@@ -30,37 +30,36 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnRefreshReports = document.getElementById("btnRefreshReports");
   const btnResetForm = document.getElementById("btnResetForm");
 
-  // 分頁導覽切換
+  // 初始化預設今日日期與時鐘
+  const todayStr = new Date().toISOString().split("T")[0];
+  const inputReportDate = document.getElementById("inputReportDate");
+  const headerClock = document.getElementById("headerClock");
+  if (inputReportDate) inputReportDate.value = todayStr;
+  if (headerClock) headerClock.innerText = todayStr;
+
+  // 分頁導覽切換 (首頁純粹戰情計分板 / 日報案件 / 報價 / 特價)
+  const tabHome = document.getElementById("navTabHome");
   const tabCases = document.getElementById("navTabCases");
   const tabQuotes = document.getElementById("navTabQuotes");
   const tabSpecials = document.getElementById("navTabSpecials");
-  const tabScoreboard = document.getElementById("navTabScoreboard");
 
+  const panelHome = document.getElementById("panelHome");
   const panelCases = document.getElementById("panelCases");
   const panelQuotes = document.getElementById("panelQuotes");
   const panelSpecials = document.getElementById("panelSpecials");
-  const panelScoreboard = document.getElementById("panelScoreboard");
 
-  // 初始化預設今日日期
-  const todayStr = new Date().toISOString().split("T")[0];
-  document.getElementById("inputReportDate").value = todayStr;
-  document.getElementById("headerClock").innerText = todayStr;
-
-  // ============================================================================
-  // 分頁切換邏輯
-  // ============================================================================
   function switchTab(activeBtn, activePanel) {
-    [tabCases, tabQuotes, tabSpecials, tabScoreboard].forEach(b => b.classList.remove("active"));
-    [panelCases, panelQuotes, panelSpecials, panelScoreboard].forEach(p => p.classList.add("hidden"));
+    [tabHome, tabCases, tabQuotes, tabSpecials].forEach(b => b && b.classList.remove("active"));
+    [panelHome, panelCases, panelQuotes, panelSpecials].forEach(p => p && p.classList.add("hidden"));
 
-    activeBtn.classList.add("active");
-    activePanel.classList.remove("hidden");
+    if (activeBtn) activeBtn.classList.add("active");
+    if (activePanel) activePanel.classList.remove("hidden");
   }
 
-  tabCases.addEventListener("click", () => switchTab(tabCases, panelCases));
-  tabQuotes.addEventListener("click", () => switchTab(tabQuotes, panelQuotes));
-  tabSpecials.addEventListener("click", () => switchTab(tabSpecials, panelSpecials));
-  tabScoreboard.addEventListener("click", () => switchTab(tabScoreboard, panelScoreboard));
+  if (tabHome) tabHome.addEventListener("click", () => switchTab(tabHome, panelHome));
+  if (tabCases) tabCases.addEventListener("click", () => switchTab(tabCases, panelCases));
+  if (tabQuotes) tabQuotes.addEventListener("click", () => switchTab(tabQuotes, panelQuotes));
+  if (tabSpecials) tabSpecials.addEventListener("click", () => switchTab(tabSpecials, panelSpecials));
 
   // ============================================================================
   // 外觀顯示模式切換 (裝置跟隨系統 / 淺色 / 深色) - 參照微軟 Office / Windows 11
@@ -146,6 +145,178 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnQuickSpecials) {
     btnQuickSpecials.addEventListener("click", () => {
       switchTab(tabSpecials, panelSpecials);
+    });
+  }
+
+  // ============================================================================
+  // 主管戰情目標設定與動態計算 (可自訂本季營收目標、拜訪次數、商機件數)
+  // ============================================================================
+  const modalTargetSettings = document.getElementById("modalTargetSettings");
+  const btnOpenTargetModal = document.getElementById("btnOpenTargetModal");
+  const btnCloseTargetModal = document.getElementById("btnCloseTargetModal");
+  const btnCancelTargetModal = document.getElementById("btnCancelTargetModal");
+  const formTargetSettings = document.getElementById("formTargetSettings");
+
+  const inputTargetRevenue = document.getElementById("inputTargetRevenue");
+  const inputTargetVisits = document.getElementById("inputTargetVisits");
+  const inputTargetOpps = document.getElementById("inputTargetOpps");
+
+  const displayActualRevenue = document.getElementById("displayActualRevenue");
+  const displayTargetRevenue = document.getElementById("displayTargetRevenue");
+  const displayRevenueSub = document.getElementById("displayRevenueSub");
+  const badgeRevenueRate = document.getElementById("badgeRevenueRate");
+  const barRevenueProgress = document.getElementById("barRevenueProgress");
+
+  const displayActualVisits = document.getElementById("displayActualVisits");
+  const displayTargetVisits = document.getElementById("displayTargetVisits");
+  const barVisitProgress = document.getElementById("barVisitProgress");
+  const badgeVisitRate = document.getElementById("badgeVisitRate");
+  const descVisitTarget = document.getElementById("descVisitTarget");
+
+  const displayActualOpps = document.getElementById("displayActualOpps");
+  const displayTargetOpps = document.getElementById("displayTargetOpps");
+  const barOppProgress = document.getElementById("barOppProgress");
+  const badgeOppRate = document.getElementById("badgeOppRate");
+  const descOppTarget = document.getElementById("descOppTarget");
+
+  // 目前系統實際累積指標 (可動態對接 API)
+  let currentMetrics = {
+    actualRevenue: 18520000,
+    actualVisits: 28,
+    actualOpps: 9
+  };
+
+  // 預設主管目標
+  const defaultTargets = {
+    targetRevenue: 22500000,
+    targetVisits: 25,
+    targetOpps: 12
+  };
+
+  function formatMoney(num) {
+    return new Intl.NumberFormat("zh-TW").format(num);
+  }
+
+  function getSavedTargets() {
+    try {
+      const saved = localStorage.getItem("shihlin_scoreboard_targets");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn("無法讀取目標設定:", e);
+    }
+    return defaultTargets;
+  }
+
+  function renderScoreboardUI(targets) {
+    // 1. 營收成果計算
+    const revTarget = Number(targets.targetRevenue) || defaultTargets.targetRevenue;
+    const revActual = currentMetrics.actualRevenue;
+    const revRate = ((revActual / revTarget) * 100).toFixed(1);
+    const revDiff = revTarget - revActual;
+
+    if (displayActualRevenue) displayActualRevenue.innerText = "NT$ " + formatMoney(revActual);
+    if (displayTargetRevenue) displayTargetRevenue.innerText = "/ 目標 NT$ " + formatMoney(revTarget);
+    if (displayRevenueSub) {
+      if (revDiff > 0) {
+        displayRevenueSub.innerText = `季度目標：NT$ ${formatMoney(revTarget)} ｜ 剩餘差距：NT$ ${formatMoney(revDiff)}`;
+      } else {
+        displayRevenueSub.innerText = `季度目標：NT$ ${formatMoney(revTarget)} ｜ 超標達成：NT$ ${formatMoney(Math.abs(revDiff))}`;
+      }
+    }
+    if (barRevenueProgress) {
+      barRevenueProgress.style.width = Math.min(revRate, 100) + "%";
+    }
+    if (badgeRevenueRate) {
+      badgeRevenueRate.innerText = revRate + "% 達標";
+      badgeRevenueRate.className = "lamp-badge " + (revRate >= 100 ? "green" : (revRate >= 75 ? "green" : "yellow"));
+    }
+
+    // 2. 客戶拜訪指標計算
+    const visitTarget = Number(targets.targetVisits) || defaultTargets.targetVisits;
+    const visitActual = currentMetrics.actualVisits;
+    const visitRate = Math.round((visitActual / visitTarget) * 100);
+
+    if (displayActualVisits) displayActualVisits.innerText = visitActual;
+    if (displayTargetVisits) displayTargetVisits.innerText = `/ 目標 ${visitTarget} 次`;
+    if (barVisitProgress) {
+      barVisitProgress.style.width = Math.min(visitRate, 100) + "%";
+    }
+    if (badgeVisitRate) {
+      if (visitRate >= 100) {
+        badgeVisitRate.className = "lamp-badge green";
+        badgeVisitRate.innerText = "🟢 良好";
+      } else if (visitRate >= 75) {
+        badgeVisitRate.className = "lamp-badge yellow";
+        badgeVisitRate.innerText = "🟡 預警";
+      } else {
+        badgeVisitRate.className = "lamp-badge red";
+        badgeVisitRate.innerText = "🔴 落後";
+      }
+    }
+    if (descVisitTarget) {
+      descVisitTarget.innerText = `達成率 ${visitRate}% ｜ 每月基準 ${visitTarget} 次實地拜訪`;
+    }
+
+    // 3. CRM 新商機指標計算
+    const oppTarget = Number(targets.targetOpps) || defaultTargets.targetOpps;
+    const oppActual = currentMetrics.actualOpps;
+    const oppRate = Math.round((oppActual / oppTarget) * 100);
+
+    if (displayActualOpps) displayActualOpps.innerText = oppActual;
+    if (displayTargetOpps) displayTargetOpps.innerText = `/ 目標 ${oppTarget} 件`;
+    if (barOppProgress) {
+      barOppProgress.style.width = Math.min(oppRate, 100) + "%";
+    }
+    if (badgeOppRate) {
+      if (oppRate >= 100) {
+        badgeOppRate.className = "lamp-badge green";
+        badgeOppRate.innerText = "🟢 達標";
+      } else if (oppRate >= 75) {
+        badgeOppRate.className = "lamp-badge yellow";
+        badgeOppRate.innerText = "🟡 預警";
+      } else {
+        badgeOppRate.className = "lamp-badge red";
+        badgeOppRate.innerText = "🔴 落後";
+      }
+    }
+    if (descOppTarget) {
+      descOppTarget.innerText = `達成率 ${oppRate}% ｜ 每月開拓 ${oppTarget} 件潛在案源`;
+    }
+  }
+
+  // 初始化計分板
+  const initialTargets = getSavedTargets();
+  renderScoreboardUI(initialTargets);
+
+  // 主管設定 Modal 開關事件
+  if (btnOpenTargetModal) {
+    btnOpenTargetModal.addEventListener("click", () => {
+      const targets = getSavedTargets();
+      if (inputTargetRevenue) inputTargetRevenue.value = targets.targetRevenue;
+      if (inputTargetVisits) inputTargetVisits.value = targets.targetVisits;
+      if (inputTargetOpps) inputTargetOpps.value = targets.targetOpps;
+      if (modalTargetSettings) modalTargetSettings.classList.remove("hidden");
+    });
+  }
+
+  function closeTargetModal() {
+    if (modalTargetSettings) modalTargetSettings.classList.add("hidden");
+  }
+
+  if (btnCloseTargetModal) btnCloseTargetModal.addEventListener("click", closeTargetModal);
+  if (btnCancelTargetModal) btnCancelTargetModal.addEventListener("click", closeTargetModal);
+
+  if (formTargetSettings) {
+    formTargetSettings.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const newTargets = {
+        targetRevenue: Number(inputTargetRevenue.value) || defaultTargets.targetRevenue,
+        targetVisits: Number(inputTargetVisits.value) || defaultTargets.targetVisits,
+        targetOpps: Number(inputTargetOpps.value) || defaultTargets.targetOpps
+      };
+      localStorage.setItem("shihlin_scoreboard_targets", JSON.stringify(newTargets));
+      renderScoreboardUI(newTargets);
+      closeTargetModal();
     });
   }
 

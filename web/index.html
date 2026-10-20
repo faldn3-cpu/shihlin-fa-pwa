@@ -39,10 +39,15 @@
 
   <!-- 功能分頁導覽列 (Navigation Ribbon) -->
   <nav class="office-nav-ribbon">
-    <button id="navTabCases" class="ribbon-tab active" type="button">
+    <button id="navTabHome" class="ribbon-tab active" type="button">
+      <!-- 單色戰情指針圖示 -->
+      <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
+      首頁 (戰情計分板)
+    </button>
+    <button id="navTabCases" class="ribbon-tab" type="button">
       <!-- 單色文件圖示 -->
       <svg class="icon-svg" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-      案件管理 (三層漏斗)
+      日報與案件管理 (三層漏斗)
     </button>
     <button id="navTabQuotes" class="ribbon-tab" type="button">
       <!-- 單色試算表圖示 -->
@@ -54,130 +59,160 @@
       <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
       專案售價申請單
     </button>
-    <button id="navTabScoreboard" class="ribbon-tab" type="button">
-      <!-- 單色戰情指針圖示 -->
-      <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
-      戰情室計分板
-    </button>
   </nav>
 
   <!-- 主內容容器 -->
   <main class="main-container">
 
     <!-- ====================================================================
-         首頁置頂戰情計分板 (Scoreboard Dashboard - 業績成果 vs 驅動指標)
+         首頁：純粹業務戰情計分板 (Scoreboard Dashboard)
+         進入首頁純粹看戰況與目標，點擊下方卡片再進入具體功能
          ==================================================================== -->
-    <div class="scoreboard-top-banner">
-      <div class="card-header" style="border-bottom:none; margin-bottom:4px; padding-bottom:0;">
-        <div class="card-title-group">
-          <svg class="icon-svg" style="color:var(--color-accent); width:20px; height:20px;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-13h-2v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+    <section id="panelHome">
+      <div class="scoreboard-top-banner">
+        <div class="card-header" style="margin-bottom:8px;">
+          <div class="card-title-group">
+            <svg class="icon-svg" style="color:var(--color-accent); width:22px; height:22px;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-13h-2v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+            <div>
+              <h2 class="card-title" style="font-size:1.2em;">士林電機 FA 業務戰情計分板</h2>
+              <p class="card-desc">全站字型：微軟正黑體 (預設 12pt) ｜ 直觀圖形化成果與驅動指標</p>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button id="btnOpenTargetModal" class="fluent-btn" type="button" title="主管可設定本季營收與每月各項驅動目標">
+              <!-- 單色齒輪圖示 -->
+              <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+              主管目標設定
+            </button>
+            <span class="lamp-badge green">即時連線</span>
+          </div>
+        </div>
+
+        <!-- 戰情指標卡片網格 -->
+        <div class="scoreboard-grid">
+          <!-- 成果指標：本季營收目標達成率 -->
+          <div class="metric-box" style="grid-column: 1 / -1; background-color: var(--bg-panel); border: 2px solid var(--border-light);">
+            <div class="metric-header">
+              <div>
+                <span class="metric-title" style="font-size:1.05em; font-weight:700;">年度 / 季度營收成果目標 (Goal vs Actual)</span>
+                <div id="displayRevenueSub" class="metric-target-text">季度目標：NT$ 22,500,000 ｜ 剩餘差距：NT$ 3,980,000</div>
+              </div>
+              <span id="badgeRevenueRate" class="lamp-badge green" style="font-size:1.1em; padding:4px 12px;">82.3% 達標</span>
+            </div>
+            <div style="display:flex; align-items:baseline; gap:12px; margin:8px 0 4px;">
+              <div id="displayActualRevenue" class="metric-val-main" style="font-size:2em; color:var(--color-accent);">NT$ 18,520,000</div>
+              <div id="displayTargetRevenue" style="font-size:0.9em; color:var(--text-tertiary);">/ 目標 NT$ 22,500,000</div>
+            </div>
+            <!-- 大尺寸圖形化進度條 -->
+            <div class="fluent-progress-bg" style="height:12px; border-radius:6px;">
+              <div id="barRevenueProgress" class="fluent-progress-bar" style="width: 82.3%; border-radius:6px;"></div>
+            </div>
+          </div>
+
+          <!-- 驅動指標 1：日報拜訪量 -->
+          <div class="metric-box">
+            <div class="metric-header">
+              <span class="metric-title">客戶拜訪量 (行動層)</span>
+              <span id="badgeVisitRate" class="lamp-badge green">🟢 良好</span>
+            </div>
+            <div style="display:flex; align-items:baseline; gap:6px; margin:4px 0;">
+              <div id="displayActualVisits" class="metric-val-main">28</div>
+              <div id="displayTargetVisits" style="font-size:0.9em; color:var(--text-tertiary);">/ 目標 25 次</div>
+            </div>
+            <div class="fluent-progress-bg">
+              <div id="barVisitProgress" class="fluent-progress-bar" style="width: 100%;"></div>
+            </div>
+            <div id="descVisitTarget" class="metric-target-text">達成率 112% ｜ 維持高頻客情拜訪</div>
+          </div>
+
+          <!-- 驅動指標 2：CRM 新商機挖掘 -->
+          <div class="metric-box">
+            <div class="metric-header">
+              <span class="metric-title">新商機挖掘 (CRM 層)</span>
+              <span id="badgeOppRate" class="lamp-badge yellow">🟡 預警</span>
+            </div>
+            <div style="display:flex; align-items:baseline; gap:6px; margin:4px 0;">
+              <div id="displayActualOpps" class="metric-val-main">9</div>
+              <div id="displayTargetOpps" style="font-size:0.9em; color:var(--text-tertiary);">/ 目標 12 件</div>
+            </div>
+            <div class="fluent-progress-bg">
+              <div id="barOppProgress" class="fluent-progress-bar" style="width: 75%;"></div>
+            </div>
+            <div id="descOppTarget" class="metric-target-text">達成率 75% ｜ 建議加強自動化設備產業案源</div>
+          </div>
+
+          <!-- 驅動指標 3：專案案件 Deal 推進 -->
+          <div class="metric-box">
+            <div class="metric-header">
+              <span class="metric-title">進行中 Deal / 標案</span>
+              <span class="lamp-badge green">🟢 活躍</span>
+            </div>
+            <div style="display:flex; align-items:baseline; gap:6px; margin:4px 0;">
+              <div class="metric-val-main">6</div>
+              <div style="font-size:0.9em; color:var(--text-tertiary);">件在案推進</div>
+            </div>
+            <div class="fluent-progress-bg">
+              <div class="fluent-progress-bar" style="width: 85%;"></div>
+            </div>
+            <div class="metric-target-text">專案總額：NT$ 4,350,000 ｜ 預估本月成案 2 件</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           計分板正下方：選擇需要的功能 (Action Hub 4 大模組大卡片)
+           ==================================================================== -->
+      <div style="margin-top:20px; margin-bottom:8px;">
+        <h3 style="font-size:1.05em; font-weight:600; color:var(--text-secondary); margin:0 0 10px;">請選擇需要執行的業務功能：</h3>
+      </div>
+
+      <div class="action-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+        <div id="btnQuickReport" class="action-card-btn" role="button" tabindex="0" title="點擊前往客戶拜訪日報填寫">
+          <div class="action-icon-circle">
+            <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </div>
           <div>
-            <h2 class="card-title" style="font-size:1.15em;">業務戰情計分板 (成果目標 vs 驅動指標)</h2>
-            <p class="card-desc">全站字型：微軟正黑體 (預設 12pt) ｜ 支援手機電腦自適應顯示</p>
+            <div class="action-btn-title" style="font-size:1.05em;">客戶拜訪日報</div>
+            <div class="action-btn-subtitle">第一層 OGSM 拜訪紀錄、自動帶入免重填</div>
           </div>
         </div>
-        <span class="lamp-badge green">
-          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:currentColor;"></span>
-          全站即時連線正常
-        </span>
-      </div>
 
-      <!-- 戰情指標卡片網格 -->
-      <div class="scoreboard-grid">
-        <!-- 指標 1：本季營收目標達成率 -->
-        <div class="metric-box">
-          <div class="metric-header">
-            <span class="metric-title">本季營收達成進度 (Goal vs Actual)</span>
-            <span class="lamp-badge green">82% 達標</span>
+        <div id="btnQuickDeals" class="action-card-btn" role="button" tabindex="0" title="點擊前往商機與專案案件追蹤看板">
+          <div class="action-icon-circle">
+            <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
           </div>
-          <div class="metric-val-main">NT$ 18,520,000</div>
-          <div class="fluent-progress-bg">
-            <div class="fluent-progress-bar" style="width: 82%;"></div>
+          <div>
+            <div class="action-btn-title" style="font-size:1.05em;">商機與案件追蹤</div>
+            <div class="action-btn-subtitle">第二/三層 CRM 漏斗、競爭品牌分析與推進</div>
           </div>
-          <div class="metric-target-text">季度目標：NT$ 22,500,000 ｜ 剩餘差距：NT$ 3,980,000</div>
         </div>
 
-        <!-- 指標 2：驅動指標 - 日報實地拜訪數 -->
-        <div class="metric-box">
-          <div class="metric-header">
-            <span class="metric-title">日報拜訪量 (行動層)</span>
-            <span class="lamp-badge green">🟢 正常</span>
+        <div id="btnQuickQuotes" class="action-card-btn" role="button" tabindex="0" title="點擊前往報價單管理中心">
+          <div class="action-icon-circle">
+            <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
           </div>
-          <div class="metric-val-main">28 <span style="font-size:0.6em; font-weight:normal; color:var(--text-secondary);">次 / 本月</span></div>
-          <div class="metric-target-text">每月標準：25 次 ｜ 達成率 112% (維持客情黏著度)</div>
+          <div>
+            <div class="action-btn-title" style="font-size:1.05em;">製作業務報價單</div>
+            <div class="action-btn-subtitle">三段式單號 Prefix-Seq-Rev、Append-Only</div>
+          </div>
         </div>
 
-        <!-- 指標 3：驅動指標 - CRM 新商機挖掘 -->
-        <div class="metric-box">
-          <div class="metric-header">
-            <span class="metric-title">潛在商機挖掘 (CRM 層)</span>
-            <span class="lamp-badge yellow">🟡 預警</span>
+        <div id="btnQuickSpecials" class="action-card-btn" role="button" tabindex="0" title="點擊前往專案售價申請單">
+          <div class="action-icon-circle">
+            <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
           </div>
-          <div class="metric-val-main">9 <span style="font-size:0.6em; font-weight:normal; color:var(--text-secondary);">件 / 本月</span></div>
-          <div class="metric-target-text">每月目標：12 件 ｜ 建議加強自動化設備產業案源挖掘</div>
-        </div>
-
-        <!-- 指標 4：驅動指標 - 專案案件與特價追蹤 -->
-        <div class="metric-box">
-          <div class="metric-header">
-            <span class="metric-title">進行中 Deal / 特價單</span>
-            <span class="lamp-badge green">🟢 活躍</span>
+          <div>
+            <div class="action-btn-title" style="font-size:1.05em;">專案售價申請</div>
+            <div class="action-btn-subtitle">低折讓連鎖防呆審批、底價利潤試算</div>
           </div>
-          <div class="metric-val-main">6 <span style="font-size:0.6em; font-weight:normal; color:var(--text-secondary);">件在案</span></div>
-          <div class="metric-target-text">專案總額：NT$ 4,350,000 ｜ 預估本月成案 2 件</div>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- ====================================================================
-         計分板下方：行動功能快捷入口 (Action Hub)
+         分頁一：日報與案件管理 (三層漏斗：日報 ➔ 商機 ➔ 案件)
          ==================================================================== -->
-    <div class="action-grid">
-      <div id="btnQuickReport" class="action-card-btn" role="button" tabindex="0" title="點擊跳轉至日報填寫">
-        <div class="action-icon-circle">
-          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-        </div>
-        <div>
-          <div class="action-btn-title">填寫客戶日報</div>
-          <div class="action-btn-subtitle">第一層 OGSM 免重複填寫</div>
-        </div>
-      </div>
-
-      <div id="btnQuickDeals" class="action-card-btn" role="button" tabindex="0" title="點擊檢視案件看板">
-        <div class="action-icon-circle">
-          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-        </div>
-        <div>
-          <div class="action-btn-title">追蹤案件看板</div>
-          <div class="action-btn-subtitle">第二/三層 CRM 漏斗推進</div>
-        </div>
-      </div>
-
-      <div id="btnQuickQuotes" class="action-card-btn" role="button" tabindex="0" title="點擊切換至報價單管理">
-        <div class="action-icon-circle">
-          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
-        </div>
-        <div>
-          <div class="action-btn-title">製作業務報價單</div>
-          <div class="action-btn-subtitle">三段式單號 Append-Only</div>
-        </div>
-      </div>
-
-      <div id="btnQuickSpecials" class="action-card-btn" role="button" tabindex="0" title="點擊切換至專案特價申請">
-        <div class="action-icon-circle">
-          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
-        </div>
-        <div>
-          <div class="action-btn-title">專案售價申請</div>
-          <div class="action-btn-subtitle">低折讓連鎖防呆審批</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ====================================================================
-         分頁一：案件管理 (三層漏斗：日報 ➔ 商機 ➔ 案件)
-         ==================================================================== -->
-    <section id="panelCases">
+    <section id="panelCases" class="hidden">
 
       <!-- 區塊 1：客戶每日日報填寫 (第一層 OGSM 行動層) -->
       <div class="fluent-card">
@@ -436,22 +471,50 @@
       </div>
     </section>
 
-    <!-- ====================================================================
-         分頁四：戰情室計分板 (預留展示)
-         ==================================================================== -->
-    <section id="panelScoreboard" class="hidden">
-      <div class="fluent-card">
-        <div class="card-header">
-          <div class="card-title-group">
-            <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
-            <h2 class="card-title">戰情室目標計分板</h2>
-          </div>
-        </div>
-        <p style="color:var(--text-secondary);">成果 vs 驅動目標、Goal vs Actual 折線圖、紅綠燈診斷工具將於里程碑 5 啟用！</p>
-      </div>
-    </section>
-
   </main>
+
+  <!-- 主管目標設定彈窗 (Modal Dialog) -->
+  <div id="modalTargetSettings" class="fluent-modal-overlay hidden">
+    <div class="fluent-modal-card">
+      <div class="modal-header">
+        <div class="card-title-group">
+          <svg class="icon-svg" style="color:var(--color-accent); width:20px; height:20px;" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+          <h3 class="card-title" style="font-size:1.1em;">主管戰情目標與行動方案設定</h3>
+        </div>
+        <button id="btnCloseTargetModal" type="button" class="modal-close-btn" title="關閉">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.9em; color:var(--text-secondary); margin-top:0;">設定後將即時動態更新戰情計分板進度條、目標對標差距與紅黃綠燈診斷號誌。</p>
+        <form id="formTargetSettings">
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">本季營收成果目標 (元)<span class="required">*</span></label>
+            <input id="inputTargetRevenue" type="number" class="form-control" value="22500000" step="500000" required />
+            <span class="autofill-hint">目前預設：22,500,000 元 (二千二百五十萬元)</span>
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">每月客戶拜訪指標次數 (次/月)<span class="required">*</span></label>
+            <input id="inputTargetVisits" type="number" class="form-control" value="25" min="1" required />
+            <span class="autofill-hint">每位業務每月基準拜訪量</span>
+          </div>
+
+          <div class="form-group" style="margin-bottom:18px;">
+            <label class="form-label">每月 CRM 新商機挖掘目標 (件/月)<span class="required">*</span></label>
+            <input id="inputTargetOpps" type="number" class="form-control" value="12" min="1" required />
+            <span class="autofill-hint">每月推廣產品系列潛在案源數</span>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button id="btnCancelTargetModal" type="button" class="fluent-btn">取消</button>
+            <button type="submit" class="fluent-btn primary">
+              <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+              儲存目標方案
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
   <!-- 引用前端主腳本 -->
   <script src="/static/js/app.js"></script>

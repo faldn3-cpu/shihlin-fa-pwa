@@ -626,6 +626,76 @@ textarea.form-control {
 }
 
 /* ==========================================================================
+   主管目標設定彈窗 (Fluent Modal Dialog)
+   ========================================================================== */
+.fluent-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.fluent-modal-card {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  width: 100%;
+  max-width: 520px;
+  overflow: hidden;
+  animation: modalSlideIn 0.15s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-light);
+  background-color: var(--bg-subtle);
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.1em;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.1s ease;
+}
+
+.modal-close-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 18px;
+}
+
+/* ==========================================================================
    RWD 手機與平板響應式優化 (Mobile / Tablet Responsive Breakpoints)
    ========================================================================== */
 @media (max-width: 768px) {

@@ -63,6 +63,93 @@ document.addEventListener("DOMContentLoaded", () => {
   tabScoreboard.addEventListener("click", () => switchTab(tabScoreboard, panelScoreboard));
 
   // ============================================================================
+  // 外觀顯示模式切換 (裝置跟隨系統 / 淺色 / 深色) - 參照微軟 Office / Windows 11
+  // ============================================================================
+  const selectThemeMode = document.getElementById("selectThemeMode");
+  const systemDarkMedia = window.matchMedia("(prefers-color-scheme: dark)");
+
+  function applyTheme(themeMode) {
+    if (themeMode === "dark") {
+      document.documentElement.setAttribute("data-theme", "dark");
+    } else if (themeMode === "light") {
+      document.documentElement.removeAttribute("data-theme");
+    } else {
+      // 裝置 (跟隨系統設定)
+      if (systemDarkMedia.matches) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      } else {
+        document.documentElement.removeAttribute("data-theme");
+      }
+    }
+  }
+
+  function initTheme() {
+    const savedTheme = localStorage.getItem("shihlin_pwa_theme_mode") || "auto";
+    if (selectThemeMode) {
+      selectThemeMode.value = savedTheme;
+      selectThemeMode.addEventListener("change", (e) => {
+        const mode = e.target.value;
+        localStorage.setItem("shihlin_pwa_theme_mode", mode);
+        applyTheme(mode);
+      });
+    }
+
+    // 監聽作業系統深淺色即時變更
+    systemDarkMedia.addEventListener("change", () => {
+      const currentMode = localStorage.getItem("shihlin_pwa_theme_mode") || "auto";
+      if (currentMode === "auto") {
+        applyTheme("auto");
+      }
+    });
+
+    // 立即套用
+    applyTheme(savedTheme);
+  }
+
+  initTheme();
+
+  // ============================================================================
+  // 行動功能快捷看板 (Action Hub) 點擊事件
+  // ============================================================================
+  const btnQuickReport = document.getElementById("btnQuickReport");
+  const btnQuickDeals = document.getElementById("btnQuickDeals");
+  const btnQuickQuotes = document.getElementById("btnQuickQuotes");
+  const btnQuickSpecials = document.getElementById("btnQuickSpecials");
+
+  if (btnQuickReport) {
+    btnQuickReport.addEventListener("click", () => {
+      switchTab(tabCases, panelCases);
+      const form = document.getElementById("dailyReportForm");
+      if (form) {
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+        selectCustomer.focus();
+      }
+    });
+  }
+
+  if (btnQuickDeals) {
+    btnQuickDeals.addEventListener("click", () => {
+      switchTab(tabCases, panelCases);
+      const dealsTable = document.getElementById("dealsTableBody");
+      if (dealsTable) {
+        dealsTable.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+  }
+
+  if (btnQuickQuotes) {
+    btnQuickQuotes.addEventListener("click", () => {
+      switchTab(tabQuotes, panelQuotes);
+    });
+  }
+
+  if (btnQuickSpecials) {
+    btnQuickSpecials.addEventListener("click", () => {
+      switchTab(tabSpecials, panelSpecials);
+    });
+  }
+
+  // ============================================================================
   // 子卡片手風琴展開 / 收合
   // ============================================================================
   checkCreateOpp.addEventListener("change", (e) => {

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>士林電機 FA 業務戰情與報價系統</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+  <!-- 頂部系統標題列 (Office Title Bar) -->
+  <header class="office-title-bar">
+    <div class="brand-wrapper">
+      <!-- 簡潔單色線條 Logo SVG (微軟風格) -->
+      <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
+        <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z"/>
+      </svg>
+      <span class="brand-title">士林電機 FA 業務戰情與報價系統</span>
+      <span class="brand-subtitle">PWA 企業整合版</span>
+    </div>
+    <div class="user-badge">
+      <span id="headerClock" style="font-family: monospace;">2026-10-20</span>
+      <div class="user-avatar" title="目前登入業務">曾</div>
+      <span id="currentSalesDisplay" style="font-weight: 600;">曾維崧</span>
+    </div>
+  </header>
+
+  <!-- 功能分頁導覽列 (Navigation Ribbon) -->
+  <nav class="office-nav-ribbon">
+    <button id="navTabCases" class="ribbon-tab active" type="button">
+      <!-- 單色文件圖示 -->
+      <svg class="icon-svg" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+      案件管理 (三層漏斗)
+    </button>
+    <button id="navTabQuotes" class="ribbon-tab" type="button">
+      <!-- 單色試算表圖示 -->
+      <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
+      報價單管理
+    </button>
+    <button id="navTabSpecials" class="ribbon-tab" type="button">
+      <!-- 單色標籤圖示 -->
+      <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
+      專案售價申請單
+    </button>
+    <button id="navTabScoreboard" class="ribbon-tab" type="button">
+      <!-- 單色戰情指針圖示 -->
+      <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
+      戰情室計分板
+    </button>
+  </nav>
+
+  <!-- 主內容容器 -->
+  <main class="main-container">
+
+    <!-- ====================================================================
+         分頁一：案件管理 (三層漏斗：日報 ➔ 商機 ➔ 案件)
+         ==================================================================== -->
+    <section id="panelCases">
+
+      <!-- 區塊 1：客戶每日日報填寫 (第一層 OGSM 行動層) -->
+      <div class="fluent-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            <div>
+              <h2 class="card-title">第一層：客戶每日日報填寫 (OGSM 行動層)</h2>
+              <p class="card-desc">單一窗口免重複輸入規範：選取客戶自動帶入統編、電話與地址；按需展開下方商機與案件卡片。</p>
+            </div>
+          </div>
+        </div>
+
+        <form id="dailyReportForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">拜訪日期<span class="required">*</span></label>
+              <input id="inputReportDate" type="date" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">業務姓名<span class="required">*</span></label>
+              <input id="inputSalesName" type="text" class="form-control" value="曾維崧" required />
+            </div>
+
+            <div class="form-group" style="grid-column: span 2;">
+              <label class="form-label">客戶公司名稱<span class="required">*</span> (下拉選取自動帶入主檔資料)</label>
+              <select id="selectCustomer" class="form-control" required>
+                <option value="">-- 請選擇拜訪客戶 (或打字過濾) --</option>
+              </select>
+              <span id="customerAutofillHint" class="autofill-hint hidden">已自動帶入客戶基本資料，無需重複輸入。</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">客戶統一編號 (自動帶入)</label>
+              <input id="inputTaxId" type="text" class="form-control" readonly placeholder="選擇客戶後自動顯示" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">拜訪對象 / 聯絡人</label>
+              <input id="inputContactName" type="text" class="form-control" placeholder="例如：陳姿蓉特助" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">聯絡電話 (自動帶入)</label>
+              <input id="inputPhone" type="text" class="form-control" readonly placeholder="選擇客戶後自動顯示" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">拜訪形式<span class="required">*</span></label>
+              <select id="selectVisitType" class="form-control">
+                <option value="實地拜訪">實地到廠拜訪</option>
+                <option value="電話聯繫">電話聯繫 / 專案溝通</option>
+                <option value="視訊會議">線上視訊會議</option>
+                <option value="報價事宜">報價事宜確認</option>
+                <option value="技術支援">技術 FAE 現場支援</option>
+              </select>
+            </div>
+
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label class="form-label">交貨地點 / 客戶地址 (自動帶入)</label>
+              <input id="inputAddress" type="text" class="form-control" readonly placeholder="選擇客戶後自動顯示" />
+            </div>
+
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label class="form-label">洽談重點與行程摘要<span class="required">*</span></label>
+              <textarea id="textContentSummary" class="form-control" placeholder="記錄今日拜訪核心重點（例如：洽談本季出貨目標，客戶反映交期問題，評估更換士林變頻器意願）" required></textarea>
+            </div>
+          </div>
+
+          <!-- 子卡片 1：產生新商機 (第二層 CRM 機會層) -->
+          <div class="extension-card">
+            <div class="extension-header" id="headerOppToggle">
+              <label class="extension-checkbox-label">
+                <input id="checkCreateOpp" type="checkbox" />
+                <span>從此日報挖掘潛在商機 (第二層 CRM)</span>
+              </label>
+              <svg class="icon-svg" style="color:var(--text-tertiary);" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+            </div>
+            <div id="bodyOppToggle" class="extension-body">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">產業類別</label>
+                  <select id="inputIndustry" class="form-control">
+                    <option value="自動化設備產業">自動化設備產業 (工具機/輸送/廠房設備)</option>
+                    <option value="電子產業">電子產業 (半導體/PCB/AI)</option>
+                    <option value="節能產業">節能產業 (風車/水泵/空調工程)</option>
+                    <option value="通路商">通路商 (經銷商/二次店/上控)</option>
+                    <option value="盤廠與機械廠">盤廠與機械廠</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">推廣產品系列</label>
+                  <select id="inputProductSeries" class="form-control">
+                    <option value="士林品">士林品 (SE3/SS2 變頻器/AX5S)</option>
+                    <option value="三菱品">三菱品 (FR-A800/E800/iQ-R)</option>
+                    <option value="松下品">松下品 (伺服馬達)</option>
+                    <option value="低壓開關">低壓開關類</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">預計產出季度</label>
+                  <select id="inputEstQuarter" class="form-control">
+                    <option value="Q4">今年 Q4</option>
+                    <option value="Q1">明年 Q1</option>
+                    <option value="Q2">明年 Q2</option>
+                    <option value="Q3">明年 Q3</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">預估潛在規模 (元)</label>
+                  <input id="inputEstScale" type="number" class="form-control" value="0" step="10000" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 子卡片 2：建立正式專案案件 (第三層 Deal 標案層) -->
+          <div class="extension-card">
+            <div class="extension-header" id="headerDealToggle">
+              <label class="extension-checkbox-label">
+                <input id="checkCreateDeal" type="checkbox" />
+                <span>規格與標的明確，直接升格為專案案件 (第三層 Deal)</span>
+              </label>
+              <svg class="icon-svg" style="color:var(--text-tertiary);" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+            </div>
+            <div id="bodyDealToggle" class="extension-body">
+              <div class="form-grid">
+                <div class="form-group" style="grid-column: span 2;">
+                  <label class="form-label">專案案場名稱<span class="required">*</span></label>
+                  <input id="inputProjectName" type="text" class="form-control" placeholder="例如：新竹廠區變頻器升級案" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">主要競爭品牌</label>
+                  <select id="inputCompBrand" class="form-control">
+                    <option value="台達">台達 (Delta)</option>
+                    <option value="三菱">日本三菱 (Mitsubishi)</option>
+                    <option value="富士">日本富士 (Fuji)</option>
+                    <option value="歐系">歐系品牌 (西門子/ABB/施耐德)</option>
+                    <option value="其他">其他品牌</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">競爭通路商</label>
+                  <input id="inputCompChannel" type="text" class="form-control" placeholder="例如：能麒 / 上菱 / 日遠" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">預估成案日期</label>
+                  <input id="inputEstDealDate" type="date" class="form-control" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">預估案件總金額 (元)</label>
+                  <input id="inputEstDealAmount" type="number" class="form-control" value="0" step="10000" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:16px; display:flex; justify-content:flex-end; gap:8px;">
+            <button id="btnResetForm" type="button" class="fluent-btn">清空重填</button>
+            <button id="btnSubmitDailyReport" type="submit" class="fluent-btn primary">
+              <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+              儲存日報並連動
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 區塊 2：今日與近期日報清單 -->
+      <div class="fluent-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="icon-svg" style="color:var(--text-secondary);" viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
+            <h3 class="card-title">近期日報紀錄清單</h3>
+          </div>
+          <button id="btnRefreshReports" class="fluent-btn" type="button">重新整頓清單</button>
+        </div>
+        <div class="fluent-table-wrapper">
+          <table class="fluent-table">
+            <thead>
+              <tr>
+                <th style="width:100px;">拜訪日期</th>
+                <th style="width:80px;">業務</th>
+                <th style="width:200px;">客戶名稱</th>
+                <th style="width:90px;">聯絡人</th>
+                <th style="width:90px;">形式</th>
+                <th>洽談重點摘要</th>
+              </tr>
+            </thead>
+            <tbody id="dailyReportsTableBody">
+              <tr><td colspan="6" style="text-align:center; color:var(--text-tertiary); padding:20px;">資料載入中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 區塊 3：Deal 專案案件看板 (可直接連動報價單) -->
+      <div class="fluent-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+            <h3 class="card-title">第三層：Deal 專案案件追蹤看板 (支援一鍵發起報價)</h3>
+          </div>
+          <span class="status-pill success">進行中案件</span>
+        </div>
+        <div class="fluent-table-wrapper">
+          <table class="fluent-table">
+            <thead>
+              <tr>
+                <th style="width:60px;">編號</th>
+                <th style="width:180px;">客戶名稱</th>
+                <th>專案名稱</th>
+                <th style="width:100px;">競爭品牌</th>
+                <th style="width:110px;">預估金額</th>
+                <th style="width:100px;">預估成案日</th>
+                <th style="width:90px;">當前階段</th>
+                <th style="width:120px; text-align:center;">操作連動</th>
+              </tr>
+            </thead>
+            <tbody id="dealsTableBody">
+              <tr><td colspan="8" style="text-align:center; color:var(--text-tertiary); padding:20px;">資料載入中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ====================================================================
+         分頁二：報價單管理 (預留展示)
+         ==================================================================== -->
+    <section id="panelQuotes" class="hidden">
+      <div class="fluent-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/></svg>
+            <h2 class="card-title">報價單管理中心</h2>
+          </div>
+        </div>
+        <p style="color:var(--text-secondary);">已備妥三段式單號 (Prefix-Seq-Rev) 與 Append-Only 不覆蓋資料庫窗口，將於里程碑 3 全面連動！</p>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         分頁三：專案售價申請單 (預留展示)
+         ==================================================================== -->
+    <section id="panelSpecials" class="hidden">
+      <div class="fluent-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42z"/></svg>
+            <h2 class="card-title">專案售價申請單中心</h2>
+          </div>
+        </div>
+        <p style="color:var(--text-secondary);">低折讓自動觸發、自動抓取 Deal 競爭情資與成本毛利，將於里程碑 4 啟用！</p>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         分頁四：戰情室計分板 (預留展示)
+         ==================================================================== -->
+    <section id="panelScoreboard" class="hidden">
+      <div class="fluent-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
+            <h2 class="card-title">戰情室目標計分板</h2>
+          </div>
+        </div>
+        <p style="color:var(--text-secondary);">成果 vs 驅動目標、Goal vs Actual 折線圖、紅綠燈診斷工具將於里程碑 5 啟用！</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 引用前端主腳本 -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

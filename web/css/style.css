@@ -1,0 +1,665 @@
+/* ==========================================================================
+   士林電機 FA 業務戰情與報價系統 - 核心樣式庫 (style.css)
+   【設計準則】：100% 參照 Windows 11 / Microsoft Office Fluent Design
+   - 字型預設：微軟正黑體 (Microsoft JhengHei)
+   - 字級預設：12pt (動態變數支援後續自訂)
+   - 外觀模式：淺色 (Light) / 深色 (Dark) / 裝置 (Device / Auto)
+   - RWD 響應式：手機與電腦跨裝置無縫切換
+   ========================================================================== */
+
+:root {
+  /* 字型與字級 (CSS 變數化，支援設定頁動態變更) */
+  --app-font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --app-font-size: 12pt;
+  
+  /* 淺色模式配色 (預設 - Office / Windows Fluent Light) */
+  --bg-app: #F3F3F3;
+  --bg-panel: #FFFFFF;
+  --bg-subtle: #F9F9F9;
+  --bg-input: #FFFFFF;
+  --bg-hover: #EAEAEA;
+  --bg-active: #E0E0E0;
+  
+  --text-primary: #1F1F1F;
+  --text-secondary: #5A5A5A;
+  --text-tertiary: #767676;
+  --text-disabled: #A19F9D;
+  
+  --border-light: #E5E5E5;
+  --border-card: #E0E0E0;
+  --border-focus: #0067C0;
+  
+  --color-accent: #0067C0;
+  --color-accent-hover: #005A9E;
+  --color-accent-light: #EBF3FC;
+  --color-success: #107C41;
+  --color-warning: #797673;
+  --color-danger: #A80000;
+
+  --header-height: 48px;
+  --border-radius: 6px;
+  --shadow-card: 0 1.6px 3.6px 0 rgba(0,0,0,0.06), 0 0.3px 0.9px 0 rgba(0,0,0,0.03);
+}
+
+/* 深色模式配色 (柔和深灰藍，不死黑、不刺眼，如同 VS Code / Windows 11 深色) */
+[data-theme="dark"] {
+  --bg-app: #202020;
+  --bg-panel: #2B2B2B;
+  --bg-subtle: #242424;
+  --bg-input: #323232;
+  --bg-hover: #383838;
+  --bg-active: #404040;
+  
+  --text-primary: #FFFFFF;
+  --text-secondary: #CCCCCC;
+  --text-tertiary: #999999;
+  --text-disabled: #666666;
+  
+  --border-light: #383838;
+  --border-card: #3D3D3D;
+  --border-focus: #4CC2FF;
+  
+  --color-accent: #4CC2FF;
+  --color-accent-hover: #60CDFF;
+  --color-accent-light: rgba(76, 194, 255, 0.15);
+  --color-success: #57C97E;
+  --color-warning: #FCE100;
+  --color-danger: #FF6B6B;
+  --shadow-card: 0 2px 6px 0 rgba(0,0,0,0.4);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--app-font-family);
+  font-size: var(--app-font-size);
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* 頂部系統標題列 */
+.office-title-bar {
+  min-height: var(--header-height);
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.brand-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-title {
+  font-size: 1.15em;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+}
+
+.brand-subtitle {
+  font-size: 0.85em;
+  color: var(--text-tertiary);
+  border-left: 1px solid var(--border-light);
+  padding-left: 10px;
+}
+
+.top-bar-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* 外觀模式切換下拉盒 (如圖：淺色 / 深色 / 裝置) */
+.theme-selector-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9em;
+  color: var(--text-secondary);
+}
+
+.theme-dropdown {
+  height: 28px;
+  padding: 0 8px;
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text-primary);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-card);
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+}
+
+.user-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9em;
+  color: var(--text-secondary);
+}
+
+.user-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background-color: var(--color-accent-light);
+  color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+/* 導覽列 */
+.office-nav-ribbon {
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 4px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.ribbon-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.95em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  flex-shrink: 0;
+}
+
+.ribbon-tab:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-hover);
+}
+
+.ribbon-tab.active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+  font-weight: 600;
+}
+
+/* 主容器排版 */
+.main-container {
+  max-width: 1400px;
+  margin: 16px auto;
+  padding: 0 16px 40px;
+}
+
+/* 卡片容器 */
+.fluent-card {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-card);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-card);
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-title {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.card-desc {
+  font-size: 0.85em;
+  color: var(--text-tertiary);
+  margin: 2px 0 0;
+}
+
+/* ==========================================================================
+   首頁置頂戰情計分板 (Scoreboard Dashboard)
+   ========================================================================== */
+.scoreboard-top-banner {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-card);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-card);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+.scoreboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.metric-box {
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.metric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.metric-title {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.metric-val-main {
+  font-size: 1.5em;
+  font-weight: 700;
+  font-family: monospace;
+  color: var(--text-primary);
+}
+
+.metric-target-text {
+  font-size: 0.8em;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
+/* 紅黃綠燈號標籤 */
+.lamp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  font-weight: 600;
+}
+.lamp-badge.green {
+  background-color: rgba(16, 124, 65, 0.15);
+  color: var(--color-success);
+}
+.lamp-badge.yellow {
+  background-color: rgba(252, 225, 0, 0.2);
+  color: #B06000;
+}
+.lamp-badge.red {
+  background-color: rgba(168, 0, 0, 0.15);
+  color: var(--color-danger);
+}
+
+/* 進度條 */
+.fluent-progress-bg {
+  width: 100%;
+  height: 6px;
+  background-color: var(--border-light);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.fluent-progress-bar {
+  height: 100%;
+  background-color: var(--color-accent);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* ==========================================================================
+   下方行動功能快捷入口 (Action Quick Navigation)
+   ========================================================================== */
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.action-card-btn {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-card);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-card);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  text-align: left;
+}
+
+.action-card-btn:hover {
+  background-color: var(--color-accent-light);
+  border-color: var(--color-accent);
+  transform: translateY(-1px);
+}
+
+.action-icon-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--bg-subtle);
+  color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.action-card-btn:hover .action-icon-circle {
+  background-color: var(--color-accent);
+  color: #FFFFFF;
+}
+
+.action-btn-title {
+  font-size: 0.95em;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.action-btn-subtitle {
+  font-size: 0.8em;
+  color: var(--text-tertiary);
+}
+
+/* 表單排版網格 */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-label {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.form-label .required {
+  color: var(--color-danger);
+  margin-left: 2px;
+}
+
+.form-control {
+  height: 34px;
+  padding: 0 10px;
+  font-family: inherit;
+  font-size: 0.95em;
+  color: var(--text-primary);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-card);
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.12s ease;
+}
+
+.form-control:focus {
+  border-color: var(--border-focus);
+}
+
+.form-control[readonly] {
+  background-color: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 70px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.autofill-hint {
+  font-size: 0.8em;
+  color: var(--color-accent);
+  margin-top: 2px;
+}
+
+/* 擴充子卡片 */
+.extension-card {
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  margin-top: 12px;
+  background-color: var(--bg-subtle);
+  overflow: hidden;
+}
+
+.extension-header {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.extension-header:hover {
+  background-color: var(--bg-hover);
+}
+
+.extension-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.95em;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.extension-body {
+  padding: 14px;
+  background-color: var(--bg-panel);
+  border-top: 1px solid var(--border-light);
+  display: none;
+}
+
+.extension-body.expanded {
+  display: block;
+}
+
+/* 按鈕樣式 */
+.fluent-btn {
+  height: 34px;
+  padding: 0 16px;
+  font-family: inherit;
+  font-size: 0.9em;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid var(--border-card);
+  background-color: var(--bg-panel);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.1s ease;
+}
+
+.fluent-btn:hover {
+  background-color: var(--bg-hover);
+}
+
+.fluent-btn.primary {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #FFFFFF;
+}
+
+.fluent-btn.primary:hover {
+  background-color: var(--color-accent-hover);
+}
+
+/* 表格 */
+.fluent-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border-card);
+  border-radius: 4px;
+  background-color: var(--bg-panel);
+}
+
+.fluent-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+  text-align: left;
+}
+
+.fluent-table th {
+  background-color: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-weight: 600;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-card);
+  white-space: nowrap;
+}
+
+.fluent-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.fluent-table tr:hover td {
+  background-color: var(--bg-hover);
+}
+
+/* 狀態徽章 */
+.status-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: 600;
+  background-color: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+}
+
+.status-pill.success {
+  background-color: rgba(16, 124, 65, 0.15);
+  color: var(--color-success);
+}
+.status-pill.warning {
+  background-color: rgba(252, 225, 0, 0.2);
+  color: #B06000;
+}
+
+.icon-svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ==========================================================================
+   RWD 手機與平板響應式優化 (Mobile / Tablet Responsive Breakpoints)
+   ========================================================================== */
+@media (max-width: 768px) {
+  body {
+    font-size: 11pt; /* 手機微調為 11pt 防止元素溢出 */
+  }
+
+  .office-title-bar {
+    padding: 8px 12px;
+  }
+
+  .brand-subtitle {
+    display: none; /* 手機隱藏副標題，保留精華空間 */
+  }
+
+  .main-container {
+    padding: 0 10px 40px;
+    margin: 10px auto;
+  }
+
+  .fluent-card, .scoreboard-top-banner {
+    padding: 14px 12px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr; /* 手機強制單欄排列，避免擠壓 */
+  }
+
+  .form-group[style*="grid-column"] {
+    grid-column: 1 / -1 !important;
+  }
+
+  .scoreboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-grid {
+    grid-template-columns: repeat(2, 1fr); /* 手機快捷按鈕 2x2 排列 */
+    gap: 8px;
+  }
+
+  .action-card-btn {
+    padding: 10px;
+  }
+
+  .fluent-btn {
+    height: 38px; /* 手機加大觸碰高度 */
+  }
+}
+
+@media (max-width: 480px) {
+  .action-grid {
+    grid-template-columns: 1fr; /* 超小手機單欄排列 */
+  }
+}

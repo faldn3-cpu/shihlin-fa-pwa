@@ -1,0 +1,24 @@
+# Python 虛擬環境
+.venv/
+venv/
+ENV/
+env/
+
+# Python 編譯快取與暫存檔
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 機密設定與連線金鑰（嚴禁存入 Git，保護密碼）
+.env
+*.env
+*.local
+
+# IDE 與編輯器暫存
+.vscode/
+.idea/
+*.swp
+
+# 紀錄檔
+*.log

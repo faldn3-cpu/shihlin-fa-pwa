@@ -486,207 +486,100 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ============================================================================
-  // 6. 在線 Excel 試算表格子渲染與即時試算引擎
+  // 6. 左右雙 Excel 接收表格 (左：挑戰目標總表 / 右：產品出貨明細表)
+  // 支援直接按 Ctrl+V 完整還原 Excel 欄位與列數
   // ============================================================================
-  const tbodyAdminExcelGrid = document.getElementById("tbodyAdminExcelGrid");
-  const tfootAdminExcelGrid = document.getElementById("tfootAdminExcelGrid");
-  const gridMonthSummaryText = document.getElementById("gridMonthSummaryText");
+  const containerTableTargets = document.getElementById("containerTableTargets");
+  const promptTargets = document.getElementById("promptTargets");
+  const tablePastedTargets = document.getElementById("tablePastedTargets");
+  const badgeTargetCount = document.getElementById("badgeTargetCount");
+  const btnPasteTargetDemo = document.getElementById("btnPasteTargetDemo");
+  const btnClearTargetTable = document.getElementById("btnClearTargetTable");
 
-  function renderAdminExcelGrid() {
-    if (!tbodyAdminExcelGrid) return;
-    const db = getTargetDatabase();
+  const containerTableShipments = document.getElementById("containerTableShipments");
+  const promptShipments = document.getElementById("promptShipments");
+  const tablePastedShipments = document.getElementById("tablePastedShipments");
+  const badgeShipmentCount = document.getElementById("badgeShipmentCount");
+  const btnPasteShipmentDemo = document.getElementById("btnPasteShipmentDemo");
+  const btnClearShipmentTable = document.getElementById("btnClearShipmentTable");
 
-    if (gridMonthSummaryText) {
-      gridMonthSummaryText.innerText = `${db.monthTitle || "10 月挑戰目標"} (全區挑戰目標：${formatMoney(db.regionTotal.target || 9300)} 萬)`;
-    }
-
-    const salesKeys = Object.keys(db.salesTargets);
-    let htmlRows = "";
-
-    salesKeys.forEach(name => {
-      const item = db.salesTargets[name];
-      const isMgr = name === "曾維崧";
-      const targetVal = Number(item.target) || 0;
-      const actualVal = Number(item.actual) || 0;
-      const rateVal = targetVal > 0 ? ((actualVal / targetVal) * 100).toFixed(1) + "%" : (isMgr ? "主管" : "-");
-
-      htmlRows += `
-        <tr data-sales="${escapeHtml(name)}">
-          <td>
-            <strong>${escapeHtml(name)}</strong>
-            ${isMgr ? '<span class="badge-manager">主管</span>' : ""}
-          </td>
-          <td>
-            <input type="number" step="any" class="excel-cell-input number grid-field" data-field="target" value="${targetVal}" ${isMgr ? "readonly style='color:var(--text-tertiary);'" : ""} />
-          </td>
-          <td>
-            <input type="number" step="any" class="excel-cell-input number grid-field" data-field="actual" value="${actualVal}" ${isMgr ? "readonly style='color:var(--text-tertiary);'" : ""} />
-          </td>
-          <td style="text-align:center; font-weight:600;" class="grid-rate-cell">
-            ${rateVal}
-          </td>
-          <td>
-            <input type="number" step="any" class="excel-cell-input number grid-field" data-field="leb" value="${Number(item.leb || 0).toFixed(2)}" />
-          </td>
-          <td>
-            <input type="number" step="any" class="excel-cell-input number grid-field" data-field="lnh" value="${Number(item.lnh || 0).toFixed(2)}" />
-          </td>
-          <td>
-            <input type="number" step="any" class="excel-cell-input number grid-field" data-field="plc" value="${Number(item.plc || 0).toFixed(2)}" />
-          </td>
-          <td style="text-align:center;">
-            ${isMgr ? "-" : `<button type="button" class="modal-close-btn btn-del-row" style="color:var(--color-danger); padding:2px 6px;" title="刪除此業務">✕</button>`}
-          </td>
-        </tr>
-      `;
-    });
-
-    tbodyAdminExcelGrid.innerHTML = htmlRows;
-    recalculateExcelTotals();
-
-    // 監聽格子數值變動 (即時計算達成率與全區加總)
-    tbodyAdminExcelGrid.querySelectorAll(".grid-field").forEach(input => {
-      input.addEventListener("input", (e) => {
-        const row = e.target.closest("tr");
-        const targetInput = row.querySelector('[data-field="target"]');
-        const actualInput = row.querySelector('[data-field="actual"]');
-        const rateCell = row.querySelector('.grid-rate-cell');
-
-        const tVal = parseFloat(targetInput.value) || 0;
-        const aVal = parseFloat(actualInput.value) || 0;
-        if (rateCell && !row.dataset.sales.includes("曾維崧")) {
-          rateCell.innerText = tVal > 0 ? ((aVal / tVal) * 100).toFixed(1) + "%" : "-";
-        }
-        recalculateExcelTotals();
-      });
-    });
-
-    // 監聽刪除按鈕
-    tbodyAdminExcelGrid.querySelectorAll(".btn-del-row").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        const row = e.target.closest("tr");
-        const sName = row.dataset.sales;
-        if (confirm(`確定要刪除業務員【${sName}】嗎？`)) {
-          const currentDb = getTargetDatabase();
-          delete currentDb.salesTargets[sName];
-          saveTargetDatabase(currentDb);
-          renderAdminExcelGrid();
-        }
-      });
-    });
-  }
-
-  // 自動加總全區合計列
-  function recalculateExcelTotals() {
-    if (!tbodyAdminExcelGrid || !tfootAdminExcelGrid) return;
-    const db = getTargetDatabase();
-
-    let sumTarget = 0;
-    let sumActual = 0;
-    let sumLEB = 0;
-    let sumLNH = 0;
-    let sumPLC = 0;
-
-    tbodyAdminExcelGrid.querySelectorAll("tr").forEach(row => {
-      const sName = row.dataset.sales;
-      if (sName === "曾維崧") return; // 主管不計入加總
-      const getFieldVal = (f) => parseFloat(row.querySelector(`[data-field="${f}"]`)?.value) || 0;
-      sumTarget += getFieldVal("target");
-      sumActual += getFieldVal("actual");
-      sumLEB += getFieldVal("leb");
-      sumLNH += getFieldVal("lnh");
-      sumPLC += getFieldVal("plc");
-    });
-
-    const totalRate = sumTarget > 0 ? ((sumActual / sumTarget) * 100).toFixed(1) : "0.0";
-
-    tfootAdminExcelGrid.innerHTML = `
-      <tr class="excel-total-row">
-        <td>全區合計 (自動加總)</td>
-        <td style="text-align:right;">${formatMoney(Math.round(sumTarget))} 萬</td>
-        <td style="text-align:right; color:var(--color-accent);">${formatMoney(Math.round(sumActual))} 萬</td>
-        <td style="text-align:center; color:var(--color-success);">${totalRate}%</td>
-        <td style="text-align:right;">${sumLEB.toFixed(2)} 萬</td>
-        <td style="text-align:right;">${sumLNH.toFixed(2)} 萬</td>
-        <td style="text-align:right;">${sumPLC.toFixed(2)} 萬</td>
-        <td></td>
-      </tr>
-    `;
-
-    // 同步自製品全區實績
-    db.regionTotal.target = Math.round(sumTarget) || db.regionTotal.target;
-    db.regionTotal.actual = Math.round(sumActual) || db.regionTotal.actual;
-    if (db.products.LEB) db.products.LEB.actual = Math.round(sumLEB) || db.products.LEB.actual;
-    if (db.products.LNH) db.products.LNH.actual = Math.round(sumLNH) || db.products.LNH.actual;
-    if (db.products.PLC) db.products.PLC.actual = Math.round(sumPLC) || db.products.PLC.actual;
-  }
-
-  // 從試算表格子讀取最新數據並儲存
-  function saveFromExcelGrid() {
-    const db = getTargetDatabase();
-    if (!tbodyAdminExcelGrid) return;
-
-    tbodyAdminExcelGrid.querySelectorAll("tr").forEach(row => {
-      const sName = row.dataset.sales;
-      if (!sName) return;
-
-      const getFieldVal = (f) => parseFloat(row.querySelector(`[data-field="${f}"]`)?.value) || 0;
-      if (!db.salesTargets[sName]) {
-        db.salesTargets[sName] = {};
-      }
-
-      if (sName === "曾維崧") {
-        db.salesTargets[sName].isManager = true;
-        db.salesTargets[sName].target = 0;
-        db.salesTargets[sName].actual = 0;
-      } else {
-        db.salesTargets[sName].target = getFieldVal("target");
-        db.salesTargets[sName].actual = getFieldVal("actual");
-      }
-      db.salesTargets[sName].leb = getFieldVal("leb");
-      db.salesTargets[sName].lnh = getFieldVal("lnh");
-      db.salesTargets[sName].plc = getFieldVal("plc");
-    });
-
-    saveTargetDatabase(db);
-    renderHomeDashboard();
-    alert("在線 Excel 試算表儲存成功！首頁戰情目標已即刻同步更新。");
-    switchPage(navItemHome, panelHome);
-  }
-
-  const btnSaveExcelGridTop = document.getElementById("btnSaveExcelGridTop");
-  const btnSaveExcelGridBottom = document.getElementById("btnSaveExcelGridBottom");
-  if (btnSaveExcelGridTop) btnSaveExcelGridTop.addEventListener("click", saveFromExcelGrid);
-  if (btnSaveExcelGridBottom) btnSaveExcelGridBottom.addEventListener("click", saveFromExcelGrid);
-
-  // 新增業務列按鈕
-  const btnAddSalesRow = document.getElementById("btnAddSalesRow");
-  if (btnAddSalesRow) {
-    btnAddSalesRow.addEventListener("click", () => {
-      const newName = prompt("請輸入新業務員姓名：");
-      if (!newName || !newName.trim()) return;
-      const clean = newName.trim();
-      const db = getTargetDatabase();
-      if (db.salesTargets[clean]) {
-        alert("此業務員已存在！");
-        return;
-      }
-      db.salesTargets[clean] = { target: 700, actual: 0, leb: 0, lnh: 0, plc: 0 };
-      saveTargetDatabase(db);
-      renderAdminExcelGrid();
-    });
-  }
-
-  // ============================================================================
-  // 7. 專屬 Excel 解析器 (支援附圖一與出貨樞紐表整表複製)
-  // ============================================================================
-  const textExcelTargets = document.getElementById("textExcelTargets");
-  const textExcelShipments = document.getElementById("textExcelShipments");
-  const btnParseAndPopulateGrid = document.getElementById("btnParseAndPopulateGrid");
   const btnLoadSampleExcel = document.getElementById("btnLoadSampleExcel");
   const btnResetAdminDefaults = document.getElementById("btnResetAdminDefaults");
+  const btnConfirmTablesReady = document.getElementById("btnConfirmTablesReady");
 
-  // 10 月真實目標表 TSV 範本
+  // 將剪貼簿 TSV 文字渲染為原生 Excel 格式表格
+  function renderPastedTable(tsvText, tableEl, promptEl, badgeEl) {
+    if (!tsvText || !tsvText.trim() || !tableEl) return;
+    const lines = tsvText.trim().split(/\r?\n/);
+    if (lines.length === 0) return;
+
+    let html = "";
+    let maxCols = 0;
+
+    lines.forEach((line, rIdx) => {
+      const cols = line.split("\t");
+      if (cols.length > maxCols) maxCols = cols.length;
+
+      html += "<tr>";
+      cols.forEach(col => {
+        const val = col.trim();
+        const tag = rIdx === 0 ? "th" : "td";
+        // 判斷是否為數字靠右排
+        const isNum = !isNaN(parseFloat(val.replace(/,/g, "").replace(/%/g, ""))) && !val.includes("月") && !val.includes("區");
+        const alignStyle = isNum ? "text-align:right;" : "text-align:left;";
+        html += `<${tag} style="${alignStyle}">${escapeHtml(val || "-")}</${tag}>`;
+      });
+      html += "</tr>";
+    });
+
+    tableEl.innerHTML = html;
+    tableEl.classList.remove("hidden");
+    if (promptEl) promptEl.classList.add("hidden");
+    if (badgeEl) {
+      badgeEl.innerText = `${lines.length} 列 × ${maxCols} 欄 (已接收)`;
+      badgeEl.classList.add("active");
+    }
+  }
+
+  function clearTable(tableEl, promptEl, badgeEl) {
+    if (tableEl) {
+      tableEl.innerHTML = "";
+      tableEl.classList.add("hidden");
+    }
+    if (promptEl) promptEl.classList.remove("hidden");
+    if (badgeEl) {
+      badgeEl.innerText = "待貼入";
+      badgeEl.classList.remove("active");
+    }
+  }
+
+  // 監聽左邊表格容器 paste 事件
+  if (containerTableTargets) {
+    containerTableTargets.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const clipboardData = e.clipboardData || window.clipboardData;
+      const text = clipboardData.getData("text");
+      if (text) {
+        renderPastedTable(text, tablePastedTargets, promptTargets, badgeTargetCount);
+        localStorage.setItem("shihlin_pasted_targets_raw", text);
+      }
+    });
+  }
+
+  // 監聽右邊表格容器 paste 事件
+  if (containerTableShipments) {
+    containerTableShipments.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const clipboardData = e.clipboardData || window.clipboardData;
+      const text = clipboardData.getData("text");
+      if (text) {
+        renderPastedTable(text, tablePastedShipments, promptShipments, badgeShipmentCount);
+        localStorage.setItem("shihlin_pasted_shipments_raw", text);
+      }
+    });
+  }
+
+  // 10 月真實目標總表範例
   const sampleTargetsExcelTSV = `北區\t10\t月挑戰目標\t9,300\t萬
 項次\t營業員\t年計月目標\t10月挑戰目標\t10月堆疊業績\t10/21累積目標\t10/21實績\t堆疊目標差異(100%)\t挑戰目標差異\t挑戰目標達成率\t前一個月實績
 經銷\t張何達\t758\t900\t900\t610\t1,451\t551\t551\t161%\t957
@@ -706,7 +599,7 @@ document.addEventListener("DOMContentLoaded", () => {
 3\tLPN+LPB+LP\t259\t210\t220\t149\t246\t97\t36\t117%\t194
 \t合計\t1,294\t1,242\t922\t625\t685\t60\t-557\t55%\t1,168`;
 
-  // 10 月真實出貨樞紐表 TSV 範本
+  // 10 月真實出貨明細樞紐表範例
   const sampleShipmentsExcelTSV = `出貨金額(萬元)\t\t月份\t10
 營業員\t產品別\t10\t總計
 何宛茹-台北\tLOG (太陽能變流器)\t52.30\t52.30
@@ -755,195 +648,70 @@ document.addEventListener("DOMContentLoaded", () => {
 \tLPC (三菱小型PLC)\t56.30\t56.30
 \tLPN (小型PLC_技提)\t2.15\t2.15`;
 
+  // 左表按鈕
+  if (btnPasteTargetDemo) {
+    btnPasteTargetDemo.addEventListener("click", () => {
+      renderPastedTable(sampleTargetsExcelTSV, tablePastedTargets, promptTargets, badgeTargetCount);
+      localStorage.setItem("shihlin_pasted_targets_raw", sampleTargetsExcelTSV);
+    });
+  }
+  if (btnClearTargetTable) {
+    btnClearTargetTable.addEventListener("click", () => {
+      clearTable(tablePastedTargets, promptTargets, badgeTargetCount);
+      localStorage.removeItem("shihlin_pasted_targets_raw");
+    });
+  }
+
+  // 右表按鈕
+  if (btnPasteShipmentDemo) {
+    btnPasteShipmentDemo.addEventListener("click", () => {
+      renderPastedTable(sampleShipmentsExcelTSV, tablePastedShipments, promptShipments, badgeShipmentCount);
+      localStorage.setItem("shihlin_pasted_shipments_raw", sampleShipmentsExcelTSV);
+    });
+  }
+  if (btnClearShipmentTable) {
+    btnClearShipmentTable.addEventListener("click", () => {
+      clearTable(tablePastedShipments, promptShipments, badgeShipmentCount);
+      localStorage.removeItem("shihlin_pasted_shipments_raw");
+    });
+  }
+
+  // 頂部全部載入/清空按鈕
   if (btnLoadSampleExcel) {
     btnLoadSampleExcel.addEventListener("click", () => {
-      if (textExcelTargets) textExcelTargets.value = sampleTargetsExcelTSV;
-      if (textExcelShipments) textExcelShipments.value = sampleShipmentsExcelTSV;
-      parseAndPopulateData();
-      alert("已成功載入並解析 10 月完整 Excel 數據，下方在線試算表格子已自動生成！");
+      renderPastedTable(sampleTargetsExcelTSV, tablePastedTargets, promptTargets, badgeTargetCount);
+      renderPastedTable(sampleShipmentsExcelTSV, tablePastedShipments, promptShipments, badgeShipmentCount);
+      localStorage.setItem("shihlin_pasted_targets_raw", sampleTargetsExcelTSV);
+      localStorage.setItem("shihlin_pasted_shipments_raw", sampleShipmentsExcelTSV);
+      alert("已成功將兩份 10 月 Excel 範例資料分別載入左右兩張表格！");
     });
   }
 
   if (btnResetAdminDefaults) {
     btnResetAdminDefaults.addEventListener("click", () => {
-      if (confirm("確定要恢復系統初始預設目標數據嗎？")) {
-        localStorage.removeItem("shihlin_target_database_v2");
-        if (textExcelTargets) textExcelTargets.value = "";
-        if (textExcelShipments) textExcelShipments.value = "";
-        renderAdminExcelGrid();
-        renderHomeDashboard();
-        alert("已重設為系統初始數據！");
+      if (confirm("確定要清空左右兩張表格嗎？")) {
+        clearTable(tablePastedTargets, promptTargets, badgeTargetCount);
+        clearTable(tablePastedShipments, promptShipments, badgeShipmentCount);
+        localStorage.removeItem("shihlin_pasted_targets_raw");
+        localStorage.removeItem("shihlin_pasted_shipments_raw");
       }
     });
   }
 
-  // 智慧解析函式 (對標使用者的四大規則)
-  function parseAndPopulateData() {
-    const targetsRaw = textExcelTargets ? textExcelTargets.value.trim() : "";
-    const shipmentsRaw = textExcelShipments ? textExcelShipments.value.trim() : "";
-
-    if (!targetsRaw && !shipmentsRaw) {
-      alert("請先貼上目標總表或產品出貨明細表！");
-      return;
-    }
-
-    const db = getTargetDatabase();
-
-    // 1. 解析目標總表 (規則：北區 10 月挑戰目標 9,300 萬)
-    if (targetsRaw) {
-      const lines = targetsRaw.split(/\r?\n/);
-      for (const line of lines) {
-        if (!line.trim()) continue;
-
-        // 規則 1：只要看到 北區 [數字] 月挑戰目標 [數字] 萬
-        const matchTitle = line.match(/北區[^\d]*(\d+)[^月]*月挑戰目標[^\d]*([\d,]+)[^萬]*萬/);
-        if (matchTitle) {
-          const mNum = matchTitle[1];
-          const tVal = parseFloat(matchTitle[2].replace(/,/g, "")) || 9300;
-          db.monthTitle = `${mNum} 月營收挑戰目標`;
-          db.regionTotal.target = tVal;
-          continue;
-        }
-
-        const cols = line.includes("\t")
-          ? line.split("\t").map(c => c.trim())
-          : line.split(/ {2,}|,/).map(c => c.trim());
-
-        if (cols.length < 3) continue;
-
-        // 自製品區塊抓取
-        const rowStr = line.toUpperCase();
-        if (rowStr.includes("LEB") && !rowStr.includes("LEA")) {
-          const nums = extractNumbersFromRow(cols);
-          if (nums.length >= 2) {
-            db.products.LEB.target = nums[1];
-            db.products.LEB.actual = nums[2] || nums[1];
-          }
-        } else if (rowStr.includes("LNH")) {
-          const nums = extractNumbersFromRow(cols);
-          if (nums.length >= 2) {
-            db.products.LNH.target = nums[1];
-            db.products.LNH.actual = nums[2] || nums[1];
-          }
-        } else if (rowStr.includes("PLC") || rowStr.includes("LPN")) {
-          const nums = extractNumbersFromRow(cols);
-          if (nums.length >= 2) {
-            db.products.PLC.target = nums[1];
-            db.products.PLC.actual = nums[2] || nums[1];
-          }
-        } else {
-          // 業務員人名對應挑戰目標
-          const knownSales = ["張何達", "葉仁豪", "邱文輝", "曾仁君", "溫達仁", "楊家豪", "莊富丞", "何宛茹", "張書偉", "黃柏翰", "周柏翰", "李成傑"];
-          for (const sName of knownSales) {
-            if (line.includes(sName)) {
-              const nums = extractNumbersFromRow(cols);
-              // 在 Excel 附圖一格式中：年計月目標(nums[0]), 挑戰目標(nums[1]), 實績(nums[3]或更大數值)
-              if (nums.length >= 2) {
-                const targetVal = nums[1] || nums[0];
-                const actualVal = nums[3] || nums[2] || nums[1];
-                if (!db.salesTargets[sName]) {
-                  db.salesTargets[sName] = { target: targetVal, actual: actualVal, leb: 0, lnh: 0, plc: 0 };
-                } else {
-                  db.salesTargets[sName].target = targetVal;
-                  db.salesTargets[sName].actual = actualVal;
-                }
-              }
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    // 2. 解析產品出貨明細表 (樞紐分析表：何宛茹-台北、何宛茹-桃園 自動加總)
-    if (shipmentsRaw) {
-      const lines = shipmentsRaw.split(/\r?\n/);
-      let currentSalesPerson = "";
-
-      for (const line of lines) {
-        if (!line.trim() || line.includes("出貨金額") || line.includes("月份")) continue;
-
-        const cols = line.includes("\t")
-          ? line.split("\t").map(c => c.trim())
-          : line.split(/ {2,}|,/).map(c => c.trim());
-
-        // 偵測是否出現新業務員姓名 (如「何宛茹-桃園」、「邱文輝-台北」)
-        const col0 = cols[0] || "";
-        const cleanName = col0.split("-")[0].replace(/合計|總計/g, "").trim();
-        const knownSales = ["何宛茹", "邱文輝", "張何達", "曾仁君", "曾維崧", "溫達仁", "楊家豪", "莊富丞", "葉仁豪", "張書偉", "黃柏翰", "周柏翰", "李成傑"];
-
-        for (const k of knownSales) {
-          if (cleanName === k || col0.includes(k)) {
-            currentSalesPerson = k;
-            break;
-          }
-        }
-
-        if (!currentSalesPerson) continue;
-        if (!db.salesTargets[currentSalesPerson]) {
-          db.salesTargets[currentSalesPerson] = { target: 700, actual: 0, leb: 0, lnh: 0, plc: 0 };
-        }
-
-        // 產品代碼與金額判斷
-        const prodCol = (cols[1] || cols[0] || "").toUpperCase();
-        // 抓出數值 (支援 .30 -> 0.30, 4.86, 28.21)
-        const valCol = parseFloatingVal(cols[2] || cols[1] || cols[0]);
-
-        if (valCol > 0) {
-          // 士林伺服：對應 LEB
-          if (prodCol.includes("LEB") || prodCol.includes("士林伺服")) {
-            db.salesTargets[currentSalesPerson].leb = parseFloat((db.salesTargets[currentSalesPerson].leb + valCol).toFixed(2));
-          }
-          // 士林變頻器：對應 LNH
-          else if (prodCol.includes("LNH") || prodCol.includes("士林變頻器")) {
-            db.salesTargets[currentSalesPerson].lnh = parseFloat((db.salesTargets[currentSalesPerson].lnh + valCol).toFixed(2));
-          }
-          // 士林PLC：對應 LPB (士林小型PLC) + LPN (小型PLC_技提) + LPD 三者加總
-          else if (
-            prodCol.includes("LPB") ||
-            prodCol.includes("LPN") ||
-            prodCol.includes("LPD") ||
-            prodCol.includes("士林小型PLC") ||
-            prodCol.includes("小型PLC_技提")
-          ) {
-            db.salesTargets[currentSalesPerson].plc = parseFloat((db.salesTargets[currentSalesPerson].plc + valCol).toFixed(2));
-          }
-        }
-      }
-    }
-
-    // 確保曾維崧為主管標記
-    if (db.salesTargets["曾維崧"]) {
-      db.salesTargets["曾維崧"].isManager = true;
-      db.salesTargets["曾維崧"].target = 0;
-      db.salesTargets["曾維崧"].actual = 0;
-    }
-
-    saveTargetDatabase(db);
-    renderAdminExcelGrid();
-    alert("解析成功！已依規則歸納：\n1. 成功抓取月份與全區挑戰目標\n2. 成功對應業務員挑戰目標與實績\n3. 成功將同姓名跨分公司出貨加總，並將 LPB+LPN+LPD 歸入士林PLC！");
+  if (btnConfirmTablesReady) {
+    btnConfirmTablesReady.addEventListener("click", () => {
+      alert("左右兩張表格已順利接收 Excel 資料！\n您可以檢視每一行、每一欄是否與 Excel 原始資料完全對齊。");
+    });
   }
 
-  function extractNumbersFromRow(cols) {
-    const nums = [];
-    for (const c of cols) {
-      const clean = c.replace(/,/g, "").replace(/%/g, "").trim();
-      const n = parseFloat(clean);
-      if (!isNaN(n)) nums.push(n);
-    }
-    return nums;
+  // 載入先前記住的已貼入表格
+  const savedTargetsRaw = localStorage.getItem("shihlin_pasted_targets_raw");
+  if (savedTargetsRaw) {
+    renderPastedTable(savedTargetsRaw, tablePastedTargets, promptTargets, badgeTargetCount);
   }
-
-  function parseFloatingVal(str) {
-    if (!str) return 0;
-    const clean = str.replace(/,/g, "").trim();
-    // 支援 .30 或 0.30
-    const n = parseFloat(clean);
-    return isNaN(n) ? 0 : n;
-  }
-
-  if (btnParseAndPopulateGrid) {
-    btnParseAndPopulateGrid.addEventListener("click", parseAndPopulateData);
+  const savedShipmentsRaw = localStorage.getItem("shihlin_pasted_shipments_raw");
+  if (savedShipmentsRaw) {
+    renderPastedTable(savedShipmentsRaw, tablePastedShipments, promptShipments, badgeShipmentCount);
   }
 
   // ============================================================================

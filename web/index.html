@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
   
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=20261021_fixed" />
 </head>
 <body>
 
@@ -575,107 +575,85 @@
     </section>
 
     <!-- ====================================================================
-         分頁五：管理員目標資料維護 (Admin Targets Panel)
-         支援直接貼上 Excel 資料，自動以「在線 Excel 試算表格子」呈現
+         分頁五：管理員目標資料維護 (左右雙 Excel 接收表格)
+         左：挑戰目標總表 / 右：產品出貨明細表 (支援直接按 Ctrl+V 貼入)
          ==================================================================== -->
     <section id="panelAdminTargets" class="hidden">
       <div class="fluent-card">
         <div class="card-header">
           <div class="card-title-group">
             <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
-              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/>
             </svg>
             <div>
-              <h2 class="card-title">管理員目標資料維護</h2>
-              <p class="card-desc">支援從 Excel 圈選直接按 Ctrl+V 貼上；自動生成在線 Excel 格子，每一格皆可點擊微調</p>
+              <h2 class="card-title">管理員目標資料維護（左右雙 Excel 接收表格）</h2>
+              <p class="card-desc">請直接在左/右表格內點擊並按 Ctrl+V 貼上 Excel 資料，表格將以原生 Excel 欄列完整呈現</p>
             </div>
           </div>
           <div style="display:flex; gap:8px;">
-            <button id="btnLoadSampleExcel" type="button" class="fluent-btn">載入 10 月完整 Excel 數據</button>
-            <button id="btnResetAdminDefaults" type="button" class="fluent-btn">恢復預設</button>
+            <button id="btnLoadSampleExcel" type="button" class="fluent-btn">載入 10 月範例數據</button>
+            <button id="btnResetAdminDefaults" type="button" class="fluent-btn">全部清空</button>
           </div>
         </div>
 
-        <!-- 貼上區塊 (支援整表直接複製貼入) -->
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:12px; margin-bottom:16px;">
-          <!-- 貼上區 1：目標總表 -->
-          <div class="excel-paste-box">
-            <div class="excel-paste-header">
-              <span style="font-weight:700; font-size:0.92em;">1. 貼上【挑戰目標總表】</span>
-              <span class="excel-tag">支援整張 Excel 複製</span>
+        <!-- 左右雙欄表格容器 -->
+        <div class="excel-dual-layout">
+
+          <!-- 左邊表格：挑戰目標總表 -->
+          <div class="excel-sheet-card">
+            <div class="excel-sheet-header">
+              <div class="excel-sheet-title">
+                <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+                <span>左表格：【挑戰目標總表】</span>
+                <span id="badgeTargetCount" class="excel-count-badge">待貼入</span>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button id="btnPasteTargetDemo" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">載入目標範例</button>
+                <button id="btnClearTargetTable" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">清空</button>
+              </div>
             </div>
-            <textarea id="textExcelTargets" class="form-control excel-textarea" rows="4" placeholder="在 Excel 中圈選目標表（含『北區 10 月挑戰目標 9,300 萬』），按 Ctrl+C 後在此按 Ctrl+V 貼上..."></textarea>
-            <span class="autofill-hint">自動辨識：月份 (10月)、全區目標 (9,300萬)、自製品總目標與業務員目標</span>
+
+            <div id="containerTableTargets" class="excel-table-scroll" tabindex="0">
+              <div id="promptTargets" class="excel-paste-prompt">
+                點擊此處，按鍵盤 <strong>Ctrl + V</strong><br/>
+                <span style="font-size:0.85em; font-weight:normal; opacity:0.85;">直接貼入 Excel「挑戰目標總表」</span>
+              </div>
+              <table id="tablePastedTargets" class="excel-pasted-table hidden"></table>
+            </div>
           </div>
 
-          <!-- 貼上區 2：產品出貨明細表 -->
-          <div class="excel-paste-box">
-            <div class="excel-paste-header">
-              <span style="font-weight:700; font-size:0.92em;">2. 貼上【產品出貨明細表】</span>
-              <span class="excel-tag">樞紐分析表</span>
+          <!-- 右邊表格：產品出貨明細表 -->
+          <div class="excel-sheet-card">
+            <div class="excel-sheet-header">
+              <div class="excel-sheet-title">
+                <svg class="icon-svg" style="color:var(--color-success);" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
+                <span>右表格：【產品出貨明細表】</span>
+                <span id="badgeShipmentCount" class="excel-count-badge">待貼入</span>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button id="btnPasteShipmentDemo" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">載入出貨範例</button>
+                <button id="btnClearShipmentTable" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">清空</button>
+              </div>
             </div>
-            <textarea id="textExcelShipments" class="form-control excel-textarea" rows="4" placeholder="在 Excel 樞紐表中圈選營業員與產品明細，按 Ctrl+C 後在此按 Ctrl+V 貼上..."></textarea>
-            <span class="autofill-hint">自動歸納：LEB ➔ 伺服、LNH ➔ 變頻器、LPB+LPN+LPD ➔ PLC，跨分公司同姓名自動加總</span>
+
+            <div id="containerTableShipments" class="excel-table-scroll" tabindex="0">
+              <div id="promptShipments" class="excel-paste-prompt">
+                點擊此處，按鍵盤 <strong>Ctrl + V</strong><br/>
+                <span style="font-size:0.85em; font-weight:normal; opacity:0.85;">直接貼入 Excel「產品出貨明細表 (樞紐表)」</span>
+              </div>
+              <table id="tablePastedShipments" class="excel-pasted-table hidden"></table>
+            </div>
           </div>
+
         </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-          <button id="btnParseAndPopulateGrid" type="button" class="fluent-btn">
-            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
-            一鍵解析並填入下方 Excel 格子
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:12px; border-top:1px solid var(--border-light);">
+          <span style="font-size:0.85em; color:var(--text-secondary);">
+            已就緒：左右兩張表格均可自由獨立貼入 Excel 剪貼簿資料
+          </span>
+          <button id="btnConfirmTablesReady" type="button" class="fluent-btn primary">
+            確認兩張表格內容無誤
           </button>
-          <button id="btnSaveExcelGridTop" type="button" class="fluent-btn primary">
-            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
-            儲存發布並同步首頁
-          </button>
-        </div>
-
-        <!-- ====================================================================
-             在線 Excel 試算表格子容器 (Online Spreadsheet Grid)
-             ==================================================================== -->
-        <div class="excel-grid-container">
-          <div class="excel-grid-toolbar">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <svg class="icon-svg" style="color:var(--color-success); width:18px; height:18px;" viewBox="0 0 24 24">
-                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/>
-              </svg>
-              <span style="font-weight:700; font-size:1em; color:var(--text-primary);">業務與產品在線試算表 (直接點擊格子修改數字，下方自動加總)</span>
-            </div>
-            <span id="gridMonthSummaryText" style="font-size:0.85em; font-weight:600; color:var(--color-accent);">10 月挑戰目標 (全區目標：9,300 萬)</span>
-          </div>
-
-          <div class="fluent-table-wrapper" style="max-height: 520px; overflow: auto;">
-            <table class="fluent-table excel-table" id="tableAdminExcelGrid">
-              <thead>
-                <tr>
-                  <th style="min-width:130px;">營業員</th>
-                  <th style="min-width:115px; text-align:right;">全月挑戰目標 (萬)</th>
-                  <th style="min-width:115px; text-align:right;">全月實績累計 (萬)</th>
-                  <th style="min-width:95px; text-align:center;">達成率</th>
-                  <th style="min-width:125px; text-align:right;">士林伺服 (LEB)</th>
-                  <th style="min-width:125px; text-align:right;">士林變頻器 (LNH)</th>
-                  <th style="min-width:145px; text-align:right;">士林PLC (LPB+LPN+LPD)</th>
-                  <th style="width:60px; text-align:center;">操作</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyAdminExcelGrid">
-                <!-- 動態注入各業務資料列 -->
-              </tbody>
-              <tfoot id="tfootAdminExcelGrid">
-                <!-- 動態注入全區合計列 -->
-              </tfoot>
-            </table>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
-            <button id="btnAddSalesRow" type="button" class="fluent-btn">
-              + 新增一位業務員
-            </button>
-            <button id="btnSaveExcelGridBottom" type="button" class="fluent-btn primary">
-              <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
-              儲存發布並同步首頁
-            </button>
-          </div>
         </div>
 
       </div>
@@ -842,7 +820,7 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=20261021_dual"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>

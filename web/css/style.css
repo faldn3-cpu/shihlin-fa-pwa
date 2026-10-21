@@ -912,6 +912,8 @@ textarea.form-control {
   font-size: 0.88em;
   font-weight: 700;
   color: var(--color-accent);
+}
+
 /* ==========================================================================
    在線 Excel 試算表格子專屬樣式 (Online Spreadsheet Grid Styles)
    ========================================================================== */
@@ -1034,6 +1036,130 @@ textarea.form-control {
   background-color: var(--color-accent-light);
   color: var(--color-accent);
   margin-left: 4px;
+}
+
+/* ==========================================================================
+   左右雙 Excel 接收表格 (Side-by-Side Excel Paste Tables)
+   ========================================================================== */
+.excel-dual-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 10px;
+}
+
+@media (max-width: 900px) {
+  .excel-dual-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.excel-sheet-card {
+  min-width: 0;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-card);
+}
+
+.excel-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light);
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.excel-sheet-title {
+  font-weight: 700;
+  font-size: 0.95em;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.excel-paste-prompt {
+  border: 2px dashed var(--color-accent);
+  background-color: var(--color-accent-light);
+  border-radius: 6px;
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--color-accent);
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.excel-paste-prompt:hover, .excel-paste-prompt:focus {
+  background-color: var(--bg-hover);
+  border-color: var(--color-accent-hover);
+}
+
+.excel-table-scroll {
+  max-height: 480px;
+  overflow: auto;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  background-color: var(--bg-panel);
+  outline: none;
+}
+
+.excel-table-scroll:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-light);
+}
+
+.excel-pasted-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85em;
+  font-family: "Segoe UI", Consolas, sans-serif;
+}
+
+.excel-pasted-table th, .excel-pasted-table td {
+  border: 1px solid var(--border-light);
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+
+.excel-pasted-table tr:first-child td, .excel-pasted-table tr:first-child th {
+  background-color: #EBF3FC;
+  color: #005A9E;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+[data-theme="dark"] .excel-pasted-table tr:first-child td,
+[data-theme="dark"] .excel-pasted-table tr:first-child th {
+  background-color: #1F3347;
+  color: #60CDFF;
+}
+
+.excel-count-badge {
+  font-size: 0.75em;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background-color: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+}
+
+.excel-count-badge.active {
+  background-color: rgba(16, 124, 65, 0.12);
+  color: var(--color-success);
+  border-color: rgba(16, 124, 65, 0.25);
 }
 
 /* ==========================================================================

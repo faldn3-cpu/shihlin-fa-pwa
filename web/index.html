@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
   
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261021_ui_cleanup_v3" />
+  <link rel="stylesheet" href="css/style.css?v=20261021_gradient_bar_v4" />
 </head>
 <body>
 
@@ -90,13 +90,21 @@
          ==================================================================== -->
     <section id="panelHome">
       <div class="scoreboard-top-banner">
-        <!-- 頂部月度目標總結列 (挑戰目標重點標示，無小圖示，無全區字樣) -->
-        <div class="scoreboard-header-bar">
-          <div class="header-bar-left">
-            <span id="displayMetric1Name" class="header-bar-title">10月業績目標 (年計目標：7,060萬 ｜ <span class="badge-target-highlight">挑戰目標：9,300萬</span> ｜ 堆疊目標：10,452萬)</span>
-          </div>
-          <div class="header-bar-right">
-            <span id="displayRegionSummary" class="region-summary-pill">實績 10,370 萬 (112% 達標)</span>
+        <!-- 頂部月度目標總結列 (本月業績目標、實績、完成率；寬版並列，窄版一行一個) -->
+        <div class="scoreboard-header-bar" id="scoreboardHeaderBar">
+          <div class="scoreboard-metrics-flow" id="scoreboardMetricsFlow">
+            <div class="flow-item flow-item-target">
+              <span class="flow-label">本月業績目標：</span>
+              <span class="flow-val badge-target-highlight" id="flowTargetVal">9,300萬</span>
+            </div>
+            <div class="flow-item flow-item-actual">
+              <span class="flow-label">實績：</span>
+              <span class="flow-val" id="flowActualVal">10,370萬</span>
+            </div>
+            <div class="flow-item flow-item-rate">
+              <span class="flow-label">完成率：</span>
+              <span class="flow-val traffic-light-badge success" id="flowRateVal">112%</span>
+            </div>
           </div>
         </div>
 
@@ -114,10 +122,10 @@
               <span class="kpi-unit">萬元</span>
             </div>
             <div class="kpi-detail-row" id="kpiDetailPersonal">
-              目標：810 萬 ｜ 實績：802 萬 ｜ 差距：8 萬
+              <span>目標：810 萬</span> <span>｜</span> <span>實績：802 萬</span> <span>｜</span> <span>差距：8 萬</span>
             </div>
             <div class="fluent-progress-bg">
-              <div id="kpiBarPersonal" class="fluent-progress-bar" style="width: 99%;"></div>
+              <div id="kpiBarPersonal" class="fluent-progress-bar bar-warning" style="width: 99%;"></div>
             </div>
           </div>
 
@@ -132,10 +140,10 @@
               <span class="kpi-unit">萬元</span>
             </div>
             <div class="kpi-detail-row" id="kpiDetailLEB">
-              目標：516 萬 ｜ 實績：196 萬 ｜ 差距：320 萬
+              <span>目標：516 萬</span> <span>｜</span> <span>實績：196 萬</span> <span>｜</span> <span>差距：320 萬</span>
             </div>
             <div class="fluent-progress-bg">
-              <div id="kpiBarLEB" class="fluent-progress-bar" style="width: 38%;"></div>
+              <div id="kpiBarLEB" class="fluent-progress-bar bar-danger" style="width: 38%;"></div>
             </div>
           </div>
 
@@ -150,10 +158,10 @@
               <span class="kpi-unit">萬元</span>
             </div>
             <div class="kpi-detail-row" id="kpiDetailLNH">
-              目標：516 萬 ｜ 實績：243 萬 ｜ 差距：273 萬
+              <span>目標：516 萬</span> <span>｜</span> <span>實績：243 萬</span> <span>｜</span> <span>差距：273 萬</span>
             </div>
             <div class="fluent-progress-bg">
-              <div id="kpiBarLNH" class="fluent-progress-bar" style="width: 47%;"></div>
+              <div id="kpiBarLNH" class="fluent-progress-bar bar-danger" style="width: 47%;"></div>
             </div>
           </div>
 
@@ -168,10 +176,10 @@
               <span class="kpi-unit">萬元</span>
             </div>
             <div class="kpi-detail-row" id="kpiDetailPLC">
-              目標：210 萬 ｜ 實績：246 萬 ｜ 超標：36 萬
+              <span>目標：210 萬</span> <span>｜</span> <span>實績：246 萬</span> <span>｜</span> <span>超標：36 萬</span>
             </div>
             <div class="fluent-progress-bg">
-              <div id="kpiBarPLC" class="fluent-progress-bar" style="width: 100%;"></div>
+              <div id="kpiBarPLC" class="fluent-progress-bar bar-success" style="width: 100%;"></div>
             </div>
           </div>
 
@@ -547,7 +555,7 @@
             <select id="selectActiveSales" class="form-control">
               <!-- 由 JavaScript 依據業務人員排序設定表動態生成 -->
             </select>
-            <span class="autofill-hint">切換業務後，首頁將即刻切換為該人員的個人目標與自製品出貨實績（曾維崧為主管，直接看全區戰況）</span>
+            <span class="autofill-hint">切換業務後，首頁將即刻切換為該人員的個人目標與自製品出貨實績（曾維崧直接看全區戰況）</span>
           </div>
 
           <!-- 業務人員順序排序設定表 (全系統業務人員順序統一標準表) -->
@@ -854,13 +862,13 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261021_ui_cleanup_v3"></script>
+  <script src="js/app.js?v=20261021_gradient_bar_v5"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=20261021_v102')
+        navigator.serviceWorker.register('./sw.js?v=20261021_v105')
           .then(function(reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

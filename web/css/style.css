@@ -1597,16 +1597,42 @@ textarea.form-control {
   letter-spacing: -0.2px;
 }
 
-.region-summary-pill {
-  font-size: 0.85rem;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 12px;
-  background: #f0f7ff;
-  color: #0052cc;
-  border: 1px solid #cce4ff;
+/* 頂部月度三大核心指標流程列 (本月業績目標、實績、完成率；寬版並列，窄版一行一個) */
+.scoreboard-metrics-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+}
+
+.flow-item {
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
+
+.flow-label {
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.flow-val {
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-left: 2px;
+}
+
+/* 手機與窄螢幕斷行規範：業績目標一行、實績一行、完成率一行 */
+@media (max-width: 650px) {
+  .scoreboard-metrics-flow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .flow-item {
+    width: 100%;
+  }
 }
 
 .kpi-hero-grid {
@@ -1622,7 +1648,8 @@ textarea.form-control {
   }
 }
 
-@media (max-width: 580px) {
+/* 700px 以下切換為單欄卡片，確保平板與手機寬度充足，字體決不跑掉裁切 */
+@media (max-width: 700px) {
   .kpi-hero-grid {
     grid-template-columns: 1fr;
   }
@@ -1632,7 +1659,7 @@ textarea.form-control {
   background: var(--bg-card);
   border: 1px solid var(--border-light);
   border-radius: 10px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
@@ -1660,33 +1687,61 @@ textarea.form-control {
   gap: 6px;
 }
 
+/* 紅綠燈達成率百分比徽章 (漸進式多階層漸層，無單一純色) */
 .traffic-light-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.2px;
+  transition: all 0.25s ease;
 }
 
-.traffic-light-badge.success {
-  background: #dcfce7;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+/* 高標達標 (>=100%)：活力翡翠綠漸層 */
+.traffic-light-badge.success,
+.bar-success {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #065f46;
+  border: 1px solid #86efac;
+}
+.fluent-progress-bar.bar-success {
+  background: linear-gradient(90deg, #34d399 0%, #10b981 50%, #059669 100%);
 }
 
-.traffic-light-badge.warning {
-  background: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
+/* 預警中標 (80%~99.9%)：金黃至暖橙漸層 */
+.traffic-light-badge.warning,
+.bar-warning {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+.fluent-progress-bar.bar-warning {
+  background: linear-gradient(90deg, #fcd34d 0%, #f59e0b 50%, #d97706 100%);
 }
 
-.traffic-light-badge.danger {
-  background: #fee2e2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
+/* 低標警戒 (50%~79.9%)：珊瑚橙至橙紅漸層 */
+.traffic-light-badge.alert,
+.bar-alert {
+  background: linear-gradient(135deg, #ffedd5 0%, #fecaca 100%);
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+.fluent-progress-bar.bar-alert {
+  background: linear-gradient(90deg, #fb923c 0%, #f87171 50%, #ef4444 100%);
+}
+
+/* 嚴重落後 (<50%)：深玫瑰至寶石紅漸層 */
+.traffic-light-badge.danger,
+.bar-danger {
+  background: linear-gradient(135deg, #fee2e2 0%, #fca5a5 100%);
+  color: #7f1d1d;
+  border: 1px solid #f87171;
+}
+.fluent-progress-bar.bar-danger {
+  background: linear-gradient(90deg, #f87171 0%, #ef4444 50%, #dc2626 100%);
 }
 
 .kpi-val-row {
@@ -1710,13 +1765,17 @@ textarea.form-control {
   color: var(--text-secondary);
 }
 
+/* 卡片最下方細節：自適應彈性間距排版，防止任何尺寸下文字跑掉或被裁切 */
 .kpi-detail-row {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-secondary);
   margin-bottom: 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  align-items: center;
+  line-height: 1.4;
+  white-space: normal;
 }
 
 /* 頂部月度挑戰目標高亮醒目標籤 */

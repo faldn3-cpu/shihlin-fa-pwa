@@ -192,12 +192,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function updateActiveSalesUI(salesName) {
-    const isManager = salesName === "曾維崧";
     if (headerUserAvatar) {
       headerUserAvatar.innerText = salesName.charAt(0) || "曾";
     }
     if (currentSalesDisplay) {
-      currentSalesDisplay.innerText = isManager ? `${salesName} (主管)` : salesName;
+      currentSalesDisplay.innerText = salesName;
     }
     if (displaySalesNameTarget) {
       displaySalesNameTarget.innerText = salesName;
@@ -213,7 +212,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 全系統標準業務人員預設排序名單 (Single Source of Truth)
   const DEFAULT_SALESPERSONS = [
-    { id: "曾維崧", name: "曾維崧", role: "主管・全區總覽", group: "主管" },
+    { id: "曾維崧", name: "曾維崧", role: "全區總覽", group: "主管" },
     { id: "曾仁君", name: "曾仁君", role: "直賣", group: "直賣" },
     { id: "何宛茹", name: "何宛茹", role: "直賣", group: "直賣" },
     { id: "張何達", name: "張何達", role: "經銷", group: "經銷" },
@@ -259,7 +258,7 @@ document.addEventListener("DOMContentLoaded", () => {
     list.forEach(sales => {
       const opt = document.createElement("option");
       opt.value = sales.name;
-      opt.innerText = sales.name === "曾維崧" ? `${sales.name} (主管・全區總覽)` : `${sales.name} (${sales.role || sales.group || "直賣"})`;
+      opt.innerText = sales.name === "曾維崧" ? `${sales.name} (全區總覽)` : `${sales.name} (${sales.role || sales.group || "直賣"})`;
       selectActiveSales.appendChild(opt);
     });
     const exists = list.some(s => s.name === currentVal);
@@ -1435,15 +1434,17 @@ document.addEventListener("DOMContentLoaded", () => {
     return cell.toString().trim();
   }
 
-  // 取得達成率紅綠燈狀態 (>=100% 綠燈達標, 80%~99.9% 黃燈預警, <80% 紅燈落後)
+  // 取得達成率紅綠燈狀態與漸進式多階層漸層色彩 (>=100% 翡翠綠, 80%~99.9% 金黃暖橙, 50%~79.9% 珊瑚橙紅, <50% 寶石艷紅)
   function getTrafficLight(rate) {
     const num = parseFloat(rate) || 0;
     if (num >= 100) {
-      return { type: "success", text: "達標" };
+      return { type: "success", barClass: "bar-success", text: "達標" };
     } else if (num >= 80) {
-      return { type: "warning", text: "預警" };
+      return { type: "warning", barClass: "bar-warning", text: "預警" };
+    } else if (num >= 50) {
+      return { type: "alert", barClass: "bar-alert", text: "落後" };
     } else {
-      return { type: "danger", text: "落後" };
+      return { type: "danger", barClass: "bar-danger", text: "嚴重落後" };
     }
   }
 
@@ -1696,6 +1697,7 @@ document.addEventListener("DOMContentLoaded", () => {
         metrics.salesName = "曾維崧";
         metrics.salesTarget = metrics.totalTarget;
         metrics.salesActual = metrics.totalActual;
+        metrics.salesDiff = metrics.totalDiff;
         metrics.salesRate = metrics.totalRate;
         metrics.salesRateNum = metrics.totalRateNum;
         metrics.salesDiffText = metrics.diffText;
@@ -1769,14 +1771,31 @@ document.addEventListener("DOMContentLoaded", () => {
   function applyScoreboardMetrics(metrics) {
     if (!metrics) return;
 
-    // 1. 頂部月度三大目標與摘要列 (挑戰目標重點標示，無小圖示，無全區字樣)
+    // 1. 頂部月度挑戰目標、實績與完成率串流 (寬版並排，窄版一行一個，挑戰目標重點標示)
+    const flowTargetVal = document.getElementById("flowTargetVal");
+    if (flowTargetVal) {
+      flowTargetVal.innerText = `${metrics.totalTarget || "9,300"}萬`;
+    }
+    const flowActualVal = document.getElementById("flowActualVal");
+    if (flowActualVal) {
+      flowActualVal.innerText = `${metrics.totalActual || "10,370"}萬`;
+    }
+    const flowRateVal = document.getElementById("flowRateVal");
+    if (flowRateVal) {
+      const rateNum = parseFloat((metrics.totalRate || "112%").replace(/%/g, "")) || 0;
+      const light = getTrafficLight(rateNum);
+      flowRateVal.className = `flow-val traffic-light-badge ${light.type}`;
+      flowRateVal.innerText = metrics.totalRate || "112%";
+    }
+
+    // 相容性回退支援
     const displayMetric1Name = document.getElementById("displayMetric1Name");
     if (displayMetric1Name) {
-      displayMetric1Name.innerHTML = `${metrics.month || 10}月業績目標 (年計目標：${metrics.annualTarget || "7,060"}萬 ｜ <span class="badge-target-highlight">挑戰目標：${metrics.totalTarget || "9,300"}萬</span> ｜ 堆疊目標：${metrics.stackTarget || "10,452"}萬)`;
+      displayMetric1Name.innerHTML = `本月業績目標：<span class="badge-target-highlight">${metrics.totalTarget || "9,300"}萬</span>`;
     }
     const displayRegionSummary = document.getElementById("displayRegionSummary");
     if (displayRegionSummary) {
-      displayRegionSummary.innerText = `實績 ${metrics.totalActual || "10,370"} 萬 (${metrics.totalRate || "112%"} 達標)`;
+      displayRegionSummary.innerText = `實績：${metrics.totalActual || "10,370"}萬 ｜ 完成率：${metrics.totalRate || "112%"}`;
     }
 
     // 2. 卡片 1：個人總業績 (標題一律為「個人總業績」，無小圖示與括號，底部完整標示目標、實績、差距/超標)
@@ -1789,10 +1808,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (kpiValPersonal) kpiValPersonal.innerText = metrics.salesActual || "802";
 
     const kpiTrafficPersonal = document.getElementById("kpiTrafficPersonal");
+    const ratePersonalNum = metrics.salesRateNum !== undefined ? metrics.salesRateNum : (parseFloat((metrics.salesRate || "0").replace(/%/g, "")) || 0);
+    const lightPersonal = getTrafficLight(ratePersonalNum);
     if (kpiTrafficPersonal) {
-      const rateNum = metrics.salesRateNum !== undefined ? metrics.salesRateNum : (parseFloat((metrics.salesRate || "0").replace(/%/g, "")) || 0);
-      const light = getTrafficLight(rateNum);
-      kpiTrafficPersonal.className = `traffic-light-badge ${light.type}`;
+      kpiTrafficPersonal.className = `traffic-light-badge ${lightPersonal.type}`;
       kpiTrafficPersonal.innerText = metrics.salesRate || "99.0%";
     }
 
@@ -1802,13 +1821,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const sA = parseFloat((metrics.salesActual || "0").replace(/,/g, ""));
       const diffVal = metrics.salesDiff ? parseFloat(metrics.salesDiff.replace(/,/g, "")) : (sA - sT);
       const diffLabel = diffVal >= 0 ? "超標" : "差距";
-      kpiDetailPersonal.innerText = `目標：${metrics.salesTarget || "810"} 萬 ｜ 實績：${metrics.salesActual || "802"} 萬 ｜ ${diffLabel}：${Math.abs(Math.round(diffVal))} 萬`;
+      kpiDetailPersonal.innerHTML = `<span>目標：${metrics.salesTarget || "810"} 萬</span> <span>｜</span> <span>實績：${metrics.salesActual || "802"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(Math.round(diffVal))} 萬</span>`;
     }
 
     const kpiBarPersonal = document.getElementById("kpiBarPersonal");
     if (kpiBarPersonal) {
-      const rateNum = metrics.salesRateNum !== undefined ? metrics.salesRateNum : (parseFloat((metrics.salesRate || "0").replace(/%/g, "")) || 0);
-      kpiBarPersonal.style.width = `${Math.min(100, Math.max(0, rateNum))}%`;
+      kpiBarPersonal.className = `fluent-progress-bar ${lightPersonal.barClass}`;
+      kpiBarPersonal.style.width = `${Math.min(100, Math.max(0, ratePersonalNum))}%`;
     }
 
     // 3. 卡片 2：士林伺服 (標題一律為「士林伺服」，無小圖示與括號，底部完整標示目標、實績、差距/超標)
@@ -1817,11 +1836,11 @@ document.addEventListener("DOMContentLoaded", () => {
       kpiValLEB.innerText = metrics.isManager ? (metrics.lebActual || "196") : (metrics.personalLeb || "0.00");
     }
 
+    const rateLEBNum = metrics.lebRateNum || 38;
+    const lightLEB = getTrafficLight(rateLEBNum);
     const kpiTrafficLEB = document.getElementById("kpiTrafficLEB");
     if (kpiTrafficLEB) {
-      const rateNum = metrics.lebRateNum || 38;
-      const light = getTrafficLight(rateNum);
-      kpiTrafficLEB.className = `traffic-light-badge ${light.type}`;
+      kpiTrafficLEB.className = `traffic-light-badge ${lightLEB.type}`;
       kpiTrafficLEB.innerText = metrics.lebRate || "38%";
     }
 
@@ -1829,12 +1848,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (kpiDetailLEB) {
       const diffNum = parseFloat((metrics.lebDiff || "-320").replace(/,/g, ""));
       const diffLabel = diffNum >= 0 ? "超標" : "差距";
-      kpiDetailLEB.innerText = `目標：${metrics.lebTarget || "516"} 萬 ｜ 實績：${metrics.lebActual || "196"} 萬 ｜ ${diffLabel}：${Math.abs(Math.round(diffNum))} 萬`;
+      kpiDetailLEB.innerHTML = `<span>目標：${metrics.lebTarget || "516"} 萬</span> <span>｜</span> <span>實績：${metrics.lebActual || "196"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(Math.round(diffNum))} 萬</span>`;
     }
 
     const kpiBarLEB = document.getElementById("kpiBarLEB");
     if (kpiBarLEB) {
-      kpiBarLEB.style.width = `${Math.min(100, Math.max(0, metrics.lebRateNum || 0))}%`;
+      kpiBarLEB.className = `fluent-progress-bar ${lightLEB.barClass}`;
+      kpiBarLEB.style.width = `${Math.min(100, Math.max(0, rateLEBNum))}%`;
     }
 
     // 4. 卡片 3：士林變頻器 (標題一律為「士林變頻器」，無小圖示與括號，底部完整標示目標、實績、差距/超標)
@@ -1843,11 +1863,11 @@ document.addEventListener("DOMContentLoaded", () => {
       kpiValLNH.innerText = metrics.isManager ? (metrics.lnhActual || "243") : (metrics.personalLnh || "0.00");
     }
 
+    const rateLNHNum = metrics.lnhRateNum || 47;
+    const lightLNH = getTrafficLight(rateLNHNum);
     const kpiTrafficLNH = document.getElementById("kpiTrafficLNH");
     if (kpiTrafficLNH) {
-      const rateNum = metrics.lnhRateNum || 47;
-      const light = getTrafficLight(rateNum);
-      kpiTrafficLNH.className = `traffic-light-badge ${light.type}`;
+      kpiTrafficLNH.className = `traffic-light-badge ${lightLNH.type}`;
       kpiTrafficLNH.innerText = metrics.lnhRate || "47%";
     }
 
@@ -1855,12 +1875,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (kpiDetailLNH) {
       const diffNum = parseFloat((metrics.lnhDiff || "-273").replace(/,/g, ""));
       const diffLabel = diffNum >= 0 ? "超標" : "差距";
-      kpiDetailLNH.innerText = `目標：${metrics.lnhTarget || "516"} 萬 ｜ 實績：${metrics.lnhActual || "243"} 萬 ｜ ${diffLabel}：${Math.abs(diffNum)} 萬`;
+      kpiDetailLNH.innerHTML = `<span>目標：${metrics.lnhTarget || "516"} 萬</span> <span>｜</span> <span>實績：${metrics.lnhActual || "243"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(diffNum)} 萬</span>`;
     }
 
     const kpiBarLNH = document.getElementById("kpiBarLNH");
     if (kpiBarLNH) {
-      kpiBarLNH.style.width = `${Math.min(100, Math.max(0, metrics.lnhRateNum || 0))}%`;
+      kpiBarLNH.className = `fluent-progress-bar ${lightLNH.barClass}`;
+      kpiBarLNH.style.width = `${Math.min(100, Math.max(0, rateLNHNum))}%`;
     }
 
     // 5. 卡片 4：士林PLC (標題一律為「士林PLC」，無小圖示與括號，底部完整標示目標、實績、差距/超標)
@@ -1869,11 +1890,11 @@ document.addEventListener("DOMContentLoaded", () => {
       kpiValPLC.innerText = metrics.isManager ? (metrics.plcActual || "246") : (metrics.personalPlc || "0.00");
     }
 
+    const ratePLCNum = metrics.plcRateNum || 117;
+    const lightPLC = getTrafficLight(ratePLCNum);
     const kpiTrafficPLC = document.getElementById("kpiTrafficPLC");
     if (kpiTrafficPLC) {
-      const rateNum = metrics.plcRateNum || 117;
-      const light = getTrafficLight(rateNum);
-      kpiTrafficPLC.className = `traffic-light-badge ${light.type}`;
+      kpiTrafficPLC.className = `traffic-light-badge ${lightPLC.type}`;
       kpiTrafficPLC.innerText = metrics.plcRate || "117%";
     }
 
@@ -1881,20 +1902,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if (kpiDetailPLC) {
       const diffNum = parseFloat((metrics.plcDiff || "36").replace(/,/g, ""));
       const diffLabel = diffNum >= 0 ? "超標" : "差距";
-      kpiDetailPLC.innerText = `目標：${metrics.plcTarget || "210"} 萬 ｜ 實績：${metrics.plcActual || "246"} 萬 ｜ ${diffLabel}：${Math.abs(diffNum)} 萬`;
+      kpiDetailPLC.innerHTML = `<span>目標：${metrics.plcTarget || "210"} 萬</span> <span>｜</span> <span>實績：${metrics.plcActual || "246"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(diffNum)} 萬</span>`;
     }
 
     const kpiBarPLC = document.getElementById("kpiBarPLC");
     if (kpiBarPLC) {
-      kpiBarPLC.style.width = `${Math.min(100, Math.max(0, metrics.plcRateNum || 0))}%`;
+      kpiBarPLC.className = `fluent-progress-bar ${lightPLC.barClass}`;
+      kpiBarPLC.style.width = `${Math.min(100, Math.max(0, ratePLCNum))}%`;
     }
 
-    // 6. 頂部導覽列業務員名稱與頭像即時連動
+    // 6. 頂部導覽列業務員名稱與頭像即時連動 (去除「(主管)」字樣，維持清爽尊貴風格)
     const currentSalesDisplay = document.getElementById("currentSalesDisplay");
     const headerUserAvatar = document.getElementById("headerUserAvatar");
-    const isManager = (metrics.salesName === "曾維崧" || metrics.isManager);
     if (currentSalesDisplay && metrics.salesName) {
-      currentSalesDisplay.innerText = isManager ? `${metrics.salesName} (主管)` : metrics.salesName;
+      currentSalesDisplay.innerText = metrics.salesName;
     }
     if (headerUserAvatar && metrics.salesName) {
       headerUserAvatar.innerText = metrics.salesName.charAt(0) || "曾";

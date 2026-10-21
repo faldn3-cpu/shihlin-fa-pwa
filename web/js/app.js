@@ -17,21 +17,25 @@ document.addEventListener("DOMContentLoaded", () => {
   let customersCache = [];
 
   // ============================================================================
-  // 1. 頂部即時時鐘 (MM-DD HH:mm) - 確保單行顯示
+  // 1. 頂部即時時鐘 (格式：2026/10/21 下午 04:32) - 支援繁體中文 12 小時制
   // ============================================================================
   const headerClock = document.getElementById("headerClock");
   function updateHeaderClock() {
     const now = new Date();
+    const yyyy = now.getFullYear();
     const mm = String(now.getMonth() + 1).padStart(2, "0");
     const dd = String(now.getDate()).padStart(2, "0");
-    const hh = String(now.getHours()).padStart(2, "0");
+    const hours = now.getHours();
     const min = String(now.getMinutes()).padStart(2, "0");
+    const period = hours >= 12 ? "下午" : "上午";
+    const h12 = hours === 0 ? 12 : (hours > 12 ? hours - 12 : hours);
+    const hh = String(h12).padStart(2, "0");
     if (headerClock) {
-      headerClock.innerText = `${mm}-${dd} ${hh}:${min}`;
+      headerClock.innerText = `${yyyy}/${mm}/${dd} ${period} ${hh}:${min}`;
     }
   }
   updateHeaderClock();
-  setInterval(updateHeaderClock, 15000); // 每 15 秒更新一次分鐘
+  setInterval(updateHeaderClock, 10000); // 每 10 秒即時更新
 
   // ============================================================================
   // 2. 四方格應用程式滑出抽屜導覽 (App Launcher Drawer)

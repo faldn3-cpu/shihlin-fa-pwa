@@ -32,7 +32,7 @@
     </div>
     <div class="top-bar-controls">
       <div class="user-badge">
-        <span id="headerClock" class="clock-display">10-21 13:05</span>
+        <span id="headerClock" class="clock-display">2026/10/21 下午 04:32</span>
         <div class="user-avatar" id="headerUserAvatar" title="目前檢視業務">曾</div>
         <span id="currentSalesDisplay" class="sales-display">曾維崧</span>
       </div>
@@ -604,8 +604,6 @@
               <div class="excel-sheet-title">
                 <svg class="icon-svg" style="color:var(--color-accent); flex-shrink:0;" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
                 <span>【挑戰目標總表】</span>
-                <span id="badgeTargetCount" class="excel-count-badge">空白試算表</span>
-                <span style="font-size:0.75em; color:var(--text-tertiary); font-weight:normal; margin-left:2px;">(右鍵操作/DEL清空)</span>
               </div>
               <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
                 <button id="btnPasteTargetDemo" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">載入範例</button>
@@ -624,8 +622,6 @@
               <div class="excel-sheet-title">
                 <svg class="icon-svg" style="color:var(--color-success); flex-shrink:0;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
                 <span>【產品出貨明細表】</span>
-                <span id="badgeShipmentCount" class="excel-count-badge">空白試算表</span>
-                <span style="font-size:0.75em; color:var(--text-tertiary); font-weight:normal; margin-left:2px;">(右鍵操作/DEL清空)</span>
               </div>
               <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
                 <button id="btnPasteShipmentDemo" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">載入範例</button>
@@ -640,10 +636,7 @@
 
         </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:12px; border-top:1px solid var(--border-light);">
-          <span style="font-size:0.85em; color:var(--text-secondary);">
-            已就緒：左右兩張表格均可自由獨立貼入 Excel 剪貼簿資料
-          </span>
+        <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:16px; padding-top:12px; border-top:1px solid var(--border-light);">
           <button id="btnConfirmTablesReady" type="button" class="fluent-btn primary">
             資料確認
           </button>
@@ -856,14 +849,15 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261021_link_scoreboard"></script>
+  <script src="js/app.js?v=20261021_clock_cleanup"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js')
+        navigator.serviceWorker.register('./sw.js?v=20261021_v102')
           .then(function(reg) {
+            reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);
           })
           .catch(function(err) {

@@ -100,9 +100,9 @@
             <span id="badgeMetric1Rate" class="status-badge success">111.5% 達標</span>
           </div>
 
-          <!-- 個人進度摘要 -->
-          <div class="personal-target-row">
-            <span class="personal-label">個人進度 (<span id="displaySalesNameTarget">曾維崧</span>)：</span>
+          <!-- 個人進度摘要 (支援主管模式免計 vs 個人業務進度) -->
+          <div class="personal-target-row" id="personalTargetRow">
+            <span class="personal-label" id="personalTargetLabel">個人進度 (<span id="displaySalesNameTarget">曾維崧</span>)：</span>
             <span id="displayPersonalRev" class="personal-val">802 萬元 / 目標 810 萬元 (99.0%，尚差 8 萬元)</span>
           </div>
 
@@ -121,15 +121,15 @@
           <span style="font-size:0.95em; font-weight:700; color:var(--text-secondary);">重點自製品目標 (個人業績 ｜ 全區戰況)</span>
         </div>
         <div class="scoreboard-sub-grid">
-          <!-- 自製品 1: LEB 士林伺服 -->
+          <!-- 自製品 1: 士林伺服 (對應代碼 LEB) -->
           <div class="metric-box sub-metric-box">
             <div class="metric-header">
-              <span class="metric-title">LEB (士林伺服)</span>
+              <span class="metric-title" id="titleProdLEB">士林伺服</span>
               <span id="badgeProdLEB" class="status-badge danger">38.0% 落後</span>
             </div>
             <div class="prod-metric-row">
               <div class="prod-personal-block">
-                <span class="prod-sub-label">個人實績</span>
+                <span id="labelPersonalLEB" class="prod-sub-label">個人實績</span>
                 <div id="displayPersonalLEB" class="prod-personal-val">28.2 <span class="unit-text">萬元</span></div>
               </div>
               <div class="prod-team-block">
@@ -143,15 +143,15 @@
             <div id="descProdLEB" class="metric-target-text">全區目標 516 萬 ｜ 差距 320 萬</div>
           </div>
 
-          <!-- 自製品 2: LNH 士林變頻器 -->
+          <!-- 自製品 2: 士林變頻器 (對應代碼 LNH) -->
           <div class="metric-box sub-metric-box">
             <div class="metric-header">
-              <span class="metric-title">LNH (士林變頻器)</span>
+              <span class="metric-title" id="titleProdLNH">士林變頻器</span>
               <span id="badgeProdLNH" class="status-badge danger">47.1% 落後</span>
             </div>
             <div class="prod-metric-row">
               <div class="prod-personal-block">
-                <span class="prod-sub-label">個人實績</span>
+                <span id="labelPersonalLNH" class="prod-sub-label">個人實績</span>
                 <div id="displayPersonalLNH" class="prod-personal-val">4.9 <span class="unit-text">萬元</span></div>
               </div>
               <div class="prod-team-block">
@@ -165,15 +165,15 @@
             <div id="descProdLNH" class="metric-target-text">全區目標 516 萬 ｜ 差距 273 萬</div>
           </div>
 
-          <!-- 自製品 3: 士林 PLC 系列 -->
+          <!-- 自製品 3: 士林PLC (對應代碼 LPB、LPN、LPD 加總) -->
           <div class="metric-box sub-metric-box">
             <div class="metric-header">
-              <span class="metric-title">士林 PLC 系列</span>
+              <span class="metric-title" id="titleProdPLC">士林PLC</span>
               <span id="badgeProdPLC" class="status-badge success">117.1% 達標</span>
             </div>
             <div class="prod-metric-row">
               <div class="prod-personal-block">
-                <span class="prod-sub-label">個人實績</span>
+                <span id="labelPersonalPLC" class="prod-sub-label">個人實績</span>
                 <div id="displayPersonalPLC" class="prod-personal-val">12.0 <span class="unit-text">萬元</span></div>
               </div>
               <div class="prod-team-block">
@@ -556,19 +556,19 @@
           <div class="form-group">
             <label class="form-label" for="selectActiveSales">目前業務身份</label>
             <select id="selectActiveSales" class="form-control">
+              <option value="曾維崧" selected>曾維崧 (主管・全區總覽)</option>
               <option value="曾仁君">曾仁君 (直賣)</option>
-              <option value="曾維崧" selected>曾維崧 (直賣)</option>
+              <option value="何宛茹">何宛茹 (直賣)</option>
               <option value="張何達">張何達 (經銷)</option>
               <option value="葉仁豪">葉仁豪 (經銷)</option>
               <option value="邱文輝">邱文輝 (經銷)</option>
               <option value="溫達仁">溫達仁 (直賣)</option>
               <option value="楊家豪">楊家豪 (直賣)</option>
               <option value="莊富丞">莊富丞 (直賣)</option>
-              <option value="何宛茹">何宛茹 (直賣)</option>
               <option value="張書偉">張書偉 (直賣)</option>
               <option value="黃柏翰">黃柏翰 (直賣)</option>
             </select>
-            <span class="autofill-hint">切換業務後，首頁將即刻切換為該人員的個人目標與自製品出貨實績</span>
+            <span class="autofill-hint">切換業務後，首頁將即刻切換為該人員的個人目標與自製品出貨實績（曾維崧為主管，直接看全區戰況）</span>
           </div>
         </div>
       </div>
@@ -576,6 +576,7 @@
 
     <!-- ====================================================================
          分頁五：管理員目標資料維護 (Admin Targets Panel)
+         支援直接貼上 Excel 資料，自動以「在線 Excel 試算表格子」呈現
          ==================================================================== -->
     <section id="panelAdminTargets" class="hidden">
       <div class="fluent-card">
@@ -586,41 +587,97 @@
             </svg>
             <div>
               <h2 class="card-title">管理員目標資料維護</h2>
-              <p class="card-desc">支援從 Excel 直接複製貼上目標總表與產品別出貨明細，系統一鍵智慧解析</p>
+              <p class="card-desc">支援從 Excel 圈選直接按 Ctrl+V 貼上；自動生成在線 Excel 格子，每一格皆可點擊微調</p>
             </div>
           </div>
           <div style="display:flex; gap:8px;">
-            <button id="btnLoadSampleExcel" type="button" class="fluent-btn">載入 10 月範例資料</button>
+            <button id="btnLoadSampleExcel" type="button" class="fluent-btn">載入 10 月完整 Excel 數據</button>
+            <button id="btnResetAdminDefaults" type="button" class="fluent-btn">恢復預設</button>
           </div>
         </div>
 
-        <form id="formAdminTargets">
-          <!-- 貼上區 1：目標總表 (附圖二) -->
-          <div class="form-group" style="margin-bottom:16px;">
-            <label class="form-label">
-              1. 貼上【當月目標總表】（附圖二格式：含全區與各營業員挑戰目標、實績與自製品目標）
-            </label>
-            <textarea id="textExcelTargets" class="form-control" rows="8" placeholder="請在 Excel 中選取目標總表（包含表頭與數據列），按 Ctrl+C 複製後在此處按 Ctrl+V 貼上..."></textarea>
-            <span class="autofill-hint">系統將自動提取：全區目標、自製品 (LEB/LNH/PLC) 目標與每位業務員的目標與實績</span>
+        <!-- 貼上區塊 (支援整表直接複製貼入) -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:12px; margin-bottom:16px;">
+          <!-- 貼上區 1：目標總表 -->
+          <div class="excel-paste-box">
+            <div class="excel-paste-header">
+              <span style="font-weight:700; font-size:0.92em;">1. 貼上【挑戰目標總表】</span>
+              <span class="excel-tag">支援整張 Excel 複製</span>
+            </div>
+            <textarea id="textExcelTargets" class="form-control excel-textarea" rows="4" placeholder="在 Excel 中圈選目標表（含『北區 10 月挑戰目標 9,300 萬』），按 Ctrl+C 後在此按 Ctrl+V 貼上..."></textarea>
+            <span class="autofill-hint">自動辨識：月份 (10月)、全區目標 (9,300萬)、自製品總目標與業務員目標</span>
           </div>
 
-          <!-- 貼上區 2：產品別出貨明細 (附圖三) -->
-          <div class="form-group" style="margin-bottom:16px;">
-            <label class="form-label">
-              2. 貼上【產品別出貨明細表】（附圖三格式：含營業員、產品別代碼與出貨金額萬元）
-            </label>
-            <textarea id="textExcelShipments" class="form-control" rows="8" placeholder="請在 Excel 樞紐分析表中選取營業員與產品出貨明細，按 Ctrl+C 複製後在此處按 Ctrl+V 貼上..."></textarea>
-            <span class="autofill-hint">系統將自動歸納：每位業務在 LEB (伺服)、LNH (變頻器)、PLC 系列的各自出貨累計金額</span>
+          <!-- 貼上區 2：產品出貨明細表 -->
+          <div class="excel-paste-box">
+            <div class="excel-paste-header">
+              <span style="font-weight:700; font-size:0.92em;">2. 貼上【產品出貨明細表】</span>
+              <span class="excel-tag">樞紐分析表</span>
+            </div>
+            <textarea id="textExcelShipments" class="form-control excel-textarea" rows="4" placeholder="在 Excel 樞紐表中圈選營業員與產品明細，按 Ctrl+C 後在此按 Ctrl+V 貼上..."></textarea>
+            <span class="autofill-hint">自動歸納：LEB ➔ 伺服、LNH ➔ 變頻器、LPB+LPN+LPD ➔ PLC，跨分公司同姓名自動加總</span>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <button id="btnParseAndPopulateGrid" type="button" class="fluent-btn">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
+            一鍵解析並填入下方 Excel 格子
+          </button>
+          <button id="btnSaveExcelGridTop" type="button" class="fluent-btn primary">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+            儲存發布並同步首頁
+          </button>
+        </div>
+
+        <!-- ====================================================================
+             在線 Excel 試算表格子容器 (Online Spreadsheet Grid)
+             ==================================================================== -->
+        <div class="excel-grid-container">
+          <div class="excel-grid-toolbar">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <svg class="icon-svg" style="color:var(--color-success); width:18px; height:18px;" viewBox="0 0 24 24">
+                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/>
+              </svg>
+              <span style="font-weight:700; font-size:1em; color:var(--text-primary);">業務與產品在線試算表 (直接點擊格子修改數字，下方自動加總)</span>
+            </div>
+            <span id="gridMonthSummaryText" style="font-size:0.85em; font-weight:600; color:var(--color-accent);">10 月挑戰目標 (全區目標：9,300 萬)</span>
           </div>
 
-          <div style="display:flex; justify-content:flex-end; gap:8px;">
-            <button id="btnResetAdminDefaults" type="button" class="fluent-btn">重設為初始數據</button>
-            <button type="submit" class="fluent-btn primary">
-              <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
-              解析並發布更新
+          <div class="fluent-table-wrapper" style="max-height: 520px; overflow: auto;">
+            <table class="fluent-table excel-table" id="tableAdminExcelGrid">
+              <thead>
+                <tr>
+                  <th style="min-width:130px;">營業員</th>
+                  <th style="min-width:115px; text-align:right;">全月挑戰目標 (萬)</th>
+                  <th style="min-width:115px; text-align:right;">全月實績累計 (萬)</th>
+                  <th style="min-width:95px; text-align:center;">達成率</th>
+                  <th style="min-width:125px; text-align:right;">士林伺服 (LEB)</th>
+                  <th style="min-width:125px; text-align:right;">士林變頻器 (LNH)</th>
+                  <th style="min-width:145px; text-align:right;">士林PLC (LPB+LPN+LPD)</th>
+                  <th style="width:60px; text-align:center;">操作</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyAdminExcelGrid">
+                <!-- 動態注入各業務資料列 -->
+              </tbody>
+              <tfoot id="tfootAdminExcelGrid">
+                <!-- 動態注入全區合計列 -->
+              </tfoot>
+            </table>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+            <button id="btnAddSalesRow" type="button" class="fluent-btn">
+              + 新增一位業務員
+            </button>
+            <button id="btnSaveExcelGridBottom" type="button" class="fluent-btn primary">
+              <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+              儲存發布並同步首頁
             </button>
           </div>
-        </form>
+        </div>
+
       </div>
     </section>
 

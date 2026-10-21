@@ -912,7 +912,128 @@ textarea.form-control {
   font-size: 0.88em;
   font-weight: 700;
   color: var(--color-accent);
-  margin-bottom: 8px;
+/* ==========================================================================
+   在線 Excel 試算表格子專屬樣式 (Online Spreadsheet Grid Styles)
+   ========================================================================== */
+.excel-paste-box {
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.excel-paste-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.excel-tag {
+  font-size: 0.75em;
+  font-weight: 600;
+  color: var(--color-accent);
+  background-color: var(--color-accent-light);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.excel-textarea {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+
+.excel-grid-container {
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+  background-color: var(--bg-panel);
+  padding: 14px;
+  box-shadow: var(--shadow-card);
+}
+
+.excel-grid-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.excel-table {
+  border: 1px solid var(--border-card);
+}
+
+.excel-table th {
+  background-color: #F0F6FF;
+  color: #104C80;
+  border: 1px solid #D6E4F0;
+  font-weight: 700;
+  padding: 8px 10px;
+}
+
+[data-theme="dark"] .excel-table th {
+  background-color: #213042;
+  color: #8CCBFF;
+  border-color: #2F445C;
+}
+
+.excel-table td {
+  border: 1px solid var(--border-light);
+  padding: 2px 4px;
+}
+
+.excel-cell-input {
+  width: 100%;
+  height: 28px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95em;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 3px;
+  outline: none;
+  transition: all 0.12s ease;
+}
+
+.excel-cell-input.number {
+  text-align: right;
+  font-family: "Segoe UI", Consolas, sans-serif;
+}
+
+.excel-cell-input:hover {
+  border-color: var(--border-light);
+  background-color: var(--bg-hover);
+}
+
+.excel-cell-input:focus {
+  border-color: var(--color-accent);
+  background-color: var(--bg-panel);
+  box-shadow: 0 0 0 2px var(--color-accent-light);
+}
+
+.excel-total-row td {
+  background-color: var(--bg-subtle);
+  font-weight: 700;
+  border-top: 2px solid var(--border-card) !important;
+  color: var(--text-primary);
+  padding: 8px 10px;
+}
+
+.badge-manager {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 0.75em;
+  font-weight: 700;
+  background-color: var(--color-accent-light);
+  color: var(--color-accent);
+  margin-left: 4px;
 }
 
 /* ==========================================================================

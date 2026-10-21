@@ -1284,7 +1284,13 @@ document.addEventListener("DOMContentLoaded", () => {
       ["", "LNK (SD-INV/變頻器配件)", "1.93", "1.93", ""],
       ["", "LNM (三菱變頻器)", "70.36", "70.36", ""],
       ["", "LPB (士林小型PLC)", "11.55", "11.55", ""],
-      ["", "LPC (三菱小型PLC)", "656.16", "656.16", ""]
+      ["", "LPC (三菱小型PLC)", "656.16", "656.16", ""],
+      ["曾仁君-新竹", "LEB (士林伺服)", "65.87", "65.87", ""],
+      ["", "LNH (士林變頻器)", "55.22", "55.22", ""],
+      ["", "LPB (士林小型PLC)", ".06", ".06", ""],
+      ["", "LPN (小型PLC_技提)", "8.97", "8.97", ""],
+      ["", "LPC (三菱小型PLC)", "219.06", "219.06", ""],
+      ["曾仁君-新竹 合計", "", "349.18", "349.18", ""]
     ];
   }
 
@@ -1295,7 +1301,21 @@ document.addEventListener("DOMContentLoaded", () => {
     return cell.toString().trim();
   }
 
+  // 取得達成率紅綠燈狀態 (>=100% 綠燈 🟢 達標, 80%~99.9% 黃燈 🟡 預警, <80% 紅燈 🔴 落後)
+  function getTrafficLight(rate) {
+    const num = parseFloat(rate) || 0;
+    if (num >= 100) {
+      return { type: "success", icon: "🟢", text: "達標" };
+    } else if (num >= 80) {
+      return { type: "warning", icon: "🟡", text: "預警" };
+    } else {
+      return { type: "danger", icon: "🔴", text: "落後" };
+    }
+  }
+
   // 計算特定業務員在出貨明細表中的重點自製品實績 (LEB、LNH、PLC)
+  // 鐵律：嚴格排除三菱產品 (如三菱大型PLC LCA、三菱小型PLC LPC、三菱伺服 LEA、三菱變頻器 LNM)
+  // 鐵律：自動跳過包含「合計」或「總計」的加總列，防止重複計算
   function calculateSalespersonProductShipments(shipmentsMatrix, salesName) {
     const result = { leb: 0, lnh: 0, plc: 0 };
     if (!shipmentsMatrix || !Array.isArray(shipmentsMatrix) || shipmentsMatrix.length === 0 || !salesName) {
@@ -1309,6 +1329,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const col1 = getCellStr(row[1]);
       const colAmtStr = getCellStr(row[2]) || getCellStr(row[3]);
 
+      // 跳過表頭列、包含「合計」或「總計」的加總列，避免重複累計
+      if (col0.includes("合計") || col0.includes("總計") || col1.includes("合計") || col1.includes("總計")) {
+        continue;
+      }
+
       if (col0 && !col0.includes("出貨金額") && !col0.includes("營業員")) {
         currentSales = col0;
       }
@@ -1316,11 +1341,20 @@ document.addEventListener("DOMContentLoaded", () => {
       // 當前列屬於該業務員 (比對業務員姓名，例如「曾仁君」)
       if (currentSales.includes(salesName)) {
         const amt = parseFloat(colAmtStr.replace(/,/g, "")) || 0;
-        if (col1.includes("LEB")) {
+
+        // 1. 士林伺服：僅認列 LEB (排除三菱 LEA)
+        if (col1.includes("LEB") || (col1.includes("士林伺服") && !col1.includes("三菱"))) {
           result.leb += amt;
-        } else if (col1.includes("LNH")) {
+        }
+        // 2. 士林變頻器：僅認列 LNH (排除三菱 LNM)
+        else if (col1.includes("LNH") || (col1.includes("士林變頻器") && !col1.includes("三菱"))) {
           result.lnh += amt;
-        } else if (col1.includes("LPB") || col1.includes("LPC") || col1.includes("LPN") || col1.includes("PLC")) {
+        }
+        // 3. 士林PLC：僅認列 LPB (士林小型PLC)、LPN (小型PLC_技提)、LPD 等士林機種，嚴格排除 LPC (三菱小型PLC) 與 LCA (三菱大型PLC)
+        else if (
+          (col1.includes("LPB") || col1.includes("LPN") || col1.includes("LPD") || col1.includes("士林小型PLC") || col1.includes("小型PLC_技提") || (col1.includes("PLC") && col1.includes("士林"))) &&
+          !col1.includes("LPC") && !col1.includes("LCA") && !col1.includes("三菱")
+        ) {
           result.plc += amt;
         }
       }
@@ -1556,57 +1590,112 @@ document.addEventListener("DOMContentLoaded", () => {
     return metrics;
   }
 
-  // 將解析好的指標即時套用至首頁各戰情卡片與元件
+  // 將解析好的指標即時套用至首頁四大核心大數字戰情卡片與紅綠燈
   function applyScoreboardMetrics(metrics) {
     if (!metrics) return;
 
-    // 1. 主要營收目標標題 (依使用者指定格式：10月業績目標 (年計目標：7,060萬；挑戰目標：9,300萬；堆疊目標：10,452萬))
+    // 1. 頂部月度三大目標與全區摘要列 (清爽俐落)
     const displayMetric1Name = document.getElementById("displayMetric1Name");
     if (displayMetric1Name) {
-      displayMetric1Name.innerText = `${metrics.month || 10}月業績目標 (年計目標：${metrics.annualTarget || "7,060"}萬；挑戰目標：${metrics.totalTarget || "9,300"}萬；堆疊目標：${metrics.stackTarget || "10,452"}萬)`;
+      displayMetric1Name.innerText = `${metrics.month || 10}月業績目標 (年計：${metrics.annualTarget || "7,060"}萬 ｜ 挑戰：${metrics.totalTarget || "9,300"}萬 ｜ 堆疊：${metrics.stackTarget || "10,452"}萬)`;
+    }
+    const displayRegionSummary = document.getElementById("displayRegionSummary");
+    if (displayRegionSummary) {
+      displayRegionSummary.innerText = `🏢 全區實績 ${metrics.totalActual || "10,370"} 萬 (${metrics.totalRate || "112%"} 達標)`;
     }
 
-    const displayMetric1Sub = document.getElementById("displayMetric1Sub");
-    if (displayMetric1Sub) {
-      displayMetric1Sub.innerText = `全區目前實績：${metrics.totalActual} 萬元 (${metrics.diffText}，達成率 ${metrics.totalRate})`;
+    // 2. 卡片 1：個人總營收 (例如曾仁君)
+    const kpiValPersonal = document.getElementById("kpiValPersonal");
+    if (kpiValPersonal) kpiValPersonal.innerText = metrics.salesActual || "802";
+
+    const kpiTrafficPersonal = document.getElementById("kpiTrafficPersonal");
+    if (kpiTrafficPersonal) {
+      const rateNum = parseFloat((metrics.salesRate || "0").replace(/%/g, "")) || 0;
+      const light = getTrafficLight(rateNum);
+      kpiTrafficPersonal.className = `traffic-light-badge ${light.type}`;
+      kpiTrafficPersonal.innerText = `${light.icon} ${metrics.salesRate || "99.0%"}`;
     }
 
-    const badgeMetric1Rate = document.getElementById("badgeMetric1Rate");
-    if (badgeMetric1Rate) {
-      const isSuccess = (metrics.totalRateNum || 0) >= 100;
-      badgeMetric1Rate.className = `status-badge ${isSuccess ? "success" : "danger"}`;
-      badgeMetric1Rate.innerText = `${metrics.totalRate} ${isSuccess ? "達標" : "落後"}`;
+    const kpiDetailPersonal = document.getElementById("kpiDetailPersonal");
+    if (kpiDetailPersonal) {
+      kpiDetailPersonal.innerText = `🎯 目標 ${metrics.salesTarget || "810"} 萬 ｜ ${metrics.salesDiffText || "尚差 8 萬"}`;
     }
 
-    // 全區雙數值：目前實績 vs 挑戰目標 (目標與實際對比更明顯)
-    const displayActualMetric1 = document.getElementById("displayActualMetric1");
-    if (displayActualMetric1) {
-      displayActualMetric1.innerHTML = `${metrics.totalActual} <span class="unit-text">萬元</span>`;
+    const kpiBarPersonal = document.getElementById("kpiBarPersonal");
+    if (kpiBarPersonal) {
+      const rateNum = parseFloat((metrics.salesRate || "0").replace(/%/g, "")) || 0;
+      kpiBarPersonal.style.width = `${Math.min(100, Math.max(0, rateNum))}%`;
     }
 
-    const displayTargetMetric1 = document.getElementById("displayTargetMetric1");
-    if (displayTargetMetric1) {
-      displayTargetMetric1.innerHTML = `${metrics.totalTarget} <span class="unit-text">萬元</span>`;
+    const kpiSalesName = document.getElementById("kpiSalesName");
+    if (kpiSalesName && metrics.salesName) {
+      kpiSalesName.innerText = metrics.salesName;
     }
 
-    const barMetric1Progress = document.getElementById("barMetric1Progress");
-    if (barMetric1Progress) {
-      barMetric1Progress.style.width = `${Math.min(100, metrics.totalRateNum || 100)}%`;
+    // 3. 卡片 2：士林伺服 (LEB)
+    const kpiValLEB = document.getElementById("kpiValLEB");
+    if (kpiValLEB) kpiValLEB.innerText = metrics.personalLeb || "0.00";
+
+    const kpiTrafficLEB = document.getElementById("kpiTrafficLEB");
+    if (kpiTrafficLEB) {
+      const rateNum = metrics.lebRateNum || 38;
+      const light = getTrafficLight(rateNum);
+      kpiTrafficLEB.className = `traffic-light-badge ${light.type}`;
+      kpiTrafficLEB.innerText = `${light.icon} ${metrics.lebRate || "38%"}`;
     }
 
-    // 2. 個人進度摘要 (藍色區塊：個人挑戰目標 810 萬，實績 802 萬)
-    const displaySalesNameTarget = document.getElementById("displaySalesNameTarget");
-    if (displaySalesNameTarget && metrics.salesName) {
-      displaySalesNameTarget.innerText = metrics.salesName;
+    const kpiDetailLEB = document.getElementById("kpiDetailLEB");
+    if (kpiDetailLEB) {
+      kpiDetailLEB.innerText = `🏢 全區 ${metrics.lebActual || "196"} / ${metrics.lebTarget || "516"} 萬 ｜ ${metrics.lebDiffText || "差距 320 萬"}`;
     }
 
-    const displayPersonalRev = document.getElementById("displayPersonalRev");
-    if (displayPersonalRev) {
-      displayPersonalRev.innerHTML = `
-        <span class="stat-badge-pill target">🎯 個人挑戰目標 <strong id="valSalesTarget">${metrics.salesTarget || "810"}</strong> 萬</span>
-        <span class="stat-badge-pill actual">📈 當前實績 <strong id="valSalesActual">${metrics.salesActual || "802"}</strong> 萬</span>
-        <span id="txtSalesDiff" class="stat-rate-text">(達成率 ${metrics.salesRate || "99.0%"}，${metrics.salesDiffText || "尚差 8 萬元"})</span>
-      `;
+    const kpiBarLEB = document.getElementById("kpiBarLEB");
+    if (kpiBarLEB) {
+      kpiBarLEB.style.width = `${Math.min(100, Math.max(0, metrics.lebRateNum || 0))}%`;
+    }
+
+    // 4. 卡片 3：士林變頻器 (LNH)
+    const kpiValLNH = document.getElementById("kpiValLNH");
+    if (kpiValLNH) kpiValLNH.innerText = metrics.personalLnh || "0.00";
+
+    const kpiTrafficLNH = document.getElementById("kpiTrafficLNH");
+    if (kpiTrafficLNH) {
+      const rateNum = metrics.lnhRateNum || 47;
+      const light = getTrafficLight(rateNum);
+      kpiTrafficLNH.className = `traffic-light-badge ${light.type}`;
+      kpiTrafficLNH.innerText = `${light.icon} ${metrics.lnhRate || "47%"}`;
+    }
+
+    const kpiDetailLNH = document.getElementById("kpiDetailLNH");
+    if (kpiDetailLNH) {
+      kpiDetailLNH.innerText = `🏢 全區 ${metrics.lnhActual || "243"} / ${metrics.lnhTarget || "516"} 萬 ｜ ${metrics.lnhDiffText || "差距 273 萬"}`;
+    }
+
+    const kpiBarLNH = document.getElementById("kpiBarLNH");
+    if (kpiBarLNH) {
+      kpiBarLNH.style.width = `${Math.min(100, Math.max(0, metrics.lnhRateNum || 0))}%`;
+    }
+
+    // 5. 卡片 4：士林PLC (LPB+LPN)
+    const kpiValPLC = document.getElementById("kpiValPLC");
+    if (kpiValPLC) kpiValPLC.innerText = metrics.personalPlc || "0.00";
+
+    const kpiTrafficPLC = document.getElementById("kpiTrafficPLC");
+    if (kpiTrafficPLC) {
+      const rateNum = metrics.plcRateNum || 117;
+      const light = getTrafficLight(rateNum);
+      kpiTrafficPLC.className = `traffic-light-badge ${light.type}`;
+      kpiTrafficPLC.innerText = `${light.icon} ${metrics.plcRate || "117%"}`;
+    }
+
+    const kpiDetailPLC = document.getElementById("kpiDetailPLC");
+    if (kpiDetailPLC) {
+      kpiDetailPLC.innerText = `🏢 全區 ${metrics.plcActual || "246"} / ${metrics.plcTarget || "210"} 萬 ｜ ${metrics.plcDiffText || "超標 36 萬"}`;
+    }
+
+    const kpiBarPLC = document.getElementById("kpiBarPLC");
+    if (kpiBarPLC) {
+      kpiBarPLC.style.width = `${Math.min(100, Math.max(0, metrics.plcRateNum || 0))}%`;
     }
 
     // 頂部導覽列業務員名稱同步
@@ -1618,61 +1707,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (headerUserAvatar && metrics.salesName) {
       headerUserAvatar.innerText = metrics.salesName.substring(0, 1);
     }
-
-    // 3. 重點自製品三大目標 (個人實績真實連動，無紀錄顯示 0.00 萬)
-    // LEB
-    const badgeProdLEB = document.getElementById("badgeProdLEB");
-    if (badgeProdLEB) {
-      const ok = (metrics.lebRateNum || 0) >= 100;
-      badgeProdLEB.className = `status-badge ${ok ? "success" : "danger"}`;
-      badgeProdLEB.innerText = `${metrics.lebRate} ${ok ? "達標" : "落後"}`;
-    }
-    const displayPersonalLEB = document.getElementById("displayPersonalLEB");
-    if (displayPersonalLEB) {
-      displayPersonalLEB.innerHTML = `${metrics.personalLeb || "0.00"} <span class="unit-text">萬元</span>`;
-    }
-    const displayTeamLEB = document.getElementById("displayTeamLEB");
-    if (displayTeamLEB) displayTeamLEB.innerText = `${metrics.lebActual} / ${metrics.lebTarget} 萬元`;
-    const barProdLEB = document.getElementById("barProdLEB");
-    if (barProdLEB) barProdLEB.style.width = `${Math.min(100, metrics.lebRateNum || 0)}%`;
-    const descProdLEB = document.getElementById("descProdLEB");
-    if (descProdLEB) descProdLEB.innerText = `🎯 全區目標 ${metrics.lebTarget} 萬 ｜ ${metrics.lebDiffText}`;
-
-    // LNH
-    const badgeProdLNH = document.getElementById("badgeProdLNH");
-    if (badgeProdLNH) {
-      const ok = (metrics.lnhRateNum || 0) >= 100;
-      badgeProdLNH.className = `status-badge ${ok ? "success" : "danger"}`;
-      badgeProdLNH.innerText = `${metrics.lnhRate} ${ok ? "達標" : "落後"}`;
-    }
-    const displayPersonalLNH = document.getElementById("displayPersonalLNH");
-    if (displayPersonalLNH) {
-      displayPersonalLNH.innerHTML = `${metrics.personalLnh || "0.00"} <span class="unit-text">萬元</span>`;
-    }
-    const displayTeamLNH = document.getElementById("displayTeamLNH");
-    if (displayTeamLNH) displayTeamLNH.innerText = `${metrics.lnhActual} / ${metrics.lnhTarget} 萬元`;
-    const barProdLNH = document.getElementById("barProdLNH");
-    if (barProdLNH) barProdLNH.style.width = `${Math.min(100, metrics.lnhRateNum || 0)}%`;
-    const descProdLNH = document.getElementById("descProdLNH");
-    if (descProdLNH) descProdLNH.innerText = `🎯 全區目標 ${metrics.lnhTarget} 萬 ｜ ${metrics.lnhDiffText}`;
-
-    // PLC
-    const badgeProdPLC = document.getElementById("badgeProdPLC");
-    if (badgeProdPLC) {
-      const ok = (metrics.plcRateNum || 0) >= 100;
-      badgeProdPLC.className = `status-badge ${ok ? "success" : "danger"}`;
-      badgeProdPLC.innerText = `${metrics.plcRate} ${ok ? "達標" : "落後"}`;
-    }
-    const displayPersonalPLC = document.getElementById("displayPersonalPLC");
-    if (displayPersonalPLC) {
-      displayPersonalPLC.innerHTML = `${metrics.personalPlc || "0.00"} <span class="unit-text">萬元</span>`;
-    }
-    const displayTeamPLC = document.getElementById("displayTeamPLC");
-    if (displayTeamPLC) displayTeamPLC.innerText = `${metrics.plcActual} / ${metrics.plcTarget} 萬元`;
-    const barProdPLC = document.getElementById("barProdPLC");
-    if (barProdPLC) barProdPLC.style.width = `${Math.min(100, metrics.plcRateNum || 0)}%`;
-    const descProdPLC = document.getElementById("descProdPLC");
-    if (descProdPLC) descProdPLC.innerText = `🎯 全區目標 ${metrics.plcTarget} 萬 ｜ ${metrics.plcDiffText}`;
   }
 
   // 左表載入範例與清空
@@ -1745,7 +1779,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (metrics) {
         applyScoreboardMetrics(metrics);
         localStorage.setItem("shihlin_dashboard_metrics", JSON.stringify(metrics));
-        alert("資料確認完成！\n首頁戰情總覽之全區三大目標 (年計/挑戰/堆疊)、重點自製品進度與個人業務進度已成功同步連動！");
+        alert("資料確認完成！\n首頁戰情總覽之四大核心大數字與紅綠燈狀態已成功同步連動！");
       } else {
         alert("資料已確認！");
       }
@@ -1759,12 +1793,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const savedShipmentsRaw = localStorage.getItem("shihlin_pasted_shipments_raw");
   renderExcelGrid(tablePastedShipments, savedShipmentsRaw || "", 25, 5, badgeShipmentCount);
 
-  // 初始載入戰情看板指標 (優先自 localStorage 讀取，若為舊格式或無快取則自動以最新邏輯重新解析)
+  // 初始載入戰情看板指標 (優先自 localStorage 讀取，若為舊格式或誤算數據則自動以最新邏輯重新解析)
   const savedDashboardMetrics = localStorage.getItem("shihlin_dashboard_metrics");
   if (savedDashboardMetrics) {
     try {
       const parsed = JSON.parse(savedDashboardMetrics);
-      if (!parsed.stackTarget || parsed.totalTarget === "7,060" || parsed.annualTarget === parsed.totalTarget) {
+      if (!parsed.stackTarget || parsed.totalTarget === "7,060" || parsed.annualTarget === parsed.totalTarget || !parsed.personalPlc || parsed.personalPlc === "0.00" || parsed.personalPlc === "228.09") {
         const currentGrid = (tablePastedTargets && tablePastedTargets._gridMatrix) || getSampleTargetsGrid();
         const currentShipments = (tablePastedShipments && tablePastedShipments._gridMatrix) || getSampleShipmentsGrid();
         const refreshed = parseTargetsGridToMetrics(currentGrid, currentShipments);

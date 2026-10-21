@@ -84,7 +84,9 @@ body {
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-/* 頂部系統標題列 */
+/* ==========================================================================
+   頂部系統標題列 (單行精簡化設計 - 永遠同一排)
+   ========================================================================== */
 .office-title-bar {
   min-height: var(--header-height);
   background-color: var(--bg-panel);
@@ -92,84 +94,82 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 16px;
-  gap: 12px;
-  flex-wrap: wrap;
+  padding: 6px 14px;
+  gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow: hidden;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .brand-wrapper {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.launcher-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-primary);
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.launcher-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--color-accent);
+}
+
+.launcher-btn:active {
+  background-color: var(--bg-active);
 }
 
 .brand-title {
-  font-size: 1.15em;
-  font-weight: 600;
+  font-size: 1.1em;
+  font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.2px;
-}
-
-.brand-subtitle {
-  font-size: 0.85em;
-  color: var(--text-tertiary);
-  border-left: 1px solid var(--border-light);
-  padding-left: 10px;
+  white-space: nowrap;
 }
 
 .top-bar-controls {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-/* 外觀模式切換下拉盒 (如圖：淺色 / 深色 / 裝置) */
-.theme-selector-group {
-  display: flex;
-  align-items: center;
   gap: 8px;
-  font-size: 0.9em;
-  color: var(--text-secondary);
-}
-
-.theme-dropdown {
-  height: 32px;
-  min-width: 96px;
-  padding: 0 10px;
-  font-family: inherit;
-  font-size: inherit;
-  font-weight: 500;
-  color: var(--text-primary);
-  background-color: var(--bg-input);
-  border: 1px solid var(--border-card);
-  border-radius: 6px;
-  outline: none;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.theme-dropdown:hover {
-  border-color: var(--color-accent);
-}
-
-.theme-dropdown:focus {
-  border-color: var(--border-focus);
-  box-shadow: 0 0 0 2px var(--color-accent-light);
-}
-
-.theme-dropdown option {
-  background-color: var(--bg-panel);
-  color: var(--text-primary);
-  padding: 6px 10px;
+  flex-shrink: 0;
 }
 
 .user-badge {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-size: 0.9em;
   color: var(--text-secondary);
+}
+
+.clock-display {
+  font-family: "Segoe UI", Consolas, monospace;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  letter-spacing: -0.2px;
+  background-color: var(--bg-subtle);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border-light);
 }
 
 .user-avatar {
@@ -182,49 +182,140 @@ body {
   align-items: center;
   justify-content: center;
   font-weight: bold;
+  font-size: 12px;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 103, 192, 0.2);
 }
 
-/* 導覽列 */
-.office-nav-ribbon {
-  background-color: var(--bg-panel);
-  border-bottom: 1px solid var(--border-light);
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
-  gap: 4px;
-  overflow-x: auto;
+.sales-display {
+  font-size: 0.88em;
+  font-weight: 600;
+  color: var(--text-primary);
   white-space: nowrap;
 }
 
-.ribbon-tab {
+/* ==========================================================================
+   四方格應用程式滑出抽屜選單 (App Launcher Drawer)
+   ========================================================================== */
+.drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 999;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.drawer-overlay.hidden {
+  display: none;
+  opacity: 0;
+}
+
+.app-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 270px;
+  max-width: 85vw;
+  height: 100vh;
+  background-color: var(--bg-panel);
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.18);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  animation: drawerSlideIn 0.22s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+
+@keyframes drawerSlideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.drawer-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-light);
+  background-color: var(--bg-subtle);
+}
+
+.drawer-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 1.05em;
+  color: var(--text-primary);
+}
+
+.drawer-nav-list {
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.drawer-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
   padding: 10px 14px;
-  background: transparent;
   border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-secondary);
+  background: transparent;
+  border-radius: 6px;
   font-family: inherit;
   font-size: 0.95em;
   font-weight: 500;
-  cursor: pointer;
-  transition: all 0.1s ease;
-  flex-shrink: 0;
-}
-
-.ribbon-tab:hover {
   color: var(--text-primary);
-  background-color: var(--bg-hover);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.ribbon-tab.active {
+.drawer-nav-item svg {
+  width: 18px;
+  height: 18px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.drawer-nav-item:hover {
+  background-color: var(--bg-hover);
   color: var(--color-accent);
-  border-bottom-color: var(--color-accent);
+}
+
+.drawer-nav-item:hover svg {
+  color: var(--color-accent);
+}
+
+.drawer-nav-item.active {
+  background-color: var(--color-accent-light);
+  color: var(--color-accent);
   font-weight: 600;
 }
 
-/* 主容器排版 */
+.drawer-nav-item.active svg {
+  color: var(--color-accent);
+}
+
+.drawer-divider {
+  height: 1px;
+  background-color: var(--border-light);
+  margin: 6px 8px;
+}
+
+/* ==========================================================================
+   主容器排版
+   ========================================================================== */
 .main-container {
   max-width: 1400px;
   margin: 16px auto;
@@ -272,7 +363,7 @@ body {
 }
 
 /* ==========================================================================
-   首頁置頂戰情計分板 (Scoreboard Dashboard)
+   首頁置頂戰情目標 (純粹目標與進度看板)
    ========================================================================== */
 .scoreboard-top-banner {
   background-color: var(--bg-panel);
@@ -281,13 +372,6 @@ body {
   box-shadow: var(--shadow-card);
   padding: 16px 20px;
   margin-bottom: 16px;
-}
-
-.scoreboard-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 12px;
 }
 
 .hero-metric-box {
@@ -331,6 +415,33 @@ body {
   white-space: nowrap;
 }
 
+/* 個人戰況進度列 */
+.personal-target-row {
+  background-color: var(--color-accent-light);
+  border: 1px solid rgba(0, 103, 192, 0.18);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.personal-label {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.personal-val {
+  font-size: 0.92em;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+/* 次要目標網格：重點自製品三大挑戰目標 */
 .scoreboard-sub-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -347,20 +458,6 @@ body {
   justify-content: space-between;
 }
 
-.metric-val-row {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin: 4px 0;
-  flex-wrap: nowrap;
-}
-
-.sub-target-text {
-  font-size: 0.85em;
-  color: var(--text-tertiary);
-  white-space: nowrap;
-}
-
 .metric-box {
   background-color: var(--bg-subtle);
   border: 1px solid var(--border-light);
@@ -375,49 +472,85 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .metric-title {
-  font-size: 0.9em;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.metric-val-main {
-  font-size: 1.5em;
+  font-size: 0.92em;
   font-weight: 700;
-  font-family: monospace;
   color: var(--text-primary);
 }
 
 .metric-target-text {
   font-size: 0.8em;
   color: var(--text-tertiary);
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
-/* 紅黃綠燈號標籤 */
-.lamp-badge {
+/* 自製品卡片雙軌指標排版 */
+.prod-metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin: 8px 0 6px;
+  gap: 8px;
+}
+
+.prod-personal-block, .prod-team-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.prod-sub-label {
+  font-size: 0.75em;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.prod-personal-val {
+  font-size: 1.35em;
+  font-weight: 700;
+  color: var(--color-accent);
+  font-family: "Segoe UI", -apple-system, sans-serif;
+  white-space: nowrap;
+}
+
+.prod-team-val {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* 嚴格去 Emoji 之純文字狀態號誌 */
+.status-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 2px 8px;
-  border-radius: 12px;
+  padding: 3px 8px;
+  border-radius: 4px;
   font-size: 0.8em;
   font-weight: 600;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
 }
-.lamp-badge.green {
-  background-color: rgba(16, 124, 65, 0.15);
+
+.status-badge.success {
+  background-color: rgba(16, 124, 65, 0.12);
   color: var(--color-success);
+  border: 1px solid rgba(16, 124, 65, 0.25);
 }
-.lamp-badge.yellow {
-  background-color: rgba(252, 225, 0, 0.2);
-  color: #B06000;
+
+.status-badge.warning {
+  background-color: rgba(121, 118, 115, 0.12);
+  color: var(--color-warning);
+  border: 1px solid rgba(121, 118, 115, 0.25);
 }
-.lamp-badge.red {
-  background-color: rgba(168, 0, 0, 0.15);
+
+.status-badge.danger {
+  background-color: rgba(168, 0, 0, 0.12);
   color: var(--color-danger);
+  border: 1px solid rgba(168, 0, 0, 0.25);
 }
 
 /* 進度條 */
@@ -427,8 +560,9 @@ body {
   background-color: var(--border-light);
   border-radius: 3px;
   overflow: hidden;
-  margin-top: 8px;
+  margin-top: 6px;
 }
+
 .fluent-progress-bar {
   height: 100%;
   background-color: var(--color-accent);
@@ -441,7 +575,7 @@ body {
    ========================================================================== */
 .action-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -664,7 +798,7 @@ textarea.form-control {
   background-color: var(--bg-hover);
 }
 
-/* 狀態徽章 */
+/* 狀態徽章 (純文字) */
 .status-pill {
   display: inline-block;
   padding: 2px 8px;
@@ -681,8 +815,8 @@ textarea.form-control {
   color: var(--color-success);
 }
 .status-pill.warning {
-  background-color: rgba(252, 225, 0, 0.2);
-  color: #B06000;
+  background-color: rgba(121, 118, 115, 0.15);
+  color: #797673;
 }
 
 .icon-svg {
@@ -790,11 +924,21 @@ textarea.form-control {
   }
 
   .office-title-bar {
-    padding: 8px 12px;
+    padding: 6px 10px;
+    gap: 6px;
   }
 
-  .brand-subtitle {
-    display: none; /* 手機隱藏副標題，保留精華空間 */
+  .brand-title {
+    font-size: 1em;
+  }
+
+  .sales-display {
+    display: none; /* 手機端隱藏文字姓名，保留頭像 [曾] 與時間以防換行 */
+  }
+
+  .clock-display {
+    font-size: 0.8em;
+    padding: 2px 4px;
   }
 
   .main-container {
@@ -814,17 +958,15 @@ textarea.form-control {
     grid-column: 1 / -1 !important;
   }
 
-  .scoreboard-grid {
-    gap: 8px;
+  .personal-target-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
   }
 
   .scoreboard-sub-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
-
-  .scoreboard-sub-grid .metric-box:last-child {
-    grid-column: 1 / -1;
+    grid-template-columns: 1fr; /* 手機端 3 個自製品上下排，清爽好閱讀 */
+    gap: 10px;
   }
 
   .hero-metric-box {
@@ -836,16 +978,16 @@ textarea.form-control {
   }
 
   .sub-metric-box {
-    padding: 8px 10px;
+    padding: 10px 12px;
   }
 
   .action-grid {
-    grid-template-columns: repeat(2, 1fr); /* 手機快捷按鈕 2x2 排列 */
+    grid-template-columns: 1fr;
     gap: 8px;
   }
 
   .action-card-btn {
-    padding: 10px;
+    padding: 10px 12px;
   }
 
   .fluent-btn {
@@ -854,13 +996,12 @@ textarea.form-control {
 }
 
 @media (max-width: 480px) {
-  .scoreboard-sub-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
+  .brand-title {
+    font-size: 0.92em;
   }
 
-  .hero-val-row {
-    gap: 6px;
+  .clock-display {
+    font-size: 0.76em;
   }
 
   .hero-val {
@@ -869,13 +1010,5 @@ textarea.form-control {
 
   .hero-target-text {
     font-size: 0.8em;
-  }
-
-  .metric-val-main {
-    font-size: 1.25em;
-  }
-
-  .action-grid {
-    grid-template-columns: 1fr; /* 超小手機單欄排列 */
   }
 }

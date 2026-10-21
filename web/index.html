@@ -19,58 +19,67 @@
 </head>
 <body>
 
-  <!-- 頂部系統標題列 (Office Title Bar) -->
+  <!-- 頂部系統標題列 (Office Title Bar - 單行精簡化) -->
   <header class="office-title-bar">
     <div class="brand-wrapper">
-      <!-- 簡潔單色線條 Logo SVG (微軟風格) -->
-      <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
-        <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z"/>
-      </svg>
-      <span class="brand-title">士林電機 FA 業務戰情與報價系統</span>
-      <span class="brand-subtitle">PWA 企業整合版</span>
+      <!-- 微軟四方格應用程式啟動按鈕 (App Launcher Button) -->
+      <button id="btnAppLauncher" class="launcher-btn" type="button" title="開啟系統功能選單" aria-label="系統功能選單">
+        <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24">
+          <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z"/>
+        </svg>
+      </button>
+      <span class="brand-title">士林電機 FA 業務系統</span>
     </div>
     <div class="top-bar-controls">
-      <!-- 外觀顯示模式下拉選單 (如圖：裝置 / 淺色 / 深色) -->
-      <div class="theme-selector-group">
-        <label for="selectThemeMode">模式</label>
-        <select id="selectThemeMode" class="theme-dropdown" title="切換外觀顯示模式">
-          <option value="auto">裝置</option>
-          <option value="light">淺色</option>
-          <option value="dark">深色</option>
-        </select>
-      </div>
-
       <div class="user-badge">
-        <span id="headerClock" style="font-family: monospace;">2026-10-20</span>
-        <div class="user-avatar" title="目前登入業務">曾</div>
-        <span id="currentSalesDisplay" style="font-weight: 600;">曾維崧</span>
+        <span id="headerClock" class="clock-display">10-21 13:05</span>
+        <div class="user-avatar" id="headerUserAvatar" title="目前檢視業務">曾</div>
+        <span id="currentSalesDisplay" class="sales-display">曾維崧</span>
       </div>
     </div>
   </header>
 
-  <!-- 功能分頁導覽列 (Navigation Ribbon) -->
-  <nav class="office-nav-ribbon">
-    <button id="navTabHome" class="ribbon-tab active" type="button">
-      <!-- 單色戰情指針圖示 -->
-      <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
-      首頁 (戰情計分板)
-    </button>
-    <button id="navTabCases" class="ribbon-tab" type="button">
-      <!-- 單色文件圖示 -->
-      <svg class="icon-svg" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-      日報與案件管理 (三層漏斗)
-    </button>
-    <button id="navTabQuotes" class="ribbon-tab" type="button">
-      <!-- 單色試算表圖示 -->
-      <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
-      報價單管理
-    </button>
-    <button id="navTabSpecials" class="ribbon-tab" type="button">
-      <!-- 單色標籤圖示 -->
-      <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
-      專案售價申請單
-    </button>
-  </nav>
+  <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
+  <div id="drawerOverlay" class="drawer-overlay hidden">
+    <nav id="appDrawer" class="app-drawer">
+      <div class="drawer-header">
+        <div class="drawer-title-group">
+          <svg class="icon-svg" style="width:18px; height:18px; color:var(--color-accent);" viewBox="0 0 24 24">
+            <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z"/>
+          </svg>
+          <span class="drawer-title">功能選單</span>
+        </div>
+        <button id="btnCloseDrawer" type="button" class="modal-close-btn" title="關閉選單">✕</button>
+      </div>
+      <div class="drawer-nav-list">
+        <button id="navItemHome" class="drawer-nav-item active" type="button">
+          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+          <span>首頁</span>
+        </button>
+        <button id="navItemCases" class="drawer-nav-item" type="button">
+          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+          <span>案件管理</span>
+        </button>
+        <button id="navItemQuotes" class="drawer-nav-item" type="button">
+          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
+          <span>報價單管理</span>
+        </button>
+        <button id="navItemSpecials" class="drawer-nav-item" type="button">
+          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
+          <span>專案單申請</span>
+        </button>
+        <div class="drawer-divider"></div>
+        <button id="navItemSettings" class="drawer-nav-item" type="button">
+          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+          <span>設定</span>
+        </button>
+        <button id="navItemAdminTargets" class="drawer-nav-item" type="button">
+          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+          <span>目標資料維護</span>
+        </button>
+      </div>
+    </nav>
+  </div>
 
   <!-- 主內容容器 -->
   <main class="main-container">
@@ -81,93 +90,101 @@
          ==================================================================== -->
     <section id="panelHome">
       <div class="scoreboard-top-banner">
-        <div class="card-header" style="margin-bottom:8px;">
-          <div class="card-title-group">
-            <svg class="icon-svg" style="color:var(--color-accent); width:20px; height:20px;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-13h-2v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        <!-- 主要目標：當月營收挑戰目標 (全區戰況 vs 個人進度) -->
+        <div class="metric-box hero-metric-box">
+          <div class="metric-header">
             <div>
-              <h2 class="card-title" style="font-size:1.15em;">士林電機 FA 業務戰情計分板</h2>
+              <span id="displayMetric1Name" class="metric-title hero-title">10 月營收挑戰目標</span>
+              <div id="displayMetric1Sub" class="metric-target-text">全區合計：10,370 萬元 / 目標 9,300 萬元 (超標 1,070 萬元)</div>
             </div>
+            <span id="badgeMetric1Rate" class="status-badge success">111.5% 達標</span>
           </div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <button id="btnOpenTargetModal" class="fluent-btn" type="button" title="主管自訂戰情目標">
-              <!-- 單色齒輪圖示 -->
-              <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-              <span>目標設定</span>
-            </button>
-            <span class="lamp-badge green">即時連線</span>
+
+          <!-- 個人進度摘要 -->
+          <div class="personal-target-row">
+            <span class="personal-label">個人進度 (<span id="displaySalesNameTarget">曾維崧</span>)：</span>
+            <span id="displayPersonalRev" class="personal-val">802 萬元 / 目標 810 萬元 (99.0%，尚差 8 萬元)</span>
+          </div>
+
+          <!-- 全區總進度條 -->
+          <div style="display:flex; align-items:baseline; justify-content:space-between; margin:6px 0 4px;">
+            <div id="displayActualMetric1" class="hero-val">10,370 <span class="unit-text">萬元</span></div>
+            <div id="displayTargetMetric1" class="hero-target-text">全區目標 9,300 萬元</div>
+          </div>
+          <div class="fluent-progress-bg" style="height:10px; border-radius:5px;">
+            <div id="barMetric1Progress" class="fluent-progress-bar" style="width: 100%; border-radius:5px;"></div>
           </div>
         </div>
 
-        <!-- 戰情指標卡片網格 -->
-        <div class="scoreboard-grid">
-          <!-- 成果指標：核心業績目標達成率 (單位：萬元) -->
-          <div class="metric-box hero-metric-box">
+        <!-- 次要目標：重點自製品三大挑戰目標 (LEB伺服、LNH變頻器、士林PLC) -->
+        <div style="margin: 14px 0 6px;">
+          <span style="font-size:0.95em; font-weight:700; color:var(--text-secondary);">重點自製品目標 (個人業績 ｜ 全區戰況)</span>
+        </div>
+        <div class="scoreboard-sub-grid">
+          <!-- 自製品 1: LEB 士林伺服 -->
+          <div class="metric-box sub-metric-box">
             <div class="metric-header">
-              <div>
-                <span id="displayMetric1Name" class="metric-title hero-title">年度 / 季度營收成果目標</span>
-                <div id="displayMetric1Sub" class="metric-target-text">季度目標：2,250 萬元 ｜ 差距：398 萬元</div>
+              <span class="metric-title">LEB (士林伺服)</span>
+              <span id="badgeProdLEB" class="status-badge danger">38.0% 落後</span>
+            </div>
+            <div class="prod-metric-row">
+              <div class="prod-personal-block">
+                <span class="prod-sub-label">個人實績</span>
+                <div id="displayPersonalLEB" class="prod-personal-val">28.2 <span class="unit-text">萬元</span></div>
               </div>
-              <span id="badgeMetric1Rate" class="lamp-badge green">82.3% 達標</span>
+              <div class="prod-team-block">
+                <span class="prod-sub-label">全區進度</span>
+                <div id="displayTeamLEB" class="prod-team-val">196 / 516 萬元</div>
+              </div>
             </div>
-            <div class="hero-val-row">
-              <div id="displayActualMetric1" class="metric-val-main hero-val">1,852 <span class="unit-text">萬元</span></div>
-              <div id="displayTargetMetric1" class="hero-target-text">/ 目標 2,250 萬元</div>
+            <div class="fluent-progress-bg">
+              <div id="barProdLEB" class="fluent-progress-bar" style="width: 38%;"></div>
             </div>
-            <!-- 大尺寸圖形化進度條 -->
-            <div class="fluent-progress-bg" style="height:10px; border-radius:5px;">
-              <div id="barMetric1Progress" class="fluent-progress-bar" style="width: 82.3%; border-radius:5px;"></div>
-            </div>
+            <div id="descProdLEB" class="metric-target-text">全區目標 516 萬 ｜ 差距 320 萬</div>
           </div>
 
-          <!-- 下方 3 大驅動指標子網格 (手機端自動並排為緊湊網格) -->
-          <div class="scoreboard-sub-grid">
-            <!-- 驅動指標 1 -->
-            <div class="metric-box sub-metric-box">
-              <div class="metric-header">
-                <span id="displayMetric2Name" class="metric-title">客戶拜訪量 (行動層)</span>
-                <span id="badgeMetric2Rate" class="lamp-badge green">良好</span>
-              </div>
-              <div class="metric-val-row">
-                <div id="displayActualMetric2" class="metric-val-main">28</div>
-                <div id="displayTargetMetric2" class="sub-target-text">/ 目標 25 次</div>
-              </div>
-              <div class="fluent-progress-bg">
-                <div id="barMetric2Progress" class="fluent-progress-bar" style="width: 100%;"></div>
-              </div>
-              <div id="descMetric2Target" class="metric-target-text">達成率 112% ｜ 每月實地拜訪</div>
+          <!-- 自製品 2: LNH 士林變頻器 -->
+          <div class="metric-box sub-metric-box">
+            <div class="metric-header">
+              <span class="metric-title">LNH (士林變頻器)</span>
+              <span id="badgeProdLNH" class="status-badge danger">47.1% 落後</span>
             </div>
+            <div class="prod-metric-row">
+              <div class="prod-personal-block">
+                <span class="prod-sub-label">個人實績</span>
+                <div id="displayPersonalLNH" class="prod-personal-val">4.9 <span class="unit-text">萬元</span></div>
+              </div>
+              <div class="prod-team-block">
+                <span class="prod-sub-label">全區進度</span>
+                <div id="displayTeamLNH" class="prod-team-val">243 / 516 萬元</div>
+              </div>
+            </div>
+            <div class="fluent-progress-bg">
+              <div id="barProdLNH" class="fluent-progress-bar" style="width: 47.1%;"></div>
+            </div>
+            <div id="descProdLNH" class="metric-target-text">全區目標 516 萬 ｜ 差距 273 萬</div>
+          </div>
 
-            <!-- 驅動指標 2 -->
-            <div class="metric-box sub-metric-box">
-              <div class="metric-header">
-                <span id="displayMetric3Name" class="metric-title">新商機挖掘 (CRM 層)</span>
-                <span id="badgeMetric3Rate" class="lamp-badge yellow">預警</span>
-              </div>
-              <div class="metric-val-row">
-                <div id="displayActualMetric3" class="metric-val-main">9</div>
-                <div id="displayTargetMetric3" class="sub-target-text">/ 目標 12 件</div>
-              </div>
-              <div class="fluent-progress-bg">
-                <div id="barMetric3Progress" class="fluent-progress-bar" style="width: 75%;"></div>
-              </div>
-              <div id="descMetric3Target" class="metric-target-text">達成率 75% ｜ 自動化案源</div>
+          <!-- 自製品 3: 士林 PLC 系列 -->
+          <div class="metric-box sub-metric-box">
+            <div class="metric-header">
+              <span class="metric-title">士林 PLC 系列</span>
+              <span id="badgeProdPLC" class="status-badge success">117.1% 達標</span>
             </div>
-
-            <!-- 驅動指標 3 -->
-            <div class="metric-box sub-metric-box">
-              <div class="metric-header">
-                <span id="displayMetric4Name" class="metric-title">進行中 Deal / 標案</span>
-                <span id="badgeMetric4Rate" class="lamp-badge green">活躍</span>
+            <div class="prod-metric-row">
+              <div class="prod-personal-block">
+                <span class="prod-sub-label">個人實績</span>
+                <div id="displayPersonalPLC" class="prod-personal-val">12.0 <span class="unit-text">萬元</span></div>
               </div>
-              <div class="metric-val-row">
-                <div id="displayActualMetric4" class="metric-val-main">6</div>
-                <div id="displayTargetMetric4" class="sub-target-text">/ 目標 8 件</div>
+              <div class="prod-team-block">
+                <span class="prod-sub-label">全區進度</span>
+                <div id="displayTeamPLC" class="prod-team-val">246 / 210 萬元</div>
               </div>
-              <div class="fluent-progress-bg">
-                <div id="barMetric4Progress" class="fluent-progress-bar" style="width: 75%;"></div>
-              </div>
-              <div id="descMetric4Target" class="metric-target-text">達成率 75% ｜ 預估本月推進</div>
             </div>
+            <div class="fluent-progress-bg">
+              <div id="barProdPLC" class="fluent-progress-bar" style="width: 100%;"></div>
+            </div>
+            <div id="descProdPLC" class="metric-target-text">全區目標 210 萬 ｜ 超標 36 萬</div>
           </div>
         </div>
       </div>
@@ -481,6 +498,129 @@
           </div>
         </div>
         <p style="color:var(--text-secondary);">低折讓自動觸發、自動抓取 Deal 競爭情資與成本毛利，將於里程碑 4 啟用！</p>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         分頁四：系統偏好設定 (Settings Panel)
+         ==================================================================== -->
+    <section id="panelSettings" class="hidden">
+      <div class="fluent-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
+              <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+            </svg>
+            <div>
+              <h2 class="card-title">系統偏好設定</h2>
+              <p class="card-desc">個人化顯示外觀、微軟正黑體字型與字級縮放設定</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+          <!-- 外觀模式設定 -->
+          <div class="form-group">
+            <label class="form-label" for="selectThemeMode">外觀顯示模式</label>
+            <select id="selectThemeMode" class="form-control">
+              <option value="auto">跟隨系統 (裝置預設)</option>
+              <option value="light">淺色模式 (商務白)</option>
+              <option value="dark">深色模式 (專業黑)</option>
+            </select>
+            <span class="autofill-hint">隨時切換淺深色外觀，並自動記憶於本地瀏覽器</span>
+          </div>
+
+          <!-- 系統字型設定 -->
+          <div class="form-group">
+            <label class="form-label" for="selectSystemFont">系統字型</label>
+            <select id="selectSystemFont" class="form-control">
+              <option value="jhenghei" selected>微軟正黑體 (Microsoft JhengHei)</option>
+              <option value="system">系統預設無襯線字型 (System Sans-Serif)</option>
+            </select>
+            <span class="autofill-hint">全站遵循微軟 Windows 11 / Office 標準字型規範</span>
+          </div>
+
+          <!-- 字級大小設定 -->
+          <div class="form-group">
+            <label class="form-label" for="selectFontSize">字級大小</label>
+            <select id="selectFontSize" class="form-control">
+              <option value="11pt">精簡模式 (11pt)</option>
+              <option value="12pt" selected>標準模式 (12pt - 系統預設)</option>
+              <option value="13pt">舒適模式 (13pt)</option>
+              <option value="14pt">放大模式 (14pt)</option>
+            </select>
+            <span class="autofill-hint">動態調整全站字體大小，自適應手機螢幕閱讀</span>
+          </div>
+
+          <!-- 目前登入業務切換 (便於測試與主管檢視) -->
+          <div class="form-group">
+            <label class="form-label" for="selectActiveSales">目前業務身份</label>
+            <select id="selectActiveSales" class="form-control">
+              <option value="曾仁君">曾仁君 (直賣)</option>
+              <option value="曾維崧" selected>曾維崧 (直賣)</option>
+              <option value="張何達">張何達 (經銷)</option>
+              <option value="葉仁豪">葉仁豪 (經銷)</option>
+              <option value="邱文輝">邱文輝 (經銷)</option>
+              <option value="溫達仁">溫達仁 (直賣)</option>
+              <option value="楊家豪">楊家豪 (直賣)</option>
+              <option value="莊富丞">莊富丞 (直賣)</option>
+              <option value="何宛茹">何宛茹 (直賣)</option>
+              <option value="張書偉">張書偉 (直賣)</option>
+              <option value="黃柏翰">黃柏翰 (直賣)</option>
+            </select>
+            <span class="autofill-hint">切換業務後，首頁將即刻切換為該人員的個人目標與自製品出貨實績</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         分頁五：管理員目標資料維護 (Admin Targets Panel)
+         ==================================================================== -->
+    <section id="panelAdminTargets" class="hidden">
+      <div class="fluent-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
+              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+            </svg>
+            <div>
+              <h2 class="card-title">管理員目標資料維護</h2>
+              <p class="card-desc">支援從 Excel 直接複製貼上目標總表與產品別出貨明細，系統一鍵智慧解析</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button id="btnLoadSampleExcel" type="button" class="fluent-btn">載入 10 月範例資料</button>
+          </div>
+        </div>
+
+        <form id="formAdminTargets">
+          <!-- 貼上區 1：目標總表 (附圖二) -->
+          <div class="form-group" style="margin-bottom:16px;">
+            <label class="form-label">
+              1. 貼上【當月目標總表】（附圖二格式：含全區與各營業員挑戰目標、實績與自製品目標）
+            </label>
+            <textarea id="textExcelTargets" class="form-control" rows="8" placeholder="請在 Excel 中選取目標總表（包含表頭與數據列），按 Ctrl+C 複製後在此處按 Ctrl+V 貼上..."></textarea>
+            <span class="autofill-hint">系統將自動提取：全區目標、自製品 (LEB/LNH/PLC) 目標與每位業務員的目標與實績</span>
+          </div>
+
+          <!-- 貼上區 2：產品別出貨明細 (附圖三) -->
+          <div class="form-group" style="margin-bottom:16px;">
+            <label class="form-label">
+              2. 貼上【產品別出貨明細表】（附圖三格式：含營業員、產品別代碼與出貨金額萬元）
+            </label>
+            <textarea id="textExcelShipments" class="form-control" rows="8" placeholder="請在 Excel 樞紐分析表中選取營業員與產品出貨明細，按 Ctrl+C 複製後在此處按 Ctrl+V 貼上..."></textarea>
+            <span class="autofill-hint">系統將自動歸納：每位業務在 LEB (伺服)、LNH (變頻器)、PLC 系列的各自出貨累計金額</span>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button id="btnResetAdminDefaults" type="button" class="fluent-btn">重設為初始數據</button>
+            <button type="submit" class="fluent-btn primary">
+              <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+              解析並發布更新
+            </button>
+          </div>
+        </form>
       </div>
     </section>
 

@@ -211,6 +211,126 @@ document.addEventListener("DOMContentLoaded", () => {
     renderHomeDashboard(salesName);
   }
 
+  // 全系統標準業務人員預設排序名單 (Single Source of Truth)
+  const DEFAULT_SALESPERSONS = [
+    { id: "曾維崧", name: "曾維崧", role: "主管・全區總覽", group: "主管" },
+    { id: "曾仁君", name: "曾仁君", role: "直賣", group: "直賣" },
+    { id: "何宛茹", name: "何宛茹", role: "直賣", group: "直賣" },
+    { id: "張何達", name: "張何達", role: "經銷", group: "經銷" },
+    { id: "葉仁豪", name: "葉仁豪", role: "經銷", group: "經銷" },
+    { id: "邱文輝", name: "邱文輝", role: "經銷", group: "經銷" },
+    { id: "溫達仁", name: "溫達仁", role: "直賣", group: "直賣" },
+    { id: "楊家豪", name: "楊家豪", role: "直賣", group: "直賣" },
+    { id: "莊富丞", name: "莊富丞", role: "直賣", group: "直賣" },
+    { id: "張書偉", name: "張書偉", role: "直賣", group: "直賣" },
+    { id: "黃柏翰", name: "黃柏翰", role: "直賣", group: "直賣" }
+  ];
+
+  // 取得當前有效業務人員排序清單 (優先自 localStorage 讀取)
+  function getOrderedSalespersons() {
+    const saved = localStorage.getItem("shihlin_salespersons_order");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {
+        console.warn("讀取業務人員排序失敗，使用預設值：", e);
+      }
+    }
+    return [...DEFAULT_SALESPERSONS];
+  }
+
+  // 儲存業務人員排序清單並即刻驅動全系統下拉選單與排序表
+  function saveSalespersonsOrder(list) {
+    localStorage.setItem("shihlin_salespersons_order", JSON.stringify(list));
+    renderActiveSalesSelectOptions();
+    renderSalespersonOrderTable();
+  }
+
+  // 依據排序設定表動態渲染「目前業務身份」下拉選單
+  function renderActiveSalesSelectOptions() {
+    const selectActiveSales = document.getElementById("selectActiveSales");
+    if (!selectActiveSales) return;
+    const currentVal = selectActiveSales.value || localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+    const list = getOrderedSalespersons();
+    selectActiveSales.innerHTML = "";
+    list.forEach(sales => {
+      const opt = document.createElement("option");
+      opt.value = sales.name;
+      opt.innerText = sales.name === "曾維崧" ? `${sales.name} (主管・全區總覽)` : `${sales.name} (${sales.role || sales.group || "直賣"})`;
+      selectActiveSales.appendChild(opt);
+    });
+    const exists = list.some(s => s.name === currentVal);
+    selectActiveSales.value = exists ? currentVal : (list[0] && list[0].name) || "曾維崧";
+  }
+
+  // 渲染系統偏好設定中的業務人員順序排序維護表
+  function renderSalespersonOrderTable() {
+    const tbody = document.getElementById("tbodySalesOrder");
+    if (!tbody) return;
+    const list = getOrderedSalespersons();
+    tbody.innerHTML = "";
+    list.forEach((sales, idx) => {
+      const tr = document.createElement("tr");
+
+      const tdIndex = document.createElement("td");
+      tdIndex.style.textAlign = "center";
+      tdIndex.style.fontWeight = "600";
+      tdIndex.innerText = (idx + 1).toString();
+
+      const tdName = document.createElement("td");
+      tdName.style.fontWeight = "600";
+      tdName.innerText = sales.name;
+
+      const tdRole = document.createElement("td");
+      tdRole.innerText = sales.role || sales.group || "直賣";
+
+      const tdActions = document.createElement("td");
+      tdActions.style.textAlign = "center";
+
+      const btnUp = document.createElement("button");
+      btnUp.type = "button";
+      btnUp.className = "btn-order-move";
+      btnUp.innerText = "上移 ⬆";
+      btnUp.disabled = (idx === 0);
+      btnUp.onclick = () => {
+        if (idx > 0) {
+          const newList = [...list];
+          const temp = newList[idx - 1];
+          newList[idx - 1] = newList[idx];
+          newList[idx] = temp;
+          saveSalespersonsOrder(newList);
+        }
+      };
+
+      const btnDown = document.createElement("button");
+      btnDown.type = "button";
+      btnDown.className = "btn-order-move";
+      btnDown.innerText = "下移 ⬇";
+      btnDown.disabled = (idx === list.length - 1);
+      btnDown.onclick = () => {
+        if (idx < list.length - 1) {
+          const newList = [...list];
+          const temp = newList[idx + 1];
+          newList[idx + 1] = newList[idx];
+          newList[idx] = temp;
+          saveSalespersonsOrder(newList);
+        }
+      };
+
+      tdActions.appendChild(btnUp);
+      tdActions.appendChild(btnDown);
+
+      tr.appendChild(tdIndex);
+      tr.appendChild(tdName);
+      tr.appendChild(tdRole);
+      tr.appendChild(tdActions);
+      tbody.appendChild(tr);
+    });
+  }
+
   function initSettings() {
     // 1. 外觀主題
     const savedTheme = localStorage.getItem("shihlin_pwa_theme_mode") || "auto";
@@ -252,7 +372,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     applyFontSize(savedSize);
 
-    // 4. 業務身份切換 (預設曾維崧主管)
+    // 4. 動態初始化業務人員排序表與目前業務下拉選單
+    renderActiveSalesSelectOptions();
+    renderSalespersonOrderTable();
+
     const savedSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
     if (selectActiveSales) {
       selectActiveSales.value = savedSales;
@@ -263,6 +386,19 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
     updateActiveSalesUI(savedSales);
+
+    // 5. 恢復預設排序按鈕
+    const btnResetSalesOrder = document.getElementById("btnResetSalesOrder");
+    if (btnResetSalesOrder) {
+      btnResetSalesOrder.addEventListener("click", () => {
+        if (confirm("確定要將業務人員排序恢復為系統預設順序嗎？")) {
+          localStorage.removeItem("shihlin_salespersons_order");
+          renderActiveSalesSelectOptions();
+          renderSalespersonOrderTable();
+          alert("已成功恢復預設業務人員順序！");
+        }
+      });
+    }
   }
 
   // ============================================================================
@@ -1299,15 +1435,15 @@ document.addEventListener("DOMContentLoaded", () => {
     return cell.toString().trim();
   }
 
-  // 取得達成率紅綠燈狀態 (>=100% 綠燈 🟢 達標, 80%~99.9% 黃燈 🟡 預警, <80% 紅燈 🔴 落後)
+  // 取得達成率紅綠燈狀態 (>=100% 綠燈達標, 80%~99.9% 黃燈預警, <80% 紅燈落後)
   function getTrafficLight(rate) {
     const num = parseFloat(rate) || 0;
     if (num >= 100) {
-      return { type: "success", icon: "🟢", text: "達標" };
+      return { type: "success", text: "達標" };
     } else if (num >= 80) {
-      return { type: "warning", icon: "🟡", text: "預警" };
+      return { type: "warning", text: "預警" };
     } else {
-      return { type: "danger", icon: "🔴", text: "落後" };
+      return { type: "danger", text: "落後" };
     }
   }
 
@@ -1629,33 +1765,24 @@ document.addEventListener("DOMContentLoaded", () => {
     return metrics;
   }
 
-  // 將解析好的指標即時套用至首頁四大核心大數字戰情卡片與紅綠燈
+  // 將解析好的指標即時套用至首頁四大核心大數字戰情卡片與紅綠燈 (純淨文字、無小圖示、無全區字樣、完整標示)
   function applyScoreboardMetrics(metrics) {
     if (!metrics) return;
 
-    // 1. 頂部月度三大目標與全區摘要列 (清爽俐落)
+    // 1. 頂部月度三大目標與摘要列 (挑戰目標重點標示，無小圖示，無全區字樣)
     const displayMetric1Name = document.getElementById("displayMetric1Name");
     if (displayMetric1Name) {
-      displayMetric1Name.innerText = `${metrics.month || 10}月業績目標 (年計：${metrics.annualTarget || "7,060"}萬 ｜ 挑戰：${metrics.totalTarget || "9,300"}萬 ｜ 堆疊：${metrics.stackTarget || "10,452"}萬)`;
+      displayMetric1Name.innerHTML = `${metrics.month || 10}月業績目標 (年計目標：${metrics.annualTarget || "7,060"}萬 ｜ <span class="badge-target-highlight">挑戰目標：${metrics.totalTarget || "9,300"}萬</span> ｜ 堆疊目標：${metrics.stackTarget || "10,452"}萬)`;
     }
     const displayRegionSummary = document.getElementById("displayRegionSummary");
     if (displayRegionSummary) {
-      displayRegionSummary.innerText = `🏢 全區實績 ${metrics.totalActual || "10,370"} 萬 (${metrics.totalRate || "112%"} 達標)`;
+      displayRegionSummary.innerText = `實績 ${metrics.totalActual || "10,370"} 萬 (${metrics.totalRate || "112%"} 達標)`;
     }
 
-    // 2. 卡片 1 標題與數值：動態判斷主管全區戰報或個人總業績
+    // 2. 卡片 1：個人總業績 (標題一律為「個人總業績」，無小圖示與括號，底部完整標示目標、實績、差距/超標)
     const kpiCardTitlePersonal = document.getElementById("kpiCardTitlePersonal");
     if (kpiCardTitlePersonal) {
-      if (metrics.isManager) {
-        kpiCardTitlePersonal.innerHTML = `👑 全區營收戰報 (<span id="kpiSalesName">${metrics.salesName || "曾維崧"}</span>・主管)`;
-      } else {
-        kpiCardTitlePersonal.innerHTML = `👤 個人總業績 (<span id="kpiSalesName">${metrics.salesName || "曾仁君"}</span>)`;
-      }
-    } else {
-      const kpiSalesName = document.getElementById("kpiSalesName");
-      if (kpiSalesName && metrics.salesName) {
-        kpiSalesName.innerText = metrics.salesName;
-      }
+      kpiCardTitlePersonal.innerText = "個人總業績";
     }
 
     const kpiValPersonal = document.getElementById("kpiValPersonal");
@@ -1666,13 +1793,16 @@ document.addEventListener("DOMContentLoaded", () => {
       const rateNum = metrics.salesRateNum !== undefined ? metrics.salesRateNum : (parseFloat((metrics.salesRate || "0").replace(/%/g, "")) || 0);
       const light = getTrafficLight(rateNum);
       kpiTrafficPersonal.className = `traffic-light-badge ${light.type}`;
-      kpiTrafficPersonal.innerText = `${light.icon} ${metrics.salesRate || "99.0%"}`;
+      kpiTrafficPersonal.innerText = metrics.salesRate || "99.0%";
     }
 
     const kpiDetailPersonal = document.getElementById("kpiDetailPersonal");
     if (kpiDetailPersonal) {
-      const targetPrefix = metrics.isManager ? "🎯 全區目標 " : "🎯 目標 ";
-      kpiDetailPersonal.innerText = `${targetPrefix}${metrics.salesTarget || "810"} 萬 ｜ ${metrics.salesDiffText || "尚差 8 萬"}`;
+      const sT = parseFloat((metrics.salesTarget || "0").replace(/,/g, ""));
+      const sA = parseFloat((metrics.salesActual || "0").replace(/,/g, ""));
+      const diffVal = metrics.salesDiff ? parseFloat(metrics.salesDiff.replace(/,/g, "")) : (sA - sT);
+      const diffLabel = diffVal >= 0 ? "超標" : "差距";
+      kpiDetailPersonal.innerText = `目標：${metrics.salesTarget || "810"} 萬 ｜ 實績：${metrics.salesActual || "802"} 萬 ｜ ${diffLabel}：${Math.abs(Math.round(diffVal))} 萬`;
     }
 
     const kpiBarPersonal = document.getElementById("kpiBarPersonal");
@@ -1681,25 +1811,25 @@ document.addEventListener("DOMContentLoaded", () => {
       kpiBarPersonal.style.width = `${Math.min(100, Math.max(0, rateNum))}%`;
     }
 
-    // 3. 卡片 2：士林伺服 (LEB)
+    // 3. 卡片 2：士林伺服 (標題一律為「士林伺服」，無小圖示與括號，底部完整標示目標、實績、差距/超標)
     const kpiValLEB = document.getElementById("kpiValLEB");
-    if (kpiValLEB) kpiValLEB.innerText = metrics.personalLeb || "0.00";
+    if (kpiValLEB) {
+      kpiValLEB.innerText = metrics.isManager ? (metrics.lebActual || "196") : (metrics.personalLeb || "0.00");
+    }
 
     const kpiTrafficLEB = document.getElementById("kpiTrafficLEB");
     if (kpiTrafficLEB) {
       const rateNum = metrics.lebRateNum || 38;
       const light = getTrafficLight(rateNum);
       kpiTrafficLEB.className = `traffic-light-badge ${light.type}`;
-      kpiTrafficLEB.innerText = `${light.icon} ${metrics.lebRate || "38%"}`;
+      kpiTrafficLEB.innerText = metrics.lebRate || "38%";
     }
 
     const kpiDetailLEB = document.getElementById("kpiDetailLEB");
     if (kpiDetailLEB) {
-      if (metrics.isManager) {
-        kpiDetailLEB.innerText = `🎯 全區目標 ${metrics.lebTarget || "516"} 萬 ｜ ${metrics.lebDiffText || "差距 320 萬"}`;
-      } else {
-        kpiDetailLEB.innerText = `🏢 全區 ${metrics.lebActual || "196"} / ${metrics.lebTarget || "516"} 萬 ｜ ${metrics.lebDiffText || "差距 320 萬"}`;
-      }
+      const diffNum = parseFloat((metrics.lebDiff || "-320").replace(/,/g, ""));
+      const diffLabel = diffNum >= 0 ? "超標" : "差距";
+      kpiDetailLEB.innerText = `目標：${metrics.lebTarget || "516"} 萬 ｜ 實績：${metrics.lebActual || "196"} 萬 ｜ ${diffLabel}：${Math.abs(Math.round(diffNum))} 萬`;
     }
 
     const kpiBarLEB = document.getElementById("kpiBarLEB");
@@ -1707,25 +1837,25 @@ document.addEventListener("DOMContentLoaded", () => {
       kpiBarLEB.style.width = `${Math.min(100, Math.max(0, metrics.lebRateNum || 0))}%`;
     }
 
-    // 4. 卡片 3：士林變頻器 (LNH)
+    // 4. 卡片 3：士林變頻器 (標題一律為「士林變頻器」，無小圖示與括號，底部完整標示目標、實績、差距/超標)
     const kpiValLNH = document.getElementById("kpiValLNH");
-    if (kpiValLNH) kpiValLNH.innerText = metrics.personalLnh || "0.00";
+    if (kpiValLNH) {
+      kpiValLNH.innerText = metrics.isManager ? (metrics.lnhActual || "243") : (metrics.personalLnh || "0.00");
+    }
 
     const kpiTrafficLNH = document.getElementById("kpiTrafficLNH");
     if (kpiTrafficLNH) {
       const rateNum = metrics.lnhRateNum || 47;
       const light = getTrafficLight(rateNum);
       kpiTrafficLNH.className = `traffic-light-badge ${light.type}`;
-      kpiTrafficLNH.innerText = `${light.icon} ${metrics.lnhRate || "47%"}`;
+      kpiTrafficLNH.innerText = metrics.lnhRate || "47%";
     }
 
     const kpiDetailLNH = document.getElementById("kpiDetailLNH");
     if (kpiDetailLNH) {
-      if (metrics.isManager) {
-        kpiDetailLNH.innerText = `🎯 全區目標 ${metrics.lnhTarget || "516"} 萬 ｜ ${metrics.lnhDiffText || "差距 273 萬"}`;
-      } else {
-        kpiDetailLNH.innerText = `🏢 全區 ${metrics.lnhActual || "243"} / ${metrics.lnhTarget || "516"} 萬 ｜ ${metrics.lnhDiffText || "差距 273 萬"}`;
-      }
+      const diffNum = parseFloat((metrics.lnhDiff || "-273").replace(/,/g, ""));
+      const diffLabel = diffNum >= 0 ? "超標" : "差距";
+      kpiDetailLNH.innerText = `目標：${metrics.lnhTarget || "516"} 萬 ｜ 實績：${metrics.lnhActual || "243"} 萬 ｜ ${diffLabel}：${Math.abs(diffNum)} 萬`;
     }
 
     const kpiBarLNH = document.getElementById("kpiBarLNH");
@@ -1733,25 +1863,25 @@ document.addEventListener("DOMContentLoaded", () => {
       kpiBarLNH.style.width = `${Math.min(100, Math.max(0, metrics.lnhRateNum || 0))}%`;
     }
 
-    // 5. 卡片 4：士林PLC (LPB+LPN)
+    // 5. 卡片 4：士林PLC (標題一律為「士林PLC」，無小圖示與括號，底部完整標示目標、實績、差距/超標)
     const kpiValPLC = document.getElementById("kpiValPLC");
-    if (kpiValPLC) kpiValPLC.innerText = metrics.personalPlc || "0.00";
+    if (kpiValPLC) {
+      kpiValPLC.innerText = metrics.isManager ? (metrics.plcActual || "246") : (metrics.personalPlc || "0.00");
+    }
 
     const kpiTrafficPLC = document.getElementById("kpiTrafficPLC");
     if (kpiTrafficPLC) {
       const rateNum = metrics.plcRateNum || 117;
       const light = getTrafficLight(rateNum);
       kpiTrafficPLC.className = `traffic-light-badge ${light.type}`;
-      kpiTrafficPLC.innerText = `${light.icon} ${metrics.plcRate || "117%"}`;
+      kpiTrafficPLC.innerText = metrics.plcRate || "117%";
     }
 
     const kpiDetailPLC = document.getElementById("kpiDetailPLC");
     if (kpiDetailPLC) {
-      if (metrics.isManager) {
-        kpiDetailPLC.innerText = `🎯 全區目標 ${metrics.plcTarget || "210"} 萬 ｜ ${metrics.plcDiffText || "超標 36 萬"}`;
-      } else {
-        kpiDetailPLC.innerText = `🏢 全區 ${metrics.plcActual || "246"} / ${metrics.plcTarget || "210"} 萬 ｜ ${metrics.plcDiffText || "超標 36 萬"}`;
-      }
+      const diffNum = parseFloat((metrics.plcDiff || "36").replace(/,/g, ""));
+      const diffLabel = diffNum >= 0 ? "超標" : "差距";
+      kpiDetailPLC.innerText = `目標：${metrics.plcTarget || "210"} 萬 ｜ 實績：${metrics.plcActual || "246"} 萬 ｜ ${diffLabel}：${Math.abs(diffNum)} 萬`;
     }
 
     const kpiBarPLC = document.getElementById("kpiBarPLC");

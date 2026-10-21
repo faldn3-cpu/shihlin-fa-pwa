@@ -1160,7 +1160,7 @@ textarea.form-control {
   position: relative;
 }
 
-/* 欄寬拖曳把手 (放在每個 th 最右側邊緣，滑鼠可按住左右拉寬) */
+/* 欄寬拖曳把手 (放在每個 th 最右側邊緣，滑鼠可按住左右拉寬，雙擊可自動適配最佳寬度) */
 .col-resizer {
   position: absolute;
   top: 0;
@@ -1174,30 +1174,6 @@ textarea.form-control {
 
 .col-resizer:hover, .col-resizer.resizing {
   background-color: #107C41;
-}
-
-/* 欄排序快速按鈕 */
-.col-sort-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  color: #8A8886;
-  margin-left: 4px;
-  cursor: pointer;
-  border-radius: 2px;
-  padding: 0 2px;
-  transition: all 0.1s ease;
-}
-
-.col-sort-btn:hover {
-  background-color: #D2D0CE;
-  color: #107C41;
-}
-
-.col-sort-btn.active {
-  color: #107C41;
-  font-weight: bold;
 }
 
 /* 左側 1, 2, 3... 列號標籤 (點擊可選取整列) */

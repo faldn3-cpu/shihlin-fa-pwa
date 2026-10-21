@@ -841,6 +841,15 @@
       <span>刪除此欄</span>
     </div>
     <div class="context-menu-divider"></div>
+    <div class="context-menu-item" id="menuAutoFitCol">
+      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M4 18h2V6H4v12zm14-12v12h2V6h-2zM8 13h8v-2H8v2z"/></svg>
+      <span>自動調整此欄寬度 (可雙擊邊線)</span>
+    </div>
+    <div class="context-menu-item" id="menuAutoFitAllCols">
+      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z"/></svg>
+      <span>自動調整全部欄寬</span>
+    </div>
+    <div class="context-menu-divider"></div>
     <div class="context-menu-item" id="menuClearCell">
       <svg class="icon-svg" style="width:16px; height:16px; color:var(--text-tertiary);" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
       <span>清空內容 / 選取區域 (DEL)</span>
@@ -848,7 +857,7 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261021_rich_excel"></script>
+  <script src="js/app.js?v=20261021_autofit"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>

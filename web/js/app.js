@@ -516,6 +516,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const menuInsertColLeft = document.getElementById("menuInsertColLeft");
   const menuInsertColRight = document.getElementById("menuInsertColRight");
   const menuDeleteCol = document.getElementById("menuDeleteCol");
+  const menuAutoFitCol = document.getElementById("menuAutoFitCol");
+  const menuAutoFitAllCols = document.getElementById("menuAutoFitAllCols");
   const menuClearCell = document.getElementById("menuClearCell");
 
   let activeContextTable = null;
@@ -752,21 +754,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const totalRows = Math.max(tableEl._minRows, dataMatrix.length);
     const totalCols = maxCols;
 
-    // 建立 thead (頂部 A, B, C... 欄標籤，含拖曳欄寬手把與排序按鈕)
+    // 建立 thead (頂部 A, B, C... 欄標籤，含拖曳欄寬與雙擊自動適配把手)
     let theadHtml = `<thead><tr><th class="corner-cell" title="點擊列號或儲存格可按右鍵操作選單，按 DEL 清空"></th>`;
     for (let c = 0; c < totalCols; c++) {
       theadHtml += `
         <th class="col-header" data-col-index="${c}">
           <div class="col-header-content">
             <span class="col-title">${getExcelColName(c)}</span>
-            <span class="col-sort-btn" data-col-index="${c}" title="點擊依此欄升冪/降冪排序">⇅</span>
           </div>
-          <div class="col-resizer" data-col-index="${c}" title="按住拖曳調整欄寬"></div>
+          <div class="col-resizer" data-col-index="${c}" title="拖曳調整欄寬，或雙擊邊界自動最佳化欄寬"></div>
         </th>`;
     }
     theadHtml += "</tr></thead>";
 
-    // 建立 tbody (左側 1, 2, 3... 列號與真實儲存格，完整還原字型、大小、底色與顏色)
+    // 建立 tbody (左側 1, 2, 3... 列號與真實儲存格，完整還原字型、大小、底色與顏色，自動列高撐開)
     let tbodyHtml = "<tbody>";
     for (let r = 0; r < totalRows; r++) {
       tbodyHtml += `<tr data-row-index="${r}"><th class="row-header" title="點擊選取第 ${r + 1} 列 (可點右鍵選單)">${r + 1}</th>`;
@@ -816,8 +817,13 @@ document.addEventListener("DOMContentLoaded", () => {
       tableEl.parentElement.scrollLeft = 0;
     }
 
-    // 綁定儲存格事件、拖曳選取、欄寬調整與排序
+    // 綁定儲存格事件、拖曳選取與欄寬調整
     bindExcelGridEvents(tableEl);
+
+    // 若有資料，自動為所有欄位計算最佳欄寬 (Auto-fit Columns)
+    if (dataMatrix.length > 0) {
+      setTimeout(() => autoFitAllColWidths(tableEl), 10);
+    }
 
     if (badgeEl) {
       if (dataMatrix.length > 0) {
@@ -855,46 +861,45 @@ document.addEventListener("DOMContentLoaded", () => {
     tableEl.querySelectorAll(`td.grid-cell[data-col="${colIdx}"]`).forEach(td => td.classList.add("col-selected"));
   }
 
-  // 依欄位快速排序 (A-Z 或數字升降冪)
-  function sortGridColumn(tableEl, colIdx) {
-    if (!tableEl || !tableEl._gridMatrix || tableEl._gridMatrix.length === 0) return;
-    const matrix = tableEl._gridMatrix;
-    const currentDir = tableEl._sortCol === colIdx && tableEl._sortDir === "asc" ? "desc" : "asc";
-    tableEl._sortCol = colIdx;
-    tableEl._sortDir = currentDir;
+  // 自動計算並調整單一欄位的最佳寬度 (Auto-fit Column Width)
+  function autoFitColWidth(tableEl, colIdx) {
+    if (!tableEl) return;
+    const th = tableEl.querySelector(`th.col-header[data-col-index="${colIdx}"]`);
+    if (!th) return;
 
-    matrix.sort((rowA, rowB) => {
-      let valA = rowA[colIdx];
-      let valB = rowB[colIdx];
-      if (valA && typeof valA === "object") valA = valA.val;
-      if (valB && typeof valB === "object") valB = valB.val;
-      valA = (valA || "").toString().trim();
-      valB = (valB || "").toString().trim();
-
-      const numA = parseFloat(valA.replace(/,/g, "").replace(/%/g, ""));
-      const numB = parseFloat(valB.replace(/,/g, "").replace(/%/g, ""));
-      const isNumA = !isNaN(numA) && !valA.includes("月") && !valA.includes("區");
-      const isNumB = !isNaN(numB) && !valB.includes("月") && !valB.includes("區");
-
-      let cmp = 0;
-      if (isNumA && isNumB) {
-        cmp = numA - numB;
-      } else {
-        cmp = valA.localeCompare(valB, "zh-Hant");
-      }
-      return currentDir === "asc" ? cmp : -cmp;
+    let maxTextLen = 3; // 至少能容納欄標籤 A, B, C
+    const cells = tableEl.querySelectorAll(`td.grid-cell[data-col="${colIdx}"]`);
+    cells.forEach(td => {
+      const text = td.innerText || "";
+      const lines = text.split("\n");
+      lines.forEach(line => {
+        let len = 0;
+        for (let i = 0; i < line.length; i++) {
+          len += line.charCodeAt(i) > 255 ? 2 : 1; // 中文字或全形佔 2 個字元寬度
+        }
+        if (len > maxTextLen) maxTextLen = len;
+      });
     });
 
-    renderExcelGrid(tableEl, matrix, tableEl._minRows, tableEl._minCols, tableEl._badgeEl, true);
-
-    const sortBtn = tableEl.querySelector(`.col-sort-btn[data-col-index="${colIdx}"]`);
-    if (sortBtn) {
-      sortBtn.classList.add("active");
-      sortBtn.innerText = currentDir === "asc" ? "▲" : "▼";
-    }
+    const optimalWidth = Math.max(55, Math.min(420, Math.round(maxTextLen * 8.2 + 22)));
+    th.style.width = `${optimalWidth}px`;
+    th.style.minWidth = `${optimalWidth}px`;
+    th.style.maxWidth = `${optimalWidth}px`;
   }
 
-  // 開啟微軟風格右鍵快顯功能選單 (支援列與欄)
+  // 自動調整整張表格的所有欄寬 (Auto-fit All Column Widths)
+  function autoFitAllColWidths(tableEl) {
+    if (!tableEl) return;
+    const colHeaders = tableEl.querySelectorAll("th.col-header");
+    colHeaders.forEach(th => {
+      const colIdx = parseInt(th.dataset.colIndex, 10);
+      if (!isNaN(colIdx)) {
+        autoFitColWidth(tableEl, colIdx);
+      }
+    });
+  }
+
+  // 開啟微軟風格右鍵快顯功能選單 (支援列、欄與自動適配寬度)
   function openContextMenu(e, tableEl, rowIdx, colIdx, cellEl) {
     if (!excelContextMenu) return;
     activeContextTable = tableEl;
@@ -904,8 +909,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let x = e.clientX;
     let y = e.clientY;
-    const menuWidth = 195;
-    const menuHeight = 240;
+    const menuWidth = 220;
+    const menuHeight = 280;
 
     if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 10;
     if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 10;
@@ -915,7 +920,7 @@ document.addEventListener("DOMContentLoaded", () => {
     excelContextMenu.classList.remove("hidden");
   }
 
-  // 綁定儲存格與列號互動事件 (含拖曳框選、欄寬調整、Tab/Enter 導航與右鍵 contextmenu)
+  // 綁定儲存格與列號互動事件 (含拖曳框選、欄寬調整、雙擊自動適配欄寬、Tab/Enter 導航與右鍵選單)
   function bindExcelGridEvents(tableEl) {
     // 1. 列號點選與右鍵
     const rowHeaders = tableEl.querySelectorAll("th.row-header");
@@ -932,15 +937,11 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-    // 2. 欄標籤點選、排序與拖曳欄寬
+    // 2. 欄標籤點選、拖曳欄寬與雙擊自動適配
     const colHeaders = tableEl.querySelectorAll("th.col-header");
     colHeaders.forEach(th => {
       const colIdx = parseInt(th.dataset.colIndex, 10);
       th.addEventListener("click", (e) => {
-        if (e.target.classList.contains("col-sort-btn")) {
-          sortGridColumn(tableEl, colIdx);
-          return;
-        }
         if (e.target.classList.contains("col-resizer")) return;
         selectGridCol(tableEl, colIdx);
       });
@@ -951,9 +952,17 @@ document.addEventListener("DOMContentLoaded", () => {
         openContextMenu(e, tableEl, -1, colIdx, null);
       });
 
-      // 欄寬拖曳把手
+      // 欄寬拖曳與雙擊把手
       const resizer = th.querySelector(".col-resizer");
       if (resizer) {
+        // 雙擊邊界：自動最佳化該欄欄寬 (就像 Excel 點兩下邊線)
+        resizer.addEventListener("dblclick", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          autoFitColWidth(tableEl, colIdx);
+        });
+
+        // 按住拖曳：手動調整欄寬
         resizer.addEventListener("mousedown", (e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -1163,6 +1172,26 @@ document.addEventListener("DOMContentLoaded", () => {
         if (activeContextTable._minCols > 3) activeContextTable._minCols--;
         renderExcelGrid(activeContextTable, matrix, activeContextTable._minRows, activeContextTable._minCols, activeContextTable._badgeEl, true);
         selectGridCol(activeContextTable, Math.max(0, activeContextCol - 1));
+      }
+      if (excelContextMenu) excelContextMenu.classList.add("hidden");
+    });
+  }
+
+  // 右鍵選單：自動調整此欄寬度
+  if (menuAutoFitCol) {
+    menuAutoFitCol.addEventListener("click", () => {
+      if (activeContextTable && activeContextCol >= 0) {
+        autoFitColWidth(activeContextTable, activeContextCol);
+      }
+      if (excelContextMenu) excelContextMenu.classList.add("hidden");
+    });
+  }
+
+  // 右鍵選單：自動調整全部欄寬
+  if (menuAutoFitAllCols) {
+    menuAutoFitAllCols.addEventListener("click", () => {
+      if (activeContextTable) {
+        autoFitAllColWidths(activeContextTable);
       }
       if (excelContextMenu) excelContextMenu.classList.add("hidden");
     });

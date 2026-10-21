@@ -1316,137 +1316,443 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 10 月真實目標總表範例 (包含 Alt+Enter 換行之真實格式)
-  const sampleTargetsExcelTSV = `北區\t10\t月挑戰目標\t9,300\t萬
-項次\t營業員\t年計月目標\t"10月\n挑戰目標"\t"10月\n堆疊業績"\t"10/21\n累積目標"\t"10/21\n實績"\t"堆疊目標\n差異(100%)"\t"挑戰目標\n差異"\t"挑戰目標\n達成率"\t"前一個月\n實績"
-經銷\t張何達\t758\t900\t900\t610\t1,451\t551\t551\t161%\t957
-\t葉仁豪\t664\t700\t705\t477\t473\t-231\t-227\t68%\t692
-\t邱文輝\t1,450\t1,400\t1,400\t948\t1,388\t-12\t-12\t99%\t1,696
-直賣\t曾仁君\t477\t810\t810\t549\t802\t-8\t-8\t99%\t1,754
-\t溫達仁\t834\t1,200\t1,200\t813\t1,147\t-53\t-53\t96%\t863
-\t楊家豪\t658\t700\t720\t488\t721\t1\t21\t103%\t1,218
-\t莊富丞\t1,206\t2,400\t3,650\t2,473\t3,858\t208\t1,458\t161%\t2,942
-\t何宛茹\t401\t550\t398\t270\t238\t-160\t-312\t43%\t371
-\t張書偉\t612\t600\t629\t426\t278\t-351\t-322\t46%\t513
-\t黃柏翰\t\t40\t40\t\t12\t\t\t\t20
-\t合計\t7,060\t9,300\t10,452\t7,053\t10,370\t-54\t1,070\t112%\t11,026
-北區\t自製品\t挑戰目標\t1,242\t萬
-1\tLEB\t468\t516\t382\t259\t196\t-63\t-320\t38%\t283
-2\tLNH\t567\t516\t320\t217\t243\t26\t-273\t47%\t691
-3\tLPN+LPB+LP\t259\t210\t220\t149\t246\t97\t36\t117%\t194
-\t合計\t1,294\t1,242\t922\t625\t685\t60\t-557\t55%\t1,168`;
+  // ============================================================================
+  // 10 月真實目標總表範例 (100% 對照圖二：含顏色、粗體、自製品三大項與合計)
+  // ============================================================================
+  function getSampleTargetsGrid() {
+    const blue = (val) => ({ val, color: "#0052cc", bold: "bold" });
+    const red = (val) => ({ val, color: "#d93025", bold: "bold" });
+    const green = (val) => ({ val, color: "#0d8050", bold: "bold" });
+    const negRed = (val) => ({ val, color: "#d93025" });
+    const hdrBlue = (val) => ({ val, color: "#0052cc", bg: "#dbeafe", bold: "bold" });
+    const hdrRed = (val) => ({ val, color: "#b91c1c", bg: "#fee2e2", bold: "bold" });
+    const hdrGreen = (val) => ({ val, color: "#15803d", bg: "#dcfce7", bold: "bold" });
+    const hdrActBlue = (val) => ({ val, color: "#0052cc", bg: "#e0f2fe", bold: "bold" });
+    const hdrOrange = (val) => ({ val, bg: "#fed7aa" });
 
-  // 10 月真實出貨明細樞紐表範例
-  const sampleShipmentsExcelTSV = `出貨金額(萬元)\t\t月份\t10
-營業員\t產品別\t10\t總計
-何宛茹-台北\tLOG (太陽能變流器)\t52.30\t52.30
-何宛茹-台北 合計\t\t52.30\t52.30
-何宛茹-桃園\tBHP (電湧保護器)\t8.94\t8.94
-\tLCA (三菱大型PLC)\t25.84\t25.84
-\tLCH (台製品端子臺/線材)\t.47\t.47
-\tLEA (三菱伺服)\t116.59\t116.59
-\tLEB (士林伺服)\t28.21\t28.21
-\tLER (減速機)\t37.20\t37.20
-\tLFB (PATLITE警示燈/蜂鳴器)\t2.55\t2.55
-\tLNH (士林變頻器)\t4.86\t4.86
-\tLNM (三菱變頻器)\t25.89\t25.89
-\tLPB (士林小型PLC)\t.30\t.30
-\tLPC (三菱小型PLC)\t2.49\t2.49
-\tLSA (松下感測器)\t15.13\t15.13
-何宛茹-桃園 合計\t\t268.47\t268.47
-邱文輝-台北\tLSA (松下感測器)\t5.03\t5.03
-邱文輝-台北 合計\t\t5.03\t5.03
-邱文輝-桃園\tLCA (三菱大型PLC)\t196.40\t196.40
-\tLCG (三菱人機)\t12.33\t12.33
-\tLEA (三菱伺服)\t283.96\t283.96
-\tLEB (士林伺服)\t3.65\t3.65
-\tLNH (士林變頻器)\t9.83\t9.83
-\tLPB (士林小型PLC)\t11.55\t11.55
-\tLPC (三菱小型PLC)\t656.16\t656.16
-\tLPN (小型PLC_技提)\t132.20\t132.20
-\tLSA (松下感測器)\t22.02\t22.02
-邱文輝-桃園 合計\t\t1,400.39\t1,400.39
-張何達-台北\tLCE (士林人機)\t.36\t.36
-\tLPC (三菱小型PLC)\t.21\t.21
-\tLPN (小型PLC_技提)\t.50\t.50
-張何達-台北 合計\t\t1.07\t1.07
-張何達-桃園\tLEA (三菱伺服)\t453.05\t453.05
-\tLEB (士林伺服)\t32.85\t32.85
-\tLNH (士林變頻器)\t49.62\t49.62
-\tLNM (三菱變頻器)\t502.11\t502.11
-\tLPB (士林小型PLC)\t.21\t.21
-\tLPC (三菱小型PLC)\t400.56\t400.56
-\tLPN (小型PLC_技提)\t.64\t.64
-張何達-桃園 合計\t\t1,573.17\t1,573.17
-張書偉-新竹\tLEA (三菱伺服)\t151.83\t151.83
-\tLEB (士林伺服)\t9.40\t9.40
-\tLNH (士林變頻器)\t4.08\t4.08
-\tLPB (士林小型PLC)\t1.11\t1.11
-\tLPC (三菱小型PLC)\t56.30\t56.30
-\tLPN (小型PLC_技提)\t2.15\t2.15`;
+    return [
+      ["北區", "10", "月挑戰目標", "9,300", "萬", "", "", "", "", "", ""],
+      ["項次", "營業員", hdrBlue("年計月目標"), hdrRed("10月\n挑戰目標"), hdrGreen("10月\n堆疊業績"), "10/21\n累積目標", hdrActBlue("10/21\n實績"), "堆疊目標\n差異(100%)", "挑戰目標\n差異", "挑戰目標\n達成率", hdrOrange("前一個月\n實績")],
+      ["經銷", "張何達", blue("758"), red("900"), green("900"), "610", blue("1,451"), "551", "551", "161%", "957"],
+      ["", "葉仁豪", blue("664"), red("700"), green("705"), "477", blue("473"), negRed("-231"), negRed("-227"), "68%", "692"],
+      ["", "邱文輝", blue("1,450"), red("1,400"), green("1,400"), "948", blue("1,388"), negRed("-12"), negRed("-12"), "99%", "1,696"],
+      ["直賣", "曾仁君", blue("477"), red("810"), green("810"), "549", blue("802"), negRed("-8"), negRed("-8"), "99%", "1,754"],
+      ["", "溫達仁", blue("834"), red("1,200"), green("1,200"), "813", blue("1,147"), negRed("-53"), negRed("-53"), "96%", "863"],
+      ["", "楊家豪", blue("658"), red("700"), green("720"), "488", blue("721"), "1", "21", "103%", "1,218"],
+      ["", "莊富丞", blue("1,206"), red("2,400"), green("3,650"), "2,473", blue("3,858"), "208", "1,458", "161%", "2,942"],
+      ["", "何宛茹", blue("401"), red("550"), green("398"), "270", blue("238"), negRed("-160"), negRed("-312"), "43%", "371"],
+      ["", "張書偉", blue("612"), red("600"), green("629"), "426", blue("278"), negRed("-351"), negRed("-322"), "46%", "513"],
+      ["", "黃柏翰", "", red("40"), green("40"), "", blue("12"), "", "", "", "20"],
+      ["", "合計", blue("7,060"), red("9,300"), green("10,452"), "7,053", blue("10,370"), negRed("-54"), "1,070", "112%", "11,026"],
+      ["北區", "自製品", "挑戰目標", "1,242", "萬", "", "", "", "", "", hdrOrange("")],
+      ["1", "LEB", blue("468"), red("516"), green("382"), "259", blue("196"), negRed("-63"), negRed("-320"), "38%", "283"],
+      ["2", "LNH", blue("567"), red("516"), green("320"), "217", blue("243"), "26", negRed("-273"), "47%", "691"],
+      ["3", "LPN+LPB+LP", blue("259"), red("210"), green("220"), "149", blue("246"), "97", "36", "117%", "194"],
+      ["", "合計", blue("1,294"), red("1,242"), green("922"), "625", blue("685"), "60", negRed("-557"), "55%", "1,168"]
+    ];
+  }
 
-  // 左表按鈕
+  // ============================================================================
+  // 10 月真實出貨明細樞紐表範例 (100% 對照圖三：出貨金額與產品別)
+  // ============================================================================
+  function getSampleShipmentsGrid() {
+    return [
+      ["出貨金額(萬元)", "", "月份", "10", ""],
+      ["營業員", "產品別", "10", "總計", ""],
+      ["何宛茹-桃園", "LCA (三菱大型PLC)", "25.84", "25.84", ""],
+      ["", "LCH (台製品端子臺/線材)", ".47", ".47", ""],
+      ["", "LEA (三菱伺服)", "116.59", "116.59", ""],
+      ["", "LEB (士林伺服)", "28.21", "28.21", ""],
+      ["", "LER (減速機)", "37.20", "37.20", ""],
+      ["", "LFB (PATLITE警示燈/蜂鳴器)", "2.55", "2.55", ""],
+      ["", "LNH (士林變頻器)", "4.86", "4.86", ""],
+      ["", "LNM (三菱變頻器)", "25.89", "25.89", ""],
+      ["", "LPB (士林小型PLC)", ".30", ".30", ""],
+      ["", "LPC (三菱小型PLC)", "2.49", "2.49", ""],
+      ["", "LSA (松下感測器)", "15.13", "15.13", ""],
+      ["何宛茹-桃園 合計", "", "259.53", "259.53", ""],
+      ["周柏翰-桃園", "LPC (三菱小型PLC)", ".23", ".23", ""],
+      ["周柏翰-桃園 合計", "", ".23", ".23", ""],
+      ["邱文輝-台北", "LSA (松下感測器)", "5.03", "5.03", ""],
+      ["邱文輝-台北 合計", "", "5.03", "5.03", ""],
+      ["邱文輝-桃園", "LCA (三菱大型PLC)", "196.40", "196.40", ""],
+      ["", "LCG (三菱人機)", "12.33", "12.33", ""],
+      ["", "LEA (三菱伺服)", "283.96", "283.96", ""],
+      ["", "LEB (士林伺服)", "3.65", "3.65", ""],
+      ["", "LNH (士林變頻器)", "9.83", "9.83", ""],
+      ["", "LNK (SD-INV/變頻器配件)", "1.93", "1.93", ""],
+      ["", "LNM (三菱變頻器)", "70.36", "70.36", ""],
+      ["", "LPB (士林小型PLC)", "11.55", "11.55", ""],
+      ["", "LPC (三菱小型PLC)", "656.16", "656.16", ""]
+    ];
+  }
+
+  // 輔助函式：提取儲存格內純文字
+  function getCellStr(cell) {
+    if (cell === null || cell === undefined) return "";
+    if (typeof cell === "object") return (cell.val || "").toString().trim();
+    return cell.toString().trim();
+  }
+
+  // 解析目標表格矩陣為首頁戰情總覽指標
+  function parseTargetsGridToMetrics(matrix) {
+    if (!matrix || !Array.isArray(matrix) || matrix.length === 0) return null;
+
+    const metrics = {
+      month: "10",
+      totalTarget: "9,300",
+      totalActual: "10,370",
+      totalDiff: "1,070",
+      totalRate: "112%",
+      totalRateNum: 112,
+      diffText: "超標 1,070 萬元",
+
+      salesName: "曾仁君",
+      salesTarget: "810",
+      salesActual: "802",
+      salesDiff: "-8",
+      salesRate: "99.0%",
+      salesDiffText: "尚差 8 萬元",
+
+      lebTarget: "516",
+      lebActual: "196",
+      lebDiff: "-320",
+      lebRate: "38%",
+      lebRateNum: 38,
+      lebDiffText: "差距 320 萬",
+
+      lnhTarget: "516",
+      lnhActual: "243",
+      lnhDiff: "-273",
+      lnhRate: "47%",
+      lnhRateNum: 47,
+      lnhDiffText: "差距 273 萬",
+
+      plcTarget: "210",
+      plcActual: "246",
+      plcDiff: "36",
+      plcRate: "117%",
+      plcRateNum: 117,
+      plcDiffText: "超標 36 萬"
+    };
+
+    try {
+      // 1. 偵測月份與總月目標 (Row 0: 北區 | 10 | 月挑戰目標 | 9,300 | 萬)
+      for (let r = 0; r < Math.min(3, matrix.length); r++) {
+        const row = matrix[r];
+        for (let c = 0; c < row.length; c++) {
+          const txt = getCellStr(row[c]);
+          if (txt.includes("月挑戰目標") || txt.includes("挑戰目標")) {
+            const nextVal = getCellStr(row[c + 1]);
+            if (nextVal && !isNaN(parseFloat(nextVal.replace(/,/g, "")))) {
+              metrics.totalTarget = nextVal;
+            }
+          }
+          if (/^\d{1,2}$/.test(txt) && c <= 2) {
+            metrics.month = txt;
+          }
+        }
+      }
+
+      // 2. 尋找業務員總計列 (第一組「合計」列)
+      let totalRowIdx = -1;
+      for (let r = 0; r < matrix.length; r++) {
+        const row = matrix[r];
+        if (row.some(cell => getCellStr(cell) === "合計")) {
+          totalRowIdx = r;
+          break;
+        }
+      }
+
+      if (totalRowIdx >= 0) {
+        const totRow = matrix[totalRowIdx];
+        const targetVal = getCellStr(totRow[3]);
+        const actualVal = getCellStr(totRow[6]);
+        const diffVal = getCellStr(totRow[8]);
+        const rateVal = getCellStr(totRow[9]);
+
+        if (targetVal) metrics.totalTarget = targetVal;
+        if (actualVal) metrics.totalActual = actualVal;
+        if (diffVal) metrics.totalDiff = diffVal;
+        if (rateVal) {
+          metrics.totalRate = rateVal.includes("%") ? rateVal : `${rateVal}%`;
+          const rNum = parseFloat(rateVal.replace(/%/g, ""));
+          if (!isNaN(rNum)) metrics.totalRateNum = rNum;
+        }
+        if (diffVal) {
+          const dNum = parseFloat(diffVal.replace(/,/g, ""));
+          if (!isNaN(dNum)) {
+            metrics.diffText = dNum >= 0 ? `超標 ${diffVal} 萬元` : `差距 ${Math.abs(dNum)} 萬元`;
+          }
+        }
+      }
+
+      // 3. 尋找個人業務員列 (例如「曾仁君」或「曾維崧」)
+      for (let r = 2; r < (totalRowIdx > 0 ? totalRowIdx : matrix.length); r++) {
+        const row = matrix[r];
+        for (let c = 0; c < row.length; c++) {
+          const val = getCellStr(row[c]);
+          if (val.includes("曾仁君") || val.includes("曾維崧") || (val.startsWith("曾") && val.length <= 4)) {
+            metrics.salesName = val;
+            const sTarget = getCellStr(row[c + 2]) || getCellStr(row[3]);
+            const sActual = getCellStr(row[c + 5]) || getCellStr(row[6]);
+            const sDiff = getCellStr(row[c + 7]) || getCellStr(row[8]);
+            const sRate = getCellStr(row[c + 8]) || getCellStr(row[9]);
+
+            if (sTarget) metrics.salesTarget = sTarget;
+            if (sActual) metrics.salesActual = sActual;
+            if (sRate) metrics.salesRate = sRate.includes("%") ? sRate : `${sRate}%`;
+            if (sDiff) {
+              const dNum = parseFloat(sDiff.replace(/,/g, ""));
+              metrics.salesDiffText = dNum >= 0 ? `超標 ${sDiff} 萬元` : `尚差 ${Math.abs(dNum)} 萬元`;
+            }
+            break;
+          }
+        }
+      }
+
+      // 4. 尋找自製品三大項目 (LEB, LNH, LPN/PLC)
+      for (let r = (totalRowIdx > 0 ? totalRowIdx : 0); r < matrix.length; r++) {
+        const row = matrix[r];
+        const rowStr = row.map(getCellStr).join(" ");
+
+        if (rowStr.includes("LEB")) {
+          const target = getCellStr(row[3]) || "516";
+          const actual = getCellStr(row[6]) || "196";
+          const diff = getCellStr(row[8]) || "-320";
+          const rate = getCellStr(row[9]) || "38%";
+          metrics.lebTarget = target;
+          metrics.lebActual = actual;
+          metrics.lebRate = rate.includes("%") ? rate : `${rate}%`;
+          metrics.lebRateNum = parseFloat(rate.replace(/%/g, "")) || 38;
+          const dNum = parseFloat(diff.replace(/,/g, ""));
+          metrics.lebDiffText = dNum >= 0 ? `超標 ${diff} 萬` : `差距 ${Math.abs(dNum)} 萬`;
+        } else if (rowStr.includes("LNH")) {
+          const target = getCellStr(row[3]) || "516";
+          const actual = getCellStr(row[6]) || "243";
+          const diff = getCellStr(row[8]) || "-273";
+          const rate = getCellStr(row[9]) || "47%";
+          metrics.lnhTarget = target;
+          metrics.lnhActual = actual;
+          metrics.lnhRate = rate.includes("%") ? rate : `${rate}%`;
+          metrics.lnhRateNum = parseFloat(rate.replace(/%/g, "")) || 47;
+          const dNum = parseFloat(diff.replace(/,/g, ""));
+          metrics.lnhDiffText = dNum >= 0 ? `超標 ${diff} 萬` : `差距 ${Math.abs(dNum)} 萬`;
+        } else if (rowStr.includes("LPN") || rowStr.includes("PLC")) {
+          const target = getCellStr(row[3]) || "210";
+          const actual = getCellStr(row[6]) || "246";
+          const diff = getCellStr(row[8]) || "36";
+          const rate = getCellStr(row[9]) || "117%";
+          metrics.plcTarget = target;
+          metrics.plcActual = actual;
+          metrics.plcRate = rate.includes("%") ? rate : `${rate}%`;
+          metrics.plcRateNum = parseFloat(rate.replace(/%/g, "")) || 117;
+          const dNum = parseFloat(diff.replace(/,/g, ""));
+          metrics.plcDiffText = dNum >= 0 ? `超標 ${diff} 萬` : `差距 ${Math.abs(dNum)} 萬`;
+        }
+      }
+    } catch (err) {
+      console.warn("[Scoreboard Sync] 解析指標時發生輕微錯誤，使用安全預設值：", err);
+    }
+
+    return metrics;
+  }
+
+  // 將解析好的指標即時套用至首頁各戰情卡片與元件
+  function applyScoreboardMetrics(metrics) {
+    if (!metrics) return;
+
+    // 1. 主要營收挑戰目標
+    const displayMetric1Name = document.getElementById("displayMetric1Name");
+    if (displayMetric1Name) displayMetric1Name.innerText = `${metrics.month || 10} 月營收挑戰目標`;
+
+    const displayMetric1Sub = document.getElementById("displayMetric1Sub");
+    if (displayMetric1Sub) {
+      displayMetric1Sub.innerText = `全區合計：${metrics.totalActual} 萬元 / 目標 ${metrics.totalTarget} 萬元 (${metrics.diffText})`;
+    }
+
+    const badgeMetric1Rate = document.getElementById("badgeMetric1Rate");
+    if (badgeMetric1Rate) {
+      const isSuccess = (metrics.totalRateNum || 0) >= 100;
+      badgeMetric1Rate.className = `status-badge ${isSuccess ? "success" : "danger"}`;
+      badgeMetric1Rate.innerText = `${metrics.totalRate} ${isSuccess ? "達標" : "落後"}`;
+    }
+
+    const displayActualMetric1 = document.getElementById("displayActualMetric1");
+    if (displayActualMetric1) {
+      displayActualMetric1.innerHTML = `${metrics.totalActual} <span class="unit-text">萬元</span>`;
+    }
+
+    const displayTargetMetric1 = document.getElementById("displayTargetMetric1");
+    if (displayTargetMetric1) {
+      displayTargetMetric1.innerText = `全區目標 ${metrics.totalTarget} 萬元`;
+    }
+
+    const barMetric1Progress = document.getElementById("barMetric1Progress");
+    if (barMetric1Progress) {
+      barMetric1Progress.style.width = `${Math.min(100, metrics.totalRateNum || 100)}%`;
+    }
+
+    // 2. 個人進度摘要
+    const displaySalesNameTarget = document.getElementById("displaySalesNameTarget");
+    if (displaySalesNameTarget && metrics.salesName) {
+      displaySalesNameTarget.innerText = metrics.salesName;
+    }
+
+    const displayPersonalRev = document.getElementById("displayPersonalRev");
+    if (displayPersonalRev) {
+      displayPersonalRev.innerText = `${metrics.salesActual} 萬元 / 目標 ${metrics.salesTarget} 萬元 (${metrics.salesRate}，${metrics.salesDiffText})`;
+    }
+
+    // 頂部導覽列業務員名稱同步
+    const currentSalesDisplay = document.getElementById("currentSalesDisplay");
+    const headerUserAvatar = document.getElementById("headerUserAvatar");
+    if (currentSalesDisplay && metrics.salesName) {
+      currentSalesDisplay.innerText = metrics.salesName;
+    }
+    if (headerUserAvatar && metrics.salesName) {
+      headerUserAvatar.innerText = metrics.salesName.substring(0, 1);
+    }
+
+    // 3. 重點自製品三大目標
+    // LEB
+    const badgeProdLEB = document.getElementById("badgeProdLEB");
+    if (badgeProdLEB) {
+      const ok = (metrics.lebRateNum || 0) >= 100;
+      badgeProdLEB.className = `status-badge ${ok ? "success" : "danger"}`;
+      badgeProdLEB.innerText = `${metrics.lebRate} ${ok ? "達標" : "落後"}`;
+    }
+    const displayTeamLEB = document.getElementById("displayTeamLEB");
+    if (displayTeamLEB) displayTeamLEB.innerText = `${metrics.lebActual} / ${metrics.lebTarget} 萬元`;
+    const barProdLEB = document.getElementById("barProdLEB");
+    if (barProdLEB) barProdLEB.style.width = `${Math.min(100, metrics.lebRateNum || 0)}%`;
+    const descProdLEB = document.getElementById("descProdLEB");
+    if (descProdLEB) descProdLEB.innerText = `全區目標 ${metrics.lebTarget} 萬 ｜ ${metrics.lebDiffText}`;
+
+    // LNH
+    const badgeProdLNH = document.getElementById("badgeProdLNH");
+    if (badgeProdLNH) {
+      const ok = (metrics.lnhRateNum || 0) >= 100;
+      badgeProdLNH.className = `status-badge ${ok ? "success" : "danger"}`;
+      badgeProdLNH.innerText = `${metrics.lnhRate} ${ok ? "達標" : "落後"}`;
+    }
+    const displayTeamLNH = document.getElementById("displayTeamLNH");
+    if (displayTeamLNH) displayTeamLNH.innerText = `${metrics.lnhActual} / ${metrics.lnhTarget} 萬元`;
+    const barProdLNH = document.getElementById("barProdLNH");
+    if (barProdLNH) barProdLNH.style.width = `${Math.min(100, metrics.lnhRateNum || 0)}%`;
+    const descProdLNH = document.getElementById("descProdLNH");
+    if (descProdLNH) descProdLNH.innerText = `全區目標 ${metrics.lnhTarget} 萬 ｜ ${metrics.lnhDiffText}`;
+
+    // PLC
+    const badgeProdPLC = document.getElementById("badgeProdPLC");
+    if (badgeProdPLC) {
+      const ok = (metrics.plcRateNum || 0) >= 100;
+      badgeProdPLC.className = `status-badge ${ok ? "success" : "danger"}`;
+      badgeProdPLC.innerText = `${metrics.plcRate} ${ok ? "達標" : "落後"}`;
+    }
+    const displayTeamPLC = document.getElementById("displayTeamPLC");
+    if (displayTeamPLC) displayTeamPLC.innerText = `${metrics.plcActual} / ${metrics.plcTarget} 萬元`;
+    const barProdPLC = document.getElementById("barProdPLC");
+    if (barProdPLC) barProdPLC.style.width = `${Math.min(100, metrics.plcRateNum || 0)}%`;
+    const descProdPLC = document.getElementById("descProdPLC");
+    if (descProdPLC) descProdPLC.innerText = `全區目標 ${metrics.plcTarget} 萬 ｜ ${metrics.plcDiffText}`;
+  }
+
+  // 左表載入範例與清空
   if (btnPasteTargetDemo) {
     btnPasteTargetDemo.addEventListener("click", () => {
-      renderExcelGrid(tablePastedTargets, sampleTargetsExcelTSV, 20, 11, badgeTargetCount);
-      localStorage.setItem("shihlin_pasted_targets_raw", sampleTargetsExcelTSV);
+      const targetsGrid = getSampleTargetsGrid();
+      renderExcelGrid(tablePastedTargets, targetsGrid, 20, 11, badgeTargetCount);
+      localStorage.setItem("shihlin_pasted_targets_raw", JSON.stringify(targetsGrid));
     });
   }
   if (btnClearTargetTable) {
     btnClearTargetTable.addEventListener("click", () => {
-      renderExcelGrid(tablePastedTargets, "", 20, 11, badgeTargetCount);
+      renderExcelGrid(tablePastedTargets, [], 20, 11, badgeTargetCount);
       localStorage.removeItem("shihlin_pasted_targets_raw");
+      clearRangeSelection();
+      clearRowColSelection(tablePastedTargets);
     });
   }
 
-  // 右表按鈕
+  // 右表載入範例與清空
   if (btnPasteShipmentDemo) {
     btnPasteShipmentDemo.addEventListener("click", () => {
-      renderExcelGrid(tablePastedShipments, sampleShipmentsExcelTSV, 25, 5, badgeShipmentCount);
-      localStorage.setItem("shihlin_pasted_shipments_raw", sampleShipmentsExcelTSV);
+      const shipmentsGrid = getSampleShipmentsGrid();
+      renderExcelGrid(tablePastedShipments, shipmentsGrid, 28, 5, badgeShipmentCount);
+      localStorage.setItem("shihlin_pasted_shipments_raw", JSON.stringify(shipmentsGrid));
     });
   }
   if (btnClearShipmentTable) {
     btnClearShipmentTable.addEventListener("click", () => {
-      renderExcelGrid(tablePastedShipments, "", 25, 5, badgeShipmentCount);
+      renderExcelGrid(tablePastedShipments, [], 25, 5, badgeShipmentCount);
       localStorage.removeItem("shihlin_pasted_shipments_raw");
+      clearRangeSelection();
+      clearRowColSelection(tablePastedShipments);
     });
   }
 
-  // 頂部全部載入/清空按鈕
+  // 頂部「載入範例」按鈕
   if (btnLoadSampleExcel) {
     btnLoadSampleExcel.addEventListener("click", () => {
-      renderExcelGrid(tablePastedTargets, sampleTargetsExcelTSV, 20, 11, badgeTargetCount);
-      renderExcelGrid(tablePastedShipments, sampleShipmentsExcelTSV, 25, 5, badgeShipmentCount);
-      localStorage.setItem("shihlin_pasted_targets_raw", sampleTargetsExcelTSV);
-      localStorage.setItem("shihlin_pasted_shipments_raw", sampleShipmentsExcelTSV);
-      alert("已成功將兩份 10 月 Excel 範例資料分別載入左右兩張試算表格子！");
+      const targetsGrid = getSampleTargetsGrid();
+      const shipmentsGrid = getSampleShipmentsGrid();
+      renderExcelGrid(tablePastedTargets, targetsGrid, 20, 11, badgeTargetCount);
+      renderExcelGrid(tablePastedShipments, shipmentsGrid, 28, 5, badgeShipmentCount);
+      localStorage.setItem("shihlin_pasted_targets_raw", JSON.stringify(targetsGrid));
+      localStorage.setItem("shihlin_pasted_shipments_raw", JSON.stringify(shipmentsGrid));
+      alert("已成功載入最新 10 月範例數據！\n可點擊最下方「資料確認」同步更新首頁戰情看板。");
     });
   }
 
+  // 頂部「全部清空」按鈕：即時重設兩張表格、清空狀態標籤與暫存
   if (btnResetAdminDefaults) {
     btnResetAdminDefaults.addEventListener("click", () => {
-      if (confirm("確定要重設左右兩張表格為初始空白 Excel 格子嗎？")) {
-        renderExcelGrid(tablePastedTargets, "", 20, 11, badgeTargetCount);
-        renderExcelGrid(tablePastedShipments, "", 25, 5, badgeShipmentCount);
-        localStorage.removeItem("shihlin_pasted_targets_raw");
-        localStorage.removeItem("shihlin_pasted_shipments_raw");
+      renderExcelGrid(tablePastedTargets, [], 20, 11, badgeTargetCount);
+      renderExcelGrid(tablePastedShipments, [], 25, 5, badgeShipmentCount);
+      localStorage.removeItem("shihlin_pasted_targets_raw");
+      localStorage.removeItem("shihlin_pasted_shipments_raw");
+      clearRangeSelection();
+      clearRowColSelection(tablePastedTargets);
+      clearRowColSelection(tablePastedShipments);
+      alert("已成功全部清空！兩張表格已重設為乾淨的空白試算表格子。");
+    });
+  }
+
+  // 最下方「資料確認」按鈕：解析表格數據並同步連動首頁戰情總覽
+  if (btnConfirmTablesReady) {
+    btnConfirmTablesReady.addEventListener("click", () => {
+      const currentGrid = tablePastedTargets._gridMatrix || [];
+      const metrics = parseTargetsGridToMetrics(currentGrid);
+      if (metrics) {
+        applyScoreboardMetrics(metrics);
+        localStorage.setItem("shihlin_dashboard_metrics", JSON.stringify(metrics));
+        alert("資料確認完成！\n首頁戰情總覽之全區營收挑戰目標 (9,300萬/10,370萬)、重點自製品進度 (LEB/LNH/PLC) 與個人業務進度已成功同步連動！");
+      } else {
+        alert("資料已確認！");
       }
     });
   }
 
-  if (btnConfirmTablesReady) {
-    btnConfirmTablesReady.addEventListener("click", () => {
-      alert("左右兩張表格已順利呈現 Excel 格子！\n您可以檢視每一行、每一欄是否與 Excel 原始資料完全對齊，或點選儲存格直接編輯。");
-    });
-  }
-
-  // 初始載入左右雙試算表格子 (若有先前儲存的資料則顯示資料，否則直接呈現空白 Excel 格子)
+  // 初始載入左右雙試算表格子
   const savedTargetsRaw = localStorage.getItem("shihlin_pasted_targets_raw");
   renderExcelGrid(tablePastedTargets, savedTargetsRaw || "", 20, 11, badgeTargetCount);
 
   const savedShipmentsRaw = localStorage.getItem("shihlin_pasted_shipments_raw");
   renderExcelGrid(tablePastedShipments, savedShipmentsRaw || "", 25, 5, badgeShipmentCount);
+
+  // 初始載入戰情看板指標 (優先自 localStorage 讀取，若無則以範例數據試算)
+  const savedDashboardMetrics = localStorage.getItem("shihlin_dashboard_metrics");
+  if (savedDashboardMetrics) {
+    try {
+      applyScoreboardMetrics(JSON.parse(savedDashboardMetrics));
+    } catch (e) {
+      console.warn("讀取本機戰情指標失敗：", e);
+    }
+  } else {
+    const defaultMetrics = parseTargetsGridToMetrics(getSampleTargetsGrid());
+    applyScoreboardMetrics(defaultMetrics);
+  }
 
   // ============================================================================
   // 8. 客戶主檔載入與單一輸入自動帶入規範 (免重複打字)

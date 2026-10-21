@@ -1072,17 +1072,21 @@ textarea.form-control {
   margin-bottom: 8px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border-light);
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: 8px;
 }
 
 .excel-sheet-title {
   font-weight: 700;
-  font-size: 0.95em;
+  font-size: 0.92em;
   color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .excel-paste-prompt {

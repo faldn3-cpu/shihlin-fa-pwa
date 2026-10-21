@@ -586,12 +586,11 @@
               <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/>
             </svg>
             <div>
-              <h2 class="card-title">管理員目標資料維護（左右雙 Excel 接收表格）</h2>
-              <p class="card-desc">請直接在左/右表格內點擊並按 Ctrl+V 貼上 Excel 資料，表格將以原生 Excel 欄列完整呈現</p>
+              <h2 class="card-title">管理員目標資料維護</h2>
             </div>
           </div>
           <div style="display:flex; gap:8px;">
-            <button id="btnLoadSampleExcel" type="button" class="fluent-btn">載入 10 月範例數據</button>
+            <button id="btnLoadSampleExcel" type="button" class="fluent-btn">載入範例</button>
             <button id="btnResetAdminDefaults" type="button" class="fluent-btn">全部清空</button>
           </div>
         </div>
@@ -603,12 +602,12 @@
           <div class="excel-sheet-card">
             <div class="excel-sheet-header">
               <div class="excel-sheet-title">
-                <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-                <span>左表格：【挑戰目標總表】</span>
+                <svg class="icon-svg" style="color:var(--color-accent); flex-shrink:0;" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+                <span>【挑戰目標總表】</span>
                 <span id="badgeTargetCount" class="excel-count-badge">空白試算表</span>
-                <span style="font-size:0.75em; color:var(--text-tertiary); font-weight:normal; margin-left:4px;">(按右鍵插入/刪除列，DEL清空)</span>
+                <span style="font-size:0.75em; color:var(--text-tertiary); font-weight:normal; margin-left:2px;">(右鍵操作/DEL清空)</span>
               </div>
-              <div style="display:flex; gap:6px; align-items:center;">
+              <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
                 <button id="btnPasteTargetDemo" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">載入範例</button>
                 <button id="btnClearTargetTable" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">清空</button>
               </div>
@@ -623,12 +622,12 @@
           <div class="excel-sheet-card">
             <div class="excel-sheet-header">
               <div class="excel-sheet-title">
-                <svg class="icon-svg" style="color:var(--color-success);" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
-                <span>右表格：【產品出貨明細表】</span>
+                <svg class="icon-svg" style="color:var(--color-success); flex-shrink:0;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
+                <span>【產品出貨明細表】</span>
                 <span id="badgeShipmentCount" class="excel-count-badge">空白試算表</span>
-                <span style="font-size:0.75em; color:var(--text-tertiary); font-weight:normal; margin-left:4px;">(按右鍵插入/刪除列，DEL清空)</span>
+                <span style="font-size:0.75em; color:var(--text-tertiary); font-weight:normal; margin-left:2px;">(右鍵操作/DEL清空)</span>
               </div>
-              <div style="display:flex; gap:6px; align-items:center;">
+              <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
                 <button id="btnPasteShipmentDemo" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">載入範例</button>
                 <button id="btnClearShipmentTable" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">清空</button>
               </div>
@@ -646,7 +645,7 @@
             已就緒：左右兩張表格均可自由獨立貼入 Excel 剪貼簿資料
           </span>
           <button id="btnConfirmTablesReady" type="button" class="fluent-btn primary">
-            確認兩張表格內容無誤
+            資料確認
           </button>
         </div>
 
@@ -857,7 +856,7 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261021_rowspan_fix"></script>
+  <script src="js/app.js?v=20261021_link_scoreboard"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>

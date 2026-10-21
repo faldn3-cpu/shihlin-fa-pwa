@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
   
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261021_contextmenu" />
+  <link rel="stylesheet" href="css/style.css?v=20261021_target_sync" />
 </head>
 <body>
 
@@ -94,22 +94,32 @@
         <div class="metric-box hero-metric-box">
           <div class="metric-header">
             <div>
-              <span id="displayMetric1Name" class="metric-title hero-title">10 月營收挑戰目標</span>
-              <div id="displayMetric1Sub" class="metric-target-text">全區合計：10,370 萬元 / 目標 9,300 萬元 (超標 1,070 萬元)</div>
+              <span id="displayMetric1Name" class="metric-title hero-title">10月業績目標 (年計目標：7,060萬；挑戰目標：9,300萬；堆疊目標：10,452萬)</span>
+              <div id="displayMetric1Sub" class="metric-target-text">全區目前實績：10,370 萬元 (超標 1,070 萬元，達成率 112%)</div>
             </div>
-            <span id="badgeMetric1Rate" class="status-badge success">111.5% 達標</span>
+            <span id="badgeMetric1Rate" class="status-badge success">112% 達標</span>
           </div>
 
           <!-- 個人進度摘要 (支援主管模式免計 vs 個人業務進度) -->
           <div class="personal-target-row" id="personalTargetRow">
-            <span class="personal-label" id="personalTargetLabel">個人進度 (<span id="displaySalesNameTarget">曾維崧</span>)：</span>
-            <span id="displayPersonalRev" class="personal-val">802 萬元 / 目標 810 萬元 (99.0%，尚差 8 萬元)</span>
+            <span class="personal-label" id="personalTargetLabel">個人進度 (<span id="displaySalesNameTarget">曾仁君</span>)：</span>
+            <div id="displayPersonalRev" class="personal-val-group">
+              <span class="stat-badge-pill target">🎯 個人挑戰目標 <strong id="valSalesTarget">810</strong> 萬</span>
+              <span class="stat-badge-pill actual">📈 當前實績 <strong id="valSalesActual">802</strong> 萬</span>
+              <span id="txtSalesDiff" class="stat-rate-text">(達成率 99.0%，尚差 8 萬元)</span>
+            </div>
           </div>
 
-          <!-- 全區總進度條 -->
-          <div style="display:flex; align-items:baseline; justify-content:space-between; margin:6px 0 4px;">
-            <div id="displayActualMetric1" class="hero-val">10,370 <span class="unit-text">萬元</span></div>
-            <div id="displayTargetMetric1" class="hero-target-text">全區目標 9,300 萬元</div>
+          <!-- 全區總進度對比 (目標與實際對比加強) -->
+          <div class="hero-val-container">
+            <div class="hero-stat-item">
+              <span class="stat-badge actual">📈 全區目前實績</span>
+              <div id="displayActualMetric1" class="hero-val">10,370 <span class="unit-text">萬元</span></div>
+            </div>
+            <div class="hero-stat-item align-right">
+              <span class="stat-badge target">🎯 全區挑戰目標</span>
+              <div id="displayTargetMetric1" class="hero-target-big">9,300 <span class="unit-text">萬元</span></div>
+            </div>
           </div>
           <div class="fluent-progress-bg" style="height:10px; border-radius:5px;">
             <div id="barMetric1Progress" class="fluent-progress-bar" style="width: 100%; border-radius:5px;"></div>
@@ -118,73 +128,73 @@
 
         <!-- 次要目標：重點自製品三大挑戰目標 (LEB伺服、LNH變頻器、士林PLC) -->
         <div style="margin: 14px 0 6px;">
-          <span style="font-size:0.95em; font-weight:700; color:var(--text-secondary);">重點自製品目標 (個人業績 ｜ 全區戰況)</span>
+          <span style="font-size:0.95em; font-weight:700; color:var(--text-secondary);">重點自製品目標 (個人實績 ｜ 全區戰況)</span>
         </div>
         <div class="scoreboard-sub-grid">
           <!-- 自製品 1: 士林伺服 (對應代碼 LEB) -->
           <div class="metric-box sub-metric-box">
             <div class="metric-header">
               <span class="metric-title" id="titleProdLEB">士林伺服</span>
-              <span id="badgeProdLEB" class="status-badge danger">38.0% 落後</span>
+              <span id="badgeProdLEB" class="status-badge danger">38% 落後</span>
             </div>
             <div class="prod-metric-row">
               <div class="prod-personal-block">
-                <span id="labelPersonalLEB" class="prod-sub-label">個人實績</span>
-                <div id="displayPersonalLEB" class="prod-personal-val">28.2 <span class="unit-text">萬元</span></div>
+                <span id="labelPersonalLEB" class="prod-sub-label">👤 個人實績</span>
+                <div id="displayPersonalLEB" class="prod-personal-val">0.00 <span class="unit-text">萬元</span></div>
               </div>
               <div class="prod-team-block">
-                <span class="prod-sub-label">全區進度</span>
+                <span class="prod-sub-label">🏢 全區實績 / 目標</span>
                 <div id="displayTeamLEB" class="prod-team-val">196 / 516 萬元</div>
               </div>
             </div>
             <div class="fluent-progress-bg">
               <div id="barProdLEB" class="fluent-progress-bar" style="width: 38%;"></div>
             </div>
-            <div id="descProdLEB" class="metric-target-text">全區目標 516 萬 ｜ 差距 320 萬</div>
+            <div id="descProdLEB" class="metric-target-text">🎯 全區目標 516 萬 ｜ 差距 320 萬</div>
           </div>
 
           <!-- 自製品 2: 士林變頻器 (對應代碼 LNH) -->
           <div class="metric-box sub-metric-box">
             <div class="metric-header">
               <span class="metric-title" id="titleProdLNH">士林變頻器</span>
-              <span id="badgeProdLNH" class="status-badge danger">47.1% 落後</span>
+              <span id="badgeProdLNH" class="status-badge danger">47% 落後</span>
             </div>
             <div class="prod-metric-row">
               <div class="prod-personal-block">
-                <span id="labelPersonalLNH" class="prod-sub-label">個人實績</span>
-                <div id="displayPersonalLNH" class="prod-personal-val">4.9 <span class="unit-text">萬元</span></div>
+                <span id="labelPersonalLNH" class="prod-sub-label">👤 個人實績</span>
+                <div id="displayPersonalLNH" class="prod-personal-val">0.00 <span class="unit-text">萬元</span></div>
               </div>
               <div class="prod-team-block">
-                <span class="prod-sub-label">全區進度</span>
+                <span class="prod-sub-label">🏢 全區實績 / 目標</span>
                 <div id="displayTeamLNH" class="prod-team-val">243 / 516 萬元</div>
               </div>
             </div>
             <div class="fluent-progress-bg">
-              <div id="barProdLNH" class="fluent-progress-bar" style="width: 47.1%;"></div>
+              <div id="barProdLNH" class="fluent-progress-bar" style="width: 47%;"></div>
             </div>
-            <div id="descProdLNH" class="metric-target-text">全區目標 516 萬 ｜ 差距 273 萬</div>
+            <div id="descProdLNH" class="metric-target-text">🎯 全區目標 516 萬 ｜ 差距 273 萬</div>
           </div>
 
           <!-- 自製品 3: 士林PLC (對應代碼 LPB、LPN、LPD 加總) -->
           <div class="metric-box sub-metric-box">
             <div class="metric-header">
               <span class="metric-title" id="titleProdPLC">士林PLC</span>
-              <span id="badgeProdPLC" class="status-badge success">117.1% 達標</span>
+              <span id="badgeProdPLC" class="status-badge success">117% 達標</span>
             </div>
             <div class="prod-metric-row">
               <div class="prod-personal-block">
-                <span id="labelPersonalPLC" class="prod-sub-label">個人實績</span>
-                <div id="displayPersonalPLC" class="prod-personal-val">12.0 <span class="unit-text">萬元</span></div>
+                <span id="labelPersonalPLC" class="prod-sub-label">👤 個人實績</span>
+                <div id="displayPersonalPLC" class="prod-personal-val">0.00 <span class="unit-text">萬元</span></div>
               </div>
               <div class="prod-team-block">
-                <span class="prod-sub-label">全區進度</span>
+                <span class="prod-sub-label">🏢 全區實績 / 目標</span>
                 <div id="displayTeamPLC" class="prod-team-val">246 / 210 萬元</div>
               </div>
             </div>
             <div class="fluent-progress-bg">
               <div id="barProdPLC" class="fluent-progress-bar" style="width: 100%;"></div>
             </div>
-            <div id="descProdPLC" class="metric-target-text">全區目標 210 萬 ｜ 超標 36 萬</div>
+            <div id="descProdPLC" class="metric-target-text">🎯 全區目標 210 萬 ｜ 超標 36 萬</div>
           </div>
         </div>
       </div>
@@ -849,7 +859,7 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261021_clock_cleanup"></script>
+  <script src="js/app.js?v=20261021_fix_header_v5"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>

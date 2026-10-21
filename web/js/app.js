@@ -324,125 +324,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 渲染首頁目標與戰況看板 (含主管檢視模式與一般業務模式)
+  // 渲染首頁目標與戰況看板 (統一連動「管理員目標資料維護」雙表格真實解析數據)
   function renderHomeDashboard() {
-    const db = getTargetDatabase();
-    const currentSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
-    const isManager = currentSales === "曾維崧";
-    const salesInfo = db.salesTargets[currentSales] || {
-      target: 800, actual: 700, leb: 20.0, lnh: 15.0, plc: 10.0
-    };
-
-    // 1. 全區核心主目標
-    const elMetric1Name = document.getElementById("displayMetric1Name");
-    const elMetric1Sub = document.getElementById("displayMetric1Sub");
-    const elBadgeMetric1 = document.getElementById("badgeMetric1Rate");
-    const elDisplayActualMetric1 = document.getElementById("displayActualMetric1");
-    const elDisplayTargetMetric1 = document.getElementById("displayTargetMetric1");
-    const elBarMetric1Progress = document.getElementById("barMetric1Progress");
-
-    const totalTarget = db.regionTotal.target || 9300;
-    const totalActual = db.regionTotal.actual || 10370;
-    const totalRate = (totalActual / totalTarget) * 100;
-    const totalDiff = totalActual - totalTarget;
-
-    if (elMetric1Name) elMetric1Name.innerText = db.monthTitle || "10 月營收挑戰目標";
-    if (elMetric1Sub) {
-      if (totalDiff >= 0) {
-        elMetric1Sub.innerText = `全區合計：${formatMoney(totalActual)} 萬元 / 目標 ${formatMoney(totalTarget)} 萬元 (超標 ${formatMoney(totalDiff)} 萬元)`;
-      } else {
-        elMetric1Sub.innerText = `全區合計：${formatMoney(totalActual)} 萬元 / 目標 ${formatMoney(totalTarget)} 萬元 (尚差 ${formatMoney(Math.abs(totalDiff))} 萬元)`;
+    const savedMetrics = localStorage.getItem("shihlin_dashboard_metrics");
+    if (savedMetrics) {
+      try {
+        const metrics = JSON.parse(savedMetrics);
+        applyScoreboardMetrics(metrics);
+        return;
+      } catch (e) {
+        console.warn("讀取本機戰情指標失敗：", e);
       }
     }
-    if (elBadgeMetric1) {
-      const badge = getStatusBadge(totalRate);
-      elBadgeMetric1.className = badge.className;
-      elBadgeMetric1.innerText = badge.text;
-    }
-    if (elDisplayActualMetric1) {
-      elDisplayActualMetric1.innerHTML = `${formatMoney(totalActual)} <span class="unit-text">萬元</span>`;
-    }
-    if (elDisplayTargetMetric1) {
-      elDisplayTargetMetric1.innerText = `全區目標 ${formatMoney(totalTarget)} 萬元`;
-    }
-    if (elBarMetric1Progress) {
-      elBarMetric1Progress.style.width = `${Math.min(Math.max(totalRate, 0), 100)}%`;
-    }
-
-    // 2. 個人進度摘要列 (主管模式 vs 一般業務個人進度)
-    const elPersonalTargetLabel = document.getElementById("personalTargetLabel");
-    const elDisplayPersonalRev = document.getElementById("displayPersonalRev");
-
-    if (isManager) {
-      // 曾維崧為主管，沒有個人目標，直接看全區戰況
-      if (elPersonalTargetLabel) {
-        elPersonalTargetLabel.innerHTML = `主管檢視模式 (<span id="displaySalesNameTarget">曾維崧</span>)：`;
-      }
-      if (elDisplayPersonalRev) {
-        elDisplayPersonalRev.innerText = `免計個人目標 ｜ 掌舵全區總目標 ${formatMoney(totalTarget)} 萬，實績 ${formatMoney(totalActual)} 萬 (${totalRate.toFixed(1)}% 達標)`;
-      }
-    } else {
-      // 一般業務人員
-      const pTarget = salesInfo.target || 1;
-      const pActual = salesInfo.actual || 0;
-      const pRate = ((pActual / pTarget) * 100).toFixed(1);
-      const pDiff = pTarget - pActual;
-
-      if (elPersonalTargetLabel) {
-        elPersonalTargetLabel.innerHTML = `個人進度 (<span id="displaySalesNameTarget">${currentSales}</span>)：`;
-      }
-      if (elDisplayPersonalRev) {
-        if (pDiff <= 0) {
-          elDisplayPersonalRev.innerText = `${formatMoney(pActual)} 萬元 / 目標 ${formatMoney(pTarget)} 萬元 (${pRate}%，超標 ${formatMoney(Math.abs(pDiff))} 萬元)`;
-        } else {
-          elDisplayPersonalRev.innerText = `${formatMoney(pActual)} 萬元 / 目標 ${formatMoney(pTarget)} 萬元 (${pRate}%，尚差 ${formatMoney(pDiff)} 萬元)`;
-        }
-      }
-    }
-
-    // 3. 自製品三大卡片 (士林伺服 LEB、士林變頻器 LNH、士林PLC)
-    const prodLEB = db.products.LEB || { target: 516, actual: 196 };
-    const prodLNH = db.products.LNH || { target: 516, actual: 243 };
-    const prodPLC = db.products.PLC || { target: 210, actual: 246 };
-
-    renderProductCardUI({
-      cardTitle: "士林伺服",
-      badgeId: "badgeProdLEB",
-      labelPersonalId: "labelPersonalLEB",
-      personalValId: "displayPersonalLEB",
-      teamValId: "displayTeamLEB",
-      barId: "barProdLEB",
-      descId: "descProdLEB",
-      isManager: isManager,
-      personalVal: salesInfo.leb || 0,
-      prodData: prodLEB
-    });
-
-    renderProductCardUI({
-      cardTitle: "士林變頻器",
-      badgeId: "badgeProdLNH",
-      labelPersonalId: "labelPersonalLNH",
-      personalValId: "displayPersonalLNH",
-      teamValId: "displayTeamLNH",
-      barId: "barProdLNH",
-      descId: "descProdLNH",
-      isManager: isManager,
-      personalVal: salesInfo.lnh || 0,
-      prodData: prodLNH
-    });
-
-    renderProductCardUI({
-      cardTitle: "士林PLC",
-      badgeId: "badgeProdPLC",
-      labelPersonalId: "labelPersonalPLC",
-      personalValId: "displayPersonalPLC",
-      teamValId: "displayTeamPLC",
-      barId: "barProdPLC",
-      descId: "descProdPLC",
-      isManager: isManager,
-      personalVal: salesInfo.plc || 0,
-      prodData: prodPLC
-    });
+    const currentGrid = (typeof tablePastedTargets !== "undefined" && tablePastedTargets && tablePastedTargets._gridMatrix) || getSampleTargetsGrid();
+    const currentShipments = (typeof tablePastedShipments !== "undefined" && tablePastedShipments && tablePastedShipments._gridMatrix) || getSampleShipmentsGrid();
+    const metrics = parseTargetsGridToMetrics(currentGrid, currentShipments);
+    applyScoreboardMetrics(metrics);
   }
 
   function renderProductCardUI(cfg) {
@@ -1398,13 +1295,48 @@ document.addEventListener("DOMContentLoaded", () => {
     return cell.toString().trim();
   }
 
-  // 解析目標表格矩陣為首頁戰情總覽指標
-  function parseTargetsGridToMetrics(matrix) {
+  // 計算特定業務員在出貨明細表中的重點自製品實績 (LEB、LNH、PLC)
+  function calculateSalespersonProductShipments(shipmentsMatrix, salesName) {
+    const result = { leb: 0, lnh: 0, plc: 0 };
+    if (!shipmentsMatrix || !Array.isArray(shipmentsMatrix) || shipmentsMatrix.length === 0 || !salesName) {
+      return result;
+    }
+
+    let currentSales = "";
+    for (let r = 0; r < shipmentsMatrix.length; r++) {
+      const row = shipmentsMatrix[r];
+      const col0 = getCellStr(row[0]);
+      const col1 = getCellStr(row[1]);
+      const colAmtStr = getCellStr(row[2]) || getCellStr(row[3]);
+
+      if (col0 && !col0.includes("出貨金額") && !col0.includes("營業員")) {
+        currentSales = col0;
+      }
+
+      // 當前列屬於該業務員 (比對業務員姓名，例如「曾仁君」)
+      if (currentSales.includes(salesName)) {
+        const amt = parseFloat(colAmtStr.replace(/,/g, "")) || 0;
+        if (col1.includes("LEB")) {
+          result.leb += amt;
+        } else if (col1.includes("LNH")) {
+          result.lnh += amt;
+        } else if (col1.includes("LPB") || col1.includes("LPC") || col1.includes("LPN") || col1.includes("PLC")) {
+          result.plc += amt;
+        }
+      }
+    }
+    return result;
+  }
+
+  // 解析目標表格矩陣為首頁戰情總覽指標 (精準定位：年計月目標、挑戰目標、堆疊目標)
+  function parseTargetsGridToMetrics(matrix, shipmentsMatrix) {
     if (!matrix || !Array.isArray(matrix) || matrix.length === 0) return null;
 
     const metrics = {
       month: "10",
+      annualTarget: "7,060",
       totalTarget: "9,300",
+      stackTarget: "10,452",
       totalActual: "10,370",
       totalDiff: "1,070",
       totalRate: "112%",
@@ -1417,6 +1349,10 @@ document.addEventListener("DOMContentLoaded", () => {
       salesDiff: "-8",
       salesRate: "99.0%",
       salesDiffText: "尚差 8 萬元",
+
+      personalLeb: "0.00",
+      personalLnh: "0.00",
+      personalPlc: "0.00",
 
       lebTarget: "516",
       lebActual: "196",
@@ -1458,9 +1394,19 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // 2. 尋找業務員總計列 (第一組「合計」列)
+      // 2. 尋找標題列 (鎖定包含 "營業員" 或同時包含 "年計" 與 "實績" 的欄位名稱列)
+      let headerRowIdx = -1;
+      for (let r = 0; r < Math.min(6, matrix.length); r++) {
+        const rowStr = matrix[r].map(getCellStr).join(" ");
+        if (rowStr.includes("營業員") || (rowStr.includes("年計") && (rowStr.includes("挑戰") || rowStr.includes("實績")))) {
+          headerRowIdx = r;
+          break;
+        }
+      }
+
+      // 3. 尋找業務員總計列 (第一組「合計」列)
       let totalRowIdx = -1;
-      for (let r = 0; r < matrix.length; r++) {
+      for (let r = (headerRowIdx >= 0 ? headerRowIdx + 1 : 0); r < matrix.length; r++) {
         const row = matrix[r];
         if (row.some(cell => getCellStr(cell) === "合計")) {
           totalRowIdx = r;
@@ -1468,63 +1414,103 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
+      // 4. 定位標題欄位索引 (年計月目標、挑戰目標、堆疊目標、實績、達成率)
+      let colAnnualTarget = -1;    // 年計月目標
+      let colChallengeTarget = -1; // 挑戰目標 (忽略月份)
+      let colStackTarget = -1;     // 堆疊目標 (忽略月份)
+      let colActual = -1;          // 實績
+      let colDiff = -1;            // 挑戰目標差異
+      let colRate = -1;            // 達成率
+
+      if (headerRowIdx >= 0) {
+        const headerRow = matrix[headerRowIdx];
+        headerRow.forEach((c, idx) => {
+          const txt = getCellStr(c);
+          if (txt.includes("年計")) {
+            colAnnualTarget = idx;
+          }
+          if (txt.includes("挑戰目標") && !txt.includes("差異") && !txt.includes("達成率")) {
+            colChallengeTarget = idx;
+          }
+          if ((txt.includes("堆疊") || txt.includes("堆疊目標") || txt.includes("堆疊業績")) && !txt.includes("差異")) {
+            colStackTarget = idx;
+          }
+          if (txt.includes("實績") && !txt.includes("前一個月")) {
+            colActual = idx;
+          }
+          if (txt.includes("達成率")) {
+            colRate = idx;
+          }
+          if (txt.includes("挑戰目標差異") || (txt.includes("差異") && !txt.includes("堆疊"))) {
+            colDiff = idx;
+          }
+        });
+      }
+
+      // 5. 從合計列依欄位精準提取數字
       if (totalRowIdx >= 0) {
         const totRow = matrix[totalRowIdx];
-        const targetVal = getCellStr(totRow[3]);
-        const actualVal = getCellStr(totRow[6]);
-        const diffVal = getCellStr(totRow[8]);
-        const rateVal = getCellStr(totRow[9]);
-
-        if (targetVal) metrics.totalTarget = targetVal;
-        if (actualVal) metrics.totalActual = actualVal;
-        if (diffVal) metrics.totalDiff = diffVal;
-        if (rateVal) {
-          metrics.totalRate = rateVal.includes("%") ? rateVal : `${rateVal}%`;
-          const rNum = parseFloat(rateVal.replace(/%/g, ""));
-          if (!isNaN(rNum)) metrics.totalRateNum = rNum;
+        if (colAnnualTarget >= 0 && getCellStr(totRow[colAnnualTarget])) {
+          metrics.annualTarget = getCellStr(totRow[colAnnualTarget]);
         }
-        if (diffVal) {
-          const dNum = parseFloat(diffVal.replace(/,/g, ""));
-          if (!isNaN(dNum)) {
-            metrics.diffText = dNum >= 0 ? `超標 ${diffVal} 萬元` : `差距 ${Math.abs(dNum)} 萬元`;
-          }
+        if (colChallengeTarget >= 0 && getCellStr(totRow[colChallengeTarget])) {
+          metrics.totalTarget = getCellStr(totRow[colChallengeTarget]);
+        }
+        if (colStackTarget >= 0 && getCellStr(totRow[colStackTarget])) {
+          metrics.stackTarget = getCellStr(totRow[colStackTarget]);
+        }
+        if (colActual >= 0 && getCellStr(totRow[colActual])) {
+          metrics.totalActual = getCellStr(totRow[colActual]);
+        }
+        if (colDiff >= 0 && getCellStr(totRow[colDiff])) {
+          metrics.totalDiff = getCellStr(totRow[colDiff]);
+        }
+        if (colRate >= 0 && getCellStr(totRow[colRate])) {
+          metrics.totalRate = getCellStr(totRow[colRate]);
+          metrics.totalRateNum = parseFloat(metrics.totalRate.replace(/%/g, "")) || 100;
+        }
+
+        const dNum = parseFloat((metrics.totalDiff || "0").replace(/,/g, ""));
+        if (!isNaN(dNum)) {
+          metrics.diffText = dNum >= 0 ? `超標 ${metrics.totalDiff} 萬元` : `差距 ${Math.abs(dNum)} 萬元`;
         }
       }
 
-      // 3. 尋找個人業務員列 (例如「曾仁君」或「曾維崧」)
-      for (let r = 2; r < (totalRowIdx > 0 ? totalRowIdx : matrix.length); r++) {
+      // 6. 尋找個人業務員列 (例如「曾仁君」或當前登入業務員)
+      for (let r = (headerRowIdx >= 0 ? headerRowIdx + 1 : 0); r < (totalRowIdx > 0 ? totalRowIdx : matrix.length); r++) {
         const row = matrix[r];
-        for (let c = 0; c < row.length; c++) {
-          const val = getCellStr(row[c]);
-          if (val.includes("曾仁君") || val.includes("曾維崧") || (val.startsWith("曾") && val.length <= 4)) {
-            metrics.salesName = val;
-            const sTarget = getCellStr(row[c + 2]) || getCellStr(row[3]);
-            const sActual = getCellStr(row[c + 5]) || getCellStr(row[6]);
-            const sDiff = getCellStr(row[c + 7]) || getCellStr(row[8]);
-            const sRate = getCellStr(row[c + 8]) || getCellStr(row[9]);
-
-            if (sTarget) metrics.salesTarget = sTarget;
-            if (sActual) metrics.salesActual = sActual;
-            if (sRate) metrics.salesRate = sRate.includes("%") ? sRate : `${sRate}%`;
-            if (sDiff) {
-              const dNum = parseFloat(sDiff.replace(/,/g, ""));
-              metrics.salesDiffText = dNum >= 0 ? `超標 ${sDiff} 萬元` : `尚差 ${Math.abs(dNum)} 萬元`;
-            }
-            break;
+        const rowStr = row.map(getCellStr).join(" ");
+        if (rowStr.includes("曾仁君") || (metrics.salesName && rowStr.includes(metrics.salesName))) {
+          metrics.salesName = "曾仁君";
+          if (colChallengeTarget >= 0 && getCellStr(row[colChallengeTarget])) {
+            metrics.salesTarget = getCellStr(row[colChallengeTarget]);
           }
+          if (colActual >= 0 && getCellStr(row[colActual])) {
+            metrics.salesActual = getCellStr(row[colActual]);
+          }
+
+          const sT = parseFloat((metrics.salesTarget || "0").replace(/,/g, ""));
+          const sA = parseFloat((metrics.salesActual || "0").replace(/,/g, ""));
+          if (sT > 0) {
+            const rVal = ((sA / sT) * 100).toFixed(1);
+            metrics.salesRate = `${rVal}%`;
+            const diff = Math.round(sA - sT);
+            metrics.salesDiffText = diff >= 0 ? `超標 ${diff} 萬元` : `尚差 ${Math.abs(diff)} 萬元`;
+          }
+          break;
         }
       }
 
-      // 4. 尋找自製品三大項目 (LEB, LNH, LPN/PLC)
+      // 7. 自製品三大項目 (LEB, LNH, PLC)
       for (let r = (totalRowIdx > 0 ? totalRowIdx : 0); r < matrix.length; r++) {
         const row = matrix[r];
         const rowStr = row.map(getCellStr).join(" ");
 
         if (rowStr.includes("LEB")) {
-          const target = getCellStr(row[3]) || "516";
-          const actual = getCellStr(row[6]) || "196";
-          const diff = getCellStr(row[8]) || "-320";
-          const rate = getCellStr(row[9]) || "38%";
+          const target = (colChallengeTarget >= 0 && getCellStr(row[colChallengeTarget])) || "516";
+          const actual = (colActual >= 0 && getCellStr(row[colActual])) || "196";
+          const diff = (colDiff >= 0 && getCellStr(row[colDiff])) || "-320";
+          const rate = (colRate >= 0 && getCellStr(row[colRate])) || "38%";
           metrics.lebTarget = target;
           metrics.lebActual = actual;
           metrics.lebRate = rate.includes("%") ? rate : `${rate}%`;
@@ -1532,10 +1518,10 @@ document.addEventListener("DOMContentLoaded", () => {
           const dNum = parseFloat(diff.replace(/,/g, ""));
           metrics.lebDiffText = dNum >= 0 ? `超標 ${diff} 萬` : `差距 ${Math.abs(dNum)} 萬`;
         } else if (rowStr.includes("LNH")) {
-          const target = getCellStr(row[3]) || "516";
-          const actual = getCellStr(row[6]) || "243";
-          const diff = getCellStr(row[8]) || "-273";
-          const rate = getCellStr(row[9]) || "47%";
+          const target = (colChallengeTarget >= 0 && getCellStr(row[colChallengeTarget])) || "516";
+          const actual = (colActual >= 0 && getCellStr(row[colActual])) || "243";
+          const diff = (colDiff >= 0 && getCellStr(row[colDiff])) || "-273";
+          const rate = (colRate >= 0 && getCellStr(row[colRate])) || "47%";
           metrics.lnhTarget = target;
           metrics.lnhActual = actual;
           metrics.lnhRate = rate.includes("%") ? rate : `${rate}%`;
@@ -1543,10 +1529,10 @@ document.addEventListener("DOMContentLoaded", () => {
           const dNum = parseFloat(diff.replace(/,/g, ""));
           metrics.lnhDiffText = dNum >= 0 ? `超標 ${diff} 萬` : `差距 ${Math.abs(dNum)} 萬`;
         } else if (rowStr.includes("LPN") || rowStr.includes("PLC")) {
-          const target = getCellStr(row[3]) || "210";
-          const actual = getCellStr(row[6]) || "246";
-          const diff = getCellStr(row[8]) || "36";
-          const rate = getCellStr(row[9]) || "117%";
+          const target = (colChallengeTarget >= 0 && getCellStr(row[colChallengeTarget])) || "210";
+          const actual = (colActual >= 0 && getCellStr(row[colActual])) || "246";
+          const diff = (colDiff >= 0 && getCellStr(row[colDiff])) || "36";
+          const rate = (colRate >= 0 && getCellStr(row[colRate])) || "117%";
           metrics.plcTarget = target;
           metrics.plcActual = actual;
           metrics.plcRate = rate.includes("%") ? rate : `${rate}%`;
@@ -1554,6 +1540,14 @@ document.addEventListener("DOMContentLoaded", () => {
           const dNum = parseFloat(diff.replace(/,/g, ""));
           metrics.plcDiffText = dNum >= 0 ? `超標 ${diff} 萬` : `差距 ${Math.abs(dNum)} 萬`;
         }
+      }
+
+      // 8. 依業務員真實計算右表自製品個人出貨明細 (若右表無該員紀錄則真實回傳 0.00 萬)
+      if (shipmentsMatrix) {
+        const personalShipments = calculateSalespersonProductShipments(shipmentsMatrix, metrics.salesName);
+        metrics.personalLeb = personalShipments.leb.toFixed(2);
+        metrics.personalLnh = personalShipments.lnh.toFixed(2);
+        metrics.personalPlc = personalShipments.plc.toFixed(2);
       }
     } catch (err) {
       console.warn("[Scoreboard Sync] 解析指標時發生輕微錯誤，使用安全預設值：", err);
@@ -1566,13 +1560,15 @@ document.addEventListener("DOMContentLoaded", () => {
   function applyScoreboardMetrics(metrics) {
     if (!metrics) return;
 
-    // 1. 主要營收挑戰目標
+    // 1. 主要營收目標標題 (依使用者指定格式：10月業績目標 (年計目標：7,060萬；挑戰目標：9,300萬；堆疊目標：10,452萬))
     const displayMetric1Name = document.getElementById("displayMetric1Name");
-    if (displayMetric1Name) displayMetric1Name.innerText = `${metrics.month || 10} 月營收挑戰目標`;
+    if (displayMetric1Name) {
+      displayMetric1Name.innerText = `${metrics.month || 10}月業績目標 (年計目標：${metrics.annualTarget || "7,060"}萬；挑戰目標：${metrics.totalTarget || "9,300"}萬；堆疊目標：${metrics.stackTarget || "10,452"}萬)`;
+    }
 
     const displayMetric1Sub = document.getElementById("displayMetric1Sub");
     if (displayMetric1Sub) {
-      displayMetric1Sub.innerText = `全區合計：${metrics.totalActual} 萬元 / 目標 ${metrics.totalTarget} 萬元 (${metrics.diffText})`;
+      displayMetric1Sub.innerText = `全區目前實績：${metrics.totalActual} 萬元 (${metrics.diffText}，達成率 ${metrics.totalRate})`;
     }
 
     const badgeMetric1Rate = document.getElementById("badgeMetric1Rate");
@@ -1582,6 +1578,7 @@ document.addEventListener("DOMContentLoaded", () => {
       badgeMetric1Rate.innerText = `${metrics.totalRate} ${isSuccess ? "達標" : "落後"}`;
     }
 
+    // 全區雙數值：目前實績 vs 挑戰目標 (目標與實際對比更明顯)
     const displayActualMetric1 = document.getElementById("displayActualMetric1");
     if (displayActualMetric1) {
       displayActualMetric1.innerHTML = `${metrics.totalActual} <span class="unit-text">萬元</span>`;
@@ -1589,7 +1586,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const displayTargetMetric1 = document.getElementById("displayTargetMetric1");
     if (displayTargetMetric1) {
-      displayTargetMetric1.innerText = `全區目標 ${metrics.totalTarget} 萬元`;
+      displayTargetMetric1.innerHTML = `${metrics.totalTarget} <span class="unit-text">萬元</span>`;
     }
 
     const barMetric1Progress = document.getElementById("barMetric1Progress");
@@ -1597,7 +1594,7 @@ document.addEventListener("DOMContentLoaded", () => {
       barMetric1Progress.style.width = `${Math.min(100, metrics.totalRateNum || 100)}%`;
     }
 
-    // 2. 個人進度摘要
+    // 2. 個人進度摘要 (藍色區塊：個人挑戰目標 810 萬，實績 802 萬)
     const displaySalesNameTarget = document.getElementById("displaySalesNameTarget");
     if (displaySalesNameTarget && metrics.salesName) {
       displaySalesNameTarget.innerText = metrics.salesName;
@@ -1605,7 +1602,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const displayPersonalRev = document.getElementById("displayPersonalRev");
     if (displayPersonalRev) {
-      displayPersonalRev.innerText = `${metrics.salesActual} 萬元 / 目標 ${metrics.salesTarget} 萬元 (${metrics.salesRate}，${metrics.salesDiffText})`;
+      displayPersonalRev.innerHTML = `
+        <span class="stat-badge-pill target">🎯 個人挑戰目標 <strong id="valSalesTarget">${metrics.salesTarget || "810"}</strong> 萬</span>
+        <span class="stat-badge-pill actual">📈 當前實績 <strong id="valSalesActual">${metrics.salesActual || "802"}</strong> 萬</span>
+        <span id="txtSalesDiff" class="stat-rate-text">(達成率 ${metrics.salesRate || "99.0%"}，${metrics.salesDiffText || "尚差 8 萬元"})</span>
+      `;
     }
 
     // 頂部導覽列業務員名稱同步
@@ -1618,7 +1619,7 @@ document.addEventListener("DOMContentLoaded", () => {
       headerUserAvatar.innerText = metrics.salesName.substring(0, 1);
     }
 
-    // 3. 重點自製品三大目標
+    // 3. 重點自製品三大目標 (個人實績真實連動，無紀錄顯示 0.00 萬)
     // LEB
     const badgeProdLEB = document.getElementById("badgeProdLEB");
     if (badgeProdLEB) {
@@ -1626,12 +1627,16 @@ document.addEventListener("DOMContentLoaded", () => {
       badgeProdLEB.className = `status-badge ${ok ? "success" : "danger"}`;
       badgeProdLEB.innerText = `${metrics.lebRate} ${ok ? "達標" : "落後"}`;
     }
+    const displayPersonalLEB = document.getElementById("displayPersonalLEB");
+    if (displayPersonalLEB) {
+      displayPersonalLEB.innerHTML = `${metrics.personalLeb || "0.00"} <span class="unit-text">萬元</span>`;
+    }
     const displayTeamLEB = document.getElementById("displayTeamLEB");
     if (displayTeamLEB) displayTeamLEB.innerText = `${metrics.lebActual} / ${metrics.lebTarget} 萬元`;
     const barProdLEB = document.getElementById("barProdLEB");
     if (barProdLEB) barProdLEB.style.width = `${Math.min(100, metrics.lebRateNum || 0)}%`;
     const descProdLEB = document.getElementById("descProdLEB");
-    if (descProdLEB) descProdLEB.innerText = `全區目標 ${metrics.lebTarget} 萬 ｜ ${metrics.lebDiffText}`;
+    if (descProdLEB) descProdLEB.innerText = `🎯 全區目標 ${metrics.lebTarget} 萬 ｜ ${metrics.lebDiffText}`;
 
     // LNH
     const badgeProdLNH = document.getElementById("badgeProdLNH");
@@ -1640,12 +1645,16 @@ document.addEventListener("DOMContentLoaded", () => {
       badgeProdLNH.className = `status-badge ${ok ? "success" : "danger"}`;
       badgeProdLNH.innerText = `${metrics.lnhRate} ${ok ? "達標" : "落後"}`;
     }
+    const displayPersonalLNH = document.getElementById("displayPersonalLNH");
+    if (displayPersonalLNH) {
+      displayPersonalLNH.innerHTML = `${metrics.personalLnh || "0.00"} <span class="unit-text">萬元</span>`;
+    }
     const displayTeamLNH = document.getElementById("displayTeamLNH");
     if (displayTeamLNH) displayTeamLNH.innerText = `${metrics.lnhActual} / ${metrics.lnhTarget} 萬元`;
     const barProdLNH = document.getElementById("barProdLNH");
     if (barProdLNH) barProdLNH.style.width = `${Math.min(100, metrics.lnhRateNum || 0)}%`;
     const descProdLNH = document.getElementById("descProdLNH");
-    if (descProdLNH) descProdLNH.innerText = `全區目標 ${metrics.lnhTarget} 萬 ｜ ${metrics.lnhDiffText}`;
+    if (descProdLNH) descProdLNH.innerText = `🎯 全區目標 ${metrics.lnhTarget} 萬 ｜ ${metrics.lnhDiffText}`;
 
     // PLC
     const badgeProdPLC = document.getElementById("badgeProdPLC");
@@ -1654,12 +1663,16 @@ document.addEventListener("DOMContentLoaded", () => {
       badgeProdPLC.className = `status-badge ${ok ? "success" : "danger"}`;
       badgeProdPLC.innerText = `${metrics.plcRate} ${ok ? "達標" : "落後"}`;
     }
+    const displayPersonalPLC = document.getElementById("displayPersonalPLC");
+    if (displayPersonalPLC) {
+      displayPersonalPLC.innerHTML = `${metrics.personalPlc || "0.00"} <span class="unit-text">萬元</span>`;
+    }
     const displayTeamPLC = document.getElementById("displayTeamPLC");
     if (displayTeamPLC) displayTeamPLC.innerText = `${metrics.plcActual} / ${metrics.plcTarget} 萬元`;
     const barProdPLC = document.getElementById("barProdPLC");
     if (barProdPLC) barProdPLC.style.width = `${Math.min(100, metrics.plcRateNum || 0)}%`;
     const descProdPLC = document.getElementById("descProdPLC");
-    if (descProdPLC) descProdPLC.innerText = `全區目標 ${metrics.plcTarget} 萬 ｜ ${metrics.plcDiffText}`;
+    if (descProdPLC) descProdPLC.innerText = `🎯 全區目標 ${metrics.plcTarget} 萬 ｜ ${metrics.plcDiffText}`;
   }
 
   // 左表載入範例與清空
@@ -1727,11 +1740,12 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnConfirmTablesReady) {
     btnConfirmTablesReady.addEventListener("click", () => {
       const currentGrid = tablePastedTargets._gridMatrix || [];
-      const metrics = parseTargetsGridToMetrics(currentGrid);
+      const currentShipments = tablePastedShipments._gridMatrix || [];
+      const metrics = parseTargetsGridToMetrics(currentGrid, currentShipments);
       if (metrics) {
         applyScoreboardMetrics(metrics);
         localStorage.setItem("shihlin_dashboard_metrics", JSON.stringify(metrics));
-        alert("資料確認完成！\n首頁戰情總覽之全區營收挑戰目標 (9,300萬/10,370萬)、重點自製品進度 (LEB/LNH/PLC) 與個人業務進度已成功同步連動！");
+        alert("資料確認完成！\n首頁戰情總覽之全區三大目標 (年計/挑戰/堆疊)、重點自製品進度與個人業務進度已成功同步連動！");
       } else {
         alert("資料已確認！");
       }
@@ -1745,16 +1759,25 @@ document.addEventListener("DOMContentLoaded", () => {
   const savedShipmentsRaw = localStorage.getItem("shihlin_pasted_shipments_raw");
   renderExcelGrid(tablePastedShipments, savedShipmentsRaw || "", 25, 5, badgeShipmentCount);
 
-  // 初始載入戰情看板指標 (優先自 localStorage 讀取，若無則以範例數據試算)
+  // 初始載入戰情看板指標 (優先自 localStorage 讀取，若為舊格式或無快取則自動以最新邏輯重新解析)
   const savedDashboardMetrics = localStorage.getItem("shihlin_dashboard_metrics");
   if (savedDashboardMetrics) {
     try {
-      applyScoreboardMetrics(JSON.parse(savedDashboardMetrics));
+      const parsed = JSON.parse(savedDashboardMetrics);
+      if (!parsed.stackTarget || parsed.totalTarget === "7,060" || parsed.annualTarget === parsed.totalTarget) {
+        const currentGrid = (tablePastedTargets && tablePastedTargets._gridMatrix) || getSampleTargetsGrid();
+        const currentShipments = (tablePastedShipments && tablePastedShipments._gridMatrix) || getSampleShipmentsGrid();
+        const refreshed = parseTargetsGridToMetrics(currentGrid, currentShipments);
+        applyScoreboardMetrics(refreshed);
+        localStorage.setItem("shihlin_dashboard_metrics", JSON.stringify(refreshed));
+      } else {
+        applyScoreboardMetrics(parsed);
+      }
     } catch (e) {
       console.warn("讀取本機戰情指標失敗：", e);
     }
   } else {
-    const defaultMetrics = parseTargetsGridToMetrics(getSampleTargetsGrid());
+    const defaultMetrics = parseTargetsGridToMetrics(getSampleTargetsGrid(), getSampleShipmentsGrid());
     applyScoreboardMetrics(defaultMetrics);
   }
 

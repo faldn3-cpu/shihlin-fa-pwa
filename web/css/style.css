@@ -421,7 +421,7 @@ body {
 /* 個人戰況進度列 */
 .personal-target-row {
   background-color: var(--color-accent-light);
-  border: 1px solid rgba(0, 103, 192, 0.18);
+  border: 1px solid rgba(0, 103, 192, 0.22);
   border-radius: 6px;
   padding: 8px 12px;
   margin: 8px 0;
@@ -429,7 +429,7 @@ body {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .personal-label {
@@ -438,10 +438,100 @@ body {
   color: var(--text-primary);
 }
 
-.personal-val {
-  font-size: 0.92em;
+.personal-val-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stat-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.88em;
+  font-weight: 600;
+}
+
+.stat-badge-pill.target {
+  background-color: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.stat-badge-pill.target strong {
+  color: #0f172a;
+  font-size: 1.05em;
+}
+
+.stat-badge-pill.actual {
+  background-color: #ffffff;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.stat-badge-pill.actual strong {
+  color: #1d4ed8;
+  font-size: 1.05em;
+}
+
+.stat-rate-text {
+  font-size: 0.86em;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* 全區目標 vs 實績醒目雙數值對比 */
+.hero-val-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin: 10px 0 6px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hero-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hero-stat-item.align-right {
+  align-items: flex-end;
+}
+
+.stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78em;
   font-weight: 700;
-  color: var(--color-accent);
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+
+.stat-badge.actual {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.stat-badge.target {
+  background-color: #f8fafc;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.hero-target-big {
+  font-size: 1.55em;
+  font-weight: 700;
+  color: #475569;
 }
 
 /* 次要目標網格：重點自製品三大挑戰目標 */

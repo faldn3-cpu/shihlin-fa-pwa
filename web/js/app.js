@@ -573,12 +573,24 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
 
-      const rows = [];
+      // 核心升級：建立 2D 矩陣追蹤 rowspan 與 colspan，徹底防止合併儲存格造成後續欄位左移錯位
+      const grid = [];
       const trList = table.querySelectorAll("tr");
-      trList.forEach(tr => {
-        const rowData = [];
+
+      trList.forEach((tr, r) => {
+        if (!grid[r]) grid[r] = [];
+        let colIdx = 0;
+
         const cellList = tr.querySelectorAll("td, th");
         cellList.forEach(cell => {
+          // 跳過已被上方列的垂直跨列 (rowspan) 或左側跨欄 (colspan) 佔據的座標
+          while (grid[r][colIdx] !== undefined) {
+            colIdx++;
+          }
+
+          const rowspan = parseInt(cell.getAttribute("rowspan") || "1", 10);
+          const colspan = parseInt(cell.getAttribute("colspan") || "1", 10);
+
           const text = (cell.innerText || "").trim();
           let bg = cell.style.backgroundColor || cell.getAttribute("bgcolor") || "";
           let color = cell.style.color || "";
@@ -608,30 +620,35 @@ document.addEventListener("DOMContentLoaded", () => {
             if (spanEl.style.fontSize && !fontSize) fontSize = spanEl.style.fontSize;
           }
 
-          if (bg || color || bold || fontSize || align) {
-            rowData.push({
-              val: text,
-              bg: bg,
-              color: color,
-              bold: bold ? "bold" : "",
-              fontSize: fontSize,
-              align: align
-            });
-          } else {
-            rowData.push(text);
+          const cellObj = (bg || color || bold || fontSize || align)
+            ? { val: text, bg: bg, color: color, bold: bold ? "bold" : "", fontSize: fontSize, align: align }
+            : text;
+
+          // 填入 2D 矩陣
+          for (let dr = 0; dr < rowspan; dr++) {
+            const targetR = r + dr;
+            if (!grid[targetR]) grid[targetR] = [];
+            for (let dc = 0; dc < colspan; dc++) {
+              const targetC = colIdx + dc;
+              if (dr === 0 && dc === 0) {
+                grid[targetR][targetC] = cellObj;
+              } else {
+                // 合併儲存格覆蓋之附屬座標，放置空字串佔位，防止同一列後續資料往左錯位
+                grid[targetR][targetC] = "";
+              }
+            }
           }
+
+          colIdx += colspan;
         });
-        if (rowData.length > 0) {
-          rows.push(rowData);
-        }
       });
 
-      // 移除尾端空白列
-      while (rows.length > 0 && rows[rows.length - 1].every(c => (typeof c === "object" ? !c.val : !c))) {
-        rows.pop();
+      // 移除尾端全空白列
+      while (grid.length > 0 && grid[grid.length - 1].every(c => (typeof c === "object" ? !c.val : !c))) {
+        grid.pop();
       }
 
-      return rows.length > 0 ? rows : null;
+      return grid.length > 0 ? grid : null;
     } catch (err) {
       console.warn("[Excel Paste] HTML 解析失敗，將回退為 TSV 純文字：", err);
       return null;

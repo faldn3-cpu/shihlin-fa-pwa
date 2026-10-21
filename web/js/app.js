@@ -149,139 +149,294 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ============================================================================
-  // 主管戰情目標設定與動態計算 (可自訂本季營收目標、拜訪次數、商機件數)
+  // 主管戰情目標設定與動態計算 (支援自訂文字、數字，以及金額/百分比/次數/件數 4 大類型)
   // ============================================================================
   const modalTargetSettings = document.getElementById("modalTargetSettings");
   const btnOpenTargetModal = document.getElementById("btnOpenTargetModal");
   const btnCloseTargetModal = document.getElementById("btnCloseTargetModal");
   const btnCancelTargetModal = document.getElementById("btnCancelTargetModal");
+  const btnResetTargetDefaults = document.getElementById("btnResetTargetDefaults");
   const formTargetSettings = document.getElementById("formTargetSettings");
 
-  const inputTargetRevenue = document.getElementById("inputTargetRevenue");
-  const inputTargetVisits = document.getElementById("inputTargetVisits");
-  const inputTargetOpps = document.getElementById("inputTargetOpps");
-
-  const displayActualRevenue = document.getElementById("displayActualRevenue");
-  const displayTargetRevenue = document.getElementById("displayTargetRevenue");
-  const displayRevenueSub = document.getElementById("displayRevenueSub");
-  const badgeRevenueRate = document.getElementById("badgeRevenueRate");
-  const barRevenueProgress = document.getElementById("barRevenueProgress");
-
-  const displayActualVisits = document.getElementById("displayActualVisits");
-  const displayTargetVisits = document.getElementById("displayTargetVisits");
-  const barVisitProgress = document.getElementById("barVisitProgress");
-  const badgeVisitRate = document.getElementById("badgeVisitRate");
-  const descVisitTarget = document.getElementById("descVisitTarget");
-
-  const displayActualOpps = document.getElementById("displayActualOpps");
-  const displayTargetOpps = document.getElementById("displayTargetOpps");
-  const barOppProgress = document.getElementById("barOppProgress");
-  const badgeOppRate = document.getElementById("badgeOppRate");
-  const descOppTarget = document.getElementById("descOppTarget");
-
-  // 目前系統實際累積指標 (可動態對接 API)
-  let currentMetrics = {
-    actualRevenue: 18520000,
-    actualVisits: 28,
-    actualOpps: 9
-  };
-
-  // 預設主管目標
+  // 4 大指標預設範本
   const defaultTargets = {
-    targetRevenue: 22500000,
-    targetVisits: 25,
-    targetOpps: 12
+    m1: {
+      name: "年度 / 季度營收成果目標",
+      type: "amount", // amount (金額-萬元), percent (百分比-%), frequency (次數-次), count (件數-件)
+      target: 2250,
+      actual: 1852,
+      desc: "季度目標對標"
+    },
+    m2: {
+      name: "客戶拜訪量 (行動層)",
+      type: "frequency",
+      target: 25,
+      actual: 28,
+      desc: "維持高頻客情拜訪"
+    },
+    m3: {
+      name: "新商機挖掘 (CRM 層)",
+      type: "count",
+      target: 12,
+      actual: 9,
+      desc: "建議加強自動化設備案源"
+    },
+    m4: {
+      name: "進行中 Deal / 標案",
+      type: "count",
+      target: 8,
+      actual: 6,
+      desc: "預估本月成案推進"
+    }
   };
 
-  function formatMoney(num) {
+  function formatMoneyNum(num) {
     return new Intl.NumberFormat("zh-TW").format(num);
   }
 
   function getSavedTargets() {
     try {
-      const saved = localStorage.getItem("shihlin_scoreboard_targets");
-      if (saved) return JSON.parse(saved);
+      const saved = localStorage.getItem("shihlin_scoreboard_targets_v2");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.m1 && parsed.m2 && parsed.m3 && parsed.m4) return parsed;
+      }
     } catch (e) {
       console.warn("無法讀取目標設定:", e);
     }
     return defaultTargets;
   }
 
+  // 格式化單一指標資料與號誌
+  function computeMetricData(m) {
+    const target = Number(m.target) || 1;
+    const actual = Number(m.actual) || 0;
+    const rawRate = (actual / target) * 100;
+    const rate = Math.round(rawRate);
+    const rateFormatted = rawRate.toFixed(1);
+    const diff = target - actual;
+
+    let unit = "";
+    let actualText = "";
+    let targetText = "";
+    let subText = "";
+
+    switch (m.type) {
+      case "amount": // 金額 (萬元)
+        unit = "萬元";
+        actualText = `${formatMoneyNum(actual)} <span class="unit-text">${unit}</span>`;
+        targetText = `/ 目標 ${formatMoneyNum(target)} ${unit}`;
+        if (diff > 0) {
+          subText = `季度目標：${formatMoneyNum(target)} ${unit} ｜ 差距：${formatMoneyNum(diff)} ${unit}`;
+        } else {
+          subText = `季度目標：${formatMoneyNum(target)} ${unit} ｜ 超標：${formatMoneyNum(Math.abs(diff))} ${unit}`;
+        }
+        break;
+
+      case "percent": // 百分比 (%)
+        unit = "%";
+        actualText = `${actual} <span class="unit-text">${unit}</span>`;
+        targetText = `/ 目標 ${target} ${unit}`;
+        if (diff > 0) {
+          subText = `目標：${target}% ｜ 尚差：${diff}%`;
+        } else {
+          subText = `目標：${target}% ｜ 超標：${Math.abs(diff)}%`;
+        }
+        break;
+
+      case "frequency": // 次數 (次)
+        unit = "次";
+        actualText = `${formatMoneyNum(actual)}`;
+        targetText = `/ 目標 ${formatMoneyNum(target)} ${unit}`;
+        subText = `達成率 ${rate}% ｜ ${m.desc || "實地拜訪"}`;
+        break;
+
+      case "count": // 件數 (件)
+      default:
+        unit = "件";
+        actualText = `${formatMoneyNum(actual)}`;
+        targetText = `/ 目標 ${formatMoneyNum(target)} ${unit}`;
+        subText = `達成率 ${rate}% ｜ ${m.desc || "推進案件"}`;
+        break;
+    }
+
+    let badgeClass = "lamp-badge green";
+    let badgeText = `${rate}% 達標`;
+    if (rate >= 100) {
+      badgeClass = "lamp-badge green";
+      badgeText = "良好";
+    } else if (rate >= 75) {
+      badgeClass = "lamp-badge yellow";
+      badgeText = "預警";
+    } else {
+      badgeClass = "lamp-badge red";
+      badgeText = "落後";
+    }
+
+    return {
+      rate,
+      rateFormatted,
+      actualText,
+      targetText,
+      subText,
+      badgeClass,
+      badgeText,
+      progressWidth: Math.min(Math.max(rate, 0), 100) + "%"
+    };
+  }
+
   function renderScoreboardUI(targets) {
-    // 1. 營收成果計算
-    const revTarget = Number(targets.targetRevenue) || defaultTargets.targetRevenue;
-    const revActual = currentMetrics.actualRevenue;
-    const revRate = ((revActual / revTarget) * 100).toFixed(1);
-    const revDiff = revTarget - revActual;
+    const data1 = computeMetricData(targets.m1);
+    const data2 = computeMetricData(targets.m2);
+    const data3 = computeMetricData(targets.m3);
+    const data4 = computeMetricData(targets.m4);
 
-    if (displayActualRevenue) displayActualRevenue.innerText = "NT$ " + formatMoney(revActual);
-    if (displayTargetRevenue) displayTargetRevenue.innerText = "/ 目標 NT$ " + formatMoney(revTarget);
-    if (displayRevenueSub) {
-      if (revDiff > 0) {
-        displayRevenueSub.innerText = `季度目標：NT$ ${formatMoney(revTarget)} ｜ 剩餘差距：NT$ ${formatMoney(revDiff)}`;
-      } else {
-        displayRevenueSub.innerText = `季度目標：NT$ ${formatMoney(revTarget)} ｜ 超標達成：NT$ ${formatMoney(Math.abs(revDiff))}`;
+    // 指標 1 (主成果)
+    const elM1Name = document.getElementById("displayMetric1Name");
+    const elM1Sub = document.getElementById("displayMetric1Sub");
+    const elM1Actual = document.getElementById("displayActualMetric1");
+    const elM1Target = document.getElementById("displayTargetMetric1");
+    const elM1Bar = document.getElementById("barMetric1Progress");
+    const elM1Badge = document.getElementById("badgeMetric1Rate");
+
+    if (elM1Name) elM1Name.innerText = targets.m1.name || "成果目標";
+    if (elM1Sub) elM1Sub.innerText = data1.subText;
+    if (elM1Actual) elM1Actual.innerHTML = data1.actualText;
+    if (elM1Target) elM1Target.innerText = data1.targetText;
+    if (elM1Bar) elM1Bar.style.width = data1.progressWidth;
+    if (elM1Badge) {
+      elM1Badge.className = data1.badgeClass;
+      elM1Badge.innerText = `${data1.rateFormatted}% 達標`;
+    }
+
+    // 指標 2
+    const elM2Name = document.getElementById("displayMetric2Name");
+    const elM2Actual = document.getElementById("displayActualMetric2");
+    const elM2Target = document.getElementById("displayTargetMetric2");
+    const elM2Bar = document.getElementById("barMetric2Progress");
+    const elM2Badge = document.getElementById("badgeMetric2Rate");
+    const elM2Desc = document.getElementById("descMetric2Target");
+
+    if (elM2Name) elM2Name.innerText = targets.m2.name;
+    if (elM2Actual) elM2Actual.innerHTML = data2.actualText;
+    if (elM2Target) elM2Target.innerText = data2.targetText;
+    if (elM2Bar) elM2Bar.style.width = data2.progressWidth;
+    if (elM2Badge) {
+      elM2Badge.className = data2.badgeClass;
+      elM2Badge.innerText = data2.badgeText;
+    }
+    if (elM2Desc) elM2Desc.innerText = data2.subText;
+
+    // 指標 3
+    const elM3Name = document.getElementById("displayMetric3Name");
+    const elM3Actual = document.getElementById("displayActualMetric3");
+    const elM3Target = document.getElementById("displayTargetMetric3");
+    const elM3Bar = document.getElementById("barMetric3Progress");
+    const elM3Badge = document.getElementById("badgeMetric3Rate");
+    const elM3Desc = document.getElementById("descMetric3Target");
+
+    if (elM3Name) elM3Name.innerText = targets.m3.name;
+    if (elM3Actual) elM3Actual.innerHTML = data3.actualText;
+    if (elM3Target) elM3Target.innerText = data3.targetText;
+    if (elM3Bar) elM3Bar.style.width = data3.progressWidth;
+    if (elM3Badge) {
+      elM3Badge.className = data3.badgeClass;
+      elM3Badge.innerText = data3.badgeText;
+    }
+    if (elM3Desc) elM3Desc.innerText = data3.subText;
+
+    // 指標 4
+    const elM4Name = document.getElementById("displayMetric4Name");
+    const elM4Actual = document.getElementById("displayActualMetric4");
+    const elM4Target = document.getElementById("displayTargetMetric4");
+    const elM4Bar = document.getElementById("barMetric4Progress");
+    const elM4Badge = document.getElementById("badgeMetric4Rate");
+    const elM4Desc = document.getElementById("descMetric4Target");
+
+    if (elM4Name) elM4Name.innerText = targets.m4.name;
+    if (elM4Actual) elM4Actual.innerHTML = data4.actualText;
+    if (elM4Target) elM4Target.innerText = data4.targetText;
+    if (elM4Bar) elM4Bar.style.width = data4.progressWidth;
+    if (elM4Badge) {
+      elM4Badge.className = data4.badgeClass;
+      elM4Badge.innerText = data4.badgeText;
+    }
+    if (elM4Desc) elM4Desc.innerText = data4.subText;
+  }
+
+  // 將設定值灌入彈窗欄位
+  function populateModalFields(targets) {
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    };
+
+    setVal("inputM1Name", targets.m1.name);
+    setVal("inputM1Type", targets.m1.type);
+    setVal("inputM1Target", targets.m1.target);
+    setVal("inputM1Actual", targets.m1.actual);
+    setVal("inputM1Desc", targets.m1.desc);
+
+    setVal("inputM2Name", targets.m2.name);
+    setVal("inputM2Type", targets.m2.type);
+    setVal("inputM2Target", targets.m2.target);
+    setVal("inputM2Actual", targets.m2.actual);
+    setVal("inputM2Desc", targets.m2.desc);
+
+    setVal("inputM3Name", targets.m3.name);
+    setVal("inputM3Type", targets.m3.type);
+    setVal("inputM3Target", targets.m3.target);
+    setVal("inputM3Actual", targets.m3.actual);
+    setVal("inputM3Desc", targets.m3.desc);
+
+    setVal("inputM4Name", targets.m4.name);
+    setVal("inputM4Type", targets.m4.type);
+    setVal("inputM4Target", targets.m4.target);
+    setVal("inputM4Actual", targets.m4.actual);
+    setVal("inputM4Desc", targets.m4.desc);
+  }
+
+  // 從彈窗讀取使用者輸入的值
+  function readModalFields() {
+    const getVal = (id) => {
+      const el = document.getElementById(id);
+      return el ? el.value.trim() : "";
+    };
+    const getNum = (id, fallback) => {
+      const val = Number(getVal(id));
+      return isNaN(val) ? fallback : val;
+    };
+
+    return {
+      m1: {
+        name: getVal("inputM1Name") || defaultTargets.m1.name,
+        type: getVal("inputM1Type") || "amount",
+        target: getNum("inputM1Target", defaultTargets.m1.target),
+        actual: getNum("inputM1Actual", defaultTargets.m1.actual),
+        desc: getVal("inputM1Desc")
+      },
+      m2: {
+        name: getVal("inputM2Name") || defaultTargets.m2.name,
+        type: getVal("inputM2Type") || "frequency",
+        target: getNum("inputM2Target", defaultTargets.m2.target),
+        actual: getNum("inputM2Actual", defaultTargets.m2.actual),
+        desc: getVal("inputM2Desc")
+      },
+      m3: {
+        name: getVal("inputM3Name") || defaultTargets.m3.name,
+        type: getVal("inputM3Type") || "count",
+        target: getNum("inputM3Target", defaultTargets.m3.target),
+        actual: getNum("inputM3Actual", defaultTargets.m3.actual),
+        desc: getVal("inputM3Desc")
+      },
+      m4: {
+        name: getVal("inputM4Name") || defaultTargets.m4.name,
+        type: getVal("inputM4Type") || "count",
+        target: getNum("inputM4Target", defaultTargets.m4.target),
+        actual: getNum("inputM4Actual", defaultTargets.m4.actual),
+        desc: getVal("inputM4Desc")
       }
-    }
-    if (barRevenueProgress) {
-      barRevenueProgress.style.width = Math.min(revRate, 100) + "%";
-    }
-    if (badgeRevenueRate) {
-      badgeRevenueRate.innerText = revRate + "% 達標";
-      badgeRevenueRate.className = "lamp-badge " + (revRate >= 100 ? "green" : (revRate >= 75 ? "green" : "yellow"));
-    }
-
-    // 2. 客戶拜訪指標計算
-    const visitTarget = Number(targets.targetVisits) || defaultTargets.targetVisits;
-    const visitActual = currentMetrics.actualVisits;
-    const visitRate = Math.round((visitActual / visitTarget) * 100);
-
-    if (displayActualVisits) displayActualVisits.innerText = visitActual;
-    if (displayTargetVisits) displayTargetVisits.innerText = `/ 目標 ${visitTarget} 次`;
-    if (barVisitProgress) {
-      barVisitProgress.style.width = Math.min(visitRate, 100) + "%";
-    }
-    if (badgeVisitRate) {
-      if (visitRate >= 100) {
-        badgeVisitRate.className = "lamp-badge green";
-        badgeVisitRate.innerText = "🟢 良好";
-      } else if (visitRate >= 75) {
-        badgeVisitRate.className = "lamp-badge yellow";
-        badgeVisitRate.innerText = "🟡 預警";
-      } else {
-        badgeVisitRate.className = "lamp-badge red";
-        badgeVisitRate.innerText = "🔴 落後";
-      }
-    }
-    if (descVisitTarget) {
-      descVisitTarget.innerText = `達成率 ${visitRate}% ｜ 每月基準 ${visitTarget} 次實地拜訪`;
-    }
-
-    // 3. CRM 新商機指標計算
-    const oppTarget = Number(targets.targetOpps) || defaultTargets.targetOpps;
-    const oppActual = currentMetrics.actualOpps;
-    const oppRate = Math.round((oppActual / oppTarget) * 100);
-
-    if (displayActualOpps) displayActualOpps.innerText = oppActual;
-    if (displayTargetOpps) displayTargetOpps.innerText = `/ 目標 ${oppTarget} 件`;
-    if (barOppProgress) {
-      barOppProgress.style.width = Math.min(oppRate, 100) + "%";
-    }
-    if (badgeOppRate) {
-      if (oppRate >= 100) {
-        badgeOppRate.className = "lamp-badge green";
-        badgeOppRate.innerText = "🟢 達標";
-      } else if (oppRate >= 75) {
-        badgeOppRate.className = "lamp-badge yellow";
-        badgeOppRate.innerText = "🟡 預警";
-      } else {
-        badgeOppRate.className = "lamp-badge red";
-        badgeOppRate.innerText = "🔴 落後";
-      }
-    }
-    if (descOppTarget) {
-      descOppTarget.innerText = `達成率 ${oppRate}% ｜ 每月開拓 ${oppTarget} 件潛在案源`;
-    }
+    };
   }
 
   // 初始化計分板
@@ -292,9 +447,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnOpenTargetModal) {
     btnOpenTargetModal.addEventListener("click", () => {
       const targets = getSavedTargets();
-      if (inputTargetRevenue) inputTargetRevenue.value = targets.targetRevenue;
-      if (inputTargetVisits) inputTargetVisits.value = targets.targetVisits;
-      if (inputTargetOpps) inputTargetOpps.value = targets.targetOpps;
+      populateModalFields(targets);
       if (modalTargetSettings) modalTargetSettings.classList.remove("hidden");
     });
   }
@@ -306,15 +459,18 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnCloseTargetModal) btnCloseTargetModal.addEventListener("click", closeTargetModal);
   if (btnCancelTargetModal) btnCancelTargetModal.addEventListener("click", closeTargetModal);
 
+  // 恢復預設值
+  if (btnResetTargetDefaults) {
+    btnResetTargetDefaults.addEventListener("click", () => {
+      populateModalFields(defaultTargets);
+    });
+  }
+
   if (formTargetSettings) {
     formTargetSettings.addEventListener("submit", (e) => {
       e.preventDefault();
-      const newTargets = {
-        targetRevenue: Number(inputTargetRevenue.value) || defaultTargets.targetRevenue,
-        targetVisits: Number(inputTargetVisits.value) || defaultTargets.targetVisits,
-        targetOpps: Number(inputTargetOpps.value) || defaultTargets.targetOpps
-      };
-      localStorage.setItem("shihlin_scoreboard_targets", JSON.stringify(newTargets));
+      const newTargets = readModalFields();
+      localStorage.setItem("shihlin_scoreboard_targets_v2", JSON.stringify(newTargets));
       renderScoreboardUI(newTargets);
       closeTargetModal();
     });

@@ -284,10 +284,81 @@ body {
 }
 
 .scoreboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   margin-top: 12px;
+}
+
+.hero-metric-box {
+  background-color: var(--bg-panel);
+  border: 2px solid var(--border-light);
+  border-radius: 8px;
+  padding: 14px 18px;
+}
+
+.hero-title {
+  font-size: 1.05em;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.hero-val-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 8px 0 6px;
+  flex-wrap: nowrap;
+}
+
+.hero-val {
+  font-size: 1.85em;
+  font-weight: 700;
+  color: var(--color-accent);
+  white-space: nowrap;
+}
+
+.unit-text {
+  font-size: 0.55em;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-left: 2px;
+}
+
+.hero-target-text {
+  font-size: 0.85em;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.scoreboard-sub-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.sub-metric-box {
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.metric-val-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 4px 0;
+  flex-wrap: nowrap;
+}
+
+.sub-target-text {
+  font-size: 0.85em;
+  color: var(--text-tertiary);
+  white-space: nowrap;
 }
 
 .metric-box {
@@ -695,6 +766,21 @@ textarea.form-control {
   padding: 18px;
 }
 
+.target-setting-section {
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.target-setting-title {
+  font-size: 0.88em;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-bottom: 8px;
+}
+
 /* ==========================================================================
    RWD 手機與平板響應式優化 (Mobile / Tablet Responsive Breakpoints)
    ========================================================================== */
@@ -729,7 +815,28 @@ textarea.form-control {
   }
 
   .scoreboard-grid {
-    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .scoreboard-sub-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .scoreboard-sub-grid .metric-box:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .hero-metric-box {
+    padding: 10px 12px;
+  }
+
+  .hero-val {
+    font-size: 1.5em;
+  }
+
+  .sub-metric-box {
+    padding: 8px 10px;
   }
 
   .action-grid {
@@ -747,6 +854,27 @@ textarea.form-control {
 }
 
 @media (max-width: 480px) {
+  .scoreboard-sub-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .hero-val-row {
+    gap: 6px;
+  }
+
+  .hero-val {
+    font-size: 1.35em;
+  }
+
+  .hero-target-text {
+    font-size: 0.8em;
+  }
+
+  .metric-val-main {
+    font-size: 1.25em;
+  }
+
   .action-grid {
     grid-template-columns: 1fr; /* 超小手機單欄排列 */
   }

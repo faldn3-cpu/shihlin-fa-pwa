@@ -83,17 +83,16 @@
       <div class="scoreboard-top-banner">
         <div class="card-header" style="margin-bottom:8px;">
           <div class="card-title-group">
-            <svg class="icon-svg" style="color:var(--color-accent); width:22px; height:22px;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-13h-2v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+            <svg class="icon-svg" style="color:var(--color-accent); width:20px; height:20px;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-13h-2v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
             <div>
-              <h2 class="card-title" style="font-size:1.2em;">士林電機 FA 業務戰情計分板</h2>
-              <p class="card-desc">全站字型：微軟正黑體 (預設 12pt) ｜ 直觀圖形化成果與驅動指標</p>
+              <h2 class="card-title" style="font-size:1.15em;">士林電機 FA 業務戰情計分板</h2>
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
-            <button id="btnOpenTargetModal" class="fluent-btn" type="button" title="主管可設定本季營收與每月各項驅動目標">
+            <button id="btnOpenTargetModal" class="fluent-btn" type="button" title="主管自訂戰情目標">
               <!-- 單色齒輪圖示 -->
               <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-              主管目標設定
+              <span>目標設定</span>
             </button>
             <span class="lamp-badge green">即時連線</span>
           </div>
@@ -101,71 +100,74 @@
 
         <!-- 戰情指標卡片網格 -->
         <div class="scoreboard-grid">
-          <!-- 成果指標：本季營收目標達成率 -->
-          <div class="metric-box" style="grid-column: 1 / -1; background-color: var(--bg-panel); border: 2px solid var(--border-light);">
+          <!-- 成果指標：核心業績目標達成率 (單位：萬元) -->
+          <div class="metric-box hero-metric-box">
             <div class="metric-header">
               <div>
-                <span class="metric-title" style="font-size:1.05em; font-weight:700;">年度 / 季度營收成果目標 (Goal vs Actual)</span>
-                <div id="displayRevenueSub" class="metric-target-text">季度目標：NT$ 22,500,000 ｜ 剩餘差距：NT$ 3,980,000</div>
+                <span id="displayMetric1Name" class="metric-title hero-title">年度 / 季度營收成果目標</span>
+                <div id="displayMetric1Sub" class="metric-target-text">季度目標：2,250 萬元 ｜ 差距：398 萬元</div>
               </div>
-              <span id="badgeRevenueRate" class="lamp-badge green" style="font-size:1.1em; padding:4px 12px;">82.3% 達標</span>
+              <span id="badgeMetric1Rate" class="lamp-badge green">82.3% 達標</span>
             </div>
-            <div style="display:flex; align-items:baseline; gap:12px; margin:8px 0 4px;">
-              <div id="displayActualRevenue" class="metric-val-main" style="font-size:2em; color:var(--color-accent);">NT$ 18,520,000</div>
-              <div id="displayTargetRevenue" style="font-size:0.9em; color:var(--text-tertiary);">/ 目標 NT$ 22,500,000</div>
+            <div class="hero-val-row">
+              <div id="displayActualMetric1" class="metric-val-main hero-val">1,852 <span class="unit-text">萬元</span></div>
+              <div id="displayTargetMetric1" class="hero-target-text">/ 目標 2,250 萬元</div>
             </div>
             <!-- 大尺寸圖形化進度條 -->
-            <div class="fluent-progress-bg" style="height:12px; border-radius:6px;">
-              <div id="barRevenueProgress" class="fluent-progress-bar" style="width: 82.3%; border-radius:6px;"></div>
+            <div class="fluent-progress-bg" style="height:10px; border-radius:5px;">
+              <div id="barMetric1Progress" class="fluent-progress-bar" style="width: 82.3%; border-radius:5px;"></div>
             </div>
           </div>
 
-          <!-- 驅動指標 1：日報拜訪量 -->
-          <div class="metric-box">
-            <div class="metric-header">
-              <span class="metric-title">客戶拜訪量 (行動層)</span>
-              <span id="badgeVisitRate" class="lamp-badge green">🟢 良好</span>
+          <!-- 下方 3 大驅動指標子網格 (手機端自動並排為緊湊網格) -->
+          <div class="scoreboard-sub-grid">
+            <!-- 驅動指標 1 -->
+            <div class="metric-box sub-metric-box">
+              <div class="metric-header">
+                <span id="displayMetric2Name" class="metric-title">客戶拜訪量 (行動層)</span>
+                <span id="badgeMetric2Rate" class="lamp-badge green">良好</span>
+              </div>
+              <div class="metric-val-row">
+                <div id="displayActualMetric2" class="metric-val-main">28</div>
+                <div id="displayTargetMetric2" class="sub-target-text">/ 目標 25 次</div>
+              </div>
+              <div class="fluent-progress-bg">
+                <div id="barMetric2Progress" class="fluent-progress-bar" style="width: 100%;"></div>
+              </div>
+              <div id="descMetric2Target" class="metric-target-text">達成率 112% ｜ 每月實地拜訪</div>
             </div>
-            <div style="display:flex; align-items:baseline; gap:6px; margin:4px 0;">
-              <div id="displayActualVisits" class="metric-val-main">28</div>
-              <div id="displayTargetVisits" style="font-size:0.9em; color:var(--text-tertiary);">/ 目標 25 次</div>
-            </div>
-            <div class="fluent-progress-bg">
-              <div id="barVisitProgress" class="fluent-progress-bar" style="width: 100%;"></div>
-            </div>
-            <div id="descVisitTarget" class="metric-target-text">達成率 112% ｜ 維持高頻客情拜訪</div>
-          </div>
 
-          <!-- 驅動指標 2：CRM 新商機挖掘 -->
-          <div class="metric-box">
-            <div class="metric-header">
-              <span class="metric-title">新商機挖掘 (CRM 層)</span>
-              <span id="badgeOppRate" class="lamp-badge yellow">🟡 預警</span>
+            <!-- 驅動指標 2 -->
+            <div class="metric-box sub-metric-box">
+              <div class="metric-header">
+                <span id="displayMetric3Name" class="metric-title">新商機挖掘 (CRM 層)</span>
+                <span id="badgeMetric3Rate" class="lamp-badge yellow">預警</span>
+              </div>
+              <div class="metric-val-row">
+                <div id="displayActualMetric3" class="metric-val-main">9</div>
+                <div id="displayTargetMetric3" class="sub-target-text">/ 目標 12 件</div>
+              </div>
+              <div class="fluent-progress-bg">
+                <div id="barMetric3Progress" class="fluent-progress-bar" style="width: 75%;"></div>
+              </div>
+              <div id="descMetric3Target" class="metric-target-text">達成率 75% ｜ 自動化案源</div>
             </div>
-            <div style="display:flex; align-items:baseline; gap:6px; margin:4px 0;">
-              <div id="displayActualOpps" class="metric-val-main">9</div>
-              <div id="displayTargetOpps" style="font-size:0.9em; color:var(--text-tertiary);">/ 目標 12 件</div>
-            </div>
-            <div class="fluent-progress-bg">
-              <div id="barOppProgress" class="fluent-progress-bar" style="width: 75%;"></div>
-            </div>
-            <div id="descOppTarget" class="metric-target-text">達成率 75% ｜ 建議加強自動化設備產業案源</div>
-          </div>
 
-          <!-- 驅動指標 3：專案案件 Deal 推進 -->
-          <div class="metric-box">
-            <div class="metric-header">
-              <span class="metric-title">進行中 Deal / 標案</span>
-              <span class="lamp-badge green">🟢 活躍</span>
+            <!-- 驅動指標 3 -->
+            <div class="metric-box sub-metric-box">
+              <div class="metric-header">
+                <span id="displayMetric4Name" class="metric-title">進行中 Deal / 標案</span>
+                <span id="badgeMetric4Rate" class="lamp-badge green">活躍</span>
+              </div>
+              <div class="metric-val-row">
+                <div id="displayActualMetric4" class="metric-val-main">6</div>
+                <div id="displayTargetMetric4" class="sub-target-text">/ 目標 8 件</div>
+              </div>
+              <div class="fluent-progress-bg">
+                <div id="barMetric4Progress" class="fluent-progress-bar" style="width: 75%;"></div>
+              </div>
+              <div id="descMetric4Target" class="metric-target-text">達成率 75% ｜ 預估本月推進</div>
             </div>
-            <div style="display:flex; align-items:baseline; gap:6px; margin:4px 0;">
-              <div class="metric-val-main">6</div>
-              <div style="font-size:0.9em; color:var(--text-tertiary);">件在案推進</div>
-            </div>
-            <div class="fluent-progress-bg">
-              <div class="fluent-progress-bar" style="width: 85%;"></div>
-            </div>
-            <div class="metric-target-text">專案總額：NT$ 4,350,000 ｜ 預估本月成案 2 件</div>
           </div>
         </div>
       </div>
@@ -486,41 +488,156 @@
 
   <!-- 主管目標設定彈窗 (Modal Dialog) -->
   <div id="modalTargetSettings" class="fluent-modal-overlay hidden">
-    <div class="fluent-modal-card">
+    <div class="fluent-modal-card" style="max-width:580px;">
       <div class="modal-header">
         <div class="card-title-group">
           <svg class="icon-svg" style="color:var(--color-accent); width:20px; height:20px;" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-          <h3 class="card-title" style="font-size:1.1em;">主管戰情目標與行動方案設定</h3>
+          <h3 class="card-title" style="font-size:1.1em;">戰情目標與指標方案設定</h3>
         </div>
         <button id="btnCloseTargetModal" type="button" class="modal-close-btn" title="關閉">✕</button>
       </div>
-      <div class="modal-body">
-        <p style="font-size:0.9em; color:var(--text-secondary); margin-top:0;">設定後將即時動態更新戰情計分板進度條、目標對標差距與紅黃綠燈診斷號誌。</p>
+      <div class="modal-body" style="max-height:75vh; overflow-y:auto;">
+        <p style="font-size:0.9em; color:var(--text-secondary); margin-top:0;">
+          自訂 4 大戰情指標：文字與數值均可編輯，系統依「金額 (萬元)」、「百分比 (%)」、「次數 (次)」、「件數 (件)」自動試算進度與號誌。
+        </p>
         <form id="formTargetSettings">
-          <div class="form-group" style="margin-bottom:14px;">
-            <label class="form-label">本季營收成果目標 (元)<span class="required">*</span></label>
-            <input id="inputTargetRevenue" type="number" class="form-control" value="22500000" step="500000" required />
-            <span class="autofill-hint">目前預設：22,500,000 元 (二千二百五十萬元)</span>
+          <!-- 指標 1 設定 (主成果指標) -->
+          <div class="target-setting-section">
+            <div class="target-setting-title">指標 1（頂部核心成果指標）</div>
+            <div class="form-grid" style="grid-template-columns: repeat(2, 1fr); gap: 10px;">
+              <div class="form-group">
+                <label class="form-label">指標名稱</label>
+                <input id="inputM1Name" type="text" class="form-control" value="年度 / 季度營收成果目標" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">目標類型</label>
+                <select id="inputM1Type" class="form-control">
+                  <option value="amount" selected>金額 (萬元)</option>
+                  <option value="percent">百分比 (%)</option>
+                  <option value="frequency">次數 (次)</option>
+                  <option value="count">件數 (件)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">目標值 (數字)</label>
+                <input id="inputM1Target" type="number" class="form-control" value="2250" step="any" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">目前實際值 (數字)</label>
+                <input id="inputM1Actual" type="number" class="form-control" value="1852" step="any" required />
+              </div>
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label">備註 / 說明文字</label>
+                <input id="inputM1Desc" type="text" class="form-control" value="季度目標對標" />
+              </div>
+            </div>
           </div>
 
-          <div class="form-group" style="margin-bottom:14px;">
-            <label class="form-label">每月客戶拜訪指標次數 (次/月)<span class="required">*</span></label>
-            <input id="inputTargetVisits" type="number" class="form-control" value="25" min="1" required />
-            <span class="autofill-hint">每位業務每月基準拜訪量</span>
+          <!-- 指標 2 設定 -->
+          <div class="target-setting-section">
+            <div class="target-setting-title">指標 2（行動層驅動指標）</div>
+            <div class="form-grid" style="grid-template-columns: repeat(2, 1fr); gap: 10px;">
+              <div class="form-group">
+                <label class="form-label">指標名稱</label>
+                <input id="inputM2Name" type="text" class="form-control" value="客戶拜訪量 (行動層)" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">目標類型</label>
+                <select id="inputM2Type" class="form-control">
+                  <option value="amount">金額 (萬元)</option>
+                  <option value="percent">百分比 (%)</option>
+                  <option value="frequency" selected>次數 (次)</option>
+                  <option value="count">件數 (件)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">目標值 (數字)</label>
+                <input id="inputM2Target" type="number" class="form-control" value="25" step="any" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">目前實際值 (數字)</label>
+                <input id="inputM2Actual" type="number" class="form-control" value="28" step="any" required />
+              </div>
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label">備註 / 說明文字</label>
+                <input id="inputM2Desc" type="text" class="form-control" value="維持高頻客情拜訪" />
+              </div>
+            </div>
           </div>
 
-          <div class="form-group" style="margin-bottom:18px;">
-            <label class="form-label">每月 CRM 新商機挖掘目標 (件/月)<span class="required">*</span></label>
-            <input id="inputTargetOpps" type="number" class="form-control" value="12" min="1" required />
-            <span class="autofill-hint">每月推廣產品系列潛在案源數</span>
+          <!-- 指標 3 設定 -->
+          <div class="target-setting-section">
+            <div class="target-setting-title">指標 3（商機層驅動指標）</div>
+            <div class="form-grid" style="grid-template-columns: repeat(2, 1fr); gap: 10px;">
+              <div class="form-group">
+                <label class="form-label">指標名稱</label>
+                <input id="inputM3Name" type="text" class="form-control" value="新商機挖掘 (CRM 層)" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">目標類型</label>
+                <select id="inputM3Type" class="form-control">
+                  <option value="amount">金額 (萬元)</option>
+                  <option value="percent">百分比 (%)</option>
+                  <option value="frequency">次數 (次)</option>
+                  <option value="count" selected>件數 (件)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">目標值 (數字)</label>
+                <input id="inputM3Target" type="number" class="form-control" value="12" step="any" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">目前實際值 (數字)</label>
+                <input id="inputM3Actual" type="number" class="form-control" value="9" step="any" required />
+              </div>
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label">備註 / 說明文字</label>
+                <input id="inputM3Desc" type="text" class="form-control" value="建議加強自動化設備案源" />
+              </div>
+            </div>
           </div>
 
-          <div style="display:flex; justify-content:flex-end; gap:8px;">
-            <button id="btnCancelTargetModal" type="button" class="fluent-btn">取消</button>
-            <button type="submit" class="fluent-btn primary">
-              <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
-              儲存目標方案
-            </button>
+          <!-- 指標 4 設定 -->
+          <div class="target-setting-section">
+            <div class="target-setting-title">指標 4（案件推進指標）</div>
+            <div class="form-grid" style="grid-template-columns: repeat(2, 1fr); gap: 10px;">
+              <div class="form-group">
+                <label class="form-label">指標名稱</label>
+                <input id="inputM4Name" type="text" class="form-control" value="進行中 Deal / 標案" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">目標類型</label>
+                <select id="inputM4Type" class="form-control">
+                  <option value="amount">金額 (萬元)</option>
+                  <option value="percent">百分比 (%)</option>
+                  <option value="frequency">次數 (次)</option>
+                  <option value="count" selected>件數 (件)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">目標值 (數字)</label>
+                <input id="inputM4Target" type="number" class="form-control" value="8" step="any" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">目前實際值 (數字)</label>
+                <input id="inputM4Actual" type="number" class="form-control" value="6" step="any" required />
+              </div>
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label">備註 / 說明文字</label>
+                <input id="inputM4Desc" type="text" class="form-control" value="預估本月成案推進" />
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; gap:8px;">
+            <button id="btnResetTargetDefaults" type="button" class="fluent-btn" style="color:var(--text-secondary);">恢復預設值</button>
+            <div style="display:flex; gap:8px;">
+              <button id="btnCancelTargetModal" type="button" class="fluent-btn">取消</button>
+              <button type="submit" class="fluent-btn primary">
+                <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                儲存目標設定
+              </button>
+            </div>
           </div>
         </form>
       </div>

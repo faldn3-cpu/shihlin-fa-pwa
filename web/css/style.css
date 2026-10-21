@@ -1269,6 +1269,53 @@ textarea.form-control {
 }
 
 /* ==========================================================================
+   微軟風格 Excel 右鍵快顯功能選單 (Spreadsheet Context Menu)
+   ========================================================================== */
+.excel-context-menu {
+  position: fixed;
+  z-index: 9999;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
+  min-width: 175px;
+  padding: 5px 0;
+  font-size: 0.88em;
+  font-family: "Segoe UI", -apple-system, sans-serif;
+  user-select: none;
+}
+
+.excel-context-menu.hidden {
+  display: none !important;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.context-menu-item:hover {
+  background-color: var(--bg-hover);
+  color: var(--color-accent);
+}
+
+.context-menu-item.danger:hover {
+  background-color: rgba(168, 0, 0, 0.08);
+  color: var(--color-danger);
+}
+
+.context-menu-divider {
+  height: 1px;
+  background-color: var(--border-light);
+  margin: 4px 0;
+}
+
+/* ==========================================================================
    RWD 手機與平板響應式優化 (Mobile / Tablet Responsive Breakpoints)
    ========================================================================== */
 @media (max-width: 768px) {

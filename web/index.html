@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
   
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261021_synology_fix" />
+  <link rel="stylesheet" href="css/style.css?v=20261021_contextmenu" />
 </head>
 <body>
 
@@ -606,11 +606,10 @@
                 <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
                 <span>左表格：【挑戰目標總表】</span>
                 <span id="badgeTargetCount" class="excel-count-badge">空白試算表</span>
+                <span style="font-size:0.75em; color:var(--text-tertiary); font-weight:normal; margin-left:4px;">(按右鍵插入/刪除列，DEL清空)</span>
               </div>
               <div style="display:flex; gap:6px; align-items:center;">
-                <button id="btnAddTargetRow" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;" title="在最後新增一列空白儲存格">+ 新增列</button>
-                <button id="btnDeleteTargetRow" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;" title="點擊列號或儲存格後點此刪除該列">刪除選定列</button>
-                <button id="btnPasteTargetDemo" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">載入目標範例</button>
+                <button id="btnPasteTargetDemo" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">載入範例</button>
                 <button id="btnClearTargetTable" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">清空</button>
               </div>
             </div>
@@ -627,11 +626,10 @@
                 <svg class="icon-svg" style="color:var(--color-success);" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
                 <span>右表格：【產品出貨明細表】</span>
                 <span id="badgeShipmentCount" class="excel-count-badge">空白試算表</span>
+                <span style="font-size:0.75em; color:var(--text-tertiary); font-weight:normal; margin-left:4px;">(按右鍵插入/刪除列，DEL清空)</span>
               </div>
               <div style="display:flex; gap:6px; align-items:center;">
-                <button id="btnAddShipmentRow" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;" title="在最後新增一列空白儲存格">+ 新增列</button>
-                <button id="btnDeleteShipmentRow" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;" title="點擊列號或儲存格後點此刪除該列">刪除選定列</button>
-                <button id="btnPasteShipmentDemo" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">載入出貨範例</button>
+                <button id="btnPasteShipmentDemo" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">載入範例</button>
                 <button id="btnClearShipmentTable" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">清空</button>
               </div>
             </div>
@@ -815,8 +813,29 @@
     </div>
   </div>
 
+  <!-- 微軟風格 Excel 原生右鍵快顯功能選單 (Context Menu) -->
+  <div id="excelContextMenu" class="excel-context-menu hidden">
+    <div class="context-menu-item" id="menuInsertRowAbove">
+      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      <span>在上方插入一列</span>
+    </div>
+    <div class="context-menu-item" id="menuInsertRowBelow">
+      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      <span>在下方插入一列</span>
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item danger" id="menuDeleteRow">
+      <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      <span>刪除此列</span>
+    </div>
+    <div class="context-menu-item" id="menuClearCell">
+      <svg class="icon-svg" style="width:16px; height:16px; color:var(--text-tertiary);" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      <span>清空內容 (DEL)</span>
+    </div>
+  </div>
+
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261021_synology_fix"></script>
+  <script src="js/app.js?v=20261021_contextmenu"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>

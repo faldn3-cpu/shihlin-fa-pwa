@@ -490,27 +490,34 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 7. 管理員目標資料維護（微軟原生 Excel 雙試算表格子）
   // 支援 RFC 4180 試算表標準（精準處理雙引號內 Alt+Enter 換行，還原 Synology 表格）
-  // 支援點選列號整列選取、新增列、刪除選定列與儲存格直接打字
+  // 支援右鍵快顯選單（插入/刪除列）、DEL 鍵快速清空與水平捲軸自適應歸零
   // ============================================================================
   const containerTableTargets = document.getElementById("containerTableTargets");
   const tablePastedTargets = document.getElementById("tablePastedTargets");
   const badgeTargetCount = document.getElementById("badgeTargetCount");
-  const btnAddTargetRow = document.getElementById("btnAddTargetRow");
-  const btnDeleteTargetRow = document.getElementById("btnDeleteTargetRow");
   const btnPasteTargetDemo = document.getElementById("btnPasteTargetDemo");
   const btnClearTargetTable = document.getElementById("btnClearTargetTable");
 
   const containerTableShipments = document.getElementById("containerTableShipments");
   const tablePastedShipments = document.getElementById("tablePastedShipments");
   const badgeShipmentCount = document.getElementById("badgeShipmentCount");
-  const btnAddShipmentRow = document.getElementById("btnAddShipmentRow");
-  const btnDeleteShipmentRow = document.getElementById("btnDeleteShipmentRow");
   const btnPasteShipmentDemo = document.getElementById("btnPasteShipmentDemo");
   const btnClearShipmentTable = document.getElementById("btnClearShipmentTable");
 
   const btnLoadSampleExcel = document.getElementById("btnLoadSampleExcel");
   const btnResetAdminDefaults = document.getElementById("btnResetAdminDefaults");
   const btnConfirmTablesReady = document.getElementById("btnConfirmTablesReady");
+
+  // 右鍵快顯功能選單元件
+  const excelContextMenu = document.getElementById("excelContextMenu");
+  const menuInsertRowAbove = document.getElementById("menuInsertRowAbove");
+  const menuInsertRowBelow = document.getElementById("menuInsertRowBelow");
+  const menuDeleteRow = document.getElementById("menuDeleteRow");
+  const menuClearCell = document.getElementById("menuClearCell");
+
+  let activeContextTable = null;
+  let activeContextRow = 0;
+  let activeContextCell = null;
 
   // 產生 Excel 欄標籤 A, B, C... Z, AA, AB...
   function getExcelColName(idx) {
@@ -573,7 +580,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // 渲染微軟原生 Excel 試算表格子 (含 A/B/C 欄標籤與 1/2/3 列號，支援 contenteditable 與 Ctrl+V 貼入)
-  function renderExcelGrid(tableEl, inputData, minRows, minCols, badgeEl) {
+  function renderExcelGrid(tableEl, inputData, minRows, minCols, badgeEl, preserveScroll = false) {
     if (!tableEl) return;
 
     // inputData 可為字串 (TSV) 或已解析的 2D 矩陣
@@ -599,7 +606,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const totalCols = maxCols;
 
     // 建立 thead (頂部 A, B, C... 欄標籤)
-    let theadHtml = "<thead><tr><th class=\"corner-cell\" title=\"點擊列號可選取整列，按『刪除選定列』刪除\"></th>";
+    let theadHtml = "<thead><tr><th class=\"corner-cell\" title=\"點擊列號或儲存格可按右鍵操作選單，按 DEL 清空\"></th>";
     for (let c = 0; c < totalCols; c++) {
       theadHtml += `<th class="col-header">${getExcelColName(c)}</th>`;
     }
@@ -608,7 +615,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 建立 tbody (左側 1, 2, 3... 列號與真實儲存格)
     let tbodyHtml = "<tbody>";
     for (let r = 0; r < totalRows; r++) {
-      tbodyHtml += `<tr data-row-index="${r}"><th class="row-header" title="點擊選取第 ${r + 1} 列">${r + 1}</th>`;
+      tbodyHtml += `<tr data-row-index="${r}"><th class="row-header" title="點擊選取第 ${r + 1} 列 (可點右鍵選單)">${r + 1}</th>`;
       const rowData = dataMatrix[r] || [];
       for (let c = 0; c < totalCols; c++) {
         const val = rowData[c] !== undefined ? rowData[c] : "";
@@ -622,6 +629,11 @@ document.addEventListener("DOMContentLoaded", () => {
     tbodyHtml += "</tbody>";
 
     tableEl.innerHTML = theadHtml + tbodyHtml;
+
+    // 貼上或重置時，自動將水平捲軸歸零，確保第 1 欄 A、B、C 永遠清晰完整可見
+    if (!preserveScroll && tableEl.parentElement) {
+      tableEl.parentElement.scrollLeft = 0;
+    }
 
     // 綁定列選取高亮與儲存格編輯監聽
     bindExcelGridEvents(tableEl);
@@ -640,6 +652,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // 選取特定列高亮
   function selectGridRow(tableEl, rowIdx) {
     tableEl._selectedRow = rowIdx;
+    activeContextTable = tableEl;
+    activeContextRow = rowIdx;
     const allRows = tableEl.querySelectorAll("tbody tr");
     allRows.forEach((tr, idx) => {
       if (idx === rowIdx) {
@@ -650,13 +664,39 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 綁定儲存格與列號互動事件
+  // 開啟微軟風格右鍵快顯功能選單
+  function openContextMenu(e, tableEl, rowIdx, cellEl) {
+    if (!excelContextMenu) return;
+    activeContextTable = tableEl;
+    activeContextRow = rowIdx;
+    activeContextCell = cellEl;
+
+    let x = e.clientX;
+    let y = e.clientY;
+    const menuWidth = 185;
+    const menuHeight = 160;
+
+    if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 10;
+    if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 10;
+
+    excelContextMenu.style.left = `${x}px`;
+    excelContextMenu.style.top = `${y}px`;
+    excelContextMenu.classList.remove("hidden");
+  }
+
+  // 綁定儲存格與列號互動事件 (含右鍵 contextmenu)
   function bindExcelGridEvents(tableEl) {
     const rowHeaders = tableEl.querySelectorAll("th.row-header");
     rowHeaders.forEach(th => {
       th.addEventListener("click", () => {
         const rowIdx = parseInt(th.parentElement.dataset.rowIndex, 10);
         selectGridRow(tableEl, rowIdx);
+      });
+      th.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        const rowIdx = parseInt(th.parentElement.dataset.rowIndex, 10);
+        selectGridRow(tableEl, rowIdx);
+        openContextMenu(e, tableEl, rowIdx, null);
       });
     });
 
@@ -665,6 +705,14 @@ document.addEventListener("DOMContentLoaded", () => {
       td.addEventListener("focus", () => {
         const rowIdx = parseInt(td.parentElement.dataset.rowIndex, 10);
         selectGridRow(tableEl, rowIdx);
+        activeContextCell = td;
+      });
+      td.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        const rowIdx = parseInt(td.parentElement.dataset.rowIndex, 10);
+        selectGridRow(tableEl, rowIdx);
+        td.focus();
+        openContextMenu(e, tableEl, rowIdx, td);
       });
       td.addEventListener("blur", () => {
         const r = parseInt(td.dataset.row, 10);
@@ -679,35 +727,108 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 新增一列
-  function addGridRow(tableEl) {
-    if (!tableEl) return;
-    const matrix = tableEl._gridMatrix || [];
-    const numCols = matrix[0] ? matrix[0].length : (tableEl._minCols || 10);
-    matrix.push(new Array(numCols).fill(""));
-    renderExcelGrid(tableEl, matrix, tableEl._minRows, tableEl._minCols, tableEl._badgeEl);
-    selectGridRow(tableEl, matrix.length - 1);
+  // 點擊選單外任一處或按 Esc 自動隱藏右鍵選單
+  document.addEventListener("click", (e) => {
+    if (excelContextMenu && !excelContextMenu.contains(e.target)) {
+      excelContextMenu.classList.add("hidden");
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && excelContextMenu) {
+      excelContextMenu.classList.add("hidden");
+    }
+  });
+
+  // 右鍵選單：在上方插入列
+  if (menuInsertRowAbove) {
+    menuInsertRowAbove.addEventListener("click", () => {
+      if (!activeContextTable) return;
+      const matrix = activeContextTable._gridMatrix || [];
+      const numCols = matrix[0] ? matrix[0].length : (activeContextTable._minCols || 10);
+      const insertIdx = activeContextRow >= 0 ? activeContextRow : 0;
+      matrix.splice(insertIdx, 0, new Array(numCols).fill(""));
+      renderExcelGrid(activeContextTable, matrix, activeContextTable._minRows, activeContextTable._minCols, activeContextTable._badgeEl, true);
+      selectGridRow(activeContextTable, insertIdx);
+      if (excelContextMenu) excelContextMenu.classList.add("hidden");
+    });
   }
 
-  // 刪除選定列
-  function deleteGridRow(tableEl) {
-    if (!tableEl || !tableEl._gridMatrix) return;
-    const targetIdx = tableEl._selectedRow !== undefined ? tableEl._selectedRow : (tableEl._gridMatrix.length - 1);
-    if (targetIdx >= 0 && targetIdx < tableEl._gridMatrix.length) {
-      tableEl._gridMatrix.splice(targetIdx, 1);
-      renderExcelGrid(tableEl, tableEl._gridMatrix, tableEl._minRows, tableEl._minCols, tableEl._badgeEl);
-      if (tableEl._gridMatrix.length > 0) {
-        const nextIdx = Math.min(targetIdx, tableEl._gridMatrix.length - 1);
-        selectGridRow(tableEl, nextIdx);
+  // 右鍵選單：在下方插入列
+  if (menuInsertRowBelow) {
+    menuInsertRowBelow.addEventListener("click", () => {
+      if (!activeContextTable) return;
+      const matrix = activeContextTable._gridMatrix || [];
+      const numCols = matrix[0] ? matrix[0].length : (activeContextTable._minCols || 10);
+      const insertIdx = (activeContextRow >= 0 ? activeContextRow : matrix.length - 1) + 1;
+      matrix.splice(insertIdx, 0, new Array(numCols).fill(""));
+      renderExcelGrid(activeContextTable, matrix, activeContextTable._minRows, activeContextTable._minCols, activeContextTable._badgeEl, true);
+      selectGridRow(activeContextTable, insertIdx);
+      if (excelContextMenu) excelContextMenu.classList.add("hidden");
+    });
+  }
+
+  // 右鍵選單：刪除此列
+  if (menuDeleteRow) {
+    menuDeleteRow.addEventListener("click", () => {
+      if (!activeContextTable || !activeContextTable._gridMatrix) return;
+      const matrix = activeContextTable._gridMatrix;
+      if (activeContextRow >= 0 && activeContextRow < matrix.length) {
+        matrix.splice(activeContextRow, 1);
+        renderExcelGrid(activeContextTable, matrix, activeContextTable._minRows, activeContextTable._minCols, activeContextTable._badgeEl, true);
+        if (matrix.length > 0) {
+          const nextIdx = Math.min(activeContextRow, matrix.length - 1);
+          selectGridRow(activeContextTable, nextIdx);
+        }
+      }
+      if (excelContextMenu) excelContextMenu.classList.add("hidden");
+    });
+  }
+
+  // 右鍵選單：清空內容 (或鍵盤 DEL)
+  if (menuClearCell) {
+    menuClearCell.addEventListener("click", () => {
+      clearSelectedCellOrRow();
+      if (excelContextMenu) excelContextMenu.classList.add("hidden");
+    });
+  }
+
+  // 清空選取單元格或整列共用函式
+  function clearSelectedCellOrRow() {
+    if (activeContextCell) {
+      activeContextCell.innerText = "";
+      const r = parseInt(activeContextCell.dataset.row, 10);
+      const c = parseInt(activeContextCell.dataset.col, 10);
+      if (activeContextTable && activeContextTable._gridMatrix && activeContextTable._gridMatrix[r]) {
+        activeContextTable._gridMatrix[r][c] = "";
+      }
+    } else if (activeContextTable && activeContextTable._gridMatrix && activeContextTable._selectedRow !== undefined) {
+      const r = activeContextTable._selectedRow;
+      if (activeContextTable._gridMatrix[r]) {
+        activeContextTable._gridMatrix[r] = new Array(activeContextTable._gridMatrix[r].length).fill("");
+        renderExcelGrid(activeContextTable, activeContextTable._gridMatrix, activeContextTable._minRows, activeContextTable._minCols, activeContextTable._badgeEl, true);
+        selectGridRow(activeContextTable, r);
       }
     }
   }
 
-  // 綁定增刪列按鈕
-  if (btnAddTargetRow) btnAddTargetRow.addEventListener("click", () => addGridRow(tablePastedTargets));
-  if (btnDeleteTargetRow) btnDeleteTargetRow.addEventListener("click", () => deleteGridRow(tablePastedTargets));
-  if (btnAddShipmentRow) btnAddShipmentRow.addEventListener("click", () => addGridRow(tablePastedShipments));
-  if (btnDeleteShipmentRow) btnDeleteShipmentRow.addEventListener("click", () => deleteGridRow(tablePastedShipments));
+  // 監聽鍵盤 DEL / Delete 鍵快速清空選取內容
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Delete" || e.key === "Del") {
+      const activeEl = document.activeElement;
+      if (activeEl && activeEl.classList.contains("grid-cell")) {
+        activeEl.innerText = "";
+        const r = parseInt(activeEl.dataset.row, 10);
+        const c = parseInt(activeEl.dataset.col, 10);
+        const tbl = activeEl.closest("table");
+        if (tbl && tbl._gridMatrix && tbl._gridMatrix[r]) {
+          tbl._gridMatrix[r][c] = "";
+        }
+      } else if (activeContextTable && activeContextTable._selectedRow !== undefined) {
+        clearSelectedCellOrRow();
+      }
+    }
+  });
 
   // 監聽左邊表格容器 paste 事件
   if (containerTableTargets) {
@@ -716,7 +837,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const clipboardData = e.clipboardData || window.clipboardData;
       const text = clipboardData.getData("text");
       if (text) {
-        renderExcelGrid(tablePastedTargets, text, 20, 11, badgeTargetCount);
+        renderExcelGrid(tablePastedTargets, text, 20, 11, badgeTargetCount, false);
         localStorage.setItem("shihlin_pasted_targets_raw", text);
       }
     });
@@ -729,7 +850,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const clipboardData = e.clipboardData || window.clipboardData;
       const text = clipboardData.getData("text");
       if (text) {
-        renderExcelGrid(tablePastedShipments, text, 25, 5, badgeShipmentCount);
+        renderExcelGrid(tablePastedShipments, text, 25, 5, badgeShipmentCount, false);
         localStorage.setItem("shihlin_pasted_shipments_raw", text);
       }
     });

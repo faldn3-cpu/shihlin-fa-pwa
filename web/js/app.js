@@ -513,11 +513,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const menuInsertRowAbove = document.getElementById("menuInsertRowAbove");
   const menuInsertRowBelow = document.getElementById("menuInsertRowBelow");
   const menuDeleteRow = document.getElementById("menuDeleteRow");
+  const menuInsertColLeft = document.getElementById("menuInsertColLeft");
+  const menuInsertColRight = document.getElementById("menuInsertColRight");
+  const menuDeleteCol = document.getElementById("menuDeleteCol");
   const menuClearCell = document.getElementById("menuClearCell");
 
   let activeContextTable = null;
-  let activeContextRow = 0;
+  let activeContextRow = -1;
+  let activeContextCol = -1;
   let activeContextCell = null;
+  let activeSelectedCol = -1;
+
+  // 滑鼠多格框選狀態
+  let isRangeSelecting = false;
+  let selectionStart = null; // { table, r, c }
+  let activeRange = null;    // { table, minR, maxR, minC, maxC }
 
   // 產生 Excel 欄標籤 A, B, C... Z, AA, AB...
   function getExcelColName(idx) {
@@ -528,6 +538,102 @@ document.addEventListener("DOMContentLoaded", () => {
       i = Math.floor(i / 26) - 1;
     }
     return name;
+  }
+
+  // 100% 格式對照：解析 Excel / Synology Office 剪貼簿產生的 HTML 表格樣式 (含顏色、字型大小、底色、粗體)
+  function parseExcelHTML(htmlText) {
+    if (!htmlText || !htmlText.includes("<table")) return null;
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, "text/html");
+      const table = doc.querySelector("table");
+      if (!table) return null;
+
+      // 提取 <style> 中的 class 樣式規則
+      const classStyles = {};
+      const styleTags = doc.querySelectorAll("style");
+      styleTags.forEach(styleTag => {
+        const cssText = styleTag.textContent || "";
+        const ruleRegex = /\.([a-zA-Z0-9_-]+)\s*\{([^}]+)\}/g;
+        let match;
+        while ((match = ruleRegex.exec(cssText)) !== null) {
+          const clsName = match[1];
+          const declarations = match[2].split(";");
+          if (!classStyles[clsName]) classStyles[clsName] = {};
+          declarations.forEach(dec => {
+            const parts = dec.split(":");
+            if (parts.length >= 2) {
+              const prop = parts[0].trim().toLowerCase();
+              const val = parts.slice(1).join(":").trim();
+              classStyles[clsName][prop] = val;
+            }
+          });
+        }
+      });
+
+      const rows = [];
+      const trList = table.querySelectorAll("tr");
+      trList.forEach(tr => {
+        const rowData = [];
+        const cellList = tr.querySelectorAll("td, th");
+        cellList.forEach(cell => {
+          const text = (cell.innerText || "").trim();
+          let bg = cell.style.backgroundColor || cell.getAttribute("bgcolor") || "";
+          let color = cell.style.color || "";
+          let bold = cell.style.fontWeight === "bold" || parseInt(cell.style.fontWeight, 10) >= 600 || !!cell.querySelector("b, strong");
+          let fontSize = cell.style.fontSize || "";
+          let align = cell.style.textAlign || cell.getAttribute("align") || "";
+
+          // 讀取 class 樣式
+          cell.classList.forEach(cls => {
+            if (classStyles[cls]) {
+              const s = classStyles[cls];
+              if (!bg && (s["background-color"] || s["background"])) bg = s["background-color"] || s["background"];
+              if (!color && s["color"]) color = s["color"];
+              if (!bold && (s["font-weight"] === "bold" || parseInt(s["font-weight"], 10) >= 600)) bold = true;
+              if (!fontSize && s["font-size"]) fontSize = s["font-size"];
+              if (!align && s["text-align"]) align = s["text-align"];
+            }
+          });
+
+          // 讀取子標籤 (<font>, <span>)
+          const fontEl = cell.querySelector("font");
+          if (fontEl && fontEl.color && !color) color = fontEl.color;
+          const spanEl = cell.querySelector("span");
+          if (spanEl) {
+            if (spanEl.style.color && !color) color = spanEl.style.color;
+            if (spanEl.style.backgroundColor && !bg) bg = spanEl.style.backgroundColor;
+            if (spanEl.style.fontSize && !fontSize) fontSize = spanEl.style.fontSize;
+          }
+
+          if (bg || color || bold || fontSize || align) {
+            rowData.push({
+              val: text,
+              bg: bg,
+              color: color,
+              bold: bold ? "bold" : "",
+              fontSize: fontSize,
+              align: align
+            });
+          } else {
+            rowData.push(text);
+          }
+        });
+        if (rowData.length > 0) {
+          rows.push(rowData);
+        }
+      });
+
+      // 移除尾端空白列
+      while (rows.length > 0 && rows[rows.length - 1].every(c => (typeof c === "object" ? !c.val : !c))) {
+        rows.pop();
+      }
+
+      return rows.length > 0 ? rows : null;
+    } catch (err) {
+      console.warn("[Excel Paste] HTML 解析失敗，將回退為 TSV 純文字：", err);
+      return null;
+    }
   }
 
   // 支援 RFC 4180 試算表規範：能正確辨識雙引號內的 Alt+Enter 換行，防止儲存格內換行碎裂跑版
@@ -571,7 +677,6 @@ document.addEventListener("DOMContentLoaded", () => {
       rows.push(currentRow);
     }
 
-    // 移除尾端多餘純空白列
     while (rows.length > 0 && rows[rows.length - 1].every(cell => !cell)) {
       rows.pop();
     }
@@ -579,19 +684,61 @@ document.addEventListener("DOMContentLoaded", () => {
     return rows;
   }
 
-  // 渲染微軟原生 Excel 試算表格子 (含 A/B/C 欄標籤與 1/2/3 列號，支援 contenteditable 與 Ctrl+V 貼入)
+  // 清除多格連續框選
+  function clearRangeSelection() {
+    if (activeRange && activeRange.table) {
+      const prevCells = activeRange.table.querySelectorAll("td.cell-selected-range");
+      prevCells.forEach(c => c.classList.remove("cell-selected-range"));
+    }
+    activeRange = null;
+  }
+
+  // 更新多格連續框選高亮區域
+  function updateRangeSelection(tableEl, r1, c1, r2, c2) {
+    clearRangeSelection();
+    activeRange = {
+      table: tableEl,
+      minR: Math.min(r1, r2),
+      maxR: Math.max(r1, r2),
+      minC: Math.min(c1, c2),
+      maxC: Math.max(c1, c2)
+    };
+    for (let r = activeRange.minR; r <= activeRange.maxR; r++) {
+      for (let c = activeRange.minC; c <= activeRange.maxC; c++) {
+        const cell = tableEl.querySelector(`td.grid-cell[data-row="${r}"][data-col="${c}"]`);
+        if (cell) cell.classList.add("cell-selected-range");
+      }
+    }
+  }
+
+  // 清除整列與整欄選取
+  function clearRowColSelection(tableEl) {
+    if (!tableEl) return;
+    tableEl.querySelectorAll("tr.row-selected").forEach(tr => tr.classList.remove("row-selected"));
+    tableEl.querySelectorAll("th.col-selected").forEach(th => th.classList.remove("col-selected"));
+    tableEl.querySelectorAll("td.col-selected").forEach(td => td.classList.remove("col-selected"));
+    activeSelectedCol = -1;
+  }
+
+  // 渲染微軟原生 Excel 試算表格子 (含 100% 樣式支援、A/B/C 欄標籤與 1/2/3 列號，支援拖曳框選、調整欄寬與排序)
   function renderExcelGrid(tableEl, inputData, minRows, minCols, badgeEl, preserveScroll = false) {
     if (!tableEl) return;
 
-    // inputData 可為字串 (TSV) 或已解析的 2D 矩陣
     let dataMatrix = [];
     if (typeof inputData === "string") {
-      dataMatrix = parseExcelTSV(inputData);
+      if (inputData.trim().startsWith("[")) {
+        try {
+          dataMatrix = JSON.parse(inputData);
+        } catch (e) {
+          dataMatrix = parseExcelHTML(inputData) || parseExcelTSV(inputData);
+        }
+      } else {
+        dataMatrix = parseExcelHTML(inputData) || parseExcelTSV(inputData);
+      }
     } else if (Array.isArray(inputData)) {
       dataMatrix = inputData;
     }
 
-    // 保存當前矩陣狀態至 DOM 元素上供行列操作存取
     tableEl._gridMatrix = dataMatrix;
     tableEl._minRows = minRows || 20;
     tableEl._minCols = minCols || 10;
@@ -605,24 +752,59 @@ document.addEventListener("DOMContentLoaded", () => {
     const totalRows = Math.max(tableEl._minRows, dataMatrix.length);
     const totalCols = maxCols;
 
-    // 建立 thead (頂部 A, B, C... 欄標籤)
-    let theadHtml = "<thead><tr><th class=\"corner-cell\" title=\"點擊列號或儲存格可按右鍵操作選單，按 DEL 清空\"></th>";
+    // 建立 thead (頂部 A, B, C... 欄標籤，含拖曳欄寬手把與排序按鈕)
+    let theadHtml = `<thead><tr><th class="corner-cell" title="點擊列號或儲存格可按右鍵操作選單，按 DEL 清空"></th>`;
     for (let c = 0; c < totalCols; c++) {
-      theadHtml += `<th class="col-header">${getExcelColName(c)}</th>`;
+      theadHtml += `
+        <th class="col-header" data-col-index="${c}">
+          <div class="col-header-content">
+            <span class="col-title">${getExcelColName(c)}</span>
+            <span class="col-sort-btn" data-col-index="${c}" title="點擊依此欄升冪/降冪排序">⇅</span>
+          </div>
+          <div class="col-resizer" data-col-index="${c}" title="按住拖曳調整欄寬"></div>
+        </th>`;
     }
     theadHtml += "</tr></thead>";
 
-    // 建立 tbody (左側 1, 2, 3... 列號與真實儲存格)
+    // 建立 tbody (左側 1, 2, 3... 列號與真實儲存格，完整還原字型、大小、底色與顏色)
     let tbodyHtml = "<tbody>";
     for (let r = 0; r < totalRows; r++) {
       tbodyHtml += `<tr data-row-index="${r}"><th class="row-header" title="點擊選取第 ${r + 1} 列 (可點右鍵選單)">${r + 1}</th>`;
       const rowData = dataMatrix[r] || [];
       for (let c = 0; c < totalCols; c++) {
-        const val = rowData[c] !== undefined ? rowData[c] : "";
-        // 判斷是否為純數字靠右對齊 (排除含有換行、月份或文字者)
-        const isNum = val && !val.includes("\n") && !isNaN(parseFloat(val.replace(/,/g, "").replace(/%/g, ""))) && !val.includes("月") && !val.includes("區");
-        const alignStyle = isNum ? "text-align:right;" : "text-align:left;";
-        tbodyHtml += `<td class="grid-cell" contenteditable="true" style="${alignStyle}" data-row="${r}" data-col="${c}">${escapeHtml(val)}</td>`;
+        const cellData = rowData[c];
+        let val = "";
+        const styleParts = [];
+
+        if (cellData && typeof cellData === "object") {
+          val = cellData.val !== undefined ? cellData.val : "";
+          if (cellData.bg && cellData.bg !== "transparent" && cellData.bg !== "inherit") {
+            styleParts.push(`background-color:${cellData.bg} !important`);
+          }
+          if (cellData.color && cellData.color !== "inherit") {
+            styleParts.push(`color:${cellData.color} !important`);
+          }
+          if (cellData.bold) {
+            styleParts.push(`font-weight:${cellData.bold}`);
+          }
+          if (cellData.fontSize) {
+            styleParts.push(`font-size:${cellData.fontSize}`);
+          }
+          if (cellData.align) {
+            styleParts.push(`text-align:${cellData.align}`);
+          }
+        } else {
+          val = cellData !== undefined ? cellData : "";
+        }
+
+        // 若來源未特別指定對齊，依據數值與字串自動靠右/靠左
+        if (!styleParts.some(p => p.startsWith("text-align"))) {
+          const isNum = val && !val.includes("\n") && !isNaN(parseFloat(val.replace(/,/g, "").replace(/%/g, ""))) && !val.includes("月") && !val.includes("區");
+          styleParts.push(isNum ? "text-align:right;" : "text-align:left;");
+        }
+
+        const styleAttr = styleParts.length > 0 ? `style="${styleParts.join(";")}"` : "";
+        tbodyHtml += `<td class="grid-cell" contenteditable="true" ${styleAttr} data-row="${r}" data-col="${c}">${escapeHtml(val)}</td>`;
       }
       tbodyHtml += "</tr>";
     }
@@ -630,12 +812,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     tableEl.innerHTML = theadHtml + tbodyHtml;
 
-    // 貼上或重置時，自動將水平捲軸歸零，確保第 1 欄 A、B、C 永遠清晰完整可見
     if (!preserveScroll && tableEl.parentElement) {
       tableEl.parentElement.scrollLeft = 0;
     }
 
-    // 綁定列選取高亮與儲存格編輯監聽
+    // 綁定儲存格事件、拖曳選取、欄寬調整與排序
     bindExcelGridEvents(tableEl);
 
     if (badgeEl) {
@@ -651,30 +832,80 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 選取特定列高亮
   function selectGridRow(tableEl, rowIdx) {
+    clearRowColSelection(tableEl);
+    clearRangeSelection();
     tableEl._selectedRow = rowIdx;
     activeContextTable = tableEl;
     activeContextRow = rowIdx;
-    const allRows = tableEl.querySelectorAll("tbody tr");
-    allRows.forEach((tr, idx) => {
-      if (idx === rowIdx) {
-        tr.classList.add("row-selected");
-      } else {
-        tr.classList.remove("row-selected");
-      }
-    });
+    activeContextCol = -1;
+    const tr = tableEl.querySelector(`tbody tr[data-row-index="${rowIdx}"]`);
+    if (tr) tr.classList.add("row-selected");
   }
 
-  // 開啟微軟風格右鍵快顯功能選單
-  function openContextMenu(e, tableEl, rowIdx, cellEl) {
+  // 選取特定欄高亮
+  function selectGridCol(tableEl, colIdx) {
+    clearRowColSelection(tableEl);
+    clearRangeSelection();
+    activeSelectedCol = colIdx;
+    activeContextTable = tableEl;
+    activeContextCol = colIdx;
+    activeContextRow = -1;
+    const th = tableEl.querySelector(`th.col-header[data-col-index="${colIdx}"]`);
+    if (th) th.classList.add("col-selected");
+    tableEl.querySelectorAll(`td.grid-cell[data-col="${colIdx}"]`).forEach(td => td.classList.add("col-selected"));
+  }
+
+  // 依欄位快速排序 (A-Z 或數字升降冪)
+  function sortGridColumn(tableEl, colIdx) {
+    if (!tableEl || !tableEl._gridMatrix || tableEl._gridMatrix.length === 0) return;
+    const matrix = tableEl._gridMatrix;
+    const currentDir = tableEl._sortCol === colIdx && tableEl._sortDir === "asc" ? "desc" : "asc";
+    tableEl._sortCol = colIdx;
+    tableEl._sortDir = currentDir;
+
+    matrix.sort((rowA, rowB) => {
+      let valA = rowA[colIdx];
+      let valB = rowB[colIdx];
+      if (valA && typeof valA === "object") valA = valA.val;
+      if (valB && typeof valB === "object") valB = valB.val;
+      valA = (valA || "").toString().trim();
+      valB = (valB || "").toString().trim();
+
+      const numA = parseFloat(valA.replace(/,/g, "").replace(/%/g, ""));
+      const numB = parseFloat(valB.replace(/,/g, "").replace(/%/g, ""));
+      const isNumA = !isNaN(numA) && !valA.includes("月") && !valA.includes("區");
+      const isNumB = !isNaN(numB) && !valB.includes("月") && !valB.includes("區");
+
+      let cmp = 0;
+      if (isNumA && isNumB) {
+        cmp = numA - numB;
+      } else {
+        cmp = valA.localeCompare(valB, "zh-Hant");
+      }
+      return currentDir === "asc" ? cmp : -cmp;
+    });
+
+    renderExcelGrid(tableEl, matrix, tableEl._minRows, tableEl._minCols, tableEl._badgeEl, true);
+
+    const sortBtn = tableEl.querySelector(`.col-sort-btn[data-col-index="${colIdx}"]`);
+    if (sortBtn) {
+      sortBtn.classList.add("active");
+      sortBtn.innerText = currentDir === "asc" ? "▲" : "▼";
+    }
+  }
+
+  // 開啟微軟風格右鍵快顯功能選單 (支援列與欄)
+  function openContextMenu(e, tableEl, rowIdx, colIdx, cellEl) {
     if (!excelContextMenu) return;
     activeContextTable = tableEl;
     activeContextRow = rowIdx;
+    activeContextCol = colIdx;
     activeContextCell = cellEl;
 
     let x = e.clientX;
     let y = e.clientY;
-    const menuWidth = 185;
-    const menuHeight = 160;
+    const menuWidth = 195;
+    const menuHeight = 240;
 
     if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 10;
     if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 10;
@@ -684,8 +915,9 @@ document.addEventListener("DOMContentLoaded", () => {
     excelContextMenu.classList.remove("hidden");
   }
 
-  // 綁定儲存格與列號互動事件 (含右鍵 contextmenu)
+  // 綁定儲存格與列號互動事件 (含拖曳框選、欄寬調整、Tab/Enter 導航與右鍵 contextmenu)
   function bindExcelGridEvents(tableEl) {
+    // 1. 列號點選與右鍵
     const rowHeaders = tableEl.querySelectorAll("th.row-header");
     rowHeaders.forEach(th => {
       th.addEventListener("click", () => {
@@ -696,36 +928,141 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         const rowIdx = parseInt(th.parentElement.dataset.rowIndex, 10);
         selectGridRow(tableEl, rowIdx);
-        openContextMenu(e, tableEl, rowIdx, null);
+        openContextMenu(e, tableEl, rowIdx, -1, null);
       });
     });
 
+    // 2. 欄標籤點選、排序與拖曳欄寬
+    const colHeaders = tableEl.querySelectorAll("th.col-header");
+    colHeaders.forEach(th => {
+      const colIdx = parseInt(th.dataset.colIndex, 10);
+      th.addEventListener("click", (e) => {
+        if (e.target.classList.contains("col-sort-btn")) {
+          sortGridColumn(tableEl, colIdx);
+          return;
+        }
+        if (e.target.classList.contains("col-resizer")) return;
+        selectGridCol(tableEl, colIdx);
+      });
+
+      th.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        selectGridCol(tableEl, colIdx);
+        openContextMenu(e, tableEl, -1, colIdx, null);
+      });
+
+      // 欄寬拖曳把手
+      const resizer = th.querySelector(".col-resizer");
+      if (resizer) {
+        resizer.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const startX = e.pageX;
+          const startWidth = th.offsetWidth;
+          resizer.classList.add("resizing");
+
+          function onMouseMove(ev) {
+            const diff = ev.pageX - startX;
+            const newWidth = Math.max(45, startWidth + diff);
+            th.style.width = `${newWidth}px`;
+            th.style.minWidth = `${newWidth}px`;
+            th.style.maxWidth = `${newWidth}px`;
+          }
+
+          function onMouseUp() {
+            resizer.classList.remove("resizing");
+            document.removeEventListener("mousemove", onMouseMove);
+            document.removeEventListener("mouseup", onMouseUp);
+          }
+
+          document.addEventListener("mousemove", onMouseMove);
+          document.addEventListener("mouseup", onMouseUp);
+        });
+      }
+    });
+
+    // 3. 儲存格事件：多格拖曳框選、鍵盤導航 (Tab, Enter) 與編輯監聽
     const cells = tableEl.querySelectorAll("td.grid-cell");
     cells.forEach(td => {
+      const r = parseInt(td.dataset.row, 10);
+      const c = parseInt(td.dataset.col, 10);
+
+      // 滑鼠按下：開始多格框選
+      td.addEventListener("mousedown", (e) => {
+        if (e.button === 0) { // 滑鼠左鍵
+          isRangeSelecting = true;
+          clearRowColSelection(tableEl);
+          selectionStart = { table: tableEl, r: r, c: c };
+          updateRangeSelection(tableEl, r, c, r, c);
+          activeContextTable = tableEl;
+          activeContextRow = r;
+          activeContextCol = c;
+          activeContextCell = td;
+        }
+      });
+
+      // 滑鼠移入：擴展框選區域
+      td.addEventListener("mouseenter", () => {
+        if (isRangeSelecting && selectionStart && selectionStart.table === tableEl) {
+          updateRangeSelection(tableEl, selectionStart.r, selectionStart.c, r, c);
+        }
+      });
+
+      // 儲存格焦點
       td.addEventListener("focus", () => {
-        const rowIdx = parseInt(td.parentElement.dataset.rowIndex, 10);
-        selectGridRow(tableEl, rowIdx);
+        activeContextTable = tableEl;
+        activeContextRow = r;
+        activeContextCol = c;
         activeContextCell = td;
       });
+
+      // 右鍵選單
       td.addEventListener("contextmenu", (e) => {
         e.preventDefault();
-        const rowIdx = parseInt(td.parentElement.dataset.rowIndex, 10);
-        selectGridRow(tableEl, rowIdx);
+        activeContextTable = tableEl;
+        activeContextRow = r;
+        activeContextCol = c;
+        activeContextCell = td;
         td.focus();
-        openContextMenu(e, tableEl, rowIdx, td);
+        openContextMenu(e, tableEl, r, c, td);
       });
+
+      // 儲存格內容變更即時寫回矩陣
       td.addEventListener("blur", () => {
-        const r = parseInt(td.dataset.row, 10);
-        const c = parseInt(td.dataset.col, 10);
         if (tableEl._gridMatrix) {
           while (tableEl._gridMatrix.length <= r) {
             tableEl._gridMatrix.push([]);
           }
-          tableEl._gridMatrix[r][c] = td.innerText;
+          const existing = tableEl._gridMatrix[r][c];
+          if (existing && typeof existing === "object") {
+            existing.val = td.innerText;
+          } else {
+            tableEl._gridMatrix[r][c] = td.innerText;
+          }
+        }
+      });
+
+      // 鍵盤導航：Tab 換欄、Enter 換列
+      td.addEventListener("keydown", (e) => {
+        if (e.key === "Tab") {
+          e.preventDefault();
+          const nextCol = e.shiftKey ? c - 1 : c + 1;
+          const targetCell = tableEl.querySelector(`td.grid-cell[data-row="${r}"][data-col="${nextCol}"]`);
+          if (targetCell) targetCell.focus();
+        } else if (e.key === "Enter" && !e.shiftKey && !e.altKey) {
+          e.preventDefault();
+          const nextRow = r + 1;
+          const targetCell = tableEl.querySelector(`td.grid-cell[data-row="${nextRow}"][data-col="${c}"]`);
+          if (targetCell) targetCell.focus();
         }
       });
     });
   }
+
+  // 全域放開滑鼠時結束框選
+  document.addEventListener("mouseup", () => {
+    isRangeSelecting = false;
+  });
 
   // 點擊選單外任一處或按 Esc 自動隱藏右鍵選單
   document.addEventListener("click", (e) => {
@@ -785,24 +1122,108 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 右鍵選單：清空內容 (或鍵盤 DEL)
-  if (menuClearCell) {
-    menuClearCell.addEventListener("click", () => {
-      clearSelectedCellOrRow();
+  // 右鍵選單：在左方插入一欄
+  if (menuInsertColLeft) {
+    menuInsertColLeft.addEventListener("click", () => {
+      if (!activeContextTable) return;
+      const matrix = activeContextTable._gridMatrix || [];
+      const insertIdx = activeContextCol >= 0 ? activeContextCol : 0;
+      matrix.forEach(row => row.splice(insertIdx, 0, ""));
+      activeContextTable._minCols = (activeContextTable._minCols || 10) + 1;
+      renderExcelGrid(activeContextTable, matrix, activeContextTable._minRows, activeContextTable._minCols, activeContextTable._badgeEl, true);
+      selectGridCol(activeContextTable, insertIdx);
       if (excelContextMenu) excelContextMenu.classList.add("hidden");
     });
   }
 
-  // 清空選取單元格或整列共用函式
-  function clearSelectedCellOrRow() {
+  // 右鍵選單：在右方插入一欄
+  if (menuInsertColRight) {
+    menuInsertColRight.addEventListener("click", () => {
+      if (!activeContextTable) return;
+      const matrix = activeContextTable._gridMatrix || [];
+      const numCols = matrix[0] ? matrix[0].length : (activeContextTable._minCols || 10);
+      const insertIdx = (activeContextCol >= 0 ? activeContextCol : numCols - 1) + 1;
+      matrix.forEach(row => row.splice(insertIdx, 0, ""));
+      activeContextTable._minCols = (activeContextTable._minCols || 10) + 1;
+      renderExcelGrid(activeContextTable, matrix, activeContextTable._minRows, activeContextTable._minCols, activeContextTable._badgeEl, true);
+      selectGridCol(activeContextTable, insertIdx);
+      if (excelContextMenu) excelContextMenu.classList.add("hidden");
+    });
+  }
+
+  // 右鍵選單：刪除此欄
+  if (menuDeleteCol) {
+    menuDeleteCol.addEventListener("click", () => {
+      if (!activeContextTable || !activeContextTable._gridMatrix) return;
+      const matrix = activeContextTable._gridMatrix;
+      if (activeContextCol >= 0) {
+        matrix.forEach(row => {
+          if (row.length > activeContextCol) row.splice(activeContextCol, 1);
+        });
+        if (activeContextTable._minCols > 3) activeContextTable._minCols--;
+        renderExcelGrid(activeContextTable, matrix, activeContextTable._minRows, activeContextTable._minCols, activeContextTable._badgeEl, true);
+        selectGridCol(activeContextTable, Math.max(0, activeContextCol - 1));
+      }
+      if (excelContextMenu) excelContextMenu.classList.add("hidden");
+    });
+  }
+
+  // 右鍵選單：清空內容 (或鍵盤 DEL)
+  if (menuClearCell) {
+    menuClearCell.addEventListener("click", () => {
+      clearSelectedCellOrRowOrRange();
+      if (excelContextMenu) excelContextMenu.classList.add("hidden");
+    });
+  }
+
+  // 清空選取單元格、整列、整欄或框選區域共用函式
+  function clearSelectedCellOrRowOrRange() {
+    // 1. 若有多格連續框選區域
+    if (activeRange && activeRange.table) {
+      const tbl = activeRange.table;
+      for (let r = activeRange.minR; r <= activeRange.maxR; r++) {
+        for (let c = activeRange.minC; c <= activeRange.maxC; c++) {
+          if (tbl._gridMatrix && tbl._gridMatrix[r]) {
+            const item = tbl._gridMatrix[r][c];
+            if (item && typeof item === "object") item.val = "";
+            else tbl._gridMatrix[r][c] = "";
+          }
+          const cell = tbl.querySelector(`td.grid-cell[data-row="${r}"][data-col="${c}"]`);
+          if (cell) cell.innerText = "";
+        }
+      }
+      return;
+    }
+
+    // 2. 若選取了整欄
+    if (activeSelectedCol >= 0 && activeContextTable) {
+      const col = activeSelectedCol;
+      const matrix = activeContextTable._gridMatrix || [];
+      matrix.forEach(row => {
+        if (row[col] !== undefined) {
+          if (row[col] && typeof row[col] === "object") row[col].val = "";
+          else row[col] = "";
+        }
+      });
+      activeContextTable.querySelectorAll(`td.grid-cell[data-col="${col}"]`).forEach(td => td.innerText = "");
+      return;
+    }
+
+    // 3. 若選取了單一儲存格
     if (activeContextCell) {
       activeContextCell.innerText = "";
       const r = parseInt(activeContextCell.dataset.row, 10);
       const c = parseInt(activeContextCell.dataset.col, 10);
       if (activeContextTable && activeContextTable._gridMatrix && activeContextTable._gridMatrix[r]) {
-        activeContextTable._gridMatrix[r][c] = "";
+        const item = activeContextTable._gridMatrix[r][c];
+        if (item && typeof item === "object") item.val = "";
+        else activeContextTable._gridMatrix[r][c] = "";
       }
-    } else if (activeContextTable && activeContextTable._gridMatrix && activeContextTable._selectedRow !== undefined) {
+      return;
+    }
+
+    // 4. 若選取了整列
+    if (activeContextTable && activeContextTable._gridMatrix && activeContextTable._selectedRow !== undefined) {
       const r = activeContextTable._selectedRow;
       if (activeContextTable._gridMatrix[r]) {
         activeContextTable._gridMatrix[r] = new Array(activeContextTable._gridMatrix[r].length).fill("");
@@ -812,46 +1233,39 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 監聽鍵盤 DEL / Delete 鍵快速清空選取內容
+  // 監聽鍵盤 DEL / Delete 鍵快速清空選取內容 (支援單格、多格框選、整欄、整列)
   document.addEventListener("keydown", (e) => {
     if (e.key === "Delete" || e.key === "Del") {
-      const activeEl = document.activeElement;
-      if (activeEl && activeEl.classList.contains("grid-cell")) {
-        activeEl.innerText = "";
-        const r = parseInt(activeEl.dataset.row, 10);
-        const c = parseInt(activeEl.dataset.col, 10);
-        const tbl = activeEl.closest("table");
-        if (tbl && tbl._gridMatrix && tbl._gridMatrix[r]) {
-          tbl._gridMatrix[r][c] = "";
-        }
-      } else if (activeContextTable && activeContextTable._selectedRow !== undefined) {
-        clearSelectedCellOrRow();
-      }
+      clearSelectedCellOrRowOrRange();
     }
   });
 
-  // 監聽左邊表格容器 paste 事件
+  // 監聽左邊表格容器 paste 事件 (優先解析 HTML 還原 100% 格式，退回 TSV)
   if (containerTableTargets) {
     containerTableTargets.addEventListener("paste", (e) => {
       e.preventDefault();
       const clipboardData = e.clipboardData || window.clipboardData;
-      const text = clipboardData.getData("text");
-      if (text) {
-        renderExcelGrid(tablePastedTargets, text, 20, 11, badgeTargetCount, false);
-        localStorage.setItem("shihlin_pasted_targets_raw", text);
+      const htmlText = clipboardData.getData("text/html");
+      const plainText = clipboardData.getData("text");
+      const matrix = parseExcelHTML(htmlText) || parseExcelTSV(plainText);
+      if (matrix && matrix.length > 0) {
+        renderExcelGrid(tablePastedTargets, matrix, 20, 11, badgeTargetCount, false);
+        localStorage.setItem("shihlin_pasted_targets_raw", JSON.stringify(matrix));
       }
     });
   }
 
-  // 監聽右邊表格容器 paste 事件
+  // 監聽右邊表格容器 paste 事件 (優先解析 HTML 還原 100% 格式，退回 TSV)
   if (containerTableShipments) {
     containerTableShipments.addEventListener("paste", (e) => {
       e.preventDefault();
       const clipboardData = e.clipboardData || window.clipboardData;
-      const text = clipboardData.getData("text");
-      if (text) {
-        renderExcelGrid(tablePastedShipments, text, 25, 5, badgeShipmentCount, false);
-        localStorage.setItem("shihlin_pasted_shipments_raw", text);
+      const htmlText = clipboardData.getData("text/html");
+      const plainText = clipboardData.getData("text");
+      const matrix = parseExcelHTML(htmlText) || parseExcelTSV(plainText);
+      if (matrix && matrix.length > 0) {
+        renderExcelGrid(tablePastedShipments, matrix, 25, 5, badgeShipmentCount, false);
+        localStorage.setItem("shihlin_pasted_shipments_raw", JSON.stringify(matrix));
       }
     });
   }

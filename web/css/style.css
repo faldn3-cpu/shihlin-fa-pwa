@@ -1146,6 +1146,58 @@ textarea.form-control {
   user-select: none;
   min-width: 68px;
   height: 24px;
+  position: sticky;
+  position: -webkit-sticky;
+}
+
+/* 欄位標籤內文字與排序圖示容器 */
+.col-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* 欄寬拖曳把手 (放在每個 th 最右側邊緣，滑鼠可按住左右拉寬) */
+.col-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 10;
+}
+
+.col-resizer:hover, .col-resizer.resizing {
+  background-color: #107C41;
+}
+
+/* 欄排序快速按鈕 */
+.col-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #8A8886;
+  margin-left: 4px;
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 0 2px;
+  transition: all 0.1s ease;
+}
+
+.col-sort-btn:hover {
+  background-color: #D2D0CE;
+  color: #107C41;
+}
+
+.col-sort-btn.active {
+  color: #107C41;
+  font-weight: bold;
 }
 
 /* 左側 1, 2, 3... 列號標籤 (點擊可選取整列) */
@@ -1214,6 +1266,23 @@ textarea.form-control {
 
 .excel-spreadsheet-grid tr.row-selected td.grid-cell {
   background-color: #E8F5E9 !important;
+}
+
+/* 整欄選取高亮樣式 */
+.excel-spreadsheet-grid th.col-header.col-selected {
+  background-color: #107C41 !important;
+  color: #FFFFFF !important;
+}
+
+.excel-spreadsheet-grid td.grid-cell.col-selected {
+  background-color: #E8F5E9 !important;
+}
+
+/* 多格連續拖曳框選區域高亮 (Range Selection) */
+.excel-spreadsheet-grid td.grid-cell.cell-selected-range {
+  background-color: rgba(16, 124, 65, 0.16) !important;
+  outline: 1px solid #107C41 !important;
+  outline-offset: -1px;
 }
 
 /* 儲存格點選時的經典 Excel 綠色選取框 */

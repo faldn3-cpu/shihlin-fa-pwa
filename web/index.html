@@ -823,19 +823,32 @@
       <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
       <span>在下方插入一列</span>
     </div>
-    <div class="context-menu-divider"></div>
     <div class="context-menu-item danger" id="menuDeleteRow">
       <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
       <span>刪除此列</span>
     </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" id="menuInsertColLeft">
+      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-success);" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6V6z"/></svg>
+      <span>在左方插入一欄</span>
+    </div>
+    <div class="context-menu-item" id="menuInsertColRight">
+      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-success);" viewBox="0 0 24 24"><path d="M10 18l6-6-6-6v12z"/></svg>
+      <span>在右方插入一欄</span>
+    </div>
+    <div class="context-menu-item danger" id="menuDeleteCol">
+      <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      <span>刪除此欄</span>
+    </div>
+    <div class="context-menu-divider"></div>
     <div class="context-menu-item" id="menuClearCell">
       <svg class="icon-svg" style="width:16px; height:16px; color:var(--text-tertiary);" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-      <span>清空內容 (DEL)</span>
+      <span>清空內容 / 選取區域 (DEL)</span>
     </div>
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261021_contextmenu"></script>
+  <script src="js/app.js?v=20261021_rich_excel"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>

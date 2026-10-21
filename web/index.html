@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
   
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261021_fixed" />
+  <link rel="stylesheet" href="css/style.css?v=20261021_excel_grid" />
 </head>
 <body>
 
@@ -605,7 +605,7 @@
               <div class="excel-sheet-title">
                 <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
                 <span>左表格：【挑戰目標總表】</span>
-                <span id="badgeTargetCount" class="excel-count-badge">待貼入</span>
+                <span id="badgeTargetCount" class="excel-count-badge">空白試算表</span>
               </div>
               <div style="display:flex; gap:6px;">
                 <button id="btnPasteTargetDemo" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">載入目標範例</button>
@@ -614,11 +614,7 @@
             </div>
 
             <div id="containerTableTargets" class="excel-table-scroll" tabindex="0">
-              <div id="promptTargets" class="excel-paste-prompt">
-                點擊此處，按鍵盤 <strong>Ctrl + V</strong><br/>
-                <span style="font-size:0.85em; font-weight:normal; opacity:0.85;">直接貼入 Excel「挑戰目標總表」</span>
-              </div>
-              <table id="tablePastedTargets" class="excel-pasted-table hidden"></table>
+              <table id="tablePastedTargets" class="excel-spreadsheet-grid"></table>
             </div>
           </div>
 
@@ -628,7 +624,7 @@
               <div class="excel-sheet-title">
                 <svg class="icon-svg" style="color:var(--color-success);" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
                 <span>右表格：【產品出貨明細表】</span>
-                <span id="badgeShipmentCount" class="excel-count-badge">待貼入</span>
+                <span id="badgeShipmentCount" class="excel-count-badge">空白試算表</span>
               </div>
               <div style="display:flex; gap:6px;">
                 <button id="btnPasteShipmentDemo" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">載入出貨範例</button>
@@ -637,11 +633,7 @@
             </div>
 
             <div id="containerTableShipments" class="excel-table-scroll" tabindex="0">
-              <div id="promptShipments" class="excel-paste-prompt">
-                點擊此處，按鍵盤 <strong>Ctrl + V</strong><br/>
-                <span style="font-size:0.85em; font-weight:normal; opacity:0.85;">直接貼入 Excel「產品出貨明細表 (樞紐表)」</span>
-              </div>
-              <table id="tablePastedShipments" class="excel-pasted-table hidden"></table>
+              <table id="tablePastedShipments" class="excel-spreadsheet-grid"></table>
             </div>
           </div>
 
@@ -820,7 +812,7 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261021_dual"></script>
+  <script src="js/app.js?v=20261021_excel_grid"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>

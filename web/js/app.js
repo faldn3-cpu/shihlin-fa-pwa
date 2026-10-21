@@ -487,17 +487,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ============================================================================
   // 6. 左右雙 Excel 接收表格 (左：挑戰目標總表 / 右：產品出貨明細表)
-  // 支援直接按 Ctrl+V 完整還原 Excel 欄位與列數
+  // ============================================================================
+  // 7. 管理員目標資料維護（微軟原生 Excel 雙試算表格子）
+  // 預設呈現一格一格的空白試算表，支援直接點擊儲存格編輯或按 Ctrl+V 貼入展開
   // ============================================================================
   const containerTableTargets = document.getElementById("containerTableTargets");
-  const promptTargets = document.getElementById("promptTargets");
   const tablePastedTargets = document.getElementById("tablePastedTargets");
   const badgeTargetCount = document.getElementById("badgeTargetCount");
   const btnPasteTargetDemo = document.getElementById("btnPasteTargetDemo");
   const btnClearTargetTable = document.getElementById("btnClearTargetTable");
 
   const containerTableShipments = document.getElementById("containerTableShipments");
-  const promptShipments = document.getElementById("promptShipments");
   const tablePastedShipments = document.getElementById("tablePastedShipments");
   const badgeShipmentCount = document.getElementById("badgeShipmentCount");
   const btnPasteShipmentDemo = document.getElementById("btnPasteShipmentDemo");
@@ -507,49 +507,66 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnResetAdminDefaults = document.getElementById("btnResetAdminDefaults");
   const btnConfirmTablesReady = document.getElementById("btnConfirmTablesReady");
 
-  // 將剪貼簿 TSV 文字渲染為原生 Excel 格式表格
-  function renderPastedTable(tsvText, tableEl, promptEl, badgeEl) {
-    if (!tsvText || !tsvText.trim() || !tableEl) return;
-    const lines = tsvText.trim().split(/\r?\n/);
-    if (lines.length === 0) return;
-
-    let html = "";
-    let maxCols = 0;
-
-    lines.forEach((line, rIdx) => {
-      const cols = line.split("\t");
-      if (cols.length > maxCols) maxCols = cols.length;
-
-      html += "<tr>";
-      cols.forEach(col => {
-        const val = col.trim();
-        const tag = rIdx === 0 ? "th" : "td";
-        // 判斷是否為數字靠右排
-        const isNum = !isNaN(parseFloat(val.replace(/,/g, "").replace(/%/g, ""))) && !val.includes("月") && !val.includes("區");
-        const alignStyle = isNum ? "text-align:right;" : "text-align:left;";
-        html += `<${tag} style="${alignStyle}">${escapeHtml(val || "-")}</${tag}>`;
-      });
-      html += "</tr>";
-    });
-
-    tableEl.innerHTML = html;
-    tableEl.classList.remove("hidden");
-    if (promptEl) promptEl.classList.add("hidden");
-    if (badgeEl) {
-      badgeEl.innerText = `${lines.length} 列 × ${maxCols} 欄 (已接收)`;
-      badgeEl.classList.add("active");
+  // 產生 Excel 欄標籤 A, B, C... Z, AA, AB...
+  function getExcelColName(idx) {
+    let name = "";
+    let i = idx;
+    while (i >= 0) {
+      name = String.fromCharCode((i % 26) + 65) + name;
+      i = Math.floor(i / 26) - 1;
     }
+    return name;
   }
 
-  function clearTable(tableEl, promptEl, badgeEl) {
-    if (tableEl) {
-      tableEl.innerHTML = "";
-      tableEl.classList.add("hidden");
+  // 渲染微軟原生 Excel 試算表格子 (含 A/B/C 欄標籤與 1/2/3 列號，支援 contenteditable 與 Ctrl+V 貼入)
+  function renderExcelGrid(tableEl, tsvText, minRows, minCols, badgeEl) {
+    if (!tableEl) return;
+
+    // 解析傳入的 TSV 剪貼簿文字
+    const rawLines = tsvText && tsvText.trim() ? tsvText.trim().split(/\r?\n/) : [];
+    const dataMatrix = rawLines.map(line => line.split("\t"));
+
+    let maxCols = minCols || 10;
+    dataMatrix.forEach(row => {
+      if (row.length > maxCols) maxCols = row.length;
+    });
+
+    const totalRows = Math.max(minRows || 20, dataMatrix.length);
+    const totalCols = maxCols;
+
+    // 建立 thead (頂部 A, B, C... 欄標籤)
+    let theadHtml = "<thead><tr><th class=\"corner-cell\" title=\"點擊儲存格可直接輸入或按 Ctrl+V 貼上\"></th>";
+    for (let c = 0; c < totalCols; c++) {
+      theadHtml += `<th class="col-header">${getExcelColName(c)}</th>`;
     }
-    if (promptEl) promptEl.classList.remove("hidden");
+    theadHtml += "</tr></thead>";
+
+    // 建立 tbody (左側 1, 2, 3... 列號與真實儲存格)
+    let tbodyHtml = "<tbody>";
+    for (let r = 0; r < totalRows; r++) {
+      tbodyHtml += `<tr><th class="row-header">${r + 1}</th>`;
+      const rowData = dataMatrix[r] || [];
+      for (let c = 0; c < totalCols; c++) {
+        const val = rowData[c] !== undefined ? rowData[c].trim() : "";
+        // 判斷是否為數字靠右對齊
+        const isNum = val && !isNaN(parseFloat(val.replace(/,/g, "").replace(/%/g, ""))) && !val.includes("月") && !val.includes("區");
+        const alignStyle = isNum ? "text-align:right;" : "text-align:left;";
+        tbodyHtml += `<td class="grid-cell" contenteditable="true" style="${alignStyle}" data-row="${r}" data-col="${c}">${escapeHtml(val)}</td>`;
+      }
+      tbodyHtml += "</tr>";
+    }
+    tbodyHtml += "</tbody>";
+
+    tableEl.innerHTML = theadHtml + tbodyHtml;
+
     if (badgeEl) {
-      badgeEl.innerText = "待貼入";
-      badgeEl.classList.remove("active");
+      if (dataMatrix.length > 0) {
+        badgeEl.innerText = `${dataMatrix.length} 列 × ${maxCols} 欄 (已填入)`;
+        badgeEl.classList.add("active");
+      } else {
+        badgeEl.innerText = `空白試算表 (${totalRows} 列 × ${totalCols} 欄)`;
+        badgeEl.classList.remove("active");
+      }
     }
   }
 
@@ -560,7 +577,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const clipboardData = e.clipboardData || window.clipboardData;
       const text = clipboardData.getData("text");
       if (text) {
-        renderPastedTable(text, tablePastedTargets, promptTargets, badgeTargetCount);
+        renderExcelGrid(tablePastedTargets, text, 20, 11, badgeTargetCount);
         localStorage.setItem("shihlin_pasted_targets_raw", text);
       }
     });
@@ -573,7 +590,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const clipboardData = e.clipboardData || window.clipboardData;
       const text = clipboardData.getData("text");
       if (text) {
-        renderPastedTable(text, tablePastedShipments, promptShipments, badgeShipmentCount);
+        renderExcelGrid(tablePastedShipments, text, 25, 5, badgeShipmentCount);
         localStorage.setItem("shihlin_pasted_shipments_raw", text);
       }
     });
@@ -651,13 +668,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // 左表按鈕
   if (btnPasteTargetDemo) {
     btnPasteTargetDemo.addEventListener("click", () => {
-      renderPastedTable(sampleTargetsExcelTSV, tablePastedTargets, promptTargets, badgeTargetCount);
+      renderExcelGrid(tablePastedTargets, sampleTargetsExcelTSV, 20, 11, badgeTargetCount);
       localStorage.setItem("shihlin_pasted_targets_raw", sampleTargetsExcelTSV);
     });
   }
   if (btnClearTargetTable) {
     btnClearTargetTable.addEventListener("click", () => {
-      clearTable(tablePastedTargets, promptTargets, badgeTargetCount);
+      renderExcelGrid(tablePastedTargets, "", 20, 11, badgeTargetCount);
       localStorage.removeItem("shihlin_pasted_targets_raw");
     });
   }
@@ -665,13 +682,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // 右表按鈕
   if (btnPasteShipmentDemo) {
     btnPasteShipmentDemo.addEventListener("click", () => {
-      renderPastedTable(sampleShipmentsExcelTSV, tablePastedShipments, promptShipments, badgeShipmentCount);
+      renderExcelGrid(tablePastedShipments, sampleShipmentsExcelTSV, 25, 5, badgeShipmentCount);
       localStorage.setItem("shihlin_pasted_shipments_raw", sampleShipmentsExcelTSV);
     });
   }
   if (btnClearShipmentTable) {
     btnClearShipmentTable.addEventListener("click", () => {
-      clearTable(tablePastedShipments, promptShipments, badgeShipmentCount);
+      renderExcelGrid(tablePastedShipments, "", 25, 5, badgeShipmentCount);
       localStorage.removeItem("shihlin_pasted_shipments_raw");
     });
   }
@@ -679,19 +696,19 @@ document.addEventListener("DOMContentLoaded", () => {
   // 頂部全部載入/清空按鈕
   if (btnLoadSampleExcel) {
     btnLoadSampleExcel.addEventListener("click", () => {
-      renderPastedTable(sampleTargetsExcelTSV, tablePastedTargets, promptTargets, badgeTargetCount);
-      renderPastedTable(sampleShipmentsExcelTSV, tablePastedShipments, promptShipments, badgeShipmentCount);
+      renderExcelGrid(tablePastedTargets, sampleTargetsExcelTSV, 20, 11, badgeTargetCount);
+      renderExcelGrid(tablePastedShipments, sampleShipmentsExcelTSV, 25, 5, badgeShipmentCount);
       localStorage.setItem("shihlin_pasted_targets_raw", sampleTargetsExcelTSV);
       localStorage.setItem("shihlin_pasted_shipments_raw", sampleShipmentsExcelTSV);
-      alert("已成功將兩份 10 月 Excel 範例資料分別載入左右兩張表格！");
+      alert("已成功將兩份 10 月 Excel 範例資料分別載入左右兩張試算表格子！");
     });
   }
 
   if (btnResetAdminDefaults) {
     btnResetAdminDefaults.addEventListener("click", () => {
-      if (confirm("確定要清空左右兩張表格嗎？")) {
-        clearTable(tablePastedTargets, promptTargets, badgeTargetCount);
-        clearTable(tablePastedShipments, promptShipments, badgeShipmentCount);
+      if (confirm("確定要重設左右兩張表格為初始空白 Excel 格子嗎？")) {
+        renderExcelGrid(tablePastedTargets, "", 20, 11, badgeTargetCount);
+        renderExcelGrid(tablePastedShipments, "", 25, 5, badgeShipmentCount);
         localStorage.removeItem("shihlin_pasted_targets_raw");
         localStorage.removeItem("shihlin_pasted_shipments_raw");
       }
@@ -700,19 +717,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (btnConfirmTablesReady) {
     btnConfirmTablesReady.addEventListener("click", () => {
-      alert("左右兩張表格已順利接收 Excel 資料！\n您可以檢視每一行、每一欄是否與 Excel 原始資料完全對齊。");
+      alert("左右兩張表格已順利呈現 Excel 格子！\n您可以檢視每一行、每一欄是否與 Excel 原始資料完全對齊，或點選儲存格直接編輯。");
     });
   }
 
-  // 載入先前記住的已貼入表格
+  // 初始載入左右雙試算表格子 (若有先前儲存的資料則顯示資料，否則直接呈現空白 Excel 格子)
   const savedTargetsRaw = localStorage.getItem("shihlin_pasted_targets_raw");
-  if (savedTargetsRaw) {
-    renderPastedTable(savedTargetsRaw, tablePastedTargets, promptTargets, badgeTargetCount);
-  }
+  renderExcelGrid(tablePastedTargets, savedTargetsRaw || "", 20, 11, badgeTargetCount);
+
   const savedShipmentsRaw = localStorage.getItem("shihlin_pasted_shipments_raw");
-  if (savedShipmentsRaw) {
-    renderPastedTable(savedShipmentsRaw, tablePastedShipments, promptShipments, badgeShipmentCount);
-  }
+  renderExcelGrid(tablePastedShipments, savedShipmentsRaw || "", 25, 5, badgeShipmentCount);
 
   // ============================================================================
   // 8. 客戶主檔載入與單一輸入自動帶入規範 (免重複打字)

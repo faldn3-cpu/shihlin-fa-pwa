@@ -1105,12 +1105,13 @@ textarea.form-control {
 }
 
 .excel-table-scroll {
-  max-height: 480px;
+  max-height: 520px;
   overflow: auto;
   border: 1px solid var(--border-light);
   border-radius: 4px;
   background-color: var(--bg-panel);
   outline: none;
+  position: relative;
 }
 
 .excel-table-scroll:focus-within {
@@ -1118,32 +1119,118 @@ textarea.form-control {
   box-shadow: 0 0 0 2px var(--color-accent-light);
 }
 
-.excel-pasted-table {
+/* ==========================================================================
+   微軟原生 Excel 試算表格子 (Authentic Excel Spreadsheet Grid)
+   ========================================================================== */
+.excel-spreadsheet-grid {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85em;
-  font-family: "Segoe UI", Consolas, sans-serif;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.84em;
+  font-family: "Segoe UI", -apple-system, Consolas, sans-serif;
+  background-color: #FFFFFF;
 }
 
-.excel-pasted-table th, .excel-pasted-table td {
-  border: 1px solid var(--border-light);
-  padding: 5px 8px;
-  white-space: nowrap;
-}
-
-.excel-pasted-table tr:first-child td, .excel-pasted-table tr:first-child th {
-  background-color: #EBF3FC;
-  color: #005A9E;
-  font-weight: 700;
+/* 頂部 A, B, C... 欄標籤 */
+.excel-spreadsheet-grid th.col-header {
+  background-color: #F3F2F1;
+  color: #605E5C;
+  font-weight: 600;
+  text-align: center;
+  border-right: 1px solid #D2D0CE;
+  border-bottom: 1px solid #D2D0CE;
+  padding: 4px 6px;
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 3;
+  user-select: none;
+  min-width: 68px;
+  height: 24px;
 }
 
-[data-theme="dark"] .excel-pasted-table tr:first-child td,
-[data-theme="dark"] .excel-pasted-table tr:first-child th {
-  background-color: #1F3347;
-  color: #60CDFF;
+/* 左側 1, 2, 3... 列號標籤 */
+.excel-spreadsheet-grid th.row-header {
+  background-color: #F3F2F1;
+  color: #605E5C;
+  font-weight: 600;
+  text-align: center;
+  border-right: 1px solid #D2D0CE;
+  border-bottom: 1px solid #D2D0CE;
+  padding: 3px 6px;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  user-select: none;
+  width: 36px;
+  min-width: 36px;
+  max-width: 36px;
+}
+
+/* 左上角全選交會格 */
+.excel-spreadsheet-grid th.corner-cell {
+  background-color: #EDEBE9;
+  border-right: 1px solid #D2D0CE;
+  border-bottom: 1px solid #D2D0CE;
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  width: 36px;
+  min-width: 36px;
+}
+
+/* 一般資料儲存格 (可打字、可貼上、框線清晰) */
+.excel-spreadsheet-grid td.grid-cell {
+  border-right: 1px solid #E1DFDD;
+  border-bottom: 1px solid #E1DFDD;
+  padding: 4px 8px;
+  min-height: 24px;
+  white-space: nowrap;
+  outline: none;
+  color: #201F1E;
+  background-color: #FFFFFF;
+  transition: background-color 0.1s ease;
+}
+
+.excel-spreadsheet-grid td.grid-cell:empty::before {
+  content: "";
+  display: inline-block;
+}
+
+/* 儲存格點選時的經典 Excel 綠色選取框 */
+.excel-spreadsheet-grid td.grid-cell:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #107C41 !important;
+  background-color: #F8FFF9 !important;
+  z-index: 1;
+}
+
+/* 暗色主題適配 */
+[data-theme="dark"] .excel-spreadsheet-grid {
+  background-color: #1E1E1E;
+}
+
+[data-theme="dark"] .excel-spreadsheet-grid th.col-header,
+[data-theme="dark"] .excel-spreadsheet-grid th.row-header {
+  background-color: #2D2D2D;
+  color: #CCCCCC;
+  border-color: #3E3E3E;
+}
+
+[data-theme="dark"] .excel-spreadsheet-grid th.corner-cell {
+  background-color: #252525;
+  border-color: #3E3E3E;
+}
+
+[data-theme="dark"] .excel-spreadsheet-grid td.grid-cell {
+  background-color: #1E1E1E;
+  color: #F3F3F3;
+  border-color: #333333;
+}
+
+[data-theme="dark"] .excel-spreadsheet-grid td.grid-cell:focus {
+  box-shadow: inset 0 0 0 2px #107C41 !important;
+  background-color: #162E1D !important;
 }
 
 .excel-count-badge {

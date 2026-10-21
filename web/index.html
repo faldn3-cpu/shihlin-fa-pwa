@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
   
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261021_excel_grid" />
+  <link rel="stylesheet" href="css/style.css?v=20261021_synology_fix" />
 </head>
 <body>
 
@@ -607,7 +607,9 @@
                 <span>左表格：【挑戰目標總表】</span>
                 <span id="badgeTargetCount" class="excel-count-badge">空白試算表</span>
               </div>
-              <div style="display:flex; gap:6px;">
+              <div style="display:flex; gap:6px; align-items:center;">
+                <button id="btnAddTargetRow" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;" title="在最後新增一列空白儲存格">+ 新增列</button>
+                <button id="btnDeleteTargetRow" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;" title="點擊列號或儲存格後點此刪除該列">刪除選定列</button>
                 <button id="btnPasteTargetDemo" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">載入目標範例</button>
                 <button id="btnClearTargetTable" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">清空</button>
               </div>
@@ -626,7 +628,9 @@
                 <span>右表格：【產品出貨明細表】</span>
                 <span id="badgeShipmentCount" class="excel-count-badge">空白試算表</span>
               </div>
-              <div style="display:flex; gap:6px;">
+              <div style="display:flex; gap:6px; align-items:center;">
+                <button id="btnAddShipmentRow" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;" title="在最後新增一列空白儲存格">+ 新增列</button>
+                <button id="btnDeleteShipmentRow" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;" title="點擊列號或儲存格後點此刪除該列">刪除選定列</button>
                 <button id="btnPasteShipmentDemo" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">載入出貨範例</button>
                 <button id="btnClearShipmentTable" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">清空</button>
               </div>
@@ -812,7 +816,7 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261021_excel_grid"></script>
+  <script src="js/app.js?v=20261021_synology_fix"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>

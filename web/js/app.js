@@ -489,17 +489,22 @@ document.addEventListener("DOMContentLoaded", () => {
   // 6. 左右雙 Excel 接收表格 (左：挑戰目標總表 / 右：產品出貨明細表)
   // ============================================================================
   // 7. 管理員目標資料維護（微軟原生 Excel 雙試算表格子）
-  // 預設呈現一格一格的空白試算表，支援直接點擊儲存格編輯或按 Ctrl+V 貼入展開
+  // 支援 RFC 4180 試算表標準（精準處理雙引號內 Alt+Enter 換行，還原 Synology 表格）
+  // 支援點選列號整列選取、新增列、刪除選定列與儲存格直接打字
   // ============================================================================
   const containerTableTargets = document.getElementById("containerTableTargets");
   const tablePastedTargets = document.getElementById("tablePastedTargets");
   const badgeTargetCount = document.getElementById("badgeTargetCount");
+  const btnAddTargetRow = document.getElementById("btnAddTargetRow");
+  const btnDeleteTargetRow = document.getElementById("btnDeleteTargetRow");
   const btnPasteTargetDemo = document.getElementById("btnPasteTargetDemo");
   const btnClearTargetTable = document.getElementById("btnClearTargetTable");
 
   const containerTableShipments = document.getElementById("containerTableShipments");
   const tablePastedShipments = document.getElementById("tablePastedShipments");
   const badgeShipmentCount = document.getElementById("badgeShipmentCount");
+  const btnAddShipmentRow = document.getElementById("btnAddShipmentRow");
+  const btnDeleteShipmentRow = document.getElementById("btnDeleteShipmentRow");
   const btnPasteShipmentDemo = document.getElementById("btnPasteShipmentDemo");
   const btnClearShipmentTable = document.getElementById("btnClearShipmentTable");
 
@@ -518,24 +523,83 @@ document.addEventListener("DOMContentLoaded", () => {
     return name;
   }
 
+  // 支援 RFC 4180 試算表規範：能正確辨識雙引號內的 Alt+Enter 換行，防止儲存格內換行碎裂跑版
+  function parseExcelTSV(text) {
+    if (!text || !text.trim()) return [];
+    const rows = [];
+    let currentRow = [];
+    let currentCell = "";
+    let inQuotes = false;
+    const len = text.length;
+
+    for (let i = 0; i < len; i++) {
+      const char = text[i];
+      const nextChar = i + 1 < len ? text[i + 1] : "";
+
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          currentCell += '"';
+          i++; // 跳過連續雙引號轉義
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === '\t' && !inQuotes) {
+        currentRow.push(currentCell.trim());
+        currentCell = "";
+      } else if ((char === '\r' || char === '\n') && !inQuotes) {
+        if (char === '\r' && nextChar === '\n') {
+          i++; // 跳過 \r\n
+        }
+        currentRow.push(currentCell.trim());
+        rows.push(currentRow);
+        currentRow = [];
+        currentCell = "";
+      } else {
+        currentCell += char;
+      }
+    }
+
+    if (currentCell !== "" || currentRow.length > 0) {
+      currentRow.push(currentCell.trim());
+      rows.push(currentRow);
+    }
+
+    // 移除尾端多餘純空白列
+    while (rows.length > 0 && rows[rows.length - 1].every(cell => !cell)) {
+      rows.pop();
+    }
+
+    return rows;
+  }
+
   // 渲染微軟原生 Excel 試算表格子 (含 A/B/C 欄標籤與 1/2/3 列號，支援 contenteditable 與 Ctrl+V 貼入)
-  function renderExcelGrid(tableEl, tsvText, minRows, minCols, badgeEl) {
+  function renderExcelGrid(tableEl, inputData, minRows, minCols, badgeEl) {
     if (!tableEl) return;
 
-    // 解析傳入的 TSV 剪貼簿文字
-    const rawLines = tsvText && tsvText.trim() ? tsvText.trim().split(/\r?\n/) : [];
-    const dataMatrix = rawLines.map(line => line.split("\t"));
+    // inputData 可為字串 (TSV) 或已解析的 2D 矩陣
+    let dataMatrix = [];
+    if (typeof inputData === "string") {
+      dataMatrix = parseExcelTSV(inputData);
+    } else if (Array.isArray(inputData)) {
+      dataMatrix = inputData;
+    }
 
-    let maxCols = minCols || 10;
+    // 保存當前矩陣狀態至 DOM 元素上供行列操作存取
+    tableEl._gridMatrix = dataMatrix;
+    tableEl._minRows = minRows || 20;
+    tableEl._minCols = minCols || 10;
+    tableEl._badgeEl = badgeEl;
+
+    let maxCols = tableEl._minCols;
     dataMatrix.forEach(row => {
       if (row.length > maxCols) maxCols = row.length;
     });
 
-    const totalRows = Math.max(minRows || 20, dataMatrix.length);
+    const totalRows = Math.max(tableEl._minRows, dataMatrix.length);
     const totalCols = maxCols;
 
     // 建立 thead (頂部 A, B, C... 欄標籤)
-    let theadHtml = "<thead><tr><th class=\"corner-cell\" title=\"點擊儲存格可直接輸入或按 Ctrl+V 貼上\"></th>";
+    let theadHtml = "<thead><tr><th class=\"corner-cell\" title=\"點擊列號可選取整列，按『刪除選定列』刪除\"></th>";
     for (let c = 0; c < totalCols; c++) {
       theadHtml += `<th class="col-header">${getExcelColName(c)}</th>`;
     }
@@ -544,12 +608,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // 建立 tbody (左側 1, 2, 3... 列號與真實儲存格)
     let tbodyHtml = "<tbody>";
     for (let r = 0; r < totalRows; r++) {
-      tbodyHtml += `<tr><th class="row-header">${r + 1}</th>`;
+      tbodyHtml += `<tr data-row-index="${r}"><th class="row-header" title="點擊選取第 ${r + 1} 列">${r + 1}</th>`;
       const rowData = dataMatrix[r] || [];
       for (let c = 0; c < totalCols; c++) {
-        const val = rowData[c] !== undefined ? rowData[c].trim() : "";
-        // 判斷是否為數字靠右對齊
-        const isNum = val && !isNaN(parseFloat(val.replace(/,/g, "").replace(/%/g, ""))) && !val.includes("月") && !val.includes("區");
+        const val = rowData[c] !== undefined ? rowData[c] : "";
+        // 判斷是否為純數字靠右對齊 (排除含有換行、月份或文字者)
+        const isNum = val && !val.includes("\n") && !isNaN(parseFloat(val.replace(/,/g, "").replace(/%/g, ""))) && !val.includes("月") && !val.includes("區");
         const alignStyle = isNum ? "text-align:right;" : "text-align:left;";
         tbodyHtml += `<td class="grid-cell" contenteditable="true" style="${alignStyle}" data-row="${r}" data-col="${c}">${escapeHtml(val)}</td>`;
       }
@@ -558,6 +622,9 @@ document.addEventListener("DOMContentLoaded", () => {
     tbodyHtml += "</tbody>";
 
     tableEl.innerHTML = theadHtml + tbodyHtml;
+
+    // 綁定列選取高亮與儲存格編輯監聽
+    bindExcelGridEvents(tableEl);
 
     if (badgeEl) {
       if (dataMatrix.length > 0) {
@@ -569,6 +636,78 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   }
+
+  // 選取特定列高亮
+  function selectGridRow(tableEl, rowIdx) {
+    tableEl._selectedRow = rowIdx;
+    const allRows = tableEl.querySelectorAll("tbody tr");
+    allRows.forEach((tr, idx) => {
+      if (idx === rowIdx) {
+        tr.classList.add("row-selected");
+      } else {
+        tr.classList.remove("row-selected");
+      }
+    });
+  }
+
+  // 綁定儲存格與列號互動事件
+  function bindExcelGridEvents(tableEl) {
+    const rowHeaders = tableEl.querySelectorAll("th.row-header");
+    rowHeaders.forEach(th => {
+      th.addEventListener("click", () => {
+        const rowIdx = parseInt(th.parentElement.dataset.rowIndex, 10);
+        selectGridRow(tableEl, rowIdx);
+      });
+    });
+
+    const cells = tableEl.querySelectorAll("td.grid-cell");
+    cells.forEach(td => {
+      td.addEventListener("focus", () => {
+        const rowIdx = parseInt(td.parentElement.dataset.rowIndex, 10);
+        selectGridRow(tableEl, rowIdx);
+      });
+      td.addEventListener("blur", () => {
+        const r = parseInt(td.dataset.row, 10);
+        const c = parseInt(td.dataset.col, 10);
+        if (tableEl._gridMatrix) {
+          while (tableEl._gridMatrix.length <= r) {
+            tableEl._gridMatrix.push([]);
+          }
+          tableEl._gridMatrix[r][c] = td.innerText;
+        }
+      });
+    });
+  }
+
+  // 新增一列
+  function addGridRow(tableEl) {
+    if (!tableEl) return;
+    const matrix = tableEl._gridMatrix || [];
+    const numCols = matrix[0] ? matrix[0].length : (tableEl._minCols || 10);
+    matrix.push(new Array(numCols).fill(""));
+    renderExcelGrid(tableEl, matrix, tableEl._minRows, tableEl._minCols, tableEl._badgeEl);
+    selectGridRow(tableEl, matrix.length - 1);
+  }
+
+  // 刪除選定列
+  function deleteGridRow(tableEl) {
+    if (!tableEl || !tableEl._gridMatrix) return;
+    const targetIdx = tableEl._selectedRow !== undefined ? tableEl._selectedRow : (tableEl._gridMatrix.length - 1);
+    if (targetIdx >= 0 && targetIdx < tableEl._gridMatrix.length) {
+      tableEl._gridMatrix.splice(targetIdx, 1);
+      renderExcelGrid(tableEl, tableEl._gridMatrix, tableEl._minRows, tableEl._minCols, tableEl._badgeEl);
+      if (tableEl._gridMatrix.length > 0) {
+        const nextIdx = Math.min(targetIdx, tableEl._gridMatrix.length - 1);
+        selectGridRow(tableEl, nextIdx);
+      }
+    }
+  }
+
+  // 綁定增刪列按鈕
+  if (btnAddTargetRow) btnAddTargetRow.addEventListener("click", () => addGridRow(tablePastedTargets));
+  if (btnDeleteTargetRow) btnDeleteTargetRow.addEventListener("click", () => deleteGridRow(tablePastedTargets));
+  if (btnAddShipmentRow) btnAddShipmentRow.addEventListener("click", () => addGridRow(tablePastedShipments));
+  if (btnDeleteShipmentRow) btnDeleteShipmentRow.addEventListener("click", () => deleteGridRow(tablePastedShipments));
 
   // 監聽左邊表格容器 paste 事件
   if (containerTableTargets) {
@@ -596,9 +735,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 10 月真實目標總表範例
+  // 10 月真實目標總表範例 (包含 Alt+Enter 換行之真實格式)
   const sampleTargetsExcelTSV = `北區\t10\t月挑戰目標\t9,300\t萬
-項次\t營業員\t年計月目標\t10月挑戰目標\t10月堆疊業績\t10/21累積目標\t10/21實績\t堆疊目標差異(100%)\t挑戰目標差異\t挑戰目標達成率\t前一個月實績
+項次\t營業員\t年計月目標\t"10月\n挑戰目標"\t"10月\n堆疊業績"\t"10/21\n累積目標"\t"10/21\n實績"\t"堆疊目標\n差異(100%)"\t"挑戰目標\n差異"\t"挑戰目標\n達成率"\t"前一個月\n實績"
 經銷\t張何達\t758\t900\t900\t610\t1,451\t551\t551\t161%\t957
 \t葉仁豪\t664\t700\t705\t477\t473\t-231\t-227\t68%\t692
 \t邱文輝\t1,450\t1,400\t1,400\t948\t1,388\t-12\t-12\t99%\t1,696

@@ -1148,7 +1148,7 @@ textarea.form-control {
   height: 24px;
 }
 
-/* 左側 1, 2, 3... 列號標籤 */
+/* 左側 1, 2, 3... 列號標籤 (點擊可選取整列) */
 .excel-spreadsheet-grid th.row-header {
   background-color: #F3F2F1;
   color: #605E5C;
@@ -1164,6 +1164,13 @@ textarea.form-control {
   width: 36px;
   min-width: 36px;
   max-width: 36px;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.excel-spreadsheet-grid th.row-header:hover {
+  background-color: #E1DFDD;
+  color: #107C41;
 }
 
 /* 左上角全選交會格 */
@@ -1179,22 +1186,34 @@ textarea.form-control {
   min-width: 36px;
 }
 
-/* 一般資料儲存格 (可打字、可貼上、框線清晰) */
+/* 一般資料儲存格 (可打字、可貼上、框線清晰、支援 Alt+Enter 儲存格內換行) */
 .excel-spreadsheet-grid td.grid-cell {
   border-right: 1px solid #E1DFDD;
   border-bottom: 1px solid #E1DFDD;
   padding: 4px 8px;
   min-height: 24px;
-  white-space: nowrap;
+  white-space: pre-wrap;
+  line-height: 1.3;
   outline: none;
   color: #201F1E;
   background-color: #FFFFFF;
   transition: background-color 0.1s ease;
+  vertical-align: middle;
 }
 
 .excel-spreadsheet-grid td.grid-cell:empty::before {
   content: "";
   display: inline-block;
+}
+
+/* 整列選取高亮樣式 (方便刪除或辨識) */
+.excel-spreadsheet-grid tr.row-selected th.row-header {
+  background-color: #107C41 !important;
+  color: #FFFFFF !important;
+}
+
+.excel-spreadsheet-grid tr.row-selected td.grid-cell {
+  background-color: #E8F5E9 !important;
 }
 
 /* 儲存格點選時的經典 Excel 綠色選取框 */

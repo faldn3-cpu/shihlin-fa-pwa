@@ -205,7 +205,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (inputSalesName) {
       inputSalesName.value = salesName;
     }
-    renderHomeDashboard();
+    if (selectActiveSales && selectActiveSales.value !== salesName) {
+      selectActiveSales.value = salesName;
+    }
+    renderHomeDashboard(salesName);
   }
 
   function initSettings() {
@@ -324,21 +327,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 渲染首頁目標與戰況看板 (統一連動「管理員目標資料維護」雙表格真實解析數據)
-  function renderHomeDashboard() {
-    const savedMetrics = localStorage.getItem("shihlin_dashboard_metrics");
-    if (savedMetrics) {
-      try {
-        const metrics = JSON.parse(savedMetrics);
-        applyScoreboardMetrics(metrics);
-        return;
-      } catch (e) {
-        console.warn("讀取本機戰情指標失敗：", e);
-      }
-    }
-    const currentGrid = (typeof tablePastedTargets !== "undefined" && tablePastedTargets && tablePastedTargets._gridMatrix) || getSampleTargetsGrid();
-    const currentShipments = (typeof tablePastedShipments !== "undefined" && tablePastedShipments && tablePastedShipments._gridMatrix) || getSampleShipmentsGrid();
-    const metrics = parseTargetsGridToMetrics(currentGrid, currentShipments);
+  // 渲染首頁目標與戰況看板 (統一連動「業績數據資料庫」雙表格真實解析數據)
+  function renderHomeDashboard(specificSales) {
+    const activeSales = specificSales || localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+    const currentGrid = (typeof tablePastedTargets !== "undefined" && tablePastedTargets && tablePastedTargets._gridMatrix && tablePastedTargets._gridMatrix.length > 0)
+      ? tablePastedTargets._gridMatrix
+      : getSampleTargetsGrid();
+    const currentShipments = (typeof tablePastedShipments !== "undefined" && tablePastedShipments && tablePastedShipments._gridMatrix && tablePastedShipments._gridMatrix.length > 0)
+      ? tablePastedShipments._gridMatrix
+      : getSampleShipmentsGrid();
+    const metrics = parseTargetsGridToMetrics(currentGrid, currentShipments, activeSales);
     applyScoreboardMetrics(metrics);
   }
 
@@ -1363,10 +1361,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // 解析目標表格矩陣為首頁戰情總覽指標 (精準定位：年計月目標、挑戰目標、堆疊目標)
-  function parseTargetsGridToMetrics(matrix, shipmentsMatrix) {
+  function parseTargetsGridToMetrics(matrix, shipmentsMatrix, activeSalesName) {
     if (!matrix || !Array.isArray(matrix) || matrix.length === 0) return null;
 
+    const targetSales = activeSalesName || localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+    const isManager = (targetSales === "曾維崧");
+
     const metrics = {
+      isManager: isManager,
+      salesName: targetSales,
       month: "10",
       annualTarget: "7,060",
       totalTarget: "9,300",
@@ -1377,11 +1380,11 @@ document.addEventListener("DOMContentLoaded", () => {
       totalRateNum: 112,
       diffText: "超標 1,070 萬元",
 
-      salesName: "曾仁君",
       salesTarget: "810",
       salesActual: "802",
       salesDiff: "-8",
       salesRate: "99.0%",
+      salesRateNum: 99.0,
       salesDiffText: "尚差 8 萬元",
 
       personalLeb: "0.00",
@@ -1481,7 +1484,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
 
-      // 5. 從合計列依欄位精準提取數字
+      // 5. 從合計列依欄位精準提取數字 (全區數據)
       if (totalRowIdx >= 0) {
         const totRow = matrix[totalRowIdx];
         if (colAnnualTarget >= 0 && getCellStr(totRow[colAnnualTarget])) {
@@ -1510,32 +1513,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // 6. 尋找個人業務員列 (例如「曾仁君」或當前登入業務員)
-      for (let r = (headerRowIdx >= 0 ? headerRowIdx + 1 : 0); r < (totalRowIdx > 0 ? totalRowIdx : matrix.length); r++) {
-        const row = matrix[r];
-        const rowStr = row.map(getCellStr).join(" ");
-        if (rowStr.includes("曾仁君") || (metrics.salesName && rowStr.includes(metrics.salesName))) {
-          metrics.salesName = "曾仁君";
-          if (colChallengeTarget >= 0 && getCellStr(row[colChallengeTarget])) {
-            metrics.salesTarget = getCellStr(row[colChallengeTarget]);
-          }
-          if (colActual >= 0 && getCellStr(row[colActual])) {
-            metrics.salesActual = getCellStr(row[colActual]);
-          }
-
-          const sT = parseFloat((metrics.salesTarget || "0").replace(/,/g, ""));
-          const sA = parseFloat((metrics.salesActual || "0").replace(/,/g, ""));
-          if (sT > 0) {
-            const rVal = ((sA / sT) * 100).toFixed(1);
-            metrics.salesRate = `${rVal}%`;
-            const diff = Math.round(sA - sT);
-            metrics.salesDiffText = diff >= 0 ? `超標 ${diff} 萬元` : `尚差 ${Math.abs(diff)} 萬元`;
-          }
-          break;
-        }
-      }
-
-      // 7. 自製品三大項目 (LEB, LNH, PLC)
+      // 6. 自製品三大項目 (LEB, LNH, PLC) - 全區戰況
       for (let r = (totalRowIdx > 0 ? totalRowIdx : 0); r < matrix.length; r++) {
         const row = matrix[r];
         const rowStr = row.map(getCellStr).join(" ");
@@ -1576,12 +1554,73 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // 8. 依業務員真實計算右表自製品個人出貨明細 (若右表無該員紀錄則真實回傳 0.00 萬)
-      if (shipmentsMatrix) {
-        const personalShipments = calculateSalespersonProductShipments(shipmentsMatrix, metrics.salesName);
-        metrics.personalLeb = personalShipments.leb.toFixed(2);
-        metrics.personalLnh = personalShipments.lnh.toFixed(2);
-        metrics.personalPlc = personalShipments.plc.toFixed(2);
+      // 7. 依據選定的業務員 (targetSales) 動態提取個人業績或主管全區業績
+      if (isManager) {
+        // 主管模式 (曾維崧)：卡片 1 直接以「全區營收戰報」為主視角
+        metrics.salesName = "曾維崧";
+        metrics.salesTarget = metrics.totalTarget;
+        metrics.salesActual = metrics.totalActual;
+        metrics.salesRate = metrics.totalRate;
+        metrics.salesRateNum = metrics.totalRateNum;
+        metrics.salesDiffText = metrics.diffText;
+        // 自製品三大卡片直接顯示全區實績
+        metrics.personalLeb = metrics.lebActual;
+        metrics.personalLnh = metrics.lnhActual;
+        metrics.personalPlc = metrics.plcActual;
+      } else {
+        // 一般業務員模式 (如葉仁豪、曾仁君、邱文輝等)：在總表中搜尋該業務員
+        let foundSales = false;
+        for (let r = (headerRowIdx >= 0 ? headerRowIdx + 1 : 0); r < (totalRowIdx > 0 ? totalRowIdx : matrix.length); r++) {
+          const row = matrix[r];
+          const rowStr = row.map(getCellStr).join(" ");
+          if (rowStr.includes(targetSales)) {
+            metrics.salesName = targetSales;
+            foundSales = true;
+            if (colChallengeTarget >= 0 && getCellStr(row[colChallengeTarget])) {
+              metrics.salesTarget = getCellStr(row[colChallengeTarget]);
+            }
+            if (colActual >= 0 && getCellStr(row[colActual])) {
+              metrics.salesActual = getCellStr(row[colActual]);
+            }
+            if (colRate >= 0 && getCellStr(row[colRate])) {
+              metrics.salesRate = getCellStr(row[colRate]);
+              metrics.salesRateNum = parseFloat(metrics.salesRate.replace(/%/g, "")) || 0;
+            }
+            if (colDiff >= 0 && getCellStr(row[colDiff])) {
+              metrics.salesDiff = getCellStr(row[colDiff]);
+            }
+
+            const sT = parseFloat((metrics.salesTarget || "0").replace(/,/g, ""));
+            const sA = parseFloat((metrics.salesActual || "0").replace(/,/g, ""));
+            if (sT > 0) {
+              if (!metrics.salesRate || metrics.salesRate === "0%") {
+                const rVal = ((sA / sT) * 100).toFixed(1);
+                metrics.salesRate = `${rVal}%`;
+                metrics.salesRateNum = parseFloat(rVal) || 0;
+              }
+              const diff = metrics.salesDiff ? parseFloat(metrics.salesDiff.replace(/,/g, "")) : (sA - sT);
+              metrics.salesDiffText = diff >= 0 ? `超標 ${Math.round(diff)} 萬元` : `尚差 ${Math.abs(Math.round(diff))} 萬元`;
+            }
+            break;
+          }
+        }
+
+        if (!foundSales) {
+          metrics.salesName = targetSales;
+          metrics.salesTarget = "0";
+          metrics.salesActual = "0";
+          metrics.salesRate = "0%";
+          metrics.salesRateNum = 0;
+          metrics.salesDiffText = "尚無個人目標數據";
+        }
+
+        // 依業務員真實計算右表自製品個人出貨明細 (若右表無該員紀錄則真實回傳 0.00 萬)
+        if (shipmentsMatrix) {
+          const personalShipments = calculateSalespersonProductShipments(shipmentsMatrix, targetSales);
+          metrics.personalLeb = personalShipments.leb.toFixed(2);
+          metrics.personalLnh = personalShipments.lnh.toFixed(2);
+          metrics.personalPlc = personalShipments.plc.toFixed(2);
+        }
       }
     } catch (err) {
       console.warn("[Scoreboard Sync] 解析指標時發生輕微錯誤，使用安全預設值：", err);
@@ -1604,13 +1643,27 @@ document.addEventListener("DOMContentLoaded", () => {
       displayRegionSummary.innerText = `🏢 全區實績 ${metrics.totalActual || "10,370"} 萬 (${metrics.totalRate || "112%"} 達標)`;
     }
 
-    // 2. 卡片 1：個人總營收 (例如曾仁君)
+    // 2. 卡片 1 標題與數值：動態判斷主管全區戰報或個人總業績
+    const kpiCardTitlePersonal = document.getElementById("kpiCardTitlePersonal");
+    if (kpiCardTitlePersonal) {
+      if (metrics.isManager) {
+        kpiCardTitlePersonal.innerHTML = `👑 全區營收戰報 (<span id="kpiSalesName">${metrics.salesName || "曾維崧"}</span>・主管)`;
+      } else {
+        kpiCardTitlePersonal.innerHTML = `👤 個人總業績 (<span id="kpiSalesName">${metrics.salesName || "曾仁君"}</span>)`;
+      }
+    } else {
+      const kpiSalesName = document.getElementById("kpiSalesName");
+      if (kpiSalesName && metrics.salesName) {
+        kpiSalesName.innerText = metrics.salesName;
+      }
+    }
+
     const kpiValPersonal = document.getElementById("kpiValPersonal");
     if (kpiValPersonal) kpiValPersonal.innerText = metrics.salesActual || "802";
 
     const kpiTrafficPersonal = document.getElementById("kpiTrafficPersonal");
     if (kpiTrafficPersonal) {
-      const rateNum = parseFloat((metrics.salesRate || "0").replace(/%/g, "")) || 0;
+      const rateNum = metrics.salesRateNum !== undefined ? metrics.salesRateNum : (parseFloat((metrics.salesRate || "0").replace(/%/g, "")) || 0);
       const light = getTrafficLight(rateNum);
       kpiTrafficPersonal.className = `traffic-light-badge ${light.type}`;
       kpiTrafficPersonal.innerText = `${light.icon} ${metrics.salesRate || "99.0%"}`;
@@ -1618,18 +1671,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const kpiDetailPersonal = document.getElementById("kpiDetailPersonal");
     if (kpiDetailPersonal) {
-      kpiDetailPersonal.innerText = `🎯 目標 ${metrics.salesTarget || "810"} 萬 ｜ ${metrics.salesDiffText || "尚差 8 萬"}`;
+      const targetPrefix = metrics.isManager ? "🎯 全區目標 " : "🎯 目標 ";
+      kpiDetailPersonal.innerText = `${targetPrefix}${metrics.salesTarget || "810"} 萬 ｜ ${metrics.salesDiffText || "尚差 8 萬"}`;
     }
 
     const kpiBarPersonal = document.getElementById("kpiBarPersonal");
     if (kpiBarPersonal) {
-      const rateNum = parseFloat((metrics.salesRate || "0").replace(/%/g, "")) || 0;
+      const rateNum = metrics.salesRateNum !== undefined ? metrics.salesRateNum : (parseFloat((metrics.salesRate || "0").replace(/%/g, "")) || 0);
       kpiBarPersonal.style.width = `${Math.min(100, Math.max(0, rateNum))}%`;
-    }
-
-    const kpiSalesName = document.getElementById("kpiSalesName");
-    if (kpiSalesName && metrics.salesName) {
-      kpiSalesName.innerText = metrics.salesName;
     }
 
     // 3. 卡片 2：士林伺服 (LEB)
@@ -1646,7 +1695,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const kpiDetailLEB = document.getElementById("kpiDetailLEB");
     if (kpiDetailLEB) {
-      kpiDetailLEB.innerText = `🏢 全區 ${metrics.lebActual || "196"} / ${metrics.lebTarget || "516"} 萬 ｜ ${metrics.lebDiffText || "差距 320 萬"}`;
+      if (metrics.isManager) {
+        kpiDetailLEB.innerText = `🎯 全區目標 ${metrics.lebTarget || "516"} 萬 ｜ ${metrics.lebDiffText || "差距 320 萬"}`;
+      } else {
+        kpiDetailLEB.innerText = `🏢 全區 ${metrics.lebActual || "196"} / ${metrics.lebTarget || "516"} 萬 ｜ ${metrics.lebDiffText || "差距 320 萬"}`;
+      }
     }
 
     const kpiBarLEB = document.getElementById("kpiBarLEB");
@@ -1668,7 +1721,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const kpiDetailLNH = document.getElementById("kpiDetailLNH");
     if (kpiDetailLNH) {
-      kpiDetailLNH.innerText = `🏢 全區 ${metrics.lnhActual || "243"} / ${metrics.lnhTarget || "516"} 萬 ｜ ${metrics.lnhDiffText || "差距 273 萬"}`;
+      if (metrics.isManager) {
+        kpiDetailLNH.innerText = `🎯 全區目標 ${metrics.lnhTarget || "516"} 萬 ｜ ${metrics.lnhDiffText || "差距 273 萬"}`;
+      } else {
+        kpiDetailLNH.innerText = `🏢 全區 ${metrics.lnhActual || "243"} / ${metrics.lnhTarget || "516"} 萬 ｜ ${metrics.lnhDiffText || "差距 273 萬"}`;
+      }
     }
 
     const kpiBarLNH = document.getElementById("kpiBarLNH");
@@ -1690,7 +1747,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const kpiDetailPLC = document.getElementById("kpiDetailPLC");
     if (kpiDetailPLC) {
-      kpiDetailPLC.innerText = `🏢 全區 ${metrics.plcActual || "246"} / ${metrics.plcTarget || "210"} 萬 ｜ ${metrics.plcDiffText || "超標 36 萬"}`;
+      if (metrics.isManager) {
+        kpiDetailPLC.innerText = `🎯 全區目標 ${metrics.plcTarget || "210"} 萬 ｜ ${metrics.plcDiffText || "超標 36 萬"}`;
+      } else {
+        kpiDetailPLC.innerText = `🏢 全區 ${metrics.plcActual || "246"} / ${metrics.plcTarget || "210"} 萬 ｜ ${metrics.plcDiffText || "超標 36 萬"}`;
+      }
     }
 
     const kpiBarPLC = document.getElementById("kpiBarPLC");
@@ -1698,14 +1759,21 @@ document.addEventListener("DOMContentLoaded", () => {
       kpiBarPLC.style.width = `${Math.min(100, Math.max(0, metrics.plcRateNum || 0))}%`;
     }
 
-    // 頂部導覽列業務員名稱同步
+    // 6. 頂部導覽列業務員名稱與頭像即時連動
     const currentSalesDisplay = document.getElementById("currentSalesDisplay");
     const headerUserAvatar = document.getElementById("headerUserAvatar");
+    const isManager = (metrics.salesName === "曾維崧" || metrics.isManager);
     if (currentSalesDisplay && metrics.salesName) {
-      currentSalesDisplay.innerText = metrics.salesName;
+      currentSalesDisplay.innerText = isManager ? `${metrics.salesName} (主管)` : metrics.salesName;
     }
     if (headerUserAvatar && metrics.salesName) {
-      headerUserAvatar.innerText = metrics.salesName.substring(0, 1);
+      headerUserAvatar.innerText = metrics.salesName.charAt(0) || "曾";
+    }
+
+    // 7. 同步更新系統設定下拉選單
+    const selectActiveSales = document.getElementById("selectActiveSales");
+    if (selectActiveSales && metrics.salesName && selectActiveSales.value !== metrics.salesName) {
+      selectActiveSales.value = metrics.salesName;
     }
   }
 
@@ -1773,12 +1841,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // 最下方「資料確認」按鈕：解析表格數據並同步連動首頁戰情總覽
   if (btnConfirmTablesReady) {
     btnConfirmTablesReady.addEventListener("click", () => {
-      const currentGrid = tablePastedTargets._gridMatrix || [];
-      const currentShipments = tablePastedShipments._gridMatrix || [];
-      const metrics = parseTargetsGridToMetrics(currentGrid, currentShipments);
+      const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+      const currentGrid = (tablePastedTargets && tablePastedTargets._gridMatrix) || [];
+      const currentShipments = (tablePastedShipments && tablePastedShipments._gridMatrix) || [];
+      const metrics = parseTargetsGridToMetrics(currentGrid, currentShipments, activeSales);
       if (metrics) {
         applyScoreboardMetrics(metrics);
-        localStorage.setItem("shihlin_dashboard_metrics", JSON.stringify(metrics));
         alert("資料確認完成！\n首頁戰情總覽之四大核心大數字與紅綠燈狀態已成功同步連動！");
       } else {
         alert("資料已確認！");
@@ -1793,27 +1861,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const savedShipmentsRaw = localStorage.getItem("shihlin_pasted_shipments_raw");
   renderExcelGrid(tablePastedShipments, savedShipmentsRaw || "", 25, 5, badgeShipmentCount);
 
-  // 初始載入戰情看板指標 (優先自 localStorage 讀取，若為舊格式或誤算數據則自動以最新邏輯重新解析)
-  const savedDashboardMetrics = localStorage.getItem("shihlin_dashboard_metrics");
-  if (savedDashboardMetrics) {
-    try {
-      const parsed = JSON.parse(savedDashboardMetrics);
-      if (!parsed.stackTarget || parsed.totalTarget === "7,060" || parsed.annualTarget === parsed.totalTarget || !parsed.personalPlc || parsed.personalPlc === "0.00" || parsed.personalPlc === "228.09") {
-        const currentGrid = (tablePastedTargets && tablePastedTargets._gridMatrix) || getSampleTargetsGrid();
-        const currentShipments = (tablePastedShipments && tablePastedShipments._gridMatrix) || getSampleShipmentsGrid();
-        const refreshed = parseTargetsGridToMetrics(currentGrid, currentShipments);
-        applyScoreboardMetrics(refreshed);
-        localStorage.setItem("shihlin_dashboard_metrics", JSON.stringify(refreshed));
-      } else {
-        applyScoreboardMetrics(parsed);
-      }
-    } catch (e) {
-      console.warn("讀取本機戰情指標失敗：", e);
-    }
-  } else {
-    const defaultMetrics = parseTargetsGridToMetrics(getSampleTargetsGrid(), getSampleShipmentsGrid());
-    applyScoreboardMetrics(defaultMetrics);
-  }
+  // 初始載入戰情看板指標 (直接依據當前儲存表格與業務身份動態渲染，不殘留過期快取)
+  renderHomeDashboard();
 
   // ============================================================================
   // 8. 客戶主檔載入與單一輸入自動帶入規範 (免重複打字)

@@ -1,0 +1,22 @@
+{
+  "name": "士林電機 FA 業務戰情與報價系統",
+  "short_name": "士電FA戰情",
+  "description": "士林電機 FA 業務戰情計分板、日報表、商機追蹤與報價管理系統",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#1e3a8a",
+  "icons": [
+    {
+      "src": "icon-192x192-v2.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512x512-v2.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

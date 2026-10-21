@@ -271,9 +271,38 @@ def serve_index():
         return FileResponse(str(index_file))
     return {"message": "士林電機 FA 系統 Web API 運行中，前端檔案準備中..."}
 
-# 掛載靜態資源目錄
+# 掛載靜態資源目錄 (同時相容 /web、/css、/js、/static 與 PWA 資源)
 if WEB_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(WEB_DIR)), name="static")
+    app.mount("/web", StaticFiles(directory=str(WEB_DIR), html=True), name="web")
+    if (WEB_DIR / "css").exists():
+        app.mount("/css", StaticFiles(directory=str(WEB_DIR / "css")), name="css")
+    if (WEB_DIR / "js").exists():
+        app.mount("/js", StaticFiles(directory=str(WEB_DIR / "js")), name="js")
+
+@app.get("/manifest.json")
+def serve_manifest():
+    return FileResponse(str(WEB_DIR / "manifest.json"))
+
+@app.get("/sw.js")
+def serve_sw():
+    return FileResponse(str(WEB_DIR / "sw.js"))
+
+@app.get("/favicon-v2.png")
+def serve_favicon():
+    return FileResponse(str(WEB_DIR / "favicon-v2.png"))
+
+@app.get("/apple-touch-icon-v2.png")
+def serve_apple_icon():
+    return FileResponse(str(WEB_DIR / "apple-touch-icon-v2.png"))
+
+@app.get("/icon-192x192-v2.png")
+def serve_icon_192():
+    return FileResponse(str(WEB_DIR / "icon-192x192-v2.png"))
+
+@app.get("/icon-512x512-v2.png")
+def serve_icon_512():
+    return FileResponse(str(WEB_DIR / "icon-512x512-v2.png"))
 
 
 if __name__ == "__main__":

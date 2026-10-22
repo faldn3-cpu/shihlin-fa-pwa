@@ -1931,6 +1931,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const rateLEBNum = metrics.lebRateNum || 38;
       const lightLEB = getTrafficLight(rateLEBNum);
       if (kpiTrafficLEB) {
+        kpiTrafficLEB.style.display = isDriverViewActive ? "none" : "";
         kpiTrafficLEB.className = `traffic-light-badge ${lightLEB.type}`;
         kpiTrafficLEB.innerText = metrics.lebRate || "38%";
       }
@@ -1947,8 +1948,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (kpiValLEB) kpiValLEB.innerText = metrics.personalLeb || "0.00";
       const pVal = parseFloat(metrics.personalLeb || "0");
       if (kpiTrafficLEB) {
-        kpiTrafficLEB.className = "traffic-light-badge success";
-        kpiTrafficLEB.innerText = `${pVal > 0 ? '出貨中' : '無紀錄'}`;
+        // 個人視角下隱藏右上標籤，保持畫面乾淨不干擾
+        kpiTrafficLEB.style.display = "none";
       }
       if (kpiDetailLEB) {
         kpiDetailLEB.innerHTML = `<span>個人出貨：<strong>${metrics.personalLeb || "0.00"}</strong> 萬</span> <span>｜</span> <span>${curRegion}挑戰目標：${metrics.lebTarget || "516"} 萬</span>`;
@@ -1970,6 +1971,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const rateLNHNum = metrics.lnhRateNum || 47;
       const lightLNH = getTrafficLight(rateLNHNum);
       if (kpiTrafficLNH) {
+        kpiTrafficLNH.style.display = isDriverViewActive ? "none" : "";
         kpiTrafficLNH.className = `traffic-light-badge ${lightLNH.type}`;
         kpiTrafficLNH.innerText = metrics.lnhRate || "47%";
       }
@@ -1986,8 +1988,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (kpiValLNH) kpiValLNH.innerText = metrics.personalLnh || "0.00";
       const pVal = parseFloat(metrics.personalLnh || "0");
       if (kpiTrafficLNH) {
-        kpiTrafficLNH.className = "traffic-light-badge success";
-        kpiTrafficLNH.innerText = `${pVal > 0 ? '出貨中' : '無紀錄'}`;
+        // 個人視角下隱藏右上標籤，保持畫面乾淨不干擾
+        kpiTrafficLNH.style.display = "none";
       }
       if (kpiDetailLNH) {
         kpiDetailLNH.innerHTML = `<span>個人出貨：<strong>${metrics.personalLnh || "0.00"}</strong> 萬</span> <span>｜</span> <span>${curRegion}挑戰目標：${metrics.lnhTarget || "516"} 萬</span>`;
@@ -2009,6 +2011,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const ratePLCNum = metrics.plcRateNum || 117;
       const lightPLC = getTrafficLight(ratePLCNum);
       if (kpiTrafficPLC) {
+        kpiTrafficPLC.style.display = isDriverViewActive ? "none" : "";
         kpiTrafficPLC.className = `traffic-light-badge ${lightPLC.type}`;
         kpiTrafficPLC.innerText = metrics.plcRate || "117%";
       }
@@ -2025,8 +2028,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (kpiValPLC) kpiValPLC.innerText = metrics.personalPlc || "0.00";
       const pVal = parseFloat(metrics.personalPlc || "0");
       if (kpiTrafficPLC) {
-        kpiTrafficPLC.className = "traffic-light-badge success";
-        kpiTrafficPLC.innerText = `${pVal > 0 ? '出貨中' : '無紀錄'}`;
+        // 個人視角下隱藏右上標籤，保持畫面乾淨不干擾
+        kpiTrafficPLC.style.display = "none";
       }
       if (kpiDetailPLC) {
         kpiDetailPLC.innerHTML = `<span>個人出貨：<strong>${metrics.personalPlc || "0.00"}</strong> 萬</span> <span>｜</span> <span>${curRegion}挑戰目標：${metrics.plcTarget || "210"} 萬</span>`;
@@ -2630,6 +2633,16 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll(".kpi-outcome-body").forEach(el => el.classList.remove("collapsed"));
         document.querySelectorAll(".kpi-driver-body").forEach(el => el.classList.remove("expanded"));
       }
+
+      // 控制伺服、變頻器、PLC 三大產品右上角標籤：
+      // 在個人視角或領先指標模式下全面隱藏；僅在北區目標且業績狀況模式時顯示
+      const kpiTrafficLEB = document.getElementById("kpiTrafficLEB");
+      const kpiTrafficLNH = document.getElementById("kpiTrafficLNH");
+      const kpiTrafficPLC = document.getElementById("kpiTrafficPLC");
+      const showTraffic = (!isActive && currentScoreboardScope === "region");
+      [kpiTrafficLEB, kpiTrafficLNH, kpiTrafficPLC].forEach(el => {
+        if (el) el.style.display = showTraffic ? "" : "none";
+      });
     }
   }
 

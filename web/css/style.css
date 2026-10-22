@@ -1974,9 +1974,9 @@ textarea.form-control {
   margin-top: 6px;
 }
 
-/* 個人/營運區總業績卡片在領先指標模式下優雅收折 */
-#cardHeroPersonal.collapsed {
-  display: none;
+/* 個人/營運區總業績卡片永久隱藏（頂部摘要卡片已完整呈現總業績、目標與完成率，去除重複資訊） */
+#cardHeroPersonal {
+  display: none !important;
 }
 
 /* 抽屜選單與設定頁版本號標籤 */

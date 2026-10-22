@@ -130,6 +130,21 @@ class QuotationCreate(BaseModel):
     items: List[QuotationItemCreate] = []
 
 
+class DriverChangeApplyRequest(BaseModel):
+    driver_id: int
+    new_driver_name: str
+    new_target_val: float
+    new_unit: str = "次"
+    change_reason: str
+
+
+class DriverReviewRequest(BaseModel):
+    request_id: int
+    action: str  # 'approve' or 'reject'
+    reviewer_name: Optional[str] = ""
+    comment: Optional[str] = ""
+
+
 # ==============================================================================
 # API 路由實作
 # ==============================================================================
@@ -256,6 +271,64 @@ def api_save_quotation(quote_data: QuotationCreate):
         "status": "success",
         "quote_no": assigned_quote_no,
         "message": f"報價單儲存成功：單號【{assigned_quote_no}】"
+    }
+
+
+# ==============================================================================
+# 產品線領先指標 (驅動目標) 與變更審核 API
+# ==============================================================================
+
+@app.get("/api/scoreboard/drivers")
+def api_get_drivers(sales_name: str = Query("曾維崧", description="業務人員姓名")):
+    """取得業務員三大產品線當前生效中的領先指標 (驅動目標) 與達成率燈號"""
+    drivers = data_access.get_active_drivers(sales_name)
+    return {
+        "status": "success",
+        "sales_name": sales_name,
+        "drivers": drivers
+    }
+
+
+@app.post("/api/scoreboard/drivers/apply-change")
+def api_apply_driver_change(req_data: DriverChangeApplyRequest):
+    """業務發起更換驅動指標申請 (內建未滿 4 週防呆阻擋)"""
+    ok, msg, req_id = data_access.apply_driver_change(req_data.model_dump())
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {
+        "status": "success",
+        "message": msg,
+        "request_id": req_id
+    }
+
+
+@app.post("/api/scoreboard/drivers/review")
+def api_review_driver_change(rev_data: DriverReviewRequest):
+    """主管審核驅動指標變更申請 (核准或駁回)"""
+    ok, msg = data_access.review_driver_change(
+        rev_data.request_id,
+        action=rev_data.action,
+        reviewer_name=rev_data.reviewer_name or "",
+        comment=rev_data.comment or ""
+    )
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {
+        "status": "success",
+        "message": msg
+    }
+
+
+@app.get("/api/scoreboard/drivers/requests")
+def api_get_driver_requests(
+    sales_name: Optional[str] = None,
+    status: Optional[str] = None
+):
+    """查詢變更申請單清單 (供業務查看申請狀態或主管審核待辦)"""
+    requests = data_access.get_driver_change_requests(sales_name=sales_name, status=status)
+    return {
+        "status": "success",
+        "requests": requests
     }
 
 

@@ -220,8 +220,73 @@ def run_all_tests():
         assert app_id > 0
         print(f"  [OK] 專案售價申請單成功建立 (ID={app_id})！")
 
+        # 7. 驗證三大產品線領先指標 (驅動目標) 與 4 週防呆審核
+        print("\n[測試 7] 驗證領先指標 (驅動目標) 讀取、4 週防呆阻擋與主管審核...")
+        drivers_tseng = data_access.get_active_drivers("曾維崧")
+        assert len(drivers_tseng) == 3, f"曾維崧應有 3 條產品線指標，實際有 {len(drivers_tseng)} 條"
+        for drv in drivers_tseng:
+            assert drv["product_line"] in ["士林伺服", "士林變頻器", "士林PLC"]
+            assert drv["rate_pct"] >= 0.0
+            assert drv["traffic_light"] in ["green", "yellow", "red"]
+        print("  [OK] 曾維崧 3 條產品線驅動指標讀取成功，紅黃綠燈計算精準！")
+
+        # 測試葉仁豪：執行 14 天 (未滿 28 天)，應被防呆阻擋
+        drivers_yeh = data_access.get_active_drivers("葉仁豪")
+        servo_yeh = next(d for d in drivers_yeh if d["product_line"] == "士林伺服")
+        assert servo_yeh["can_change"] is False, "未滿 28 天卻顯示可變更！"
+        ok, msg, req_id = data_access.apply_driver_change({
+            "driver_id": servo_yeh["id"],
+            "new_driver_name": "想要隨便更換指標",
+            "new_target_val": 10.0,
+            "new_unit": "次",
+            "change_reason": "測試防呆"
+        })
+        assert ok is False, "未滿 28 天之指標竟然申請成功！防呆機制失效！"
+        assert "未滿 4 週" in msg, f"防呆提示訊息不正確: {msg}"
+        print(f"  [OK] 成功通過 4 週防呆審查：未滿 28 天申請遭精準阻擋！(系統提示：{msg})")
+
+        # 測試曾仁君 (直賣主管)：執行 35 天 (滿 4 週)，申請變更應成功
+        drivers_ren = data_access.get_active_drivers("曾仁君")
+        servo_ren = next(d for d in drivers_ren if d["product_line"] == "士林伺服")
+        assert servo_ren["can_change"] is True, "已滿 28 天卻顯示不可變更！"
+        ok_apply, msg_apply, req_id_apply = data_access.apply_driver_change({
+            "driver_id": servo_ren["id"],
+            "new_driver_name": "先進半導體產線實機調機與規格制定",
+            "new_target_val": 5.0,
+            "new_unit": "場",
+            "change_reason": "配合新竹大廠擴產，原試機轉為深入調機規格制定。"
+        })
+        assert ok_apply is True, f"滿 4 週指標申請失敗: {msg_apply}"
+        assert req_id_apply is not None
+        print(f"  [OK] 滿 4 週指標申請成功送出 (申請單 ID={req_id_apply})！")
+
+        # 測試主管審核：核准該變更申請
+        ok_rev, msg_rev = data_access.review_driver_change(req_id_apply, action="approve", reviewer_name="曾維崧", comment="同意策略調整，全力支援技術工程師。")
+        assert ok_rev is True, f"主管審核核准失敗: {msg_rev}"
+
+        # 驗證舊指標已封存、新指標已 active、且新指標名稱正確
+        drivers_ren_after = data_access.get_active_drivers("曾仁君")
+        servo_ren_after = next(d for d in drivers_ren_after if d["product_line"] == "士林伺服")
+        assert servo_ren_after["driver_name"] == "先進半導體產線實機調機與規格制定"
+        assert servo_ren_after["target_val"] == 5.0
+        assert servo_ren_after["actual_val"] == 0.0
+        print("  [OK] 主管核准生效：舊指標安全歸檔封存，新指標成功上線運作！")
+
+        # 測試主管審核駁回功能
+        # 建立一筆可申請的測試指標
+        ok_apply2, _, req_id_apply2 = data_access.apply_driver_change({
+            "driver_id": servo_ren_after["id"],
+            "new_driver_name": "短線電訪 50 通",
+            "new_target_val": 50.0,
+            "new_unit": "通",
+            "change_reason": "短線衝刺"
+        })
+        # 注意此時剛核准的新指標 start_date 是今天，天數為 0，所以此處會被阻擋
+        assert ok_apply2 is False, "新指標未滿 28 天卻能再次申請！"
+        print("  [OK] 新指標剛上線執行 0 天，再次觸發 4 週防呆鎖定保護！")
+
         print("\n" + "=" * 65)
-        print("[SUCCESS] 恭喜！data_access.py 全數 6 大單元測試 100% 通過！")
+        print("[SUCCESS] 恭喜！data_access.py 全數 7 大單元測試 100% 通過！")
         print("=" * 65)
 
     finally:

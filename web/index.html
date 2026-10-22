@@ -133,7 +133,12 @@
           <div class="kpi-hero-card">
             <div class="kpi-card-header">
               <span class="kpi-card-title">士林伺服</span>
-              <span id="kpiTrafficLEB" class="traffic-light-badge danger">38%</span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span id="kpiTrafficLEB" class="traffic-light-badge danger">38%</span>
+                <button type="button" class="kpi-drawer-toggle" id="btnToggleDriverLEB" title="點擊展開/收合士林伺服領先指標" aria-expanded="false">
+                  <svg class="icon-svg toggle-arrow" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+                </button>
+              </div>
             </div>
             <div class="kpi-val-row">
               <div id="kpiValLEB" class="kpi-big-num">65.87</div>
@@ -145,13 +150,22 @@
             <div class="fluent-progress-bg">
               <div id="kpiBarLEB" class="fluent-progress-bar bar-danger" style="width: 38%;"></div>
             </div>
+            <!-- 領先指標 (驅動目標) 平滑折疊抽屜 -->
+            <div class="kpi-driver-drawer" id="drawerDriverLEB">
+              <!-- JS 動態渲染 -->
+            </div>
           </div>
 
           <!-- 卡片 3：士林變頻器 -->
           <div class="kpi-hero-card">
             <div class="kpi-card-header">
               <span class="kpi-card-title">士林變頻器</span>
-              <span id="kpiTrafficLNH" class="traffic-light-badge danger">47%</span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span id="kpiTrafficLNH" class="traffic-light-badge danger">47%</span>
+                <button type="button" class="kpi-drawer-toggle" id="btnToggleDriverLNH" title="點擊展開/收合士林變頻器領先指標" aria-expanded="false">
+                  <svg class="icon-svg toggle-arrow" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+                </button>
+              </div>
             </div>
             <div class="kpi-val-row">
               <div id="kpiValLNH" class="kpi-big-num">55.22</div>
@@ -163,13 +177,22 @@
             <div class="fluent-progress-bg">
               <div id="kpiBarLNH" class="fluent-progress-bar bar-danger" style="width: 47%;"></div>
             </div>
+            <!-- 領先指標 (驅動目標) 平滑折疊抽屜 -->
+            <div class="kpi-driver-drawer" id="drawerDriverLNH">
+              <!-- JS 動態渲染 -->
+            </div>
           </div>
 
           <!-- 卡片 4：士林PLC -->
           <div class="kpi-hero-card">
             <div class="kpi-card-header">
               <span class="kpi-card-title">士林PLC</span>
-              <span id="kpiTrafficPLC" class="traffic-light-badge success">117%</span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span id="kpiTrafficPLC" class="traffic-light-badge success">117%</span>
+                <button type="button" class="kpi-drawer-toggle" id="btnToggleDriverPLC" title="點擊展開/收合士林PLC領先指標" aria-expanded="false">
+                  <svg class="icon-svg toggle-arrow" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+                </button>
+              </div>
             </div>
             <div class="kpi-val-row">
               <div id="kpiValPLC" class="kpi-big-num">9.03</div>
@@ -180,6 +203,10 @@
             </div>
             <div class="fluent-progress-bg">
               <div id="kpiBarPLC" class="fluent-progress-bar bar-success" style="width: 100%;"></div>
+            </div>
+            <!-- 領先指標 (驅動目標) 平滑折疊抽屜 -->
+            <div class="kpi-driver-drawer" id="drawerDriverPLC">
+              <!-- JS 動態渲染 -->
             </div>
           </div>
 
@@ -583,6 +610,38 @@
               </table>
             </div>
           </div>
+
+          <!-- 領先指標 (驅動目標) 維護專區 (業務個人視角) -->
+          <div class="form-group" style="margin-top: 1.5rem; border-top: 1px solid var(--border-light); padding-top: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+              <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;">三大產品線領先指標 (驅動目標) 管理</label>
+              <span style="font-size: 0.78rem; color: var(--text-tertiary);">防呆規則：執行滿 4 週 (28天) 方可申請調整</span>
+            </div>
+            <span class="autofill-hint" style="display: block; margin-bottom: 0.75rem;">
+              業務各產品線對標具體行動（如實地試機、規格制定、拜訪家數）。達成率未滿或行動失真時，經主管審查可進行策略覆盤調整。
+            </span>
+            <div class="driver-mgmt-grid" id="gridSalesDrivers">
+              <!-- 由 JavaScript 動態渲染目前業務員的 3 條驅動指標卡片 -->
+            </div>
+          </div>
+
+          <!-- 主管專屬：驅動指標變更審核專區 (曾維崧、曾仁君、張何達 可見) -->
+          <div class="driver-review-panel" id="panelDriverReview" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;">驅動目標變更審核專區</label>
+                <span class="traffic-light-badge success" id="badgeManagerRole" style="font-size:0.75rem;">主管權限</span>
+              </div>
+              <button type="button" id="btnRefreshDriverRequests" class="btn btn-secondary" style="padding: 3px 10px; font-size: 0.8rem;">重新整理待審清單</button>
+            </div>
+            <span class="autofill-hint" style="display: block; margin-bottom: 0.75rem;">
+              主管覆盤審核：評估業務變更理由是否合理。核准後原指標將安全歸檔留存、新指標即刻生效；駁回則維持原指標行動。
+            </span>
+            <div class="driver-review-list" id="listDriverReviewRequests">
+              <!-- 由 JavaScript 動態渲染待審核申請單 -->
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -857,18 +916,69 @@
     <div class="context-menu-divider"></div>
     <div class="context-menu-item" id="menuClearCell">
       <svg class="icon-svg" style="width:16px; height:16px; color:var(--text-tertiary);" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-      <span>清空內容 / 選取區域 (DEL)</span>
+  <!-- 領先指標 (驅動目標) 更換申請對話框 Modal -->
+  <div class="fluent-modal-overlay" id="modalDriverChangeApply" style="display: none;">
+    <div class="fluent-modal-dialog">
+      <div class="fluent-modal-header">
+        <h3 class="fluent-modal-title" id="modalDriverApplyTitle">申請更換領先指標 (驅動目標)</h3>
+        <button type="button" id="btnCloseDriverApplyModal" class="kpi-drawer-toggle" title="關閉">
+          <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+      <form id="formDriverChangeApply">
+        <input type="hidden" id="applyDriverId" value="" />
+        <div class="fluent-modal-body">
+          <div class="form-group">
+            <label class="form-label">產品線</label>
+            <input type="text" id="applyProductLine" class="form-control" readonly style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">當前指標名稱</label>
+            <input type="text" id="applyOldDriverName" class="form-control" readonly style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="applyNewDriverName">新領先指標名稱 (欲更換的新行動) <span style="color:var(--color-danger, #ef4444);">*</span></label>
+            <input type="text" id="applyNewDriverName" class="form-control" placeholder="例：先進設備伺服實機調機與規格制定" required />
+            <span class="autofill-hint">請描述具體、可落實、可衡量的業務前線行動</span>
+          </div>
+          <div style="display:flex; gap:12px;">
+            <div class="form-group" style="flex:1;">
+              <label class="form-label" for="applyNewTargetVal">新目標數值 <span style="color:var(--color-danger, #ef4444);">*</span></label>
+              <input type="number" id="applyNewTargetVal" class="form-control" step="0.1" min="1" placeholder="例：4" required />
+            </div>
+            <div class="form-group" style="width:120px;">
+              <label class="form-label" for="applyNewUnit">單位 <span style="color:var(--color-danger, #ef4444);">*</span></label>
+              <select id="applyNewUnit" class="form-control">
+                <option value="場" selected>場</option>
+                <option value="次">次</option>
+                <option value="家">家</option>
+                <option value="案">案</option>
+                <option value="組">組</option>
+                <option value="通">通</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="applyChangeReason">申請變更理由 (策略覆盤反思) <span style="color:var(--color-danger, #ef4444);">*</span></label>
+            <textarea id="applyChangeReason" class="form-control" rows="3" placeholder="請詳細反思：原驅動目標為何無法轉化為成果？新目標預計帶來何種突破？" required></textarea>
+          </div>
+        </div>
+        <div class="fluent-modal-footer">
+          <button type="button" id="btnCancelDriverApply" class="btn btn-secondary">取消</button>
+          <button type="submit" id="btnSubmitDriverApply" class="btn btn-primary">送出更換申請 (送主管審核)</button>
+        </div>
+      </form>
     </div>
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261021_gradient_bar_v5"></script>
+  <script src="js/app.js?v=20261022_drivers_v2"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=20261021_v105')
+        navigator.serviceWorker.register('./sw.js?v=20261022_drivers_v2')
           .then(function(reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

@@ -212,10 +212,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 全系統標準業務人員預設排序名單 (Single Source of Truth)
   const DEFAULT_SALESPERSONS = [
-    { id: "曾維崧", name: "曾維崧", role: "全區總覽", group: "主管" },
-    { id: "曾仁君", name: "曾仁君", role: "直賣", group: "直賣" },
+    { id: "曾維崧", name: "曾維崧", role: "全區總管", group: "主管" },
+    { id: "曾仁君", name: "曾仁君", role: "直賣主管", group: "主管" },
     { id: "何宛茹", name: "何宛茹", role: "直賣", group: "直賣" },
-    { id: "張何達", name: "張何達", role: "經銷", group: "經銷" },
+    { id: "張何達", name: "張何達", role: "經銷主管", group: "主管" },
     { id: "葉仁豪", name: "葉仁豪", role: "經銷", group: "經銷" },
     { id: "邱文輝", name: "邱文輝", role: "經銷", group: "經銷" },
     { id: "溫達仁", name: "溫達仁", role: "直賣", group: "直賣" },
@@ -1926,6 +1926,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (selectActiveSales && metrics.salesName && selectActiveSales.value !== metrics.salesName) {
       selectActiveSales.value = metrics.salesName;
     }
+
+    // 8. 載入並渲染三大產品線領先指標 (驅動目標) 與審核面板
+    loadAndRenderDriverMetrics(metrics.salesName);
   }
 
   // 左表載入範例與清空
@@ -2250,6 +2253,568 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ============================================================================
+  // 6. 產品線領先指標 (驅動目標) 與變更審核管理
+  // ============================================================================
+
+  function isSalesManager(name) {
+    return name === "曾維崧" || name === "曾仁君" || name === "張何達";
+  }
+
+  function getManagerTitle(name) {
+    if (name === "曾維崧") return "FA 全區主管";
+    if (name === "曾仁君") return "直賣業務主管";
+    if (name === "張何達") return "經銷業務主管";
+    return "業務主管";
+  }
+
+  // 預設種子資料快取 (相容於離線或純靜態 GitHub Pages 託管環境)
+  const LOCAL_SEED_DRIVERS = {
+    "曾維崧": [
+      { id: 1, sales_name: "曾維崧", product_line: "士林伺服", driver_name: "伺服關鍵客群專案洽談", target_val: 6, actual_val: 5, unit: "場", period_type: "月", start_date: "2026-09-17", days_active: 35, weeks_active: 5.0, can_change: true, days_remaining: 0, rate_pct: 83.3, traffic_light: "yellow", light_text: "預警", bar_class: "bar-warning" },
+      { id: 2, sales_name: "曾維崧", product_line: "士林變頻器", driver_name: "大型廠區變頻節能案場勘查", target_val: 8, actual_val: 7, unit: "場", period_type: "月", start_date: "2026-09-17", days_active: 35, weeks_active: 5.0, can_change: true, days_remaining: 0, rate_pct: 87.5, traffic_light: "yellow", light_text: "預警", bar_class: "bar-warning" },
+      { id: 3, sales_name: "曾維崧", product_line: "士林PLC", driver_name: "AX5S 高階 PLC 連線展示", target_val: 5, actual_val: 5, unit: "場", period_type: "月", start_date: "2026-09-17", days_active: 35, weeks_active: 5.0, can_change: true, days_remaining: 0, rate_pct: 100.0, traffic_light: "green", light_text: "達標", bar_class: "bar-success" }
+    ],
+    "曾仁君": [
+      { id: 4, sales_name: "曾仁君", product_line: "士林伺服", driver_name: "半導體設備伺服實機試機", target_val: 4, actual_val: 3, unit: "場", period_type: "週", start_date: "2026-09-17", days_active: 35, weeks_active: 5.0, can_change: true, days_remaining: 0, rate_pct: 75.0, traffic_light: "yellow", light_text: "預警", bar_class: "bar-warning" },
+      { id: 5, sales_name: "曾仁君", product_line: "士林變頻器", driver_name: "直賣變頻器升級汰換拜訪", target_val: 6, actual_val: 5, unit: "次", period_type: "週", start_date: "2026-09-17", days_active: 35, weeks_active: 5.0, can_change: true, days_remaining: 0, rate_pct: 83.3, traffic_light: "yellow", light_text: "預警", bar_class: "bar-warning" },
+      { id: 6, sales_name: "曾仁君", product_line: "士林PLC", driver_name: "專案自動化產線 PLC 規格制定", target_val: 3, actual_val: 3, unit: "案", period_type: "週", start_date: "2026-09-17", days_active: 35, weeks_active: 5.0, can_change: true, days_remaining: 0, rate_pct: 100.0, traffic_light: "green", light_text: "達標", bar_class: "bar-success" }
+    ],
+    "張何達": [
+      { id: 7, sales_name: "張何達", product_line: "士林伺服", driver_name: "經銷商伺服現貨在庫拜訪", target_val: 8, actual_val: 8, unit: "家", period_type: "週", start_date: "2026-09-17", days_active: 35, weeks_active: 5.0, can_change: true, days_remaining: 0, rate_pct: 100.0, traffic_light: "green", light_text: "達標", bar_class: "bar-success" },
+      { id: 8, sales_name: "張何達", product_line: "士林變頻器", driver_name: "盤廠經銷通路變頻專案盤點", target_val: 10, actual_val: 9, unit: "家", period_type: "週", start_date: "2026-09-17", days_active: 35, weeks_active: 5.0, can_change: true, days_remaining: 0, rate_pct: 90.0, traffic_light: "green", light_text: "達標", bar_class: "bar-success" },
+      { id: 9, sales_name: "張何達", product_line: "士林PLC", driver_name: "經銷商推廣 AX 系列技術交流", target_val: 6, actual_val: 6, unit: "場", period_type: "週", start_date: "2026-09-17", days_active: 35, weeks_active: 5.0, can_change: true, days_remaining: 0, rate_pct: 100.0, traffic_light: "green", light_text: "達標", bar_class: "bar-success" }
+    ],
+    "葉仁豪": [
+      { id: 10, sales_name: "葉仁豪", product_line: "士林伺服", driver_name: "伺服新樣品送樣驗證", target_val: 4, actual_val: 1, unit: "組", period_type: "週", start_date: "2026-10-08", days_active: 14, weeks_active: 2.0, can_change: false, days_remaining: 14, rate_pct: 25.0, traffic_light: "red", light_text: "嚴重落後", bar_class: "bar-danger" },
+      { id: 11, sales_name: "葉仁豪", product_line: "士林變頻器", driver_name: "變頻器舊換新推廣電訪", target_val: 12, actual_val: 10, unit: "通", period_type: "週", start_date: "2026-10-08", days_active: 14, weeks_active: 2.0, can_change: false, days_remaining: 14, rate_pct: 83.3, traffic_light: "yellow", light_text: "預警", bar_class: "bar-warning" },
+      { id: 12, sales_name: "葉仁豪", product_line: "士林PLC", driver_name: "PLC 搭配變頻配套展示", target_val: 4, actual_val: 3, unit: "次", period_type: "週", start_date: "2026-10-08", days_active: 14, weeks_active: 2.0, can_change: false, days_remaining: 14, rate_pct: 75.0, traffic_light: "yellow", light_text: "預警", bar_class: "bar-warning" }
+    ],
+    "何宛茹": [
+      { id: 13, sales_name: "何宛茹", product_line: "士林伺服", driver_name: "直賣伺服節能設備實機測試", target_val: 4, actual_val: 3, unit: "場", period_type: "週", start_date: "2026-09-20", days_active: 32, weeks_active: 4.6, can_change: true, days_remaining: 0, rate_pct: 75.0, traffic_light: "yellow", light_text: "預警", bar_class: "bar-warning" },
+      { id: 14, sales_name: "何宛茹", product_line: "士林變頻器", driver_name: "新竹設備廠變頻器推廣洽談", target_val: 6, actual_val: 5, unit: "家", period_type: "週", start_date: "2026-09-20", days_active: 32, weeks_active: 4.6, can_change: true, days_remaining: 0, rate_pct: 83.3, traffic_light: "yellow", light_text: "預警", bar_class: "bar-warning" },
+      { id: 15, sales_name: "何宛茹", product_line: "士林PLC", driver_name: "包裝機設備 PLC 升級專案", target_val: 2, actual_val: 2, unit: "案", period_type: "週", start_date: "2026-09-20", days_active: 32, weeks_active: 4.6, can_change: true, days_remaining: 0, rate_pct: 100.0, traffic_light: "green", light_text: "達標", bar_class: "bar-success" }
+    ]
+  };
+
+  const LOCAL_SEED_REQUESTS = [
+    {
+      id: 1,
+      driver_id: 14,
+      sales_name: "何宛茹",
+      product_line: "士林變頻器",
+      old_driver_name: "新竹設備廠變頻器推廣洽談",
+      new_driver_name: "半導體耗電產線大馬力變頻替換",
+      new_target_val: 5.0,
+      new_unit: "場",
+      change_reason: "原推廣洽談轉化率佳，配合節能政策聚焦大馬力機型實地能耗檢測。",
+      apply_date: "2026-10-22",
+      review_status: "待審核"
+    }
+  ];
+
+  function getLocalDriverMetrics(salesName) {
+    const key = "shihlin_pwa_driver_metrics";
+    let store = null;
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) store = JSON.parse(raw);
+    } catch (e) {
+      console.warn("讀取本地驅動指標失敗：", e);
+    }
+    if (!store) {
+      store = { ...LOCAL_SEED_DRIVERS };
+      localStorage.setItem(key, JSON.stringify(store));
+    }
+    if (!store[salesName]) {
+      store[salesName] = [
+        { id: Date.now(), sales_name: salesName, product_line: "士林伺服", driver_name: "伺服客群實地拜訪與技術交流", target_val: 4, actual_val: 3, unit: "場", period_type: "週", start_date: "2026-09-20", days_active: 32, weeks_active: 4.6, can_change: true, days_remaining: 0, rate_pct: 75.0, traffic_light: "yellow", light_text: "預警", bar_class: "bar-warning" },
+        { id: Date.now() + 1, sales_name: salesName, product_line: "士林變頻器", driver_name: "變頻器節能案場勘查與推廣", target_val: 6, actual_val: 5, unit: "次", period_type: "週", start_date: "2026-09-20", days_active: 32, weeks_active: 4.6, can_change: true, days_remaining: 0, rate_pct: 83.3, traffic_light: "yellow", light_text: "預警", bar_class: "bar-warning" },
+        { id: Date.now() + 2, sales_name: salesName, product_line: "士林PLC", driver_name: "PLC 與自動化連線架構制定", target_val: 3, actual_val: 2, unit: "案", period_type: "週", start_date: "2026-09-20", days_active: 32, weeks_active: 4.6, can_change: true, days_remaining: 0, rate_pct: 66.7, traffic_light: "red", light_text: "低標", bar_class: "bar-alert" }
+      ];
+      localStorage.setItem(key, JSON.stringify(store));
+    }
+    return store[salesName];
+  }
+
+  function getLocalDriverRequests() {
+    const key = "shihlin_pwa_driver_requests";
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {
+      console.warn("讀取本地申請單失敗：", e);
+    }
+    const reqs = [...LOCAL_SEED_REQUESTS];
+    localStorage.setItem(key, JSON.stringify(reqs));
+    return reqs;
+  }
+
+  function saveLocalDriverRequests(reqs) {
+    localStorage.setItem("shihlin_pwa_driver_requests", JSON.stringify(reqs));
+  }
+
+  function saveLocalDriverMetrics(salesName, list) {
+    const key = "shihlin_pwa_driver_metrics";
+    let store = {};
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) store = JSON.parse(raw);
+    } catch (e) {}
+    store[salesName] = list;
+    localStorage.setItem(key, JSON.stringify(store));
+  }
+
+  // 載入並渲染驅動目標
+  async function loadAndRenderDriverMetrics(salesName) {
+    const sName = salesName || localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+    let drivers = [];
+
+    // 優先向後端 API 請求，若離線或 404 則無縫由本地儲存備援
+    try {
+      const res = await fetch(`/api/scoreboard/drivers?sales_name=${encodeURIComponent(sName)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === "success" && Array.isArray(data.drivers)) {
+          drivers = data.drivers;
+        }
+      }
+    } catch (err) {
+      console.log("[Drivers] 後端連線備援，切換至本地快取：", err.message);
+    }
+
+    if (!drivers || drivers.length === 0) {
+      drivers = getLocalDriverMetrics(sName);
+    }
+
+    // 渲染三大產品線折疊抽屜
+    renderDriverDrawer("士林伺服", "drawerDriverLEB", drivers);
+    renderDriverDrawer("士林變頻器", "drawerDriverLNH", drivers);
+    renderDriverDrawer("士林PLC", "drawerDriverPLC", drivers);
+
+    // 同步渲染設定頁面的個人指標管理卡片
+    renderSettingsDriverManagement(sName, drivers);
+
+    // 若當前業務員為主管 (曾維崧、曾仁君、張何達)，同步渲染審核面板
+    renderManagerReviewPanel(sName);
+  }
+
+  // 渲染單一抽屜內容
+  function renderDriverDrawer(productLine, drawerId, drivers) {
+    const drawerEl = document.getElementById(drawerId);
+    if (!drawerEl) return;
+
+    const d = drivers.find(item => item.product_line === productLine);
+    if (!d) {
+      drawerEl.innerHTML = `<div style="font-size:0.75rem; color:var(--text-tertiary); padding:4px 0;">暫無此產品線驅動指標</div>`;
+      return;
+    }
+
+    const lightClass = d.traffic_light === "green" ? "success" : (d.traffic_light === "yellow" ? "warning" : (d.rate_pct >= 50 ? "alert" : "danger"));
+    const barGradientClass = d.bar_class || (d.traffic_light === "green" ? "bar-success" : (d.traffic_light === "yellow" ? "bar-warning" : (d.rate_pct >= 50 ? "bar-alert" : "bar-danger")));
+
+    drawerEl.innerHTML = `
+      <div class="driver-item-card">
+        <div class="driver-header-row">
+          <div class="driver-title-group">
+            <svg class="icon-svg" style="width:14px; height:14px; color:var(--color-accent); flex-shrink:0;" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+            <span class="driver-name" title="${escapeHtml(d.driver_name)}">${escapeHtml(d.driver_name)}</span>
+          </div>
+          <span class="traffic-light-badge ${lightClass}" style="font-size:0.72rem; padding:1px 6px;">
+            ${d.rate_pct}% (${escapeHtml(d.light_text || '進度')})
+          </span>
+        </div>
+        <div class="driver-metrics-row">
+          <span>目標：<strong>${d.target_val}</strong> ${escapeHtml(d.unit)}</span>
+          <span>實績：<strong>${d.actual_val}</strong> ${escapeHtml(d.unit)}</span>
+          <span>週期：${escapeHtml(d.period_type || '週')}</span>
+        </div>
+        <div class="driver-progress-bg">
+          <div class="driver-progress-bar ${barGradientClass}" style="width: ${Math.min(100, Math.max(0, d.rate_pct))}%;"></div>
+        </div>
+        <div class="driver-footer-row">
+          <span>始於：${escapeHtml(d.start_date || '')}</span>
+          <span>${d.can_change ? '<span style="color:#059669; font-weight:600;">已執行滿 4 週 (可微調)</span>' : `<span style="color:#dc2626; font-weight:600;">已執行 ${d.days_active} 天 (尚需 ${d.days_remaining} 天滿 4 週)</span>`}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // 綁定三大卡片抽屜開關按鈕
+  function setupDriverDrawerToggles() {
+    const pairs = [
+      { btnId: "btnToggleDriverLEB", drawerId: "drawerDriverLEB" },
+      { btnId: "btnToggleDriverLNH", drawerId: "drawerDriverLNH" },
+      { btnId: "btnToggleDriverPLC", drawerId: "drawerDriverPLC" }
+    ];
+    pairs.forEach(({ btnId, drawerId }) => {
+      const btn = document.getElementById(btnId);
+      const drawer = document.getElementById(drawerId);
+      if (btn && drawer) {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const isOpen = drawer.classList.contains("open");
+          if (isOpen) {
+            drawer.classList.remove("open");
+            btn.classList.remove("expanded");
+            btn.setAttribute("aria-expanded", "false");
+          } else {
+            drawer.classList.add("open");
+            btn.classList.add("expanded");
+            btn.setAttribute("aria-expanded", "true");
+          }
+        };
+      }
+    });
+  }
+
+  // 渲染設定頁個人驅動指標管理卡片
+  function renderSettingsDriverManagement(salesName, drivers) {
+    const gridEl = document.getElementById("gridSalesDrivers");
+    if (!gridEl) return;
+
+    if (!drivers || drivers.length === 0) {
+      gridEl.innerHTML = `<div style="color:var(--text-secondary); font-size:0.85rem;">目前無指標資料</div>`;
+      return;
+    }
+
+    gridEl.innerHTML = drivers.map(d => {
+      const lightClass = d.traffic_light === "green" ? "success" : (d.traffic_light === "yellow" ? "warning" : (d.rate_pct >= 50 ? "alert" : "danger"));
+      return `
+        <div class="driver-mgmt-card">
+          <div class="driver-mgmt-card-header">
+            <span class="driver-mgmt-product">${escapeHtml(d.product_line)}</span>
+            <span class="traffic-light-badge ${lightClass}" style="font-size:0.75rem;">
+              達成率 ${d.rate_pct}% (${escapeHtml(d.light_text || '')})
+            </span>
+          </div>
+          <div style="font-size:0.9rem; font-weight:600; color:var(--text-primary);">
+            ${escapeHtml(d.driver_name)}
+          </div>
+          <div style="font-size:0.82rem; color:var(--text-secondary); display:flex; justify-content:space-between;">
+            <span>目標：${d.target_val} ${escapeHtml(d.unit)} (${escapeHtml(d.period_type || '週')})</span>
+            <span>實績：${d.actual_val} ${escapeHtml(d.unit)}</span>
+          </div>
+          <div class="driver-progress-bg" style="margin:2px 0;">
+            <div class="driver-progress-bar ${d.bar_class || 'bar-warning'}" style="width: ${Math.min(100, Math.max(0, d.rate_pct))}%;"></div>
+          </div>
+          <div style="font-size:0.78rem; color:var(--text-tertiary); display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+            <span>始於：${escapeHtml(d.start_date)}</span>
+            ${d.can_change ? `<span style="color:#059669; font-weight:600;">已執行 ${d.days_active} 天 (滿 4 週)</span>` : `<span style="color:#dc2626; font-weight:600;">已執行 ${d.days_active} 天 (差 ${d.days_remaining} 天)</span>`}
+          </div>
+          <div style="margin-top:6px;">
+            ${d.can_change ? `
+              <button type="button" class="btn btn-primary btn-sm btn-open-driver-modal" style="width:100%; font-size:0.82rem;" data-id="${d.id}" data-product="${escapeHtml(d.product_line)}" data-name="${escapeHtml(d.driver_name)}">
+                申請調整指標 (滿 4 週)
+              </button>
+            ` : `
+              <button type="button" class="btn btn-secondary btn-sm" disabled style="width:100%; font-size:0.82rem; opacity:0.6; cursor:not-allowed;" title="執行未滿 4 週，尚需 ${d.days_remaining} 天">
+                未滿 4 週 (尚需 ${d.days_remaining} 天)
+              </button>
+            `}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    // 綁定申請調整按鈕
+    gridEl.querySelectorAll(".btn-open-driver-modal").forEach(btn => {
+      btn.onclick = () => {
+        const dId = btn.getAttribute("data-id");
+        const pLine = btn.getAttribute("data-product");
+        const oName = btn.getAttribute("data-name");
+        openDriverApplyModal(dId, pLine, oName);
+      };
+    });
+  }
+
+  // 渲染主管審核專區 (曾維崧、曾仁君、張何達)
+  async function renderManagerReviewPanel(salesName) {
+    const panel = document.getElementById("panelDriverReview");
+    const listEl = document.getElementById("listDriverReviewRequests");
+    const badgeRole = document.getElementById("badgeManagerRole");
+    if (!panel || !listEl) return;
+
+    if (!isSalesManager(salesName)) {
+      panel.style.display = "none";
+      return;
+    }
+
+    panel.style.display = "block";
+    if (badgeRole) {
+      badgeRole.innerText = `${salesName} (${getManagerTitle(salesName)})`;
+    }
+
+    let requests = [];
+    try {
+      const res = await fetch("/api/scoreboard/drivers/requests");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === "success" && Array.isArray(data.requests)) {
+          requests = data.requests;
+        }
+      }
+    } catch (e) {
+      console.log("[Drivers Review] 後端連線備援，切換至本地申請清單");
+    }
+
+    if (!requests || requests.length === 0) {
+      requests = getLocalDriverRequests();
+    }
+
+    // 篩選待審核之申請單
+    const pendingReqs = requests.filter(r => r.review_status === "待審核");
+
+    if (pendingReqs.length === 0) {
+      listEl.innerHTML = `<div style="font-size:0.85rem; color:var(--text-tertiary); padding:10px 0; text-align:center;">目前無待審核之領先指標申請案件。</div>`;
+      return;
+    }
+
+    listEl.innerHTML = pendingReqs.map(req => `
+      <div class="driver-review-item" data-req-id="${req.id}">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span style="font-weight:700; color:var(--text-primary); font-size:0.95rem;">
+            ${escapeHtml(req.sales_name)} ➔ ${escapeHtml(req.product_line)}
+          </span>
+          <span class="traffic-light-badge warning" style="font-size:0.75rem;">${escapeHtml(req.review_status)}</span>
+        </div>
+        <div style="font-size:0.84rem; color:var(--text-secondary); margin-bottom:4px;">
+          <strong>原指標：</strong>${escapeHtml(req.old_driver_name)}
+        </div>
+        <div style="font-size:0.84rem; color:var(--text-primary); margin-bottom:4px;">
+          <strong>申請新指標：</strong><span style="color:var(--color-accent); font-weight:600;">${escapeHtml(req.new_driver_name)}</span> (目標：${req.new_target_val} ${escapeHtml(req.new_unit || '次')})
+        </div>
+        <div style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:8px; background:var(--bg-subtle, rgba(0,0,0,0.03)); padding:6px 8px; border-radius:4px;">
+          <strong>變更理由：</strong>${escapeHtml(req.change_reason)}
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+          <input type="text" id="reviewComment_${req.id}" class="form-control" placeholder="主管簽核指引 / 反饋意見 (選填)" style="flex:1; font-size:0.82rem; padding:4px 8px;" />
+          <button type="button" class="btn btn-primary btn-sm btn-approve-driver" data-id="${req.id}" style="padding:4px 12px; font-size:0.82rem;">核准生效</button>
+          <button type="button" class="btn btn-secondary btn-sm btn-reject-driver" data-id="${req.id}" style="padding:4px 12px; font-size:0.82rem;">駁回申請</button>
+        </div>
+      </div>
+    `).join("");
+
+    // 綁定核准與駁回按鈕
+    listEl.querySelectorAll(".btn-approve-driver").forEach(btn => {
+      btn.onclick = () => {
+        const reqId = btn.getAttribute("data-id");
+        const commentInput = document.getElementById(`reviewComment_${reqId}`);
+        const comment = commentInput ? commentInput.value : "";
+        handleReviewAction(reqId, "approve", salesName, comment);
+      };
+    });
+
+    listEl.querySelectorAll(".btn-reject-driver").forEach(btn => {
+      btn.onclick = () => {
+        const reqId = btn.getAttribute("data-id");
+        const commentInput = document.getElementById(`reviewComment_${reqId}`);
+        const comment = commentInput ? commentInput.value : "";
+        handleReviewAction(reqId, "reject", salesName, comment);
+      };
+    });
+  }
+
+  // 處理主管審核動作
+  async function handleReviewAction(requestId, action, reviewerName, comment) {
+    const actionText = action === "approve" ? "核准" : "駁回";
+    if (!confirm(`確定要【${actionText}】此筆領先指標變更申請嗎？`)) {
+      return;
+    }
+
+    let success = false;
+    let message = "";
+
+    try {
+      const res = await fetch("/api/scoreboard/drivers/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          request_id: parseInt(requestId),
+          action: action,
+          reviewer_name: reviewerName,
+          comment: comment
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        success = true;
+        message = data.message;
+      } else {
+        const err = await res.json();
+        message = err.detail || "審核失敗";
+      }
+    } catch (e) {
+      // 離線備援處理
+      const localReqs = getLocalDriverRequests();
+      const r = localReqs.find(item => item.id == requestId);
+      if (r) {
+        r.review_status = action === "approve" ? "已核准" : "已駁回";
+        r.reviewer_comment = `[${reviewerName}] ${comment || '審核完成'}`;
+        saveLocalDriverRequests(localReqs);
+
+        if (action === "approve") {
+          const metrics = getLocalDriverMetrics(r.sales_name);
+          const m = metrics.find(item => item.product_line === r.product_line);
+          if (m) {
+            m.driver_name = r.new_driver_name;
+            m.target_val = r.new_target_val;
+            m.actual_val = 0;
+            m.unit = r.new_unit;
+            m.start_date = new Date().toISOString().split("T")[0];
+            m.days_active = 0;
+            m.weeks_active = 0;
+            m.can_change = false;
+            m.days_remaining = 28;
+            m.rate_pct = 0;
+            m.traffic_light = "red";
+            m.light_text = "嚴重落後";
+            m.bar_class = "bar-danger";
+            saveLocalDriverMetrics(r.sales_name, metrics);
+          }
+        }
+        success = true;
+        message = action === "approve" ? "申請已核准！新指標正式生效。" : "已駁回申請。";
+      }
+    }
+
+    if (success) {
+      alert(`[審核成功] ${message}`);
+      const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+      loadAndRenderDriverMetrics(activeSales);
+    } else {
+      alert(`[審核失敗] ${message}`);
+    }
+  }
+
+  // 申請彈窗控制
+  function openDriverApplyModal(driverId, productLine, currentName) {
+    const modal = document.getElementById("modalDriverChangeApply");
+    const dIdEl = document.getElementById("applyDriverId");
+    const pLineEl = document.getElementById("applyProductLine");
+    const oNameEl = document.getElementById("applyOldDriverName");
+    const nNameEl = document.getElementById("applyNewDriverName");
+    const nValEl = document.getElementById("applyNewTargetVal");
+    const nReasonEl = document.getElementById("applyChangeReason");
+
+    if (!modal) return;
+    if (dIdEl) dIdEl.value = driverId;
+    if (pLineEl) pLineEl.value = productLine;
+    if (oNameEl) oNameEl.value = currentName;
+    if (nNameEl) nNameEl.value = "";
+    if (nValEl) nValEl.value = "";
+    if (nReasonEl) nReasonEl.value = "";
+
+    modal.style.display = "flex";
+  }
+
+  function closeDriverApplyModal() {
+    const modal = document.getElementById("modalDriverChangeApply");
+    if (modal) modal.style.display = "none";
+  }
+
+  // 設定 Modal 事件
+  function setupDriverModalEvents() {
+    const btnClose = document.getElementById("btnCloseDriverApplyModal");
+    const btnCancel = document.getElementById("btnCancelDriverApply");
+    const modal = document.getElementById("modalDriverChangeApply");
+    const form = document.getElementById("formDriverChangeApply");
+    const btnRefresh = document.getElementById("btnRefreshDriverRequests");
+
+    if (btnClose) btnClose.addEventListener("click", closeDriverApplyModal);
+    if (btnCancel) btnCancel.addEventListener("click", closeDriverApplyModal);
+    if (modal) {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) closeDriverApplyModal();
+      });
+    }
+
+    if (btnRefresh) {
+      btnRefresh.addEventListener("click", () => {
+        const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+        renderManagerReviewPanel(activeSales);
+      });
+    }
+
+    if (form) {
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const driverId = parseInt(document.getElementById("applyDriverId").value);
+        const pLine = document.getElementById("applyProductLine").value;
+        const oName = document.getElementById("applyOldDriverName").value;
+        const newName = document.getElementById("applyNewDriverName").value.trim();
+        const newVal = parseFloat(document.getElementById("applyNewTargetVal").value);
+        const newUnit = document.getElementById("applyNewUnit").value;
+        const reason = document.getElementById("applyChangeReason").value.trim();
+        const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+
+        if (!newName || !newVal || !reason) {
+          alert("請完整填寫所有必填欄位！");
+          return;
+        }
+
+        if (!confirm(`確定要送出【${pLine}】領先指標變更申請嗎？\n\n新指標：${newName} (${newVal} ${newUnit})\n變更理由：${reason}`)) {
+          return;
+        }
+
+        let success = false;
+        let message = "";
+
+        try {
+          const res = await fetch("/api/scoreboard/drivers/apply-change", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              driver_id: driverId,
+              new_driver_name: newName,
+              new_target_val: newVal,
+              new_unit: newUnit,
+              change_reason: reason
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            success = true;
+            message = data.message;
+          } else {
+            const err = await res.json();
+            message = err.detail || "申請失敗";
+          }
+        } catch (err) {
+          // 離線備援
+          const reqs = getLocalDriverRequests();
+          const newReq = {
+            id: Date.now(),
+            driver_id: driverId,
+            sales_name: activeSales,
+            product_line: pLine,
+            old_driver_name: oName,
+            new_driver_name: newName,
+            new_target_val: newVal,
+            new_unit: newUnit,
+            change_reason: reason,
+            apply_date: new Date().toISOString().split("T")[0],
+            review_status: "待審核"
+          };
+          reqs.unshift(newReq);
+          saveLocalDriverRequests(reqs);
+          success = true;
+          message = "更換申請已成功送出，請靜候主管審核！";
+        }
+
+        if (success) {
+          alert(`[申請成功] ${message}`);
+          closeDriverApplyModal();
+          loadAndRenderDriverMetrics(activeSales);
+        } else {
+          alert(`[無法申請] ${message}`);
+        }
+      });
+    }
+  }
+
   // 工具函式：XSS 安全防護
   function escapeHtml(str) {
     if (!str) return "";
@@ -2263,8 +2828,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 初始載入設定與數據
   initSettings();
-  renderAdminExcelGrid();
   renderHomeDashboard();
+  setupDriverDrawerToggles();
+  setupDriverModalEvents();
 
   // 初始載入客戶主檔與後端日報
   loadCustomers();

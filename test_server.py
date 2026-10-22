@@ -80,8 +80,20 @@ def test_api():
     assert any(d["project_name"] == "測試產線升級專案" for d in deals)
     print("  [OK] Deal 案件看板 API 正常回傳，確認包含新建之「測試產線升級專案」")
 
+    # 5. 驗證三大產品線領先指標 (驅動目標) API
+    print("\n[測試 5] 驗證領先指標 API 與三位主管/業務視角...")
+    for s_name in ["曾維崧", "曾仁君", "張何達"]:
+        driver_res = server.api_get_drivers(sales_name=s_name)
+        assert driver_res["status"] == "success"
+        assert len(driver_res["drivers"]) == 3, f"{s_name} 指標數量不為 3"
+        print(f"  [OK] {s_name} 領先指標 API 回傳正常 (3 條產品線)")
+
+    req_res = server.api_get_driver_requests()
+    assert req_res["status"] == "success"
+    print(f"  [OK] 變更申請單 API 回傳正常，目前共有 {len(req_res['requests'])} 筆申請待審")
+
     print("\n" + "=" * 60)
-    print("[SUCCESS] Web API 與三層漏斗功能驗證全數通過！")
+    print("[SUCCESS] Web API、三層漏斗與領先指標功能全數驗證通過！")
     print("=" * 60)
 
 

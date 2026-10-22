@@ -462,6 +462,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // 戰情看板檢視視角狀態
+  let currentScoreboardScope = null; // "region" (全區目標) 或 "personal" (個人目標)
+  let lastParsedMetrics = null;
+  let isDriverViewActive = false; // 是否折疊成果目標並僅檢視領先指標
+
   // 渲染首頁目標與戰況看板 (統一連動「業績數據資料庫」雙表格真實解析數據)
   function renderHomeDashboard(specificSales) {
     const activeSales = specificSales || localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
@@ -472,7 +477,14 @@ document.addEventListener("DOMContentLoaded", () => {
       ? tablePastedShipments._gridMatrix
       : getSampleShipmentsGrid();
     const metrics = parseTargetsGridToMetrics(currentGrid, currentShipments, activeSales);
-    applyScoreboardMetrics(metrics);
+    lastParsedMetrics = metrics;
+
+    // 依主管身分自動給定預設：主管預設全區目標 ("region")，其他人預設個人目標 ("personal")
+    if (!currentScoreboardScope || specificSales) {
+      currentScoreboardScope = isSalesManager(activeSales) ? "region" : "personal";
+    }
+    updateScopeSwitchUI(currentScoreboardScope);
+    applyScoreboardMetrics(metrics, currentScoreboardScope);
   }
 
   function renderProductCardUI(cfg) {
@@ -1767,151 +1779,211 @@ document.addEventListener("DOMContentLoaded", () => {
     return metrics;
   }
 
-  // 將解析好的指標即時套用至首頁四大核心大數字戰情卡片與紅綠燈 (純淨文字、無小圖示、無全區字樣、完整標示)
-  function applyScoreboardMetrics(metrics) {
+  // 將解析好的指標即時套用至首頁四大核心大數字戰情卡片與紅綠燈 (支援全區目標 vs 個人目標切換)
+  function applyScoreboardMetrics(metrics, scope) {
     if (!metrics) return;
+    const viewScope = scope || currentScoreboardScope || "region";
 
-    // 1. 頂部月度挑戰目標、實績與完成率串流 (寬版並排，窄版一行一個，挑戰目標重點標示)
+    const isRegion = (viewScope === "region");
+
+    // 1. 頂部月度挑戰目標、實績與完成率串流 (標籤與數值依全區/個人切換)
+    const labelMainTarget = document.getElementById("labelMainTarget");
+    const labelMainActual = document.getElementById("labelMainActual");
     const flowTargetVal = document.getElementById("flowTargetVal");
-    if (flowTargetVal) {
-      flowTargetVal.innerText = `${metrics.totalTarget || "9,300"}萬`;
-    }
     const flowActualVal = document.getElementById("flowActualVal");
-    if (flowActualVal) {
-      flowActualVal.innerText = `${metrics.totalActual || "10,370"}萬`;
-    }
     const flowRateVal = document.getElementById("flowRateVal");
-    if (flowRateVal) {
-      const rateNum = parseFloat((metrics.totalRate || "112%").replace(/%/g, "")) || 0;
-      const light = getTrafficLight(rateNum);
-      flowRateVal.className = `flow-val traffic-light-badge ${light.type}`;
-      flowRateVal.innerText = metrics.totalRate || "112%";
+
+    if (isRegion) {
+      if (labelMainTarget) labelMainTarget.innerText = "本月全區目標：";
+      if (labelMainActual) labelMainActual.innerText = "全區實績：";
+      if (flowTargetVal) flowTargetVal.innerText = `${metrics.totalTarget || "9,300"}萬`;
+      if (flowActualVal) flowActualVal.innerText = `${metrics.totalActual || "10,370"}萬`;
+      if (flowRateVal) {
+        const rateNum = parseFloat((metrics.totalRate || "112%").replace(/%/g, "")) || 0;
+        const light = getTrafficLight(rateNum);
+        flowRateVal.className = `flow-val traffic-light-badge ${light.type}`;
+        flowRateVal.innerText = metrics.totalRate || "112%";
+      }
+    } else {
+      if (labelMainTarget) labelMainTarget.innerText = "本月個人目標：";
+      if (labelMainActual) labelMainActual.innerText = "個人實績：";
+      if (flowTargetVal) flowTargetVal.innerText = `${metrics.salesTarget || "810"}萬`;
+      if (flowActualVal) flowActualVal.innerText = `${metrics.salesActual || "802"}萬`;
+      if (flowRateVal) {
+        const rateNum = parseFloat((metrics.salesRate || "99.0%").replace(/%/g, "")) || 0;
+        const light = getTrafficLight(rateNum);
+        flowRateVal.className = `flow-val traffic-light-badge ${light.type}`;
+        flowRateVal.innerText = metrics.salesRate || "99.0%";
+      }
     }
 
-    // 相容性回退支援
-    const displayMetric1Name = document.getElementById("displayMetric1Name");
-    if (displayMetric1Name) {
-      displayMetric1Name.innerHTML = `本月業績目標：<span class="badge-target-highlight">${metrics.totalTarget || "9,300"}萬</span>`;
-    }
-    const displayRegionSummary = document.getElementById("displayRegionSummary");
-    if (displayRegionSummary) {
-      displayRegionSummary.innerText = `實績：${metrics.totalActual || "10,370"}萬 ｜ 完成率：${metrics.totalRate || "112%"}`;
-    }
-
-    // 2. 卡片 1：個人總業績 (標題一律為「個人總業績」，無小圖示與括號，底部完整標示目標、實績、差距/超標)
+    // 2. 卡片 1：總業績 (全區總業績 / 個人總業績)
     const kpiCardTitlePersonal = document.getElementById("kpiCardTitlePersonal");
-    if (kpiCardTitlePersonal) {
-      kpiCardTitlePersonal.innerText = "個人總業績";
-    }
-
     const kpiValPersonal = document.getElementById("kpiValPersonal");
-    if (kpiValPersonal) kpiValPersonal.innerText = metrics.salesActual || "802";
-
     const kpiTrafficPersonal = document.getElementById("kpiTrafficPersonal");
-    const ratePersonalNum = metrics.salesRateNum !== undefined ? metrics.salesRateNum : (parseFloat((metrics.salesRate || "0").replace(/%/g, "")) || 0);
-    const lightPersonal = getTrafficLight(ratePersonalNum);
-    if (kpiTrafficPersonal) {
-      kpiTrafficPersonal.className = `traffic-light-badge ${lightPersonal.type}`;
-      kpiTrafficPersonal.innerText = metrics.salesRate || "99.0%";
-    }
-
     const kpiDetailPersonal = document.getElementById("kpiDetailPersonal");
-    if (kpiDetailPersonal) {
-      const sT = parseFloat((metrics.salesTarget || "0").replace(/,/g, ""));
-      const sA = parseFloat((metrics.salesActual || "0").replace(/,/g, ""));
-      const diffVal = metrics.salesDiff ? parseFloat(metrics.salesDiff.replace(/,/g, "")) : (sA - sT);
-      const diffLabel = diffVal >= 0 ? "超標" : "差距";
-      kpiDetailPersonal.innerHTML = `<span>目標：${metrics.salesTarget || "810"} 萬</span> <span>｜</span> <span>實績：${metrics.salesActual || "802"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(Math.round(diffVal))} 萬</span>`;
-    }
-
     const kpiBarPersonal = document.getElementById("kpiBarPersonal");
-    if (kpiBarPersonal) {
-      kpiBarPersonal.className = `fluent-progress-bar ${lightPersonal.barClass}`;
-      kpiBarPersonal.style.width = `${Math.min(100, Math.max(0, ratePersonalNum))}%`;
+
+    if (isRegion) {
+      if (kpiCardTitlePersonal) kpiCardTitlePersonal.innerText = "全區總業績";
+      if (kpiValPersonal) kpiValPersonal.innerText = metrics.totalActual || "10,370";
+      const rateNum = metrics.totalRateNum || 112;
+      const light = getTrafficLight(rateNum);
+      if (kpiTrafficPersonal) {
+        kpiTrafficPersonal.className = `traffic-light-badge ${light.type}`;
+        kpiTrafficPersonal.innerText = metrics.totalRate || "112%";
+      }
+      if (kpiDetailPersonal) {
+        const tVal = parseFloat((metrics.totalTarget || "9300").replace(/,/g, ""));
+        const aVal = parseFloat((metrics.totalActual || "10370").replace(/,/g, ""));
+        const diff = aVal - tVal;
+        const dLabel = diff >= 0 ? "超標" : "差距";
+        kpiDetailPersonal.innerHTML = `<span>目標：${metrics.totalTarget || "9,300"} 萬</span> <span>｜</span> <span>實績：${metrics.totalActual || "10,370"} 萬</span> <span>｜</span> <span>${dLabel}：${Math.abs(Math.round(diff))} 萬</span>`;
+      }
+      if (kpiBarPersonal) {
+        kpiBarPersonal.className = `fluent-progress-bar ${light.barClass}`;
+        kpiBarPersonal.style.width = `${Math.min(100, Math.max(0, rateNum))}%`;
+      }
+    } else {
+      if (kpiCardTitlePersonal) kpiCardTitlePersonal.innerText = "個人總業績";
+      if (kpiValPersonal) kpiValPersonal.innerText = metrics.salesActual || "802";
+      const ratePersonalNum = metrics.salesRateNum !== undefined ? metrics.salesRateNum : (parseFloat((metrics.salesRate || "0").replace(/%/g, "")) || 0);
+      const lightPersonal = getTrafficLight(ratePersonalNum);
+      if (kpiTrafficPersonal) {
+        kpiTrafficPersonal.className = `traffic-light-badge ${lightPersonal.type}`;
+        kpiTrafficPersonal.innerText = metrics.salesRate || "99.0%";
+      }
+      if (kpiDetailPersonal) {
+        const sT = parseFloat((metrics.salesTarget || "0").replace(/,/g, ""));
+        const sA = parseFloat((metrics.salesActual || "0").replace(/,/g, ""));
+        const diffVal = metrics.salesDiff ? parseFloat(metrics.salesDiff.replace(/,/g, "")) : (sA - sT);
+        const diffLabel = diffVal >= 0 ? "超標" : "差距";
+        kpiDetailPersonal.innerHTML = `<span>目標：${metrics.salesTarget || "810"} 萬</span> <span>｜</span> <span>實績：${metrics.salesActual || "802"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(Math.round(diffVal))} 萬</span>`;
+      }
+      if (kpiBarPersonal) {
+        kpiBarPersonal.className = `fluent-progress-bar ${lightPersonal.barClass}`;
+        kpiBarPersonal.style.width = `${Math.min(100, Math.max(0, ratePersonalNum))}%`;
+      }
     }
 
-    // 3. 卡片 2：士林伺服 (標題一律為「士林伺服」，無小圖示與括號，底部完整標示目標、實績、差距/超標)
+    // 3. 卡片 2：士林伺服
     const kpiValLEB = document.getElementById("kpiValLEB");
-    if (kpiValLEB) {
-      kpiValLEB.innerText = metrics.isManager ? (metrics.lebActual || "196") : (metrics.personalLeb || "0.00");
-    }
-
-    const rateLEBNum = metrics.lebRateNum || 38;
-    const lightLEB = getTrafficLight(rateLEBNum);
     const kpiTrafficLEB = document.getElementById("kpiTrafficLEB");
-    if (kpiTrafficLEB) {
-      kpiTrafficLEB.className = `traffic-light-badge ${lightLEB.type}`;
-      kpiTrafficLEB.innerText = metrics.lebRate || "38%";
-    }
-
     const kpiDetailLEB = document.getElementById("kpiDetailLEB");
-    if (kpiDetailLEB) {
-      const diffNum = parseFloat((metrics.lebDiff || "-320").replace(/,/g, ""));
-      const diffLabel = diffNum >= 0 ? "超標" : "差距";
-      kpiDetailLEB.innerHTML = `<span>目標：${metrics.lebTarget || "516"} 萬</span> <span>｜</span> <span>實績：${metrics.lebActual || "196"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(Math.round(diffNum))} 萬</span>`;
-    }
-
     const kpiBarLEB = document.getElementById("kpiBarLEB");
-    if (kpiBarLEB) {
-      kpiBarLEB.className = `fluent-progress-bar ${lightLEB.barClass}`;
-      kpiBarLEB.style.width = `${Math.min(100, Math.max(0, rateLEBNum))}%`;
+
+    if (isRegion) {
+      if (kpiValLEB) kpiValLEB.innerText = metrics.lebActual || "196";
+      const rateLEBNum = metrics.lebRateNum || 38;
+      const lightLEB = getTrafficLight(rateLEBNum);
+      if (kpiTrafficLEB) {
+        kpiTrafficLEB.className = `traffic-light-badge ${lightLEB.type}`;
+        kpiTrafficLEB.innerText = metrics.lebRate || "38%";
+      }
+      if (kpiDetailLEB) {
+        const diffNum = parseFloat((metrics.lebDiff || "-320").replace(/,/g, ""));
+        const diffLabel = diffNum >= 0 ? "超標" : "差距";
+        kpiDetailLEB.innerHTML = `<span>全區目標：${metrics.lebTarget || "516"} 萬</span> <span>｜</span> <span>全區實績：${metrics.lebActual || "196"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(Math.round(diffNum))} 萬</span>`;
+      }
+      if (kpiBarLEB) {
+        kpiBarLEB.className = `fluent-progress-bar ${lightLEB.barClass}`;
+        kpiBarLEB.style.width = `${Math.min(100, Math.max(0, rateLEBNum))}%`;
+      }
+    } else {
+      if (kpiValLEB) kpiValLEB.innerText = metrics.personalLeb || "0.00";
+      const pVal = parseFloat(metrics.personalLeb || "0");
+      if (kpiTrafficLEB) {
+        kpiTrafficLEB.className = "traffic-light-badge success";
+        kpiTrafficLEB.innerText = `${pVal > 0 ? '出貨中' : '無紀錄'}`;
+      }
+      if (kpiDetailLEB) {
+        kpiDetailLEB.innerHTML = `<span>個人出貨：<strong>${metrics.personalLeb || "0.00"}</strong> 萬</span> <span>｜</span> <span>全區挑戰目標：${metrics.lebTarget || "516"} 萬</span>`;
+      }
+      if (kpiBarLEB) {
+        kpiBarLEB.className = `fluent-progress-bar bar-success`;
+        kpiBarLEB.style.width = pVal > 0 ? `${Math.min(100, Math.round((pVal / 100) * 100))}%` : "0%";
+      }
     }
 
-    // 4. 卡片 3：士林變頻器 (標題一律為「士林變頻器」，無小圖示與括號，底部完整標示目標、實績、差距/超標)
+    // 4. 卡片 3：士林變頻器
     const kpiValLNH = document.getElementById("kpiValLNH");
-    if (kpiValLNH) {
-      kpiValLNH.innerText = metrics.isManager ? (metrics.lnhActual || "243") : (metrics.personalLnh || "0.00");
-    }
-
-    const rateLNHNum = metrics.lnhRateNum || 47;
-    const lightLNH = getTrafficLight(rateLNHNum);
     const kpiTrafficLNH = document.getElementById("kpiTrafficLNH");
-    if (kpiTrafficLNH) {
-      kpiTrafficLNH.className = `traffic-light-badge ${lightLNH.type}`;
-      kpiTrafficLNH.innerText = metrics.lnhRate || "47%";
-    }
-
     const kpiDetailLNH = document.getElementById("kpiDetailLNH");
-    if (kpiDetailLNH) {
-      const diffNum = parseFloat((metrics.lnhDiff || "-273").replace(/,/g, ""));
-      const diffLabel = diffNum >= 0 ? "超標" : "差距";
-      kpiDetailLNH.innerHTML = `<span>目標：${metrics.lnhTarget || "516"} 萬</span> <span>｜</span> <span>實績：${metrics.lnhActual || "243"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(diffNum)} 萬</span>`;
-    }
-
     const kpiBarLNH = document.getElementById("kpiBarLNH");
-    if (kpiBarLNH) {
-      kpiBarLNH.className = `fluent-progress-bar ${lightLNH.barClass}`;
-      kpiBarLNH.style.width = `${Math.min(100, Math.max(0, rateLNHNum))}%`;
+
+    if (isRegion) {
+      if (kpiValLNH) kpiValLNH.innerText = metrics.lnhActual || "243";
+      const rateLNHNum = metrics.lnhRateNum || 47;
+      const lightLNH = getTrafficLight(rateLNHNum);
+      if (kpiTrafficLNH) {
+        kpiTrafficLNH.className = `traffic-light-badge ${lightLNH.type}`;
+        kpiTrafficLNH.innerText = metrics.lnhRate || "47%";
+      }
+      if (kpiDetailLNH) {
+        const diffNum = parseFloat((metrics.lnhDiff || "-273").replace(/,/g, ""));
+        const diffLabel = diffNum >= 0 ? "超標" : "差距";
+        kpiDetailLNH.innerHTML = `<span>全區目標：${metrics.lnhTarget || "516"} 萬</span> <span>｜</span> <span>全區實績：${metrics.lnhActual || "243"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(diffNum)} 萬</span>`;
+      }
+      if (kpiBarLNH) {
+        kpiBarLNH.className = `fluent-progress-bar ${lightLNH.barClass}`;
+        kpiBarLNH.style.width = `${Math.min(100, Math.max(0, rateLNHNum))}%`;
+      }
+    } else {
+      if (kpiValLNH) kpiValLNH.innerText = metrics.personalLnh || "0.00";
+      const pVal = parseFloat(metrics.personalLnh || "0");
+      if (kpiTrafficLNH) {
+        kpiTrafficLNH.className = "traffic-light-badge success";
+        kpiTrafficLNH.innerText = `${pVal > 0 ? '出貨中' : '無紀錄'}`;
+      }
+      if (kpiDetailLNH) {
+        kpiDetailLNH.innerHTML = `<span>個人出貨：<strong>${metrics.personalLnh || "0.00"}</strong> 萬</span> <span>｜</span> <span>全區挑戰目標：${metrics.lnhTarget || "516"} 萬</span>`;
+      }
+      if (kpiBarLNH) {
+        kpiBarLNH.className = `fluent-progress-bar bar-success`;
+        kpiBarLNH.style.width = pVal > 0 ? `${Math.min(100, Math.round((pVal / 100) * 100))}%` : "0%";
+      }
     }
 
-    // 5. 卡片 4：士林PLC (標題一律為「士林PLC」，無小圖示與括號，底部完整標示目標、實績、差距/超標)
+    // 5. 卡片 4：士林PLC
     const kpiValPLC = document.getElementById("kpiValPLC");
-    if (kpiValPLC) {
-      kpiValPLC.innerText = metrics.isManager ? (metrics.plcActual || "246") : (metrics.personalPlc || "0.00");
-    }
-
-    const ratePLCNum = metrics.plcRateNum || 117;
-    const lightPLC = getTrafficLight(ratePLCNum);
     const kpiTrafficPLC = document.getElementById("kpiTrafficPLC");
-    if (kpiTrafficPLC) {
-      kpiTrafficPLC.className = `traffic-light-badge ${lightPLC.type}`;
-      kpiTrafficPLC.innerText = metrics.plcRate || "117%";
-    }
-
     const kpiDetailPLC = document.getElementById("kpiDetailPLC");
-    if (kpiDetailPLC) {
-      const diffNum = parseFloat((metrics.plcDiff || "36").replace(/,/g, ""));
-      const diffLabel = diffNum >= 0 ? "超標" : "差距";
-      kpiDetailPLC.innerHTML = `<span>目標：${metrics.plcTarget || "210"} 萬</span> <span>｜</span> <span>實績：${metrics.plcActual || "246"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(diffNum)} 萬</span>`;
-    }
-
     const kpiBarPLC = document.getElementById("kpiBarPLC");
-    if (kpiBarPLC) {
-      kpiBarPLC.className = `fluent-progress-bar ${lightPLC.barClass}`;
-      kpiBarPLC.style.width = `${Math.min(100, Math.max(0, ratePLCNum))}%`;
+
+    if (isRegion) {
+      if (kpiValPLC) kpiValPLC.innerText = metrics.plcActual || "246";
+      const ratePLCNum = metrics.plcRateNum || 117;
+      const lightPLC = getTrafficLight(ratePLCNum);
+      if (kpiTrafficPLC) {
+        kpiTrafficPLC.className = `traffic-light-badge ${lightPLC.type}`;
+        kpiTrafficPLC.innerText = metrics.plcRate || "117%";
+      }
+      if (kpiDetailPLC) {
+        const diffNum = parseFloat((metrics.plcDiff || "36").replace(/,/g, ""));
+        const diffLabel = diffNum >= 0 ? "超標" : "差距";
+        kpiDetailPLC.innerHTML = `<span>全區目標：${metrics.plcTarget || "210"} 萬</span> <span>｜</span> <span>全區實績：${metrics.plcActual || "246"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(diffNum)} 萬</span>`;
+      }
+      if (kpiBarPLC) {
+        kpiBarPLC.className = `fluent-progress-bar ${lightPLC.barClass}`;
+        kpiBarPLC.style.width = `${Math.min(100, Math.max(0, ratePLCNum))}%`;
+      }
+    } else {
+      if (kpiValPLC) kpiValPLC.innerText = metrics.personalPlc || "0.00";
+      const pVal = parseFloat(metrics.personalPlc || "0");
+      if (kpiTrafficPLC) {
+        kpiTrafficPLC.className = "traffic-light-badge success";
+        kpiTrafficPLC.innerText = `${pVal > 0 ? '出貨中' : '無紀錄'}`;
+      }
+      if (kpiDetailPLC) {
+        kpiDetailPLC.innerHTML = `<span>個人出貨：<strong>${metrics.personalPlc || "0.00"}</strong> 萬</span> <span>｜</span> <span>全區挑戰目標：${metrics.plcTarget || "210"} 萬</span>`;
+      }
+      if (kpiBarPLC) {
+        kpiBarPLC.className = `fluent-progress-bar bar-success`;
+        kpiBarPLC.style.width = pVal > 0 ? `${Math.min(100, Math.round((pVal / 100) * 100))}%` : "0%";
+      }
     }
 
-    // 6. 頂部導覽列業務員名稱與頭像即時連動 (去除「(主管)」字樣，維持清爽尊貴風格)
+    // 6. 頂部導覽列業務員名稱與頭像即時連動
     const currentSalesDisplay = document.getElementById("currentSalesDisplay");
     const headerUserAvatar = document.getElementById("headerUserAvatar");
     if (currentSalesDisplay && metrics.salesName) {
@@ -1929,6 +2001,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 8. 載入並渲染三大產品線領先指標 (驅動目標) 與審核面板
     loadAndRenderDriverMetrics(metrics.salesName);
+    updateGlobalDriverView(isDriverViewActive);
   }
 
   // 左表載入範例與清空
@@ -2442,32 +2515,76 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
-  // 綁定三大卡片抽屜開關按鈕
-  function setupDriverDrawerToggles() {
-    const pairs = [
-      { btnId: "btnToggleDriverLEB", drawerId: "drawerDriverLEB" },
-      { btnId: "btnToggleDriverLNH", drawerId: "drawerDriverLNH" },
-      { btnId: "btnToggleDriverPLC", drawerId: "drawerDriverPLC" }
-    ];
-    pairs.forEach(({ btnId, drawerId }) => {
-      const btn = document.getElementById(btnId);
-      const drawer = document.getElementById(drawerId);
-      if (btn && drawer) {
-        btn.onclick = (e) => {
-          e.stopPropagation();
-          const isOpen = drawer.classList.contains("open");
-          if (isOpen) {
-            drawer.classList.remove("open");
-            btn.classList.remove("expanded");
-            btn.setAttribute("aria-expanded", "false");
-          } else {
-            drawer.classList.add("open");
-            btn.classList.add("expanded");
-            btn.setAttribute("aria-expanded", "true");
-          }
-        };
+  // 1. 綁定附圖一紅框處「全區目標 ｜ 個人目標」膠囊切換鈕
+  function setupScoreboardScopeSwitch() {
+    const btnRegion = document.getElementById("btnScopeRegion");
+    const btnPersonal = document.getElementById("btnScopePersonal");
+
+    if (btnRegion) {
+      btnRegion.onclick = () => {
+        currentScoreboardScope = "region";
+        updateScopeSwitchUI("region");
+        if (lastParsedMetrics) applyScoreboardMetrics(lastParsedMetrics, "region");
+      };
+    }
+    if (btnPersonal) {
+      btnPersonal.onclick = () => {
+        currentScoreboardScope = "personal";
+        updateScopeSwitchUI("personal");
+        if (lastParsedMetrics) applyScoreboardMetrics(lastParsedMetrics, "personal");
+      };
+    }
+  }
+
+  function updateScopeSwitchUI(scope) {
+    const btnRegion = document.getElementById("btnScopeRegion");
+    const btnPersonal = document.getElementById("btnScopePersonal");
+    if (btnRegion && btnPersonal) {
+      if (scope === "personal") {
+        btnPersonal.classList.add("active");
+        btnRegion.classList.remove("active");
+      } else {
+        btnRegion.classList.add("active");
+        btnPersonal.classList.remove("active");
       }
-    });
+    }
+  }
+
+  // 2. 綁定單一全局展開按鈕：點擊後成果目標完全折疊，只保留領先指標
+  function setupGlobalDriverToggle() {
+    const btn = document.getElementById("btnGlobalToggleDriver");
+    if (!btn) return;
+    btn.onclick = () => {
+      isDriverViewActive = !isDriverViewActive;
+      updateGlobalDriverView(isDriverViewActive);
+    };
+  }
+
+  function updateGlobalDriverView(isActive) {
+    const btn = document.getElementById("btnGlobalToggleDriver");
+    const label = document.getElementById("btnGlobalToggleLabel");
+    const hint = document.getElementById("txtCurrentViewMode");
+    const cardPersonal = document.getElementById("cardHeroPersonal");
+
+    if (btn) {
+      if (isActive) {
+        btn.classList.add("expanded");
+        btn.setAttribute("aria-expanded", "true");
+        if (label) label.innerText = "返回成果目標 (營收金額)";
+        if (hint) hint.innerText = "目前檢視：三大產品線領先指標 (行動層)";
+        if (cardPersonal) cardPersonal.classList.add("collapsed");
+        document.querySelectorAll(".kpi-outcome-body").forEach(el => el.classList.add("collapsed"));
+        document.querySelectorAll(".kpi-driver-body").forEach(el => el.classList.add("expanded"));
+      } else {
+        btn.classList.remove("expanded");
+        btn.setAttribute("aria-expanded", "false");
+        if (label) label.innerText = "展開領先指標 (行動層)";
+        if (hint) hint.innerText = "目前檢視：三大產品線成果目標 (營收金額)";
+        if (cardPersonal) cardPersonal.classList.remove("collapsed");
+        document.querySelectorAll(".kpi-outcome-body").forEach(el => el.classList.remove("collapsed"));
+        document.querySelectorAll(".kpi-driver-body").forEach(el => el.classList.remove("expanded"));
+      }
+    }
   }
 
   // 渲染設定頁個人驅動指標管理卡片
@@ -2828,8 +2945,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 初始載入設定與數據
   initSettings();
+  setupScoreboardScopeSwitch();
+  setupGlobalDriverToggle();
   renderHomeDashboard();
-  setupDriverDrawerToggles();
   setupDriverModalEvents();
 
   // 初始載入客戶主檔與後端日報

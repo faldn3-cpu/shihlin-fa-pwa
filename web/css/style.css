@@ -1835,46 +1835,137 @@ textarea.form-control {
 /* ==========================================================================
    領先指標 (驅動目標) 視覺化折疊抽屜與漸進式色彩進度條
    ========================================================================== */
-.kpi-drawer-toggle {
+/* 附圖一紅框處：全區目標 / 個人目標 膠囊切換鈕 (微軟現代辦公風格) */
+.scoreboard-scope-switch {
+  display: inline-flex;
+  background: var(--bg-surface-secondary, rgba(128, 128, 128, 0.12));
+  padding: 3px;
+  border-radius: 20px;
+  border: 1px solid var(--border-light);
+  gap: 2px;
+}
+.scope-pill-btn {
   background: transparent;
   border: none;
-  padding: 4px;
-  cursor: pointer;
+  outline: none;
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--text-secondary);
-  border-radius: 4px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+.scope-pill-btn:hover {
+  color: var(--text-primary);
+}
+.scope-pill-btn.active {
+  background: var(--color-accent, #0078d4);
+  color: #ffffff !important;
+  box-shadow: 0 1px 4px rgba(0, 120, 212, 0.35);
+}
+
+/* 單一全局切換列：切換成果目標與領先指標 */
+.kpi-view-switch-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 10px 0 6px 0;
+  padding: 4px 2px;
+}
+.kpi-view-mode-indicator {
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
-.kpi-drawer-toggle:hover {
-  background: var(--bg-hover);
+.kpi-view-mode-indicator .mode-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--color-accent, #0078d4);
+  box-shadow: 0 0 6px rgba(0, 120, 212, 0.6);
+}
+.kpi-global-toggle-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  padding: 4px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
   color: var(--color-accent);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.kpi-drawer-toggle .toggle-arrow {
-  width: 18px;
-  height: 18px;
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+.kpi-global-toggle-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--color-accent);
+  transform: translateY(-1px);
+}
+.kpi-global-toggle-btn .toggle-arrow {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   fill: currentColor;
 }
-.kpi-drawer-toggle.expanded .toggle-arrow {
+.kpi-global-toggle-btn.expanded .toggle-arrow {
   transform: rotate(180deg);
 }
 
-.kpi-driver-drawer {
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin-top 0.25s ease, padding 0.25s ease;
-  margin-top: 0;
-  border-top: 1px dashed transparent;
-}
-.kpi-driver-drawer.open {
-  max-height: 220px;
+/* 成果目標區塊 (折疊收合控制) */
+.kpi-outcome-body {
+  max-height: 160px;
   opacity: 1;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top-color: var(--border-light);
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin 0.25s ease;
+}
+.kpi-outcome-body.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 領先指標區塊 (折疊展開控制) */
+.kpi-driver-body {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin 0.25s ease;
+}
+.kpi-driver-body.expanded {
+  max-height: 260px;
+  opacity: 1;
+  margin-top: 6px;
+}
+
+/* 個人/全區總業績卡片在領先指標模式下優雅收折 */
+#cardHeroPersonal.collapsed {
+  display: none;
+}
+
+/* 抽屜選單與設定頁版本號標籤 */
+.drawer-version-tag {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 12px 0 6px 0;
+  letter-spacing: 0.3px;
+}
+.settings-version-tag {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  text-align: center;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border-light);
 }
 
 .driver-item-card {

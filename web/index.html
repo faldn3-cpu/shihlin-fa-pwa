@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
   
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261021_gradient_bar_v4" />
+  <link rel="stylesheet" href="css/style.css?v=20261022_v1_0_13" />
 </head>
 <body>
 
@@ -73,10 +73,9 @@
           <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
           <span>設定</span>
         </button>
-        <button id="navItemAdminTargets" class="drawer-nav-item" type="button">
-          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-          <span>業績數據資料庫</span>
-        </button>
+        <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
+        <div class="drawer-divider"></div>
+        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.13 (PWA)</div>
       </div>
     </nav>
   </div>
@@ -90,15 +89,15 @@
          ==================================================================== -->
     <section id="panelHome">
       <div class="scoreboard-top-banner">
-        <!-- 頂部月度目標總結列 (本月業績目標、實績、完成率；寬版並列，窄版一行一個) -->
+        <!-- 頂部月度目標總結列 (含附圖一紅框處：全區目標 / 個人目標 切換開關) -->
         <div class="scoreboard-header-bar" id="scoreboardHeaderBar">
           <div class="scoreboard-metrics-flow" id="scoreboardMetricsFlow">
             <div class="flow-item flow-item-target">
-              <span class="flow-label">本月業績目標：</span>
+              <span class="flow-label" id="labelMainTarget">本月全區目標：</span>
               <span class="flow-val badge-target-highlight" id="flowTargetVal">9,300萬</span>
             </div>
             <div class="flow-item flow-item-actual">
-              <span class="flow-label">實績：</span>
+              <span class="flow-label" id="labelMainActual">全區實績：</span>
               <span class="flow-val" id="flowActualVal">10,370萬</span>
             </div>
             <div class="flow-item flow-item-rate">
@@ -106,107 +105,121 @@
               <span class="flow-val traffic-light-badge success" id="flowRateVal">112%</span>
             </div>
           </div>
+
+          <!-- 附圖一紅框處：全區目標 vs 個人目標 切換膠囊鈕 -->
+          <div class="scoreboard-scope-switch" id="scopeSwitchContainer">
+            <button type="button" class="scope-pill-btn active" id="btnScopeRegion" data-scope="region">全區目標</button>
+            <button type="button" class="scope-pill-btn" id="btnScopePersonal" data-scope="personal">個人目標</button>
+          </div>
         </div>
 
-        <!-- 四大核心大數字焦點戰情看板 (無圖示、無括號、最下方完整顯示：目標、實績、差距) -->
-        <div class="kpi-hero-grid">
+        <!-- 單一全局切換列：點擊展開領先指標，成果目標完全折疊 -->
+        <div class="kpi-view-switch-row">
+          <div class="kpi-view-mode-indicator">
+            <span class="mode-dot"></span>
+            <span id="txtCurrentViewMode">目前檢視：三大產品線成果目標 (營收金額)</span>
+          </div>
+          <button type="button" class="kpi-global-toggle-btn" id="btnGlobalToggleDriver" title="點擊切換：折疊成果目標，展開領先指標" aria-expanded="false">
+            <span id="btnGlobalToggleLabel">展開領先指標 (行動層)</span>
+            <svg class="icon-svg toggle-arrow" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+          </button>
+        </div>
+
+        <!-- 四大核心戰情看板 (支援一鍵折疊成果目標，只保留領先指標) -->
+        <div class="kpi-hero-grid" id="kpiHeroGrid">
           
-          <!-- 卡片 1：個人總業績 -->
-          <div class="kpi-hero-card">
+          <!-- 卡片 1：總業績 (成果目標模式顯示，領先指標模式時優雅折疊) -->
+          <div class="kpi-hero-card" id="cardHeroPersonal">
             <div class="kpi-card-header">
               <span class="kpi-card-title" id="kpiCardTitlePersonal">個人總業績</span>
               <span id="kpiTrafficPersonal" class="traffic-light-badge warning">99.0%</span>
             </div>
-            <div class="kpi-val-row">
-              <div id="kpiValPersonal" class="kpi-big-num">802</div>
-              <span class="kpi-unit">萬元</span>
-            </div>
-            <div class="kpi-detail-row" id="kpiDetailPersonal">
-              <span>目標：810 萬</span> <span>｜</span> <span>實績：802 萬</span> <span>｜</span> <span>差距：8 萬</span>
-            </div>
-            <div class="fluent-progress-bg">
-              <div id="kpiBarPersonal" class="fluent-progress-bar bar-warning" style="width: 99%;"></div>
+            <div class="kpi-outcome-body" id="outcomeBodyPersonal">
+              <div class="kpi-val-row">
+                <div id="kpiValPersonal" class="kpi-big-num">802</div>
+                <span class="kpi-unit">萬元</span>
+              </div>
+              <div class="kpi-detail-row" id="kpiDetailPersonal">
+                <span>目標：810 萬</span> <span>｜</span> <span>實績：802 萬</span> <span>｜</span> <span>差距：8 萬</span>
+              </div>
+              <div class="fluent-progress-bg">
+                <div id="kpiBarPersonal" class="fluent-progress-bar bar-warning" style="width: 99%;"></div>
+              </div>
             </div>
           </div>
 
           <!-- 卡片 2：士林伺服 -->
-          <div class="kpi-hero-card">
+          <div class="kpi-hero-card" id="cardHeroLEB">
             <div class="kpi-card-header">
               <span class="kpi-card-title">士林伺服</span>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span id="kpiTrafficLEB" class="traffic-light-badge danger">38%</span>
-                <button type="button" class="kpi-drawer-toggle" id="btnToggleDriverLEB" title="點擊展開/收合士林伺服領先指標" aria-expanded="false">
-                  <svg class="icon-svg toggle-arrow" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
-                </button>
+              <span id="kpiTrafficLEB" class="traffic-light-badge danger">38%</span>
+            </div>
+            <!-- 成果目標區塊 (點擊展開按鈕時平滑折疊收合) -->
+            <div class="kpi-outcome-body" id="outcomeBodyLEB">
+              <div class="kpi-val-row">
+                <div id="kpiValLEB" class="kpi-big-num">65.87</div>
+                <span class="kpi-unit">萬元</span>
+              </div>
+              <div class="kpi-detail-row" id="kpiDetailLEB">
+                <span>目標：516 萬</span> <span>｜</span> <span>實績：196 萬</span> <span>｜</span> <span>差距：320 萬</span>
+              </div>
+              <div class="fluent-progress-bg">
+                <div id="kpiBarLEB" class="fluent-progress-bar bar-danger" style="width: 38%;"></div>
               </div>
             </div>
-            <div class="kpi-val-row">
-              <div id="kpiValLEB" class="kpi-big-num">65.87</div>
-              <span class="kpi-unit">萬元</span>
-            </div>
-            <div class="kpi-detail-row" id="kpiDetailLEB">
-              <span>目標：516 萬</span> <span>｜</span> <span>實績：196 萬</span> <span>｜</span> <span>差距：320 萬</span>
-            </div>
-            <div class="fluent-progress-bg">
-              <div id="kpiBarLEB" class="fluent-progress-bar bar-danger" style="width: 38%;"></div>
-            </div>
-            <!-- 領先指標 (驅動目標) 平滑折疊抽屜 -->
-            <div class="kpi-driver-drawer" id="drawerDriverLEB">
-              <!-- JS 動態渲染 -->
+            <!-- 領先指標區塊 (折疊成果目標後，在此完整呈現) -->
+            <div class="kpi-driver-body" id="drawerDriverLEB">
+              <!-- JS 動態渲染領先指標 -->
             </div>
           </div>
 
           <!-- 卡片 3：士林變頻器 -->
-          <div class="kpi-hero-card">
+          <div class="kpi-hero-card" id="cardHeroLNH">
             <div class="kpi-card-header">
               <span class="kpi-card-title">士林變頻器</span>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span id="kpiTrafficLNH" class="traffic-light-badge danger">47%</span>
-                <button type="button" class="kpi-drawer-toggle" id="btnToggleDriverLNH" title="點擊展開/收合士林變頻器領先指標" aria-expanded="false">
-                  <svg class="icon-svg toggle-arrow" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
-                </button>
+              <span id="kpiTrafficLNH" class="traffic-light-badge danger">47%</span>
+            </div>
+            <!-- 成果目標區塊 (點擊展開按鈕時平滑折疊收合) -->
+            <div class="kpi-outcome-body" id="outcomeBodyLNH">
+              <div class="kpi-val-row">
+                <div id="kpiValLNH" class="kpi-big-num">55.22</div>
+                <span class="kpi-unit">萬元</span>
+              </div>
+              <div class="kpi-detail-row" id="kpiDetailLNH">
+                <span>目標：516 萬</span> <span>｜</span> <span>實績：243 萬</span> <span>｜</span> <span>差距：273 萬</span>
+              </div>
+              <div class="fluent-progress-bg">
+                <div id="kpiBarLNH" class="fluent-progress-bar bar-danger" style="width: 47%;"></div>
               </div>
             </div>
-            <div class="kpi-val-row">
-              <div id="kpiValLNH" class="kpi-big-num">55.22</div>
-              <span class="kpi-unit">萬元</span>
-            </div>
-            <div class="kpi-detail-row" id="kpiDetailLNH">
-              <span>目標：516 萬</span> <span>｜</span> <span>實績：243 萬</span> <span>｜</span> <span>差距：273 萬</span>
-            </div>
-            <div class="fluent-progress-bg">
-              <div id="kpiBarLNH" class="fluent-progress-bar bar-danger" style="width: 47%;"></div>
-            </div>
-            <!-- 領先指標 (驅動目標) 平滑折疊抽屜 -->
-            <div class="kpi-driver-drawer" id="drawerDriverLNH">
-              <!-- JS 動態渲染 -->
+            <!-- 領先指標區塊 (折疊成果目標後，在此完整呈現) -->
+            <div class="kpi-driver-body" id="drawerDriverLNH">
+              <!-- JS 動態渲染領先指標 -->
             </div>
           </div>
 
           <!-- 卡片 4：士林PLC -->
-          <div class="kpi-hero-card">
+          <div class="kpi-hero-card" id="cardHeroPLC">
             <div class="kpi-card-header">
               <span class="kpi-card-title">士林PLC</span>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span id="kpiTrafficPLC" class="traffic-light-badge success">117%</span>
-                <button type="button" class="kpi-drawer-toggle" id="btnToggleDriverPLC" title="點擊展開/收合士林PLC領先指標" aria-expanded="false">
-                  <svg class="icon-svg toggle-arrow" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
-                </button>
+              <span id="kpiTrafficPLC" class="traffic-light-badge success">117%</span>
+            </div>
+            <!-- 成果目標區塊 (點擊展開按鈕時平滑折疊收合) -->
+            <div class="kpi-outcome-body" id="outcomeBodyPLC">
+              <div class="kpi-val-row">
+                <div id="kpiValPLC" class="kpi-big-num">9.03</div>
+                <span class="kpi-unit">萬元</span>
+              </div>
+              <div class="kpi-detail-row" id="kpiDetailPLC">
+                <span>目標：210 萬</span> <span>｜</span> <span>實績：246 萬</span> <span>｜</span> <span>超標：36 萬</span>
+              </div>
+              <div class="fluent-progress-bg">
+                <div id="kpiBarPLC" class="fluent-progress-bar bar-success" style="width: 100%;"></div>
               </div>
             </div>
-            <div class="kpi-val-row">
-              <div id="kpiValPLC" class="kpi-big-num">9.03</div>
-              <span class="kpi-unit">萬元</span>
-            </div>
-            <div class="kpi-detail-row" id="kpiDetailPLC">
-              <span>目標：210 萬</span> <span>｜</span> <span>實績：246 萬</span> <span>｜</span> <span>超標：36 萬</span>
-            </div>
-            <div class="fluent-progress-bg">
-              <div id="kpiBarPLC" class="fluent-progress-bar bar-success" style="width: 100%;"></div>
-            </div>
-            <!-- 領先指標 (驅動目標) 平滑折疊抽屜 -->
-            <div class="kpi-driver-drawer" id="drawerDriverPLC">
-              <!-- JS 動態渲染 -->
+            <!-- 領先指標區塊 (折疊成果目標後，在此完整呈現) -->
+            <div class="kpi-driver-body" id="drawerDriverPLC">
+              <!-- JS 動態渲染領先指標 -->
             </div>
           </div>
 
@@ -642,6 +655,7 @@
               <!-- 由 JavaScript 動態渲染待審核申請單 -->
             </div>
           </div>
+          <div class="settings-version-tag">系統版本：v1.0.13 (PWA 離線快取版)</div>
         </div>
       </div>
     </section>
@@ -972,13 +986,13 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261022_drivers_v2"></script>
+  <script src="js/app.js?v=20261022_v1_0_13"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=20261022_drivers_v2')
+        navigator.serviceWorker.register('./sw.js?v=20261022_v1_0_13')
           .then(function(reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

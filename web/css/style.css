@@ -485,7 +485,7 @@ body {
   color: var(--text-secondary);
 }
 
-/* 全區目標 vs 實績醒目雙數值對比 */
+/* 營運區目標 vs 實績醒目雙數值對比 */
 .hero-val-container {
   display: flex;
   align-items: flex-end;
@@ -1835,35 +1835,58 @@ textarea.form-control {
 /* ==========================================================================
    領先指標 (驅動目標) 視覺化折疊抽屜與漸進式色彩進度條
    ========================================================================== */
-/* 附圖一紅框處：全區目標 / 個人目標 膠囊切換鈕 (微軟現代辦公風格) */
-.scoreboard-scope-switch {
-  display: inline-flex;
-  background: var(--bg-surface-secondary, rgba(128, 128, 128, 0.12));
-  padding: 3px;
-  border-radius: 20px;
-  border: 1px solid var(--border-light);
-  gap: 2px;
+/* 附圖一紅框處：單一立體按鍵 (北區目標 ⮂ 個人目標) */
+.scope-btn-wrapper {
+  display: flex;
+  align-items: center;
 }
-.scope-pill-btn {
-  background: transparent;
-  border: none;
-  outline: none;
-  padding: 4px 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  border-radius: 16px;
+.scope-toggle-btn {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-size: 0.84rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  user-select: none;
 }
-.scope-pill-btn:hover {
-  color: var(--text-primary);
+.scope-toggle-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
-.scope-pill-btn.active {
-  background: var(--color-accent, #0078d4);
+.scope-toggle-btn:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15), inset 0 2px 3px rgba(0, 0, 0, 0.2);
+}
+/* 區域目標模式 (微軟沉穩商務藍漸層，白字立體感) */
+.scope-toggle-btn.scope-mode-region {
+  background: linear-gradient(180deg, #0078d4 0%, #005a9e 100%);
   color: #ffffff !important;
-  box-shadow: 0 1px 4px rgba(0, 120, 212, 0.35);
+  border-color: #004578;
+}
+.scope-toggle-btn.scope-mode-region .scope-btn-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #60cdff;
+  box-shadow: 0 0 5px #60cdff;
+}
+/* 個人目標模式 (微軟暖琥珀金漸層，白字立體感) */
+.scope-toggle-btn.scope-mode-personal {
+  background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+  color: #ffffff !important;
+  border-color: #92400e;
+}
+.scope-toggle-btn.scope-mode-personal .scope-btn-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fde047;
+  box-shadow: 0 0 5px #fde047;
 }
 
 /* 單一全局切換列：切換成果目標與領先指標 */
@@ -1878,44 +1901,49 @@ textarea.form-control {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 .kpi-view-mode-indicator .mode-dot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background-color: var(--color-accent, #0078d4);
   box-shadow: 0 0 6px rgba(0, 120, 212, 0.6);
 }
-.kpi-global-toggle-btn {
-  background: var(--bg-card);
-  border: 1px solid var(--border-light);
-  border-radius: 20px;
-  padding: 4px 12px;
+/* 純圖示倒箭頭圓角按鈕 */
+.kpi-global-toggle-btn.icon-only-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.82rem;
-  font-weight: 600;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
   color: var(--color-accent);
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.kpi-global-toggle-btn:hover {
+.kpi-global-toggle-btn.icon-only-btn:hover {
   background: var(--bg-hover);
   border-color: var(--color-accent);
   transform: translateY(-1px);
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.14);
 }
-.kpi-global-toggle-btn .toggle-arrow {
-  width: 16px;
-  height: 16px;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.kpi-global-toggle-btn.icon-only-btn:active {
+  transform: scale(0.95);
+}
+.kpi-global-toggle-btn.icon-only-btn .toggle-arrow {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   fill: currentColor;
 }
-.kpi-global-toggle-btn.expanded .toggle-arrow {
+.kpi-global-toggle-btn.icon-only-btn.expanded .toggle-arrow {
   transform: rotate(180deg);
 }
 
@@ -1946,7 +1974,7 @@ textarea.form-control {
   margin-top: 6px;
 }
 
-/* 個人/全區總業績卡片在領先指標模式下優雅收折 */
+/* 個人/營運區總業績卡片在領先指標模式下優雅收折 */
 #cardHeroPersonal.collapsed {
   display: none;
 }

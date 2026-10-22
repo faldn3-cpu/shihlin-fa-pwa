@@ -75,7 +75,7 @@
         </button>
         <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
         <div class="drawer-divider"></div>
-        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.13 (PWA)</div>
+        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.14 (PWA)</div>
       </div>
     </nav>
   </div>
@@ -89,15 +89,15 @@
          ==================================================================== -->
     <section id="panelHome">
       <div class="scoreboard-top-banner">
-        <!-- 頂部月度目標總結列 (含附圖一紅框處：全區目標 / 個人目標 切換開關) -->
+        <!-- 頂部月度目標總結列 (含附圖一紅框處：單一立體切換按鈕) -->
         <div class="scoreboard-header-bar" id="scoreboardHeaderBar">
           <div class="scoreboard-metrics-flow" id="scoreboardMetricsFlow">
             <div class="flow-item flow-item-target">
-              <span class="flow-label" id="labelMainTarget">本月全區目標：</span>
+              <span class="flow-label" id="labelMainTarget">本月北區目標：</span>
               <span class="flow-val badge-target-highlight" id="flowTargetVal">9,300萬</span>
             </div>
             <div class="flow-item flow-item-actual">
-              <span class="flow-label" id="labelMainActual">全區實績：</span>
+              <span class="flow-label" id="labelMainActual">北區實績：</span>
               <span class="flow-val" id="flowActualVal">10,370萬</span>
             </div>
             <div class="flow-item flow-item-rate">
@@ -106,10 +106,12 @@
             </div>
           </div>
 
-          <!-- 附圖一紅框處：全區目標 vs 個人目標 切換膠囊鈕 -->
-          <div class="scoreboard-scope-switch" id="scopeSwitchContainer">
-            <button type="button" class="scope-pill-btn active" id="btnScopeRegion" data-scope="region">全區目標</button>
-            <button type="button" class="scope-pill-btn" id="btnScopePersonal" data-scope="personal">個人目標</button>
+          <!-- 附圖一紅框處：單一立體切換按鈕 (北區目標 ⮂ 個人目標) -->
+          <div class="scope-btn-wrapper" id="scopeSwitchContainer">
+            <button type="button" class="scope-toggle-btn scope-mode-region" id="btnToggleScope" data-scope="region" title="點擊切換目標視角 (北區/個人)">
+              <span class="scope-btn-dot"></span>
+              <span id="txtScopeBtnLabel">北區目標</span>
+            </button>
           </div>
         </div>
 
@@ -117,10 +119,9 @@
         <div class="kpi-view-switch-row">
           <div class="kpi-view-mode-indicator">
             <span class="mode-dot"></span>
-            <span id="txtCurrentViewMode">目前檢視：三大產品線成果目標 (營收金額)</span>
+            <span id="txtCurrentViewMode">目前檢視：業績狀況</span>
           </div>
-          <button type="button" class="kpi-global-toggle-btn" id="btnGlobalToggleDriver" title="點擊切換：折疊成果目標，展開領先指標" aria-expanded="false">
-            <span id="btnGlobalToggleLabel">展開領先指標 (行動層)</span>
+          <button type="button" class="kpi-global-toggle-btn icon-only-btn" id="btnGlobalToggleDriver" title="點擊切換：業績狀況 / 領先指標" aria-expanded="false">
             <svg class="icon-svg toggle-arrow" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
           </button>
         </div>
@@ -589,20 +590,37 @@
             <span class="autofill-hint">動態調整全站字體大小，自適應手機螢幕閱讀</span>
           </div>
 
+          <!-- 所屬營運區域設定 (支援保存預設) -->
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <label class="form-label" for="selectActiveRegion" style="font-weight: 700; margin: 0;">所屬營運區域</label>
+              <button type="button" id="btnSaveDefaultRegion" class="btn btn-primary" style="padding: 3px 10px; font-size: 0.8rem;">💾 保存為預設區域</button>
+            </div>
+            <select id="selectActiveRegion" class="form-control">
+              <option value="北區" selected>北區營業處 (系統預設)</option>
+              <option value="中區">中區營業處</option>
+              <option value="南區">南區營業處</option>
+            </select>
+            <span class="autofill-hint">點擊「保存為預設區域」後，全系統戰情看板、報表與切換按鈕將永久自動綁定該區域（如北區目標、中區目標、南區目標）。</span>
+          </div>
+
           <!-- 目前登入業務切換 (便於測試與主管檢視) -->
           <div class="form-group">
             <label class="form-label" for="selectActiveSales">目前業務身份</label>
             <select id="selectActiveSales" class="form-control">
               <!-- 由 JavaScript 依據業務人員排序設定表動態生成 -->
             </select>
-            <span class="autofill-hint">切換業務後，首頁將即刻切換為該人員的個人目標與自製品出貨實績（曾維崧直接看全區戰況）</span>
+            <span class="autofill-hint">切換業務後，首頁將即刻切換為該人員的個人目標與自製品出貨實績（曾維崧直接看北區戰況）</span>
           </div>
 
           <!-- 業務人員順序排序設定表 (全系統業務人員順序統一標準表) -->
           <div class="form-group" style="margin-top: 1.5rem; border-top: 1px solid var(--border-light); padding-top: 1.25rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
               <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;">業務人員順序排序設定表</label>
-              <button type="button" id="btnResetSalesOrder" class="btn btn-secondary" style="padding: 3px 10px; font-size: 0.8rem;">恢復預設順序</button>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" id="btnSaveDefaultSalesOrder" class="btn btn-primary" style="padding: 3px 10px; font-size: 0.8rem;">💾 保存為預設順序</button>
+                <button type="button" id="btnResetSalesOrder" class="btn btn-secondary" style="padding: 3px 10px; font-size: 0.8rem;">恢復原廠順序</button>
+              </div>
             </div>
             <span class="autofill-hint" style="display: block; margin-bottom: 0.75rem;">
               全系統所有業務人員下拉選單與列表皆統一參照此表。點擊「上移 ⬆」或「下移 ⬇」即可即時調整排列順序並自動儲存。
@@ -655,7 +673,7 @@
               <!-- 由 JavaScript 動態渲染待審核申請單 -->
             </div>
           </div>
-          <div class="settings-version-tag">系統版本：v1.0.13 (PWA 離線快取版)</div>
+          <div class="settings-version-tag">系統版本：v1.0.14 (PWA 離線快取版)</div>
         </div>
       </div>
     </section>
@@ -986,13 +1004,13 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261022_v1_0_13"></script>
+  <script src="js/app.js?v=20261022_v1_0_14"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=20261022_v1_0_13')
+        navigator.serviceWorker.register('./sw.js?v=20261022_v1_0_14')
           .then(function(reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

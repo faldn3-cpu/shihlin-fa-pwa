@@ -4,7 +4,7 @@
  * 1. 100% 採用 Office / Windows Fluent 洗鍊線條樣式
  * 2. 徹底剔除彩色 Emoji 表情符號，採用洗鍊純文字狀態號誌 [達標] / [預警] / [落後]
  * 3. 業績卡更名：士林伺服 (LEB)、士林變頻器 (LNH)、士林PLC (LPB+LPN+LPD 加總)
- * 4. 曾維崧為主管，免計個人目標，直接看全區總戰況
+ * 4. 曾維崧為主管，免計個人目標，直接看北區總戰況
  * 5. 目標維護支援 Excel 貼上自動解析 + 在線 Excel 試算表格子直接點選微調
  * 6. 拜訪單一紀錄規範：選取客戶自動帶入統編、電話、地址與聯絡人
  * 7. 三層漏斗：日報 ➔ 商機 ➔ 案件 連鎖建立
@@ -212,7 +212,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 全系統標準業務人員預設排序名單 (Single Source of Truth)
   const DEFAULT_SALESPERSONS = [
-    { id: "曾維崧", name: "曾維崧", role: "全區總管", group: "主管" },
+    { id: "曾維崧", name: "曾維崧", role: "北區總管", group: "主管" },
     { id: "曾仁君", name: "曾仁君", role: "直賣主管", group: "主管" },
     { id: "何宛茹", name: "何宛茹", role: "直賣", group: "直賣" },
     { id: "張何達", name: "張何達", role: "經銷主管", group: "主管" },
@@ -225,14 +225,18 @@ document.addEventListener("DOMContentLoaded", () => {
     { id: "黃柏翰", name: "黃柏翰", role: "直賣", group: "直賣" }
   ];
 
-  // 取得當前有效業務人員排序清單 (優先自 localStorage 讀取)
+  // 取得當前有效業務人員排序清單 (優先自 localStorage 讀取，並自動清洗歷史快取中的全區字樣)
   function getOrderedSalespersons() {
-    const saved = localStorage.getItem("shihlin_salespersons_order");
+    const saved = localStorage.getItem("shihlin_salespersons_order") || localStorage.getItem("shihlin_salespersons_default_order");
+    const currentRegion = getCurrentRegion();
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          return parsed.map(s => ({
+            ...s,
+            role: (s.role || "").replace(/全區/g, currentRegion) || (s.name === "曾維崧" ? `${currentRegion}總管` : (s.group || "直賣"))
+          }));
         }
       } catch (e) {
         console.warn("讀取業務人員排序失敗，使用預設值：", e);
@@ -253,12 +257,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const selectActiveSales = document.getElementById("selectActiveSales");
     if (!selectActiveSales) return;
     const currentVal = selectActiveSales.value || localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+    const currentRegion = getCurrentRegion();
     const list = getOrderedSalespersons();
     selectActiveSales.innerHTML = "";
     list.forEach(sales => {
       const opt = document.createElement("option");
       opt.value = sales.name;
-      opt.innerText = sales.name === "曾維崧" ? `${sales.name} (全區總覽)` : `${sales.name} (${sales.role || sales.group || "直賣"})`;
+      opt.innerText = sales.name === "曾維崧" ? `${sales.name} (${currentRegion}總覽)` : `${sales.name} (${sales.role || sales.group || "直賣"})`;
       selectActiveSales.appendChild(opt);
     });
     const exists = list.some(s => s.name === currentVal);
@@ -269,6 +274,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderSalespersonOrderTable() {
     const tbody = document.getElementById("tbodySalesOrder");
     if (!tbody) return;
+    const currentRegion = getCurrentRegion();
     const list = getOrderedSalespersons();
     tbody.innerHTML = "";
     list.forEach((sales, idx) => {
@@ -284,7 +290,11 @@ document.addEventListener("DOMContentLoaded", () => {
       tdName.innerText = sales.name;
 
       const tdRole = document.createElement("td");
-      tdRole.innerText = sales.role || sales.group || "直賣";
+      let roleText = sales.role || sales.group || "直賣";
+      if (roleText.includes("全區")) {
+        roleText = roleText.replace(/全區/g, currentRegion);
+      }
+      tdRole.innerText = roleText;
 
       const tdActions = document.createElement("td");
       tdActions.style.textAlign = "center";
@@ -371,7 +381,31 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     applyFontSize(savedSize);
 
-    // 4. 動態初始化業務人員排序表與目前業務下拉選單
+    // 4. 所屬營運區域設定 (北區 / 中區 / 南區，支援保存預設)
+    const selectActiveRegion = document.getElementById("selectActiveRegion");
+    const btnSaveDefaultRegion = document.getElementById("btnSaveDefaultRegion");
+    const currentReg = getCurrentRegion();
+    if (selectActiveRegion) {
+      selectActiveRegion.value = currentReg;
+      selectActiveRegion.addEventListener("change", (e) => {
+        const rVal = e.target.value;
+        localStorage.setItem("shihlin_pwa_current_region", rVal);
+        renderActiveSalesSelectOptions();
+        renderHomeDashboard();
+      });
+    }
+    if (btnSaveDefaultRegion) {
+      btnSaveDefaultRegion.addEventListener("click", () => {
+        const rVal = selectActiveRegion ? selectActiveRegion.value : "北區";
+        localStorage.setItem("shihlin_pwa_default_region", rVal);
+        localStorage.setItem("shihlin_pwa_current_region", rVal);
+        renderActiveSalesSelectOptions();
+        renderHomeDashboard();
+        alert(`[成功保存] 已將【${rVal}】永久保存為全系統預設營運區域！`);
+      });
+    }
+
+    // 5. 動態初始化業務人員排序表與目前業務下拉選單
     renderActiveSalesSelectOptions();
     renderSalespersonOrderTable();
 
@@ -386,18 +420,34 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     updateActiveSalesUI(savedSales);
 
-    // 5. 恢復預設排序按鈕
+    // 6. 業務人員排序保存與恢復按鈕
+    const btnSaveDefaultSalesOrder = document.getElementById("btnSaveDefaultSalesOrder");
+    if (btnSaveDefaultSalesOrder) {
+      btnSaveDefaultSalesOrder.addEventListener("click", () => {
+        const currentList = getOrderedSalespersons();
+        localStorage.setItem("shihlin_salespersons_default_order", JSON.stringify(currentList));
+        localStorage.setItem("shihlin_salespersons_order", JSON.stringify(currentList));
+        alert("[成功保存] 已將目前的業務人員排列順序永久保存為系統預設排序！");
+      });
+    }
+
     const btnResetSalesOrder = document.getElementById("btnResetSalesOrder");
     if (btnResetSalesOrder) {
       btnResetSalesOrder.addEventListener("click", () => {
-        if (confirm("確定要將業務人員排序恢復為系統預設順序嗎？")) {
+        if (confirm("確定要將業務人員排序恢復為系統原廠預設順序嗎？")) {
           localStorage.removeItem("shihlin_salespersons_order");
+          localStorage.removeItem("shihlin_salespersons_default_order");
           renderActiveSalesSelectOptions();
           renderSalespersonOrderTable();
-          alert("已成功恢復預設業務人員順序！");
+          alert("已成功恢復原廠預設業務人員順序！");
         }
       });
     }
+  }
+
+  // 取得目前設定的營運區域 (預設為北區)
+  function getCurrentRegion() {
+    return localStorage.getItem("shihlin_pwa_current_region") || localStorage.getItem("shihlin_pwa_default_region") || "北區";
   }
 
   // ============================================================================
@@ -463,7 +513,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // 戰情看板檢視視角狀態
-  let currentScoreboardScope = null; // "region" (全區目標) 或 "personal" (個人目標)
+  let currentScoreboardScope = null; // "region" (北區/營運區目標) 或 "personal" (個人目標)
   let lastParsedMetrics = null;
   let isDriverViewActive = false; // 是否折疊成果目標並僅檢視領先指標
 
@@ -479,7 +529,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const metrics = parseTargetsGridToMetrics(currentGrid, currentShipments, activeSales);
     lastParsedMetrics = metrics;
 
-    // 依主管身分自動給定預設：主管預設全區目標 ("region")，其他人預設個人目標 ("personal")
+    // 依主管身分自動給定預設：主管預設營運區目標 ("region")，其他人預設個人目標 ("personal")
     if (!currentScoreboardScope || specificSales) {
       currentScoreboardScope = isSalesManager(activeSales) ? "region" : "personal";
     }
@@ -506,9 +556,11 @@ document.addEventListener("DOMContentLoaded", () => {
       badgeEl.innerText = b.text;
     }
 
+    const curRegion = getCurrentRegion();
+
     if (cfg.isManager) {
-      // 主管模式：個人實績欄位直接標註「全區累計」
-      if (labelEl) labelEl.innerText = "全區實績";
+      // 主管模式：個人實績欄位直接標註「營運區實績」
+      if (labelEl) labelEl.innerText = `${curRegion}實績`;
       if (personalEl) personalEl.innerHTML = `${formatMoney(actual)} <span class="unit-text">萬元</span>`;
     } else {
       // 一般業務：個人實績欄位
@@ -524,9 +576,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (descEl) {
       if (diff > 0) {
-        descEl.innerText = `全區目標 ${formatMoney(target)} 萬 ｜ 差距 ${formatMoney(diff)} 萬`;
+        descEl.innerText = `${curRegion}目標 ${formatMoney(target)} 萬 ｜ 差距 ${formatMoney(diff)} 萬`;
       } else {
-        descEl.innerText = `全區目標 ${formatMoney(target)} 萬 ｜ 超標 ${formatMoney(Math.abs(diff))} 萬`;
+        descEl.innerText = `${curRegion}目標 ${formatMoney(target)} 萬 ｜ 超標 ${formatMoney(Math.abs(diff))} 萬`;
       }
     }
   }
@@ -1633,7 +1685,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
 
-      // 5. 從合計列依欄位精準提取數字 (全區數據)
+      // 5. 從合計列依欄位精準提取數字 (北區/營運區數據)
       if (totalRowIdx >= 0) {
         const totRow = matrix[totalRowIdx];
         if (colAnnualTarget >= 0 && getCellStr(totRow[colAnnualTarget])) {
@@ -1662,7 +1714,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // 6. 自製品三大項目 (LEB, LNH, PLC) - 全區戰況
+      // 6. 自製品三大項目 (LEB, LNH, PLC) - 北區/營運區戰況
       for (let r = (totalRowIdx > 0 ? totalRowIdx : 0); r < matrix.length; r++) {
         const row = matrix[r];
         const rowStr = row.map(getCellStr).join(" ");
@@ -1703,9 +1755,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // 7. 依據選定的業務員 (targetSales) 動態提取個人業績或主管全區業績
+      // 7. 依據選定的業務員 (targetSales) 動態提取個人業績或主管北區業績
       if (isManager) {
-        // 主管模式 (曾維崧)：卡片 1 直接以「全區營收戰報」為主視角
+        // 主管模式 (曾維崧)：卡片 1 直接以「營運區營收戰報」為主視角
         metrics.salesName = "曾維崧";
         metrics.salesTarget = metrics.totalTarget;
         metrics.salesActual = metrics.totalActual;
@@ -1713,7 +1765,7 @@ document.addEventListener("DOMContentLoaded", () => {
         metrics.salesRate = metrics.totalRate;
         metrics.salesRateNum = metrics.totalRateNum;
         metrics.salesDiffText = metrics.diffText;
-        // 自製品三大卡片直接顯示全區實績
+        // 自製品三大卡片直接顯示營運區實績
         metrics.personalLeb = metrics.lebActual;
         metrics.personalLnh = metrics.lnhActual;
         metrics.personalPlc = metrics.plcActual;
@@ -1779,23 +1831,25 @@ document.addEventListener("DOMContentLoaded", () => {
     return metrics;
   }
 
-  // 將解析好的指標即時套用至首頁四大核心大數字戰情卡片與紅綠燈 (支援全區目標 vs 個人目標切換)
+  // 將解析好的指標即時套用至首頁四大核心大數字戰情卡片與紅綠燈 (支援北區/營運區目標 vs 個人目標切換)
   function applyScoreboardMetrics(metrics, scope) {
     if (!metrics) return;
     const viewScope = scope || currentScoreboardScope || "region";
 
     const isRegion = (viewScope === "region");
 
-    // 1. 頂部月度挑戰目標、實績與完成率串流 (標籤與數值依全區/個人切換)
+    // 1. 頂部月度挑戰目標、實績與完成率串流 (標籤與數值依營運區/個人切換)
     const labelMainTarget = document.getElementById("labelMainTarget");
     const labelMainActual = document.getElementById("labelMainActual");
     const flowTargetVal = document.getElementById("flowTargetVal");
     const flowActualVal = document.getElementById("flowActualVal");
     const flowRateVal = document.getElementById("flowRateVal");
 
+    const curRegion = getCurrentRegion();
+
     if (isRegion) {
-      if (labelMainTarget) labelMainTarget.innerText = "本月全區目標：";
-      if (labelMainActual) labelMainActual.innerText = "全區實績：";
+      if (labelMainTarget) labelMainTarget.innerText = `本月${curRegion}目標：`;
+      if (labelMainActual) labelMainActual.innerText = `${curRegion}實績：`;
       if (flowTargetVal) flowTargetVal.innerText = `${metrics.totalTarget || "9,300"}萬`;
       if (flowActualVal) flowActualVal.innerText = `${metrics.totalActual || "10,370"}萬`;
       if (flowRateVal) {
@@ -1817,7 +1871,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // 2. 卡片 1：總業績 (全區總業績 / 個人總業績)
+    // 2. 卡片 1：總業績 (營運區總業績 / 個人總業績)
     const kpiCardTitlePersonal = document.getElementById("kpiCardTitlePersonal");
     const kpiValPersonal = document.getElementById("kpiValPersonal");
     const kpiTrafficPersonal = document.getElementById("kpiTrafficPersonal");
@@ -1825,7 +1879,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const kpiBarPersonal = document.getElementById("kpiBarPersonal");
 
     if (isRegion) {
-      if (kpiCardTitlePersonal) kpiCardTitlePersonal.innerText = "全區總業績";
+      if (kpiCardTitlePersonal) kpiCardTitlePersonal.innerText = `${curRegion}總業績`;
       if (kpiValPersonal) kpiValPersonal.innerText = metrics.totalActual || "10,370";
       const rateNum = metrics.totalRateNum || 112;
       const light = getTrafficLight(rateNum);
@@ -1883,7 +1937,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (kpiDetailLEB) {
         const diffNum = parseFloat((metrics.lebDiff || "-320").replace(/,/g, ""));
         const diffLabel = diffNum >= 0 ? "超標" : "差距";
-        kpiDetailLEB.innerHTML = `<span>全區目標：${metrics.lebTarget || "516"} 萬</span> <span>｜</span> <span>全區實績：${metrics.lebActual || "196"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(Math.round(diffNum))} 萬</span>`;
+        kpiDetailLEB.innerHTML = `<span>${curRegion}目標：${metrics.lebTarget || "516"} 萬</span> <span>｜</span> <span>${curRegion}實績：${metrics.lebActual || "196"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(Math.round(diffNum))} 萬</span>`;
       }
       if (kpiBarLEB) {
         kpiBarLEB.className = `fluent-progress-bar ${lightLEB.barClass}`;
@@ -1897,7 +1951,7 @@ document.addEventListener("DOMContentLoaded", () => {
         kpiTrafficLEB.innerText = `${pVal > 0 ? '出貨中' : '無紀錄'}`;
       }
       if (kpiDetailLEB) {
-        kpiDetailLEB.innerHTML = `<span>個人出貨：<strong>${metrics.personalLeb || "0.00"}</strong> 萬</span> <span>｜</span> <span>全區挑戰目標：${metrics.lebTarget || "516"} 萬</span>`;
+        kpiDetailLEB.innerHTML = `<span>個人出貨：<strong>${metrics.personalLeb || "0.00"}</strong> 萬</span> <span>｜</span> <span>${curRegion}挑戰目標：${metrics.lebTarget || "516"} 萬</span>`;
       }
       if (kpiBarLEB) {
         kpiBarLEB.className = `fluent-progress-bar bar-success`;
@@ -1922,7 +1976,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (kpiDetailLNH) {
         const diffNum = parseFloat((metrics.lnhDiff || "-273").replace(/,/g, ""));
         const diffLabel = diffNum >= 0 ? "超標" : "差距";
-        kpiDetailLNH.innerHTML = `<span>全區目標：${metrics.lnhTarget || "516"} 萬</span> <span>｜</span> <span>全區實績：${metrics.lnhActual || "243"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(diffNum)} 萬</span>`;
+        kpiDetailLNH.innerHTML = `<span>${curRegion}目標：${metrics.lnhTarget || "516"} 萬</span> <span>｜</span> <span>${curRegion}實績：${metrics.lnhActual || "243"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(diffNum)} 萬</span>`;
       }
       if (kpiBarLNH) {
         kpiBarLNH.className = `fluent-progress-bar ${lightLNH.barClass}`;
@@ -1936,7 +1990,7 @@ document.addEventListener("DOMContentLoaded", () => {
         kpiTrafficLNH.innerText = `${pVal > 0 ? '出貨中' : '無紀錄'}`;
       }
       if (kpiDetailLNH) {
-        kpiDetailLNH.innerHTML = `<span>個人出貨：<strong>${metrics.personalLnh || "0.00"}</strong> 萬</span> <span>｜</span> <span>全區挑戰目標：${metrics.lnhTarget || "516"} 萬</span>`;
+        kpiDetailLNH.innerHTML = `<span>個人出貨：<strong>${metrics.personalLnh || "0.00"}</strong> 萬</span> <span>｜</span> <span>${curRegion}挑戰目標：${metrics.lnhTarget || "516"} 萬</span>`;
       }
       if (kpiBarLNH) {
         kpiBarLNH.className = `fluent-progress-bar bar-success`;
@@ -1961,7 +2015,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (kpiDetailPLC) {
         const diffNum = parseFloat((metrics.plcDiff || "36").replace(/,/g, ""));
         const diffLabel = diffNum >= 0 ? "超標" : "差距";
-        kpiDetailPLC.innerHTML = `<span>全區目標：${metrics.plcTarget || "210"} 萬</span> <span>｜</span> <span>全區實績：${metrics.plcActual || "246"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(diffNum)} 萬</span>`;
+        kpiDetailPLC.innerHTML = `<span>${curRegion}目標：${metrics.plcTarget || "210"} 萬</span> <span>｜</span> <span>${curRegion}實績：${metrics.plcActual || "246"} 萬</span> <span>｜</span> <span>${diffLabel}：${Math.abs(diffNum)} 萬</span>`;
       }
       if (kpiBarPLC) {
         kpiBarPLC.className = `fluent-progress-bar ${lightPLC.barClass}`;
@@ -1975,7 +2029,7 @@ document.addEventListener("DOMContentLoaded", () => {
         kpiTrafficPLC.innerText = `${pVal > 0 ? '出貨中' : '無紀錄'}`;
       }
       if (kpiDetailPLC) {
-        kpiDetailPLC.innerHTML = `<span>個人出貨：<strong>${metrics.personalPlc || "0.00"}</strong> 萬</span> <span>｜</span> <span>全區挑戰目標：${metrics.plcTarget || "210"} 萬</span>`;
+        kpiDetailPLC.innerHTML = `<span>個人出貨：<strong>${metrics.personalPlc || "0.00"}</strong> 萬</span> <span>｜</span> <span>${curRegion}挑戰目標：${metrics.plcTarget || "210"} 萬</span>`;
       }
       if (kpiBarPLC) {
         kpiBarPLC.className = `fluent-progress-bar bar-success`;
@@ -2335,7 +2389,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function getManagerTitle(name) {
-    if (name === "曾維崧") return "FA 全區主管";
+    if (name === "曾維崧") return `FA ${getCurrentRegion()}主管`;
     if (name === "曾仁君") return "直賣業務主管";
     if (name === "張何達") return "經銷業務主管";
     return "業務主管";
@@ -2515,38 +2569,33 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
-  // 1. 綁定附圖一紅框處「全區目標 ｜ 個人目標」膠囊切換鈕
+  // 1. 綁定附圖一紅框處「單一立體切換按鈕」 (區域目標 ⮂ 個人目標)
   function setupScoreboardScopeSwitch() {
-    const btnRegion = document.getElementById("btnScopeRegion");
-    const btnPersonal = document.getElementById("btnScopePersonal");
+    const btnToggle = document.getElementById("btnToggleScope");
+    if (!btnToggle) return;
 
-    if (btnRegion) {
-      btnRegion.onclick = () => {
-        currentScoreboardScope = "region";
-        updateScopeSwitchUI("region");
-        if (lastParsedMetrics) applyScoreboardMetrics(lastParsedMetrics, "region");
-      };
-    }
-    if (btnPersonal) {
-      btnPersonal.onclick = () => {
-        currentScoreboardScope = "personal";
-        updateScopeSwitchUI("personal");
-        if (lastParsedMetrics) applyScoreboardMetrics(lastParsedMetrics, "personal");
-      };
-    }
+    btnToggle.onclick = () => {
+      // 點一下在 region 與 personal 之間切換
+      currentScoreboardScope = (currentScoreboardScope === "region") ? "personal" : "region";
+      updateScopeSwitchUI(currentScoreboardScope);
+      if (lastParsedMetrics) applyScoreboardMetrics(lastParsedMetrics, currentScoreboardScope);
+    };
   }
 
   function updateScopeSwitchUI(scope) {
-    const btnRegion = document.getElementById("btnScopeRegion");
-    const btnPersonal = document.getElementById("btnScopePersonal");
-    if (btnRegion && btnPersonal) {
-      if (scope === "personal") {
-        btnPersonal.classList.add("active");
-        btnRegion.classList.remove("active");
-      } else {
-        btnRegion.classList.add("active");
-        btnPersonal.classList.remove("active");
-      }
+    const btnToggle = document.getElementById("btnToggleScope");
+    const label = document.getElementById("txtScopeBtnLabel");
+    const currentRegion = getCurrentRegion();
+    if (!btnToggle) return;
+
+    if (scope === "personal") {
+      btnToggle.className = "scope-toggle-btn scope-mode-personal";
+      btnToggle.setAttribute("data-scope", "personal");
+      if (label) label.innerText = "個人目標";
+    } else {
+      btnToggle.className = "scope-toggle-btn scope-mode-region";
+      btnToggle.setAttribute("data-scope", "region");
+      if (label) label.innerText = `${currentRegion}目標`;
     }
   }
 
@@ -2562,7 +2611,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function updateGlobalDriverView(isActive) {
     const btn = document.getElementById("btnGlobalToggleDriver");
-    const label = document.getElementById("btnGlobalToggleLabel");
     const hint = document.getElementById("txtCurrentViewMode");
     const cardPersonal = document.getElementById("cardHeroPersonal");
 
@@ -2570,16 +2618,14 @@ document.addEventListener("DOMContentLoaded", () => {
       if (isActive) {
         btn.classList.add("expanded");
         btn.setAttribute("aria-expanded", "true");
-        if (label) label.innerText = "返回成果目標 (營收金額)";
-        if (hint) hint.innerText = "目前檢視：三大產品線領先指標 (行動層)";
+        if (hint) hint.innerText = "目前檢視：領先指標";
         if (cardPersonal) cardPersonal.classList.add("collapsed");
         document.querySelectorAll(".kpi-outcome-body").forEach(el => el.classList.add("collapsed"));
         document.querySelectorAll(".kpi-driver-body").forEach(el => el.classList.add("expanded"));
       } else {
         btn.classList.remove("expanded");
         btn.setAttribute("aria-expanded", "false");
-        if (label) label.innerText = "展開領先指標 (行動層)";
-        if (hint) hint.innerText = "目前檢視：三大產品線成果目標 (營收金額)";
+        if (hint) hint.innerText = "目前檢視：業績狀況";
         if (cardPersonal) cardPersonal.classList.remove("collapsed");
         document.querySelectorAll(".kpi-outcome-body").forEach(el => el.classList.remove("collapsed"));
         document.querySelectorAll(".kpi-driver-body").forEach(el => el.classList.remove("expanded"));

@@ -344,7 +344,7 @@ def save_daily_report(report: Dict[str, Any]) -> int:
             report.get("manager_task_id")
         ))
         conn.commit()
-        return cursor.lastrowid
+        return int(cursor.lastrowid or 0)
     finally:
         conn.close()
 
@@ -396,7 +396,7 @@ def save_crm_opportunity(opp: Dict[str, Any]) -> int:
             opp.get("status", "挖掘中")
         ))
         conn.commit()
-        return cursor.lastrowid
+        return int(cursor.lastrowid or 0)
     finally:
         conn.close()
 
@@ -426,7 +426,7 @@ def save_deal_case(deal: Dict[str, Any]) -> int:
             deal.get("win_loss_reason", "")
         ))
         conn.commit()
-        return cursor.lastrowid
+        return int(cursor.lastrowid or 0)
     finally:
         conn.close()
 
@@ -654,7 +654,7 @@ def save_special_price_application(app_data: Dict[str, Any]) -> int:
             app_data.get("review_status", "待主管審核")
         ))
         conn.commit()
-        return cursor.lastrowid
+        return int(cursor.lastrowid or 0)
     finally:
         conn.close()
 

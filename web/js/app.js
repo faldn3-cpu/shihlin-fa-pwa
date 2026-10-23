@@ -335,6 +335,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function applyFontSize(size) {
     if (!size) size = "12pt";
     document.documentElement.style.setProperty("--app-font-size", size);
+    document.documentElement.style.fontSize = size;
   }
 
   function applyDensity(mode) {

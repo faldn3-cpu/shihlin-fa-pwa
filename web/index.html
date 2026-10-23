@@ -1214,7 +1214,7 @@
           <div style="display:flex; gap:12px;">
             <div class="form-group" style="flex:1;">
               <label class="form-label" for="applyNewTargetVal">新目標數值 <span style="color:var(--color-danger, #ef4444);">*</span></label>
-              <input type="number" id="applyNewTargetVal" class="form-control" step="0.1" min="1" placeholder="例：4" required />
+              <input type="number" id="applyNewTargetVal" class="form-control" step="any" min="0" placeholder="例：4" required />
             </div>
             <div class="form-group" style="width:120px;">
               <label class="form-label" for="applyNewUnit">單位 <span style="color:var(--color-danger, #ef4444);">*</span></label>
@@ -1277,7 +1277,7 @@
             <div class="form-group" style="flex: 1;">
               <label class="form-label" for="reportActualVal">目前累計完成實績 <span style="color:var(--color-danger, #ef4444);">*</span></label>
               <div style="display: flex; align-items: center; gap: 6px;">
-                <input type="number" id="reportActualVal" class="form-control" step="0.5" min="0" required />
+                <input type="number" id="reportActualVal" class="form-control" step="any" min="0" required />
                 <span id="reportUnitText2" style="font-size: 0.85rem; color: var(--text-secondary); min-width: 24px;">場</span>
               </div>
             </div>
@@ -1331,7 +1331,7 @@
           <div style="display: flex; gap: 12px;">
             <div class="form-group" style="flex: 1;">
               <label class="form-label" for="editTargetVal">目標數值 <span style="color:var(--color-danger, #ef4444);">*</span></label>
-              <input type="number" id="editTargetVal" class="form-control" step="0.5" min="0.1" placeholder="例：4" required />
+              <input type="number" id="editTargetVal" class="form-control" step="any" min="0" placeholder="例：4" required />
             </div>
             <div class="form-group" style="width: 120px;">
               <label class="form-label" for="editUnit">單位 <span style="color:var(--color-danger, #ef4444);">*</span></label>
@@ -1365,13 +1365,13 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261023_v1_0_31"></script>
+  <script src="js/app.js?v=20261023_v1_0_32"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_31')
+        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_32')
           .then(function(reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

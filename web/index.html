@@ -84,7 +84,7 @@
         </button>
         <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
         <div class="drawer-divider"></div>
-        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.22 (PWA)</div>
+        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.23 (PWA)</div>
       </div>
     </nav>
   </div>
@@ -737,7 +737,7 @@
           <!-- 由 JavaScript 根據 getOrderedSalespersons() 動態渲染手機卡片 -->
         </div>
 
-        <div class="settings-version-tag">系統版本：v1.0.22 (PWA 離線快取版)</div>
+        <div class="settings-version-tag">系統版本：v1.0.23 (PWA 離線快取版)</div>
       </div>
     </section>
 
@@ -1223,13 +1223,13 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261023_v1_0_22"></script>
+  <script src="js/app.js?v=20261023_v1_0_23"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_22')
+        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_23')
           .then(function(reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

@@ -1201,6 +1201,62 @@ document.addEventListener("DOMContentLoaded", () => {
     return name;
   }
 
+  // 雙模表格色彩淨化與變數映射防呆機制 (Contrast Guard)
+  function normalizeGridColor(color) {
+    if (!color) return "";
+    const c = color.trim().toLowerCase();
+    // 1. 淨化寫死的黑色與深灰底字 (讓其自然繼承系統主題色 var(--text-primary))
+    if (c === "#000" || c === "#000000" || c === "black" || c === "windowtext" ||
+        c === "rgb(0, 0, 0)" || c === "rgb(0,0,0)" || c === "rgba(0, 0, 0, 1)" ||
+        c === "#111827" || c === "#1f2937" || c === "#201f1e" || c === "#1f1f1f" ||
+        c === "#333" || c === "#333333" || c === "#222" || c === "#2b2b2b") {
+      return "";
+    }
+    // 2. 映射深藍/純藍數字 -> 雙模變數 var(--grid-num-blue)
+    if (c === "#0000ff" || c === "#0052cc" || c === "#1d4ed8" || c === "#0000cd" || c === "blue" || c === "#2563eb" || c === "#1e40af") {
+      return "var(--grid-num-blue)";
+    }
+    // 3. 映射紅色數字 -> 雙模變數 var(--grid-num-red)
+    if (c === "#d93025" || c === "#b91c1c" || c === "#ff0000" || c === "red" || c === "#dc2626" || c === "#ef4444" || c === "#991b1b") {
+      return "var(--grid-num-red)";
+    }
+    // 4. 映射綠色數字 -> 雙模變數 var(--grid-num-green)
+    if (c === "#0d8050" || c === "#15803d" || c === "#008000" || c === "green" || c === "#16a34a" || c === "#107c41" || c === "#166534") {
+      return "var(--grid-num-green)";
+    }
+    // 5. 映射橘色數字 -> 雙模變數 var(--grid-num-orange)
+    if (c === "#c2410c" || c === "#ea580c" || c === "#f97316" || c === "orange" || c === "#9a3412") {
+      return "var(--grid-num-orange)";
+    }
+    return color;
+  }
+
+  function normalizeGridBg(bg) {
+    if (!bg || bg === "transparent" || bg === "inherit") return "";
+    const b = bg.trim().toLowerCase();
+    // 淺藍底色 -> 雙模變數 var(--grid-bg-blue) 或 var(--grid-bg-total)
+    if (b === "#dbeafe" || b === "#bfdbfe" || b === "#e0f2fe" || b === "#bae6fd" || b === "#e6f4ea") {
+      return b === "#e0f2fe" ? "var(--grid-bg-total)" : "var(--grid-bg-blue)";
+    }
+    // 淺紅底色 -> 雙模變數 var(--grid-bg-red)
+    if (b === "#fee2e2" || b === "#fecaca" || b === "#ffebee") {
+      return "var(--grid-bg-red)";
+    }
+    // 淺綠底色 -> 雙模變數 var(--grid-bg-green)
+    if (b === "#dcfce7" || b === "#bbf7d0" || b === "#e8f5e9") {
+      return "var(--grid-bg-green)";
+    }
+    // 淺橘底色 -> 雙模變數 var(--grid-bg-orange)
+    if (b === "#fed7aa" || b === "#ffedd5" || b === "#fff3e0") {
+      return "var(--grid-bg-orange)";
+    }
+    // 白色/純淺灰背景 (Excel 預設 white/rgb(255,255,255)) 在深色模式下淨化，避免黑底泛白塊
+    if (b === "#fff" || b === "#ffffff" || b === "white" || b === "rgb(255, 255, 255)" || b === "rgb(255,255,255)") {
+      return "";
+    }
+    return bg;
+  }
+
   // 100% 格式對照：解析 Excel / Synology Office 剪貼簿產生的 HTML 表格樣式 (含顏色、字型大小、底色、粗體)
   function parseExcelHTML(htmlText) {
     if (!htmlText || !htmlText.includes("<table")) return null;
@@ -1279,8 +1335,12 @@ document.addEventListener("DOMContentLoaded", () => {
             if (spanEl.style.fontSize && !fontSize) fontSize = spanEl.style.fontSize;
           }
 
-          const cellObj = (bg || color || bold || fontSize || align)
-            ? { val: text, bg: bg, color: color, bold: bold ? "bold" : "", fontSize: fontSize, align: align }
+          // 執行貼上色彩淨化與變數轉換
+          const sanitizedColor = normalizeGridColor(color);
+          const sanitizedBg = normalizeGridBg(bg);
+
+          const cellObj = (sanitizedBg || sanitizedColor || bold || fontSize || align)
+            ? { val: text, bg: sanitizedBg, color: sanitizedColor, bold: bold ? "bold" : "", fontSize: fontSize, align: align }
             : text;
 
           // 填入 2D 矩陣
@@ -1455,11 +1515,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (cellData && typeof cellData === "object") {
           val = cellData.val !== undefined ? cellData.val : "";
-          if (cellData.bg && cellData.bg !== "transparent" && cellData.bg !== "inherit") {
-            styleParts.push(`background-color:${cellData.bg} !important`);
+          const normBg = normalizeGridBg(cellData.bg);
+          const normColor = normalizeGridColor(cellData.color);
+
+          if (normBg) {
+            styleParts.push(`background-color:${normBg} !important`);
           }
-          if (cellData.color && cellData.color !== "inherit") {
-            styleParts.push(`color:${cellData.color} !important`);
+          if (normColor) {
+            styleParts.push(`color:${normColor} !important`);
           }
           if (cellData.bold) {
             styleParts.push(`font-weight:${cellData.bold}`);
@@ -1979,15 +2042,15 @@ document.addEventListener("DOMContentLoaded", () => {
   // 10 月真實目標總表範例 (100% 對照圖二：含顏色、粗體、自製品三大項與合計)
   // ============================================================================
   function getSampleTargetsGrid() {
-    const blue = (val) => ({ val, color: "#0052cc", bold: "bold" });
-    const red = (val) => ({ val, color: "#d93025", bold: "bold" });
-    const green = (val) => ({ val, color: "#0d8050", bold: "bold" });
-    const negRed = (val) => ({ val, color: "#d93025" });
-    const hdrBlue = (val) => ({ val, color: "#0052cc", bg: "#dbeafe", bold: "bold" });
-    const hdrRed = (val) => ({ val, color: "#b91c1c", bg: "#fee2e2", bold: "bold" });
-    const hdrGreen = (val) => ({ val, color: "#15803d", bg: "#dcfce7", bold: "bold" });
-    const hdrActBlue = (val) => ({ val, color: "#0052cc", bg: "#e0f2fe", bold: "bold" });
-    const hdrOrange = (val) => ({ val, bg: "#fed7aa" });
+    const blue = (val) => ({ val, color: "var(--grid-num-blue)", bold: "bold" });
+    const red = (val) => ({ val, color: "var(--grid-num-red)", bold: "bold" });
+    const green = (val) => ({ val, color: "var(--grid-num-green)", bold: "bold" });
+    const negRed = (val) => ({ val, color: "var(--grid-num-red)" });
+    const hdrBlue = (val) => ({ val, color: "var(--grid-num-blue)", bg: "var(--grid-bg-blue)", bold: "bold" });
+    const hdrRed = (val) => ({ val, color: "var(--grid-num-red)", bg: "var(--grid-bg-red)", bold: "bold" });
+    const hdrGreen = (val) => ({ val, color: "var(--grid-num-green)", bg: "var(--grid-bg-green)", bold: "bold" });
+    const hdrActBlue = (val) => ({ val, color: "var(--grid-num-blue)", bg: "var(--grid-bg-total)", bold: "bold" });
+    const hdrOrange = (val) => ({ val, bg: "var(--grid-bg-orange)" });
 
     return [
       ["北區", "10", "月挑戰目標", "9,300", "萬", "", "", "", "", "", ""],

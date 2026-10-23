@@ -45,6 +45,18 @@
   --header-height: 48px;
   --border-radius: 6px;
   --shadow-card: 0 1.6px 3.6px 0 rgba(0,0,0,0.06), 0 0.3px 0.9px 0 rgba(0,0,0,0.03);
+
+  /* 語意化雙模數字與儲存格底色變數 (淺色模式 - Office 高對比標準) */
+  --grid-num-blue: #1D4ED8;
+  --grid-num-red: #B91C1C;
+  --grid-num-green: #15803D;
+  --grid-num-orange: #C2410C;
+
+  --grid-bg-blue: #DBEAFE;
+  --grid-bg-red: #FEE2E2;
+  --grid-bg-green: #DCFCE7;
+  --grid-bg-orange: #FED7AA;
+  --grid-bg-total: #E0F2FE;
 }
 
 /* 深色模式配色 (柔和深灰藍，不死黑、不刺眼，如同 VS Code / Windows 11 深色) */
@@ -77,6 +89,18 @@ html[data-theme="dark"],
   --color-warning: #FCE100;
   --color-danger: #FF6B6B;
   --shadow-card: 0 2px 6px 0 rgba(0,0,0,0.4);
+
+  /* 語意化雙模數字與儲存格底色變數 (深色模式 - 柔和明亮高對比，絕不死黑刺眼) */
+  --grid-num-blue: #60A5FA;
+  --grid-num-red: #F87171;
+  --grid-num-green: #4ADE80;
+  --grid-num-orange: #FB923C;
+
+  --grid-bg-blue: rgba(59, 130, 246, 0.22);
+  --grid-bg-red: rgba(239, 68, 68, 0.22);
+  --grid-bg-green: rgba(34, 197, 94, 0.22);
+  --grid-bg-orange: rgba(249, 115, 22, 0.22);
+  --grid-bg-total: rgba(14, 165, 233, 0.22);
 }
 
 *, *::before, *::after {
@@ -1324,16 +1348,16 @@ textarea.form-control {
 
 /* 一般資料儲存格 (可打字、可貼上、框線清晰、支援 Alt+Enter 儲存格內換行) */
 .excel-spreadsheet-grid td.grid-cell {
-  border-right: 1px solid #E1DFDD;
-  border-bottom: 1px solid #E1DFDD;
+  border-right: 1px solid var(--border-light, #E1DFDD);
+  border-bottom: 1px solid var(--border-light, #E1DFDD);
   padding: 4px 8px;
   min-height: 24px;
   white-space: pre-wrap;
   line-height: 1.3;
   outline: none;
-  color: #201F1E;
-  background-color: #FFFFFF;
-  transition: background-color 0.1s ease;
+  color: var(--text-primary, #201F1E);
+  background-color: var(--bg-panel, #FFFFFF);
+  transition: background-color 0.1s ease, color 0.1s ease;
   vertical-align: middle;
 }
 
@@ -1396,8 +1420,25 @@ textarea.form-control {
 
 [data-theme="dark"] .excel-spreadsheet-grid td.grid-cell {
   background-color: #1E1E1E;
-  color: #F3F3F3;
+  color: #F8FAFC !important;
   border-color: #333333;
+}
+
+/* 深色模式下的黑字過濾防護 (Contrast Guard) - 強制將寫死黑字轉為高亮白 */
+[data-theme="dark"] .excel-spreadsheet-grid td.grid-cell[style*="color:#000"],
+[data-theme="dark"] .excel-spreadsheet-grid td.grid-cell[style*="color: #000"],
+[data-theme="dark"] .excel-spreadsheet-grid td.grid-cell[style*="color:black"],
+[data-theme="dark"] .excel-spreadsheet-grid td.grid-cell[style*="color: black"],
+[data-theme="dark"] .excel-spreadsheet-grid td.grid-cell[style*="color:windowtext"],
+[data-theme="dark"] .excel-spreadsheet-grid td.grid-cell[style*="color: windowtext"],
+[data-theme="dark"] .excel-spreadsheet-grid td.grid-cell[style*="color:rgb(0, 0, 0)"],
+[data-theme="dark"] .excel-spreadsheet-grid td.grid-cell[style*="color: rgb(0, 0, 0)"],
+[data-theme="dark"] .excel-spreadsheet-grid td.grid-cell[style*="color:rgb(0,0,0)"],
+[data-theme="dark"] .excel-spreadsheet-grid td.grid-cell[style*="color:#201F1E"],
+[data-theme="dark"] .excel-spreadsheet-grid td.grid-cell[style*="color: #201F1E"],
+[data-theme="dark"] .excel-spreadsheet-grid td.grid-cell[style*="color:#1F1F1F"],
+[data-theme="dark"] .excel-spreadsheet-grid td.grid-cell[style*="color: #1F1F1F"] {
+  color: #F8FAFC !important;
 }
 
 [data-theme="dark"] .excel-spreadsheet-grid td.grid-cell:focus {

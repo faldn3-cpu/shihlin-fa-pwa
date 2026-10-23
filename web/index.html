@@ -84,7 +84,7 @@
         </button>
         <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
         <div class="drawer-divider"></div>
-        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.25 (PWA)</div>
+        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.26 (PWA)</div>
       </div>
     </nav>
   </div>
@@ -848,7 +848,7 @@
          分頁：領先指標設定與審核 (Driver Management & Review Panel)
          包含：業務個人三大產品線領先指標維護 ＆ 主管專屬覆盤審核中心
          ==================================================================== -->
-    <section  class="hidden">
+    <section id="panelDriverMgmt" class="hidden">
       <div class="fluent-card">
         <div class="card-header">
           <div class="card-title-group">
@@ -1223,13 +1223,13 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261023_v1_0_25"></script>
+  <script src="js/app.js?v=20261023_v1_0_26"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_25')
+        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_26')
           .then(function(reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

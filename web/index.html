@@ -84,7 +84,7 @@
         </button>
         <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
         <div class="drawer-divider"></div>
-        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.21 (PWA)</div>
+        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.22 (PWA)</div>
       </div>
     </nav>
   </div>
@@ -737,7 +737,7 @@
           <!-- 由 JavaScript 根據 getOrderedSalespersons() 動態渲染手機卡片 -->
         </div>
 
-        <div class="settings-version-tag">系統版本：v1.0.21 (PWA 離線快取版)</div>
+        <div class="settings-version-tag">系統版本：v1.0.22 (PWA 離線快取版)</div>
       </div>
     </section>
 
@@ -802,6 +802,43 @@
         <div class="dialog-footer" style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border-light); padding-top:12px;">
           <button type="button" id="btnCancelDeleteSales" class="fluent-btn secondary">取消</button>
           <button type="button" id="btnConfirmDeleteSales" class="fluent-btn danger">確認刪除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 保存業務人員與權限設定警示確認對話框 (優雅微軟 Fluent 警示視窗) -->
+    <div id="modalConfirmSaveSalespersonSettings" class="modal-overlay hidden">
+      <div class="fluent-dialog" style="max-width: 440px;">
+        <div class="dialog-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light); padding-bottom:10px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg class="icon-svg" style="width:20px; height:20px; color:#f59e0b;" viewBox="0 0 24 24">
+              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+            </svg>
+            <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">保存設定警示確認</h3>
+          </div>
+          <button type="button" id="btnCloseSaveSalesModal" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-secondary);">&times;</button>
+        </div>
+        <div class="dialog-body" style="padding:16px 0; display:flex; flex-direction:column; gap:12px;">
+          <div style="background:rgba(245, 158, 11, 0.12); border:1px solid rgba(245, 158, 11, 0.35); border-radius:6px; padding:10px 12px; font-size:0.9rem; line-height:1.5; color:var(--text-primary);">
+            <strong style="color:#d97706;">⚠️ 變更警示：</strong>您即將正式儲存業務人員名冊與權限設定。
+          </div>
+          <div style="font-size:0.9rem; line-height:1.6; color:var(--text-secondary); background:var(--bg-subtle, rgba(255,255,255,0.03)); border-radius:6px; padding:10px 12px; border:1px solid var(--border-light);">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span>名冊業務人員總數：</span>
+              <strong id="spanSaveSummaryTotal" style="color:var(--text-primary);">0 位</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+              <span>具數據管理權限：</span>
+              <strong id="spanSaveSummaryManagers" style="color:var(--text-primary); text-align:right; max-width:65%;">0 位</strong>
+            </div>
+          </div>
+          <p style="margin:0; font-size:0.9rem; line-height:1.5; color:var(--text-primary);">
+            保存後將立即同步套用至全系統看板排序、首頁業務身份切換及數據管理審核權限。確定要保存生效嗎？
+          </p>
+        </div>
+        <div class="dialog-footer" style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border-light); padding-top:12px;">
+          <button type="button" id="btnCancelSaveSalesSettings" class="fluent-btn secondary">取消</button>
+          <button type="button" id="btnConfirmSaveSalesSettings" class="fluent-btn primary">確認保存</button>
         </div>
       </div>
     </div>
@@ -1186,13 +1223,13 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261023_v1_0_21"></script>
+  <script src="js/app.js?v=20261023_v1_0_22"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_21')
+        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_22')
           .then(function(reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

@@ -924,8 +924,23 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // 12. 保存名冊與權限設定按鈕
+    // 12. 保存名冊與權限設定按鈕 (修改保存前彈出微軟 Fluent 警示確認對話盒)
     const btnSaveSalespersonSettings = document.getElementById("btnSaveSalespersonSettings");
+    const modalConfirmSaveSalespersonSettings = document.getElementById("modalConfirmSaveSalespersonSettings");
+    const btnCloseSaveSalesModal = document.getElementById("btnCloseSaveSalesModal");
+    const btnCancelSaveSalesSettings = document.getElementById("btnCancelSaveSalesSettings");
+    const btnConfirmSaveSalesSettings = document.getElementById("btnConfirmSaveSalesSettings");
+    const spanSaveSummaryTotal = document.getElementById("spanSaveSummaryTotal");
+    const spanSaveSummaryManagers = document.getElementById("spanSaveSummaryManagers");
+
+    const hideSaveModal = () => {
+      if (modalConfirmSaveSalespersonSettings) modalConfirmSaveSalespersonSettings.classList.add("hidden");
+    };
+
+    if (btnCloseSaveSalesModal) btnCloseSaveSalesModal.addEventListener("click", hideSaveModal);
+    if (btnCancelSaveSalesSettings) btnCancelSaveSalesSettings.addEventListener("click", hideSaveModal);
+
+    // 點擊「保存」按鈕 -> 執行前置檢查並彈出警示對話盒
     if (btnSaveSalespersonSettings) {
       btnSaveSalespersonSettings.addEventListener("click", () => {
         if (!currentSalespersonsDraft || currentSalespersonsDraft.length === 0) {
@@ -938,6 +953,30 @@ document.addEventListener("DOMContentLoaded", () => {
           alert("請至少勾選一位具備數據管理權限之人員！");
           return;
         }
+
+        // 動態注入當前名冊變更摘要
+        if (spanSaveSummaryTotal) {
+          spanSaveSummaryTotal.innerText = `${currentSalespersonsDraft.length} 位業務人員`;
+        }
+        if (spanSaveSummaryManagers) {
+          spanSaveSummaryManagers.innerText = `${mgrList.length} 位（${mgrList.join("、")}）`;
+        }
+
+        // 彈出警示對話盒
+        if (modalConfirmSaveSalespersonSettings) {
+          modalConfirmSaveSalespersonSettings.classList.remove("hidden");
+        }
+      });
+    }
+
+    // 警示對話盒內點擊「確認保存」 -> 正式寫入系統並同步生效
+    if (btnConfirmSaveSalesSettings) {
+      btnConfirmSaveSalesSettings.addEventListener("click", () => {
+        hideSaveModal();
+
+        if (!currentSalespersonsDraft || currentSalespersonsDraft.length === 0) return;
+        const mgrList = currentSalespersonsDraft.filter(s => s.isManager).map(s => s.name);
+        if (mgrList.length === 0) return;
 
         const curRegion = getCurrentRegion();
         const cleanList = currentSalespersonsDraft.map(s => ({

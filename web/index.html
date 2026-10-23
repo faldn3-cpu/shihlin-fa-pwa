@@ -84,7 +84,7 @@
         </button>
         <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
         <div class="drawer-divider"></div>
-        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.26 (PWA)</div>
+        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.27 (PWA)</div>
       </div>
     </nav>
   </div>
@@ -862,10 +862,25 @@
           </div>
         </div>
 
-        <!-- 1. 業務個人視角：三大產品線領先指標 (驅動目標) 管理 -->
+        <!-- 1. 業務人員切換列 (主管可快速切換 10 位同仁；一般業務鎖定個人) -->
+        <div class="driver-filter-container" id="containerDriverSalesFilter">
+          <div class="driver-filter-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              <label class="form-label" style="font-size: 0.95rem; font-weight: 700; margin: 0;">業務人員切換：</label>
+              <span id="badgeCurrentDriverViewingSales" class="traffic-light-badge" style="background:var(--bg-hover); color:var(--color-accent); font-weight:700; border:1px solid var(--border-light); font-size:0.8rem; padding:2px 8px;">曾維崧</span>
+            </div>
+            <span class="driver-filter-role-hint" id="hintDriverFilterRole" style="font-size: 0.78rem; color: var(--text-tertiary);">主管模式：點擊下方任一業務可立即巡視該員指標</span>
+          </div>
+          <div class="driver-sales-chips-bar" id="driverSalesFilterBar">
+            <!-- 由 JavaScript 動態渲染 10 位業務膠囊按鈕 -->
+          </div>
+        </div>
+
+        <!-- 2. 三大產品線領先指標 (驅動目標) 卡片區 -->
         <div class="form-group" style="margin-bottom: 1.5rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
-            <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;">三大產品線領先指標 (驅動目標) 管理</label>
+            <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;" id="labelDriverCardsTitle">三大產品線領先指標 (驅動目標)</label>
             <span style="font-size: 0.78rem; color: var(--text-tertiary);">防呆規則：執行滿 4 週 (28天) 方可申請調整</span>
           </div>
           <span class="autofill-hint" style="display: block; margin-bottom: 0.75rem;">
@@ -1223,13 +1238,13 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261023_v1_0_26"></script>
+  <script src="js/app.js?v=20261023_v1_0_27"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_26')
+        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_27')
           .then(function(reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

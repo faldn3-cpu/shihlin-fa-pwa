@@ -2136,6 +2136,70 @@ textarea.form-control {
   margin-top: 1px;
 }
 
+/* 業務人員切換膠囊按鈕列 (主管快速切換 10 人) */
+.driver-filter-container {
+  background: var(--bg-hover);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 1.25rem;
+}
+.driver-filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.driver-sales-chips-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.driver-sales-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-card, var(--bg-panel));
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+.driver-sales-chip:hover:not(.disabled-other) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  transform: translateY(-1px);
+}
+.driver-sales-chip.active {
+  background: var(--color-accent) !important;
+  color: #ffffff !important;
+  border-color: var(--color-accent) !important;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+.driver-sales-chip.disabled-other {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* 首頁領先指標展開卡片內之申請按鈕 */
+.btn-driver-apply-home {
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+.btn-driver-apply-home:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
 /* 設定頁面驅動指標管理與主管審核樣式 */
 .driver-mgmt-grid {
   display: grid;

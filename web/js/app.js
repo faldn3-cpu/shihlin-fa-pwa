@@ -152,9 +152,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (activePanel === panelDriverMgmt) {
         const curSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
-        loadAndRenderDriverMetrics(curSales);
-        renderManagerReviewPanel(curSales);
-        updateManagerUIVisibility(curSales);
+        currentViewingDriverSales = currentViewingDriverSales || curSales;
+        renderDriverManagementPage(currentViewingDriverSales);
       }
     }
     closeDrawer();
@@ -829,8 +828,10 @@ document.addEventListener("DOMContentLoaded", () => {
       selectActiveSales.addEventListener("change", (e) => {
         const sName = e.target.value;
         localStorage.setItem("shihlin_pwa_active_sales", sName);
+        currentViewingDriverSales = sName;
         updateActiveSalesUI(sName);
         updateManagerUIVisibility(sName);
+        loadAndRenderDriverMetrics(sName);
       });
     }
     updateActiveSalesUI(savedSales);
@@ -3119,7 +3120,101 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem(key, JSON.stringify(store));
   }
 
-  // 載入並渲染驅動目標
+  let currentViewingDriverSales = null;
+
+  // 業務人員快速切換膠囊按鈕列 (主管巡視 10 位同仁 / 一般業務鎖定個人)
+  function renderDriverSalesFilterBar(viewingSales, loggedInSales, isManager) {
+    const container = document.getElementById("driverSalesFilterBar");
+    const hint = document.getElementById("hintDriverFilterRole");
+    if (!container) return;
+
+    const allSales = getOrderedSalespersons();
+
+    if (hint) {
+      if (isManager) {
+        hint.innerText = "主管模式：點選任一同仁姓名，即可立即巡視其專屬三大產品線指標";
+        hint.style.color = "var(--color-accent)";
+      } else {
+        hint.innerText = "一般業務模式：已鎖定個人專屬指標檢視";
+        hint.style.color = "var(--text-tertiary)";
+      }
+    }
+
+    container.innerHTML = allSales.map(s => {
+      const isSelected = (s.name === viewingSales);
+      const isSelf = (s.name === loggedInSales);
+      let classes = "driver-sales-chip";
+      let title = "";
+
+      if (isSelected) classes += " active";
+      if (!isManager && !isSelf) {
+        classes += " disabled-other";
+        title = "一般業務僅可檢視個人指標";
+      }
+
+      return `
+        <button type="button" class="${classes}" data-sales="${escapeHtml(s.name)}" title="${title}">
+          <span>${escapeHtml(s.name)}</span>
+          ${isSelf ? '<span style="font-size:0.7rem; opacity:0.85;">(我)</span>' : ''}
+        </button>
+      `;
+    }).join("");
+
+    container.querySelectorAll(".driver-sales-chip").forEach(btn => {
+      btn.onclick = () => {
+        const target = btn.getAttribute("data-sales");
+        if (!isManager && target !== loggedInSales) return;
+        renderDriverManagementPage(target);
+      };
+    });
+  }
+
+  // 渲染領先指標管理與審核專頁
+  async function renderDriverManagementPage(targetSalesName) {
+    const curSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+    const isMgr = isSalesManager(curSales);
+    const viewingSales = targetSalesName || curSales;
+    currentViewingDriverSales = viewingSales;
+
+    // 1. 渲染切換膠囊列
+    renderDriverSalesFilterBar(viewingSales, curSales, isMgr);
+
+    // 2. 更新頂部徽章與卡片標題
+    const badgeViewing = document.getElementById("badgeCurrentDriverViewingSales");
+    if (badgeViewing) badgeViewing.innerText = viewingSales;
+
+    const labelTitle = document.getElementById("labelDriverCardsTitle");
+    if (labelTitle) {
+      labelTitle.innerText = `${viewingSales} 的三大產品線領先指標 (驅動目標)`;
+    }
+
+    // 3. 向後端請求該業務員的領先指標
+    let drivers = [];
+    try {
+      const res = await fetch(`/api/scoreboard/drivers?sales_name=${encodeURIComponent(viewingSales)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === "success" && Array.isArray(data.drivers)) {
+          drivers = data.drivers;
+        }
+      }
+    } catch (err) {
+      console.log("[Drivers] 後端連線備援，切換至本地快取：", err.message);
+    }
+
+    if (!drivers || drivers.length === 0) {
+      drivers = getLocalDriverMetrics(viewingSales);
+    }
+
+    // 4. 渲染 3 張產品線管理卡片
+    renderSettingsDriverManagement(viewingSales, drivers);
+
+    // 5. 渲染主管審核專區
+    renderManagerReviewPanel(curSales);
+    updateManagerUIVisibility(curSales);
+  }
+
+  // 載入並渲染驅動目標 (首頁戰情看板專用)
   async function loadAndRenderDriverMetrics(salesName) {
     const sName = salesName || localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
     let drivers = [];
@@ -3141,19 +3236,17 @@ document.addEventListener("DOMContentLoaded", () => {
       drivers = getLocalDriverMetrics(sName);
     }
 
-    // 渲染三大產品線折疊抽屜
+    // 渲染三大產品線折疊抽屜 (首頁)
     renderDriverDrawer("士林伺服", "drawerDriverLEB", drivers);
     renderDriverDrawer("士林變頻器", "drawerDriverLNH", drivers);
     renderDriverDrawer("士林PLC", "drawerDriverPLC", drivers);
 
-    // 同步渲染設定頁面的個人指標管理卡片
-    renderSettingsDriverManagement(sName, drivers);
-
-    // 若當前業務員為主管 (曾維崧、曾仁君、張何達)，同步渲染審核面板
-    renderManagerReviewPanel(sName);
+    // 同步渲染管理頁面
+    const viewingSales = currentViewingDriverSales || sName;
+    renderDriverManagementPage(viewingSales);
   }
 
-  // 渲染單一抽屜內容
+  // 渲染單一抽屜內容 (首頁三大產品線領先指標卡片)
   function renderDriverDrawer(productLine, drawerId, drivers) {
     const drawerEl = document.getElementById(drawerId);
     if (!drawerEl) return;
@@ -3192,8 +3285,29 @@ document.addEventListener("DOMContentLoaded", () => {
           <span>始於：${escapeHtml(d.start_date || '')}</span>
           <span>${d.can_change ? '<span style="color:#059669; font-weight:600;">已執行滿 4 週 (可微調)</span>' : `<span style="color:#dc2626; font-weight:600;">已執行 ${d.days_active} 天 (尚需 ${d.days_remaining} 天滿 4 週)</span>`}</span>
         </div>
+        <div style="margin-top:6px;">
+          ${d.can_change ? `
+            <button type="button" class="btn btn-primary btn-sm btn-driver-apply-home" style="width:100%; font-size:0.78rem; padding:3px 6px;" data-id="${d.id}" data-product="${escapeHtml(d.product_line)}" data-name="${escapeHtml(d.driver_name)}">
+              申請調整指標 (滿 4 週)
+            </button>
+          ` : `
+            <button type="button" class="btn btn-secondary btn-sm" disabled style="width:100%; font-size:0.78rem; padding:3px 6px; opacity:0.6; cursor:not-allowed;" title="執行未滿 4 週，尚需 ${d.days_remaining} 天">
+              未滿 4 週 (尚需 ${d.days_remaining} 天)
+            </button>
+          `}
+        </div>
       </div>
     `;
+
+    // 綁定首頁卡片內之申請調整指標按鈕
+    drawerEl.querySelectorAll(".btn-driver-apply-home").forEach(btn => {
+      btn.onclick = () => {
+        const dId = btn.getAttribute("data-id");
+        const pLine = btn.getAttribute("data-product");
+        const oName = btn.getAttribute("data-name");
+        openDriverApplyModal(dId, pLine, oName);
+      };
+    });
   }
 
   // 1. 綁定附圖一紅框處「單一立體切換按鈕」 (區域目標 ⮂ 個人目標)
@@ -3484,6 +3598,9 @@ document.addEventListener("DOMContentLoaded", () => {
       alert(`[審核成功] ${message}`);
       const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
       loadAndRenderDriverMetrics(activeSales);
+      if (currentViewingDriverSales) {
+        renderDriverManagementPage(currentViewingDriverSales);
+      }
     } else {
       alert(`[審核失敗] ${message}`);
     }
@@ -3535,6 +3652,9 @@ document.addEventListener("DOMContentLoaded", () => {
       btnRefresh.addEventListener("click", () => {
         const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
         renderManagerReviewPanel(activeSales);
+        if (currentViewingDriverSales) {
+          renderDriverManagementPage(currentViewingDriverSales);
+        }
       });
     }
 
@@ -3608,6 +3728,9 @@ document.addEventListener("DOMContentLoaded", () => {
           alert(`[申請成功] ${message}`);
           closeDriverApplyModal();
           loadAndRenderDriverMetrics(activeSales);
+          if (currentViewingDriverSales) {
+            renderDriverManagementPage(currentViewingDriverSales);
+          }
         } else {
           alert(`[無法申請] ${message}`);
         }

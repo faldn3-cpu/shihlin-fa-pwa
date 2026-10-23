@@ -84,7 +84,7 @@
         </button>
         <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
         <div class="drawer-divider"></div>
-        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.16 (PWA)</div>
+        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.17 (PWA)</div>
       </div>
     </nav>
   </div>
@@ -570,7 +570,7 @@
           <div class="form-group">
             <label class="form-label" for="selectThemeMode">外觀顯示模式</label>
             <select id="selectThemeMode" class="form-control">
-              <option value="auto">跟隨系統 (裝置預設)</option>
+              <option value="auto">跟隨系統</option>
               <option value="light">淺色模式 (商務白)</option>
               <option value="dark">深色模式 (專業黑)</option>
             </select>
@@ -582,7 +582,7 @@
             <label class="form-label" for="selectSystemFont">系統字型</label>
             <select id="selectSystemFont" class="form-control">
               <option value="jhenghei" selected>微軟正黑體 (Microsoft JhengHei)</option>
-              <option value="system">系統預設無襯線字型 (System Sans-Serif)</option>
+              <option value="system">無襯線字型 (System Sans-Serif)</option>
             </select>
             <span class="autofill-hint">全站遵循微軟 Windows 11 / Office 標準字型規範</span>
           </div>
@@ -592,7 +592,7 @@
             <label class="form-label" for="selectFontSize">字級大小</label>
             <select id="selectFontSize" class="form-control">
               <option value="11pt">精簡模式 (11pt)</option>
-              <option value="12pt" selected>標準模式 (12pt - 系統預設)</option>
+              <option value="12pt" selected>標準模式 (12pt)</option>
               <option value="13pt">舒適模式 (13pt)</option>
               <option value="14pt">放大模式 (14pt)</option>
             </select>
@@ -603,10 +603,10 @@
           <div class="form-group">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
               <label class="form-label" for="selectActiveRegion" style="font-weight: 700; margin: 0;">所屬營運區域</label>
-              <button type="button" id="btnSaveDefaultRegion" class="btn btn-primary" style="padding: 3px 10px; font-size: 0.8rem;">💾 保存為預設區域</button>
+              <button type="button" id="btnSaveDefaultRegion" class="fluent-btn primary" style="display:inline-flex; align-items:center; gap:4px; padding:3px 10px; font-size:0.8rem;"><svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>保存</button>
             </div>
             <select id="selectActiveRegion" class="form-control">
-              <option value="北區" selected>北區營業處 (系統預設)</option>
+              <option value="北區" selected>北區營業處</option>
               <option value="中區">中區營業處</option>
               <option value="南區">南區營業處</option>
             </select>
@@ -621,24 +621,33 @@
             </select>
             <span class="autofill-hint">切換業務後，首頁將即刻切換為該人員的個人目標與自製品出貨實績（曾維崧直接看北區戰況）</span>
           </div>
+        </div>
 
-          <!-- 業務人員順序排序設定表 (全系統業務人員順序統一標準表) -->
+          <!-- 業務人員名冊與權限設定總表 (二合一整合表) -->
           <div class="form-group" style="margin-top: 1.5rem; border-top: 1px solid var(--border-light); padding-top: 1.25rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
-              <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;">業務人員順序排序設定表</label>
-              <button type="button" id="btnSaveDefaultSalesOrder" class="btn btn-primary" style="padding: 3px 10px; font-size: 0.8rem;">💾 保存為預設順序</button>
+              <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;">業務人員與權限設定</label>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" id="btnAddSalesperson" class="fluent-btn" style="display:inline-flex; align-items:center; gap:4px; padding:4px 12px; font-size:0.85rem;">
+                  <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                  新增人員
+                </button>
+                <button type="button" id="btnSaveSalespersonSettings" class="fluent-btn primary" style="display:inline-flex; align-items:center; gap:4px; padding:4px 14px; font-size:0.85rem;">
+                  <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                  保存
+                </button>
+              </div>
             </div>
-            <span class="autofill-hint" style="display: block; margin-bottom: 0.75rem;">
-              全系統所有業務人員下拉選單與列表皆統一參照此表。點擊「上移 ⬆」或「下移 ⬇」調整後，點擊「保存為預設順序」即可永久固定為系統預設排序。
-            </span>
-            <div style="border: 1px solid var(--border-light); border-radius: 6px; overflow: hidden; max-height: 420px; overflow-y: auto;">
+            <div style="border: 1px solid var(--border-light); border-radius: 6px; overflow: hidden; max-height: 480px; overflow-y: auto;">
               <table class="sales-order-table" id="tableSalesOrder">
                 <thead>
                   <tr>
-                    <th style="width: 55px; text-align: center;">序號</th>
-                    <th style="width: 120px;">姓名</th>
-                    <th style="width: 150px;">組別 / 類別</th>
-                    <th style="text-align: center; width: 140px;">順序調整</th>
+                    <th style="width: 50px; text-align: center;">序號</th>
+                    <th style="width: 130px;">姓名</th>
+                    <th style="width: 110px; text-align: center;">通路</th>
+                    <th style="width: 120px; text-align: center;">數據管理權限</th>
+                    <th style="width: 130px; text-align: center;">順序調整</th>
+                    <th style="width: 85px; text-align: center;">人員增減</th>
                   </tr>
                 </thead>
                 <tbody id="tbodySalesOrder">
@@ -648,24 +657,7 @@
             </div>
           </div>
 
-          <!-- 數據管理權限設定 (業績數據資料庫 ＆ 領先指標審核共用) -->
-          <div class="form-group" style="margin-top: 1.5rem; border-top: 1px solid var(--border-light); padding-top: 1.25rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-                <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;">數據管理權限</label>
-              </div>
-              <button type="button" id="btnSaveDefaultManagers" class="btn btn-primary" style="padding: 3px 10px; font-size: 0.8rem;">💾 保存為預設權限</button>
-            </div>
-            <span class="autofill-hint" style="display: block; margin-bottom: 0.75rem;">
-              勾選具備數據管理權限之業務主管與人員。經授權者可使用「業績數據資料庫」貼入最新戰情數據，並在「領先指標設定與審核」頁面進行指標變更審核。
-            </span>
-            <div id="containerManagerCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; padding: 12px; background: var(--bg-hover); border-radius: 6px; border: 1px solid var(--border-light);">
-              <!-- 由 JavaScript 動態生成業務人員 Checkbox -->
-            </div>
-          </div>
-          <div class="settings-version-tag">系統版本：v1.0.16 (PWA 離線快取版)</div>
-        </div>
+          <div class="settings-version-tag">系統版本：v1.0.17 (PWA 離線快取版)</div>
       </div>
     </section>
 
@@ -734,7 +726,7 @@
               <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/>
             </svg>
             <div>
-              <h2 class="card-title">業績數據資料庫 (左右雙 Excel 接收表格)</h2>
+              <h2 class="card-title">業績數據資料庫</h2>
             </div>
           </div>
           <div style="display:flex; gap:8px;">
@@ -1048,13 +1040,13 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261023_v1_0_16"></script>
+  <script src="js/app.js?v=20261023_v1_0_17"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_16')
+        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_17')
           .then(function(reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

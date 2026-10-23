@@ -320,47 +320,101 @@ document.addEventListener("DOMContentLoaded", () => {
     const selectActiveSales = document.getElementById("selectActiveSales");
     if (!selectActiveSales) return;
     const currentVal = selectActiveSales.value || localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
-    const currentRegion = getCurrentRegion();
     const list = getOrderedSalespersons();
     selectActiveSales.innerHTML = "";
     list.forEach(sales => {
       const opt = document.createElement("option");
       opt.value = sales.name;
-      opt.innerText = sales.name === "曾維崧" ? `${sales.name} (${currentRegion}總覽)` : `${sales.name} (${sales.role || sales.group || "直賣"})`;
+      opt.innerText = sales.name;
       selectActiveSales.appendChild(opt);
     });
     const exists = list.some(s => s.name === currentVal);
     selectActiveSales.value = exists ? currentVal : (list[0] && list[0].name) || "曾維崧";
   }
 
-  // 渲染系統偏好設定中的業務人員順序排序維護表
+  // 記憶體編輯工作草稿 (未按「保存」前不覆寫本地永久預設)
+  let currentSalespersonsDraft = null;
+
+  function initSalespersonsDraft() {
+    const list = getOrderedSalespersons();
+    const mgrs = getManagerSalesList();
+    currentSalespersonsDraft = list.map(s => {
+      let grp = s.group || "";
+      if (grp === "主管") {
+        if (s.role && s.role.includes("直賣")) grp = "直賣";
+        else if (s.role && s.role.includes("經銷")) grp = "經銷";
+        else grp = "";
+      } else if (!grp && s.role) {
+        if (s.role.includes("直賣")) grp = "直賣";
+        else if (s.role.includes("經銷")) grp = "經銷";
+      }
+      if (s.name === "曾維崧") grp = "";
+      return {
+        id: s.id || s.name,
+        name: s.name,
+        group: grp,
+        isManager: mgrs.includes(s.name)
+      };
+    });
+  }
+
+  // 渲染業務人員與權限設定總表 (二合一整合表：通路下拉、純Checkbox、上移下移、人員增減刪除)
   function renderSalespersonOrderTable() {
     const tbody = document.getElementById("tbodySalesOrder");
     if (!tbody) return;
-    const currentRegion = getCurrentRegion();
-    const list = getOrderedSalespersons();
+
+    if (!currentSalespersonsDraft) {
+      initSalespersonsDraft();
+    }
+
     tbody.innerHTML = "";
-    list.forEach((sales, idx) => {
+    currentSalespersonsDraft.forEach((sales, idx) => {
       const tr = document.createElement("tr");
 
+      // 1. 序號
       const tdIndex = document.createElement("td");
       tdIndex.style.textAlign = "center";
       tdIndex.style.fontWeight = "600";
       tdIndex.innerText = (idx + 1).toString();
 
+      // 2. 姓名
       const tdName = document.createElement("td");
       tdName.style.fontWeight = "600";
       tdName.innerText = sales.name;
 
-      const tdRole = document.createElement("td");
-      let roleText = sales.role || sales.group || "直賣";
-      if (roleText.includes("全區")) {
-        roleText = roleText.replace(/全區/g, currentRegion);
-      }
-      tdRole.innerText = roleText;
+      // 3. 通路 (直賣 / 經銷 / 空白 下拉選單)
+      const tdGroup = document.createElement("td");
+      tdGroup.style.textAlign = "center";
+      const selGroup = document.createElement("select");
+      selGroup.className = "sales-group-select";
+      selGroup.innerHTML = `
+        <option value="直賣" ${sales.group === "直賣" ? "selected" : ""}>直賣</option>
+        <option value="經銷" ${sales.group === "經銷" ? "selected" : ""}>經銷</option>
+        <option value="" ${(!sales.group || sales.group === "空白") ? "selected" : ""}>空白</option>
+      `;
+      selGroup.onchange = (e) => {
+        sales.group = e.target.value;
+      };
+      tdGroup.appendChild(selGroup);
 
-      const tdActions = document.createElement("td");
-      tdActions.style.textAlign = "center";
+      // 4. 數據管理權限 (純 Checkbox 置中，無多餘文字)
+      const tdMgr = document.createElement("td");
+      tdMgr.style.textAlign = "center";
+      const chkMgr = document.createElement("input");
+      chkMgr.type = "checkbox";
+      chkMgr.className = "chk-manager-sales";
+      chkMgr.checked = !!sales.isManager;
+      chkMgr.style.width = "16px";
+      chkMgr.style.height = "16px";
+      chkMgr.style.cursor = "pointer";
+      chkMgr.onchange = (e) => {
+        sales.isManager = e.target.checked;
+      };
+      tdMgr.appendChild(chkMgr);
+
+      // 5. 順序調整 (上移 / 下移)
+      const tdOrder = document.createElement("td");
+      tdOrder.style.textAlign = "center";
 
       const btnUp = document.createElement("button");
       btnUp.type = "button";
@@ -369,11 +423,10 @@ document.addEventListener("DOMContentLoaded", () => {
       btnUp.disabled = (idx === 0);
       btnUp.onclick = () => {
         if (idx > 0) {
-          const newList = [...list];
-          const temp = newList[idx - 1];
-          newList[idx - 1] = newList[idx];
-          newList[idx] = temp;
-          saveSalespersonsOrder(newList);
+          const temp = currentSalespersonsDraft[idx - 1];
+          currentSalespersonsDraft[idx - 1] = currentSalespersonsDraft[idx];
+          currentSalespersonsDraft[idx] = temp;
+          renderSalespersonOrderTable();
         }
       };
 
@@ -381,24 +434,45 @@ document.addEventListener("DOMContentLoaded", () => {
       btnDown.type = "button";
       btnDown.className = "btn-order-move";
       btnDown.innerText = "下移 ⬇";
-      btnDown.disabled = (idx === list.length - 1);
+      btnDown.disabled = (idx === currentSalespersonsDraft.length - 1);
       btnDown.onclick = () => {
-        if (idx < list.length - 1) {
-          const newList = [...list];
-          const temp = newList[idx + 1];
-          newList[idx + 1] = newList[idx];
-          newList[idx] = temp;
-          saveSalespersonsOrder(newList);
+        if (idx < currentSalespersonsDraft.length - 1) {
+          const temp = currentSalespersonsDraft[idx + 1];
+          currentSalespersonsDraft[idx + 1] = currentSalespersonsDraft[idx];
+          currentSalespersonsDraft[idx] = temp;
+          renderSalespersonOrderTable();
         }
       };
 
-      tdActions.appendChild(btnUp);
-      tdActions.appendChild(btnDown);
+      tdOrder.appendChild(btnUp);
+      tdOrder.appendChild(btnDown);
+
+      // 6. 人員增減 (刪除按鈕，附帶警示確認)
+      const tdActions = document.createElement("td");
+      tdActions.style.textAlign = "center";
+      const btnDel = document.createElement("button");
+      btnDel.type = "button";
+      btnDel.className = "btn-order-delete";
+      btnDel.innerHTML = `<svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> 刪除`;
+      btnDel.onclick = () => {
+        if (currentSalespersonsDraft.length <= 1) {
+          alert("系統名冊至少需保留一名業務人員，無法刪除！");
+          return;
+        }
+        if (confirm(`確定要從名冊中刪除業務人員【${sales.name}】嗎？\n\n(注意：請於操作後點擊右上角「保存」按鈕確認生效)`)) {
+          currentSalespersonsDraft.splice(idx, 1);
+          renderSalespersonOrderTable();
+        }
+      };
+      tdActions.appendChild(btnDel);
 
       tr.appendChild(tdIndex);
       tr.appendChild(tdName);
-      tr.appendChild(tdRole);
+      tr.appendChild(tdGroup);
+      tr.appendChild(tdMgr);
+      tr.appendChild(tdOrder);
       tr.appendChild(tdActions);
+
       tbody.appendChild(tr);
     });
   }
@@ -485,39 +559,71 @@ document.addEventListener("DOMContentLoaded", () => {
     updateActiveSalesUI(savedSales);
     updateManagerUIVisibility(savedSales);
 
-    // 6. 業務人員排序保存按鈕 (已移除恢復原廠按鈕)
-    const btnSaveDefaultSalesOrder = document.getElementById("btnSaveDefaultSalesOrder");
-    if (btnSaveDefaultSalesOrder) {
-      btnSaveDefaultSalesOrder.addEventListener("click", () => {
-        const currentList = getOrderedSalespersons();
-        localStorage.setItem("shihlin_salespersons_default_order", JSON.stringify(currentList));
-        localStorage.setItem("shihlin_salespersons_order", JSON.stringify(currentList));
-        renderManagerCheckboxes(); // 同步刷新管理員勾選清單順序
-        alert("[成功保存] 已將目前的業務人員排列順序永久保存為系統預設排序！");
+    // 6. 二合一整合總表：新增人員與保存設定按鈕
+    const btnAddSalesperson = document.getElementById("btnAddSalesperson");
+    if (btnAddSalesperson) {
+      btnAddSalesperson.addEventListener("click", () => {
+        if (!currentSalespersonsDraft) initSalespersonsDraft();
+        const inputName = prompt("請輸入新增業務人員姓名：");
+        if (!inputName || !inputName.trim()) return;
+        const cleanName = inputName.trim();
+        if (currentSalespersonsDraft.some(s => s.name === cleanName)) {
+          alert(`業務人員【${cleanName}】已在名冊中，無法重複新增！`);
+          return;
+        }
+        currentSalespersonsDraft.push({
+          id: cleanName,
+          name: cleanName,
+          group: "直賣",
+          isManager: false
+        });
+        renderSalespersonOrderTable();
       });
     }
 
-    // 7. 數據管理權限保存按鈕
-    renderManagerCheckboxes();
-    const btnSaveDefaultManagers = document.getElementById("btnSaveDefaultManagers");
-    if (btnSaveDefaultManagers) {
-      btnSaveDefaultManagers.addEventListener("click", () => {
-        const checkboxes = document.querySelectorAll(".chk-manager-sales:checked");
-        const selected = Array.from(checkboxes).map(c => c.value);
-        if (selected.length === 0) {
-          alert("請至少保留勾選一位具備數據管理權限之人員！");
+    const btnSaveSalespersonSettings = document.getElementById("btnSaveSalespersonSettings");
+    if (btnSaveSalespersonSettings) {
+      btnSaveSalespersonSettings.addEventListener("click", () => {
+        if (!currentSalespersonsDraft || currentSalespersonsDraft.length === 0) {
+          alert("名冊人員不能為空！");
           return;
         }
-        localStorage.setItem("shihlin_pwa_manager_sales", JSON.stringify(selected));
-        const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
-        updateManagerUIVisibility(activeSales);
-        renderManagerReviewPanel(activeSales);
-        alert(`[成功保存] 已將【${selected.join("、")}】永久保存為「數據管理權限」名單！`);
+
+        const mgrList = currentSalespersonsDraft.filter(s => s.isManager).map(s => s.name);
+        if (mgrList.length === 0) {
+          alert("請至少勾選一位具備數據管理權限之人員！");
+          return;
+        }
+
+        const curRegion = getCurrentRegion();
+        const cleanList = currentSalespersonsDraft.map(s => ({
+          id: s.id || s.name,
+          name: s.name,
+          group: s.group || "",
+          role: s.name === "曾維崧" ? `${curRegion}總管` : (s.group || "直賣")
+        }));
+
+        localStorage.setItem("shihlin_salespersons_default_order", JSON.stringify(cleanList));
+        localStorage.setItem("shihlin_salespersons_order", JSON.stringify(cleanList));
+        localStorage.setItem("shihlin_pwa_manager_sales", JSON.stringify(mgrList));
+
+        // 同步更新「目前業務身份」選單 (若被刪除者為當前登入者，回退至第1位)
+        const curActive = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+        const stillExists = cleanList.some(s => s.name === curActive);
+        const finalActive = stillExists ? curActive : cleanList[0].name;
+        localStorage.setItem("shihlin_pwa_active_sales", finalActive);
+
+        renderActiveSalesSelectOptions();
+        updateActiveSalesUI(finalActive);
+        updateManagerUIVisibility(finalActive);
+        renderManagerReviewPanel(finalActive);
+        renderHomeDashboard(finalActive);
+
+        alert("[保存成功] 業務人員名冊與數據管理權限已同步更新生效！");
       });
     }
   }
 
-  // 取得目前設定的營運區域 (預設為北區)
   function getCurrentRegion() {
     return localStorage.getItem("shihlin_pwa_current_region") || localStorage.getItem("shihlin_pwa_default_region") || "北區";
   }

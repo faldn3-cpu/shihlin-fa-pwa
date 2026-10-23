@@ -2174,3 +2174,42 @@ textarea.form-control {
   width: 16px;
   height: 16px;
 }
+
+
+/* 業務人員刪除按鈕 (Office 簡約單色樣式) */
+.btn-order-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 0.78rem;
+  border: 1px solid var(--border-light, #cbd5e1);
+  background: var(--bg-card, #ffffff);
+  color: var(--color-danger, #d83b01);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin: 0 2px;
+}
+.btn-order-delete:hover:not(:disabled) {
+  background: var(--color-danger, #d83b01);
+  color: #fff;
+  border-color: var(--color-danger, #d83b01);
+}
+.sales-group-select {
+  padding: 2px 6px;
+  font-size: 0.82rem;
+  border: 1px solid var(--border-light, #cbd5e1);
+  border-radius: 4px;
+  background: var(--bg-card, #ffffff);
+  color: var(--text-primary);
+  font-family: inherit;
+}
+
+.sales-order-table {
+  min-width: 580px !important;
+}
+.sales-order-table th,
+.sales-order-table td {
+  white-space: nowrap !important;
+}

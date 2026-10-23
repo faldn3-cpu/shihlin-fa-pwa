@@ -145,6 +145,19 @@ class DriverReviewRequest(BaseModel):
     comment: Optional[str] = ""
 
 
+class DriverReportActualRequest(BaseModel):
+    driver_id: int
+    actual_val: float
+
+
+class DriverUpdateSettingsRequest(BaseModel):
+    driver_id: int
+    driver_name: str
+    target_val: float
+    unit: str = "次"
+    period_type: str = "週"
+
+
 # ==============================================================================
 # API 路由實作
 # ==============================================================================
@@ -329,6 +342,36 @@ def api_get_driver_requests(
     return {
         "status": "success",
         "requests": requests
+    }
+
+
+@app.post("/api/scoreboard/drivers/report-actual")
+def api_report_driver_actual(req_data: DriverReportActualRequest):
+    """業務登記前線最新實績數值 (actual_val)"""
+    ok, msg = data_access.record_driver_actual(req_data.driver_id, req_data.actual_val)
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {
+        "status": "success",
+        "message": msg
+    }
+
+
+@app.post("/api/scoreboard/drivers/update-settings")
+def api_update_driver_settings(req_data: DriverUpdateSettingsRequest):
+    """直接設定或編輯領先指標內容 (包含行動名稱、目標數值、單位與週期)"""
+    ok, msg = data_access.update_driver_settings(
+        req_data.driver_id,
+        driver_name=req_data.driver_name,
+        target_val=req_data.target_val,
+        unit=req_data.unit,
+        period_type=req_data.period_type
+    )
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {
+        "status": "success",
+        "message": msg
     }
 
 

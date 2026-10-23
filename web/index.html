@@ -84,7 +84,7 @@
         </button>
         <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
         <div class="drawer-divider"></div>
-        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.27 (PWA)</div>
+        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.28 (PWA)</div>
       </div>
     </nav>
   </div>
@@ -1237,14 +1237,137 @@
     </div>
   </div>
 
+  <!-- 領先指標：回報前線實績對話框 Modal (Zero Emoji 規範) -->
+  <div class="fluent-modal-overlay" id="modalDriverReportActual" style="display: none;">
+    <div class="fluent-modal-dialog">
+      <div class="fluent-modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+          </svg>
+          <h3 class="fluent-modal-title">回報前線實績</h3>
+        </div>
+        <button type="button" id="btnCloseDriverReportModal" class="kpi-drawer-toggle" title="關閉">
+          <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+      <form id="formDriverReportActual">
+        <input type="hidden" id="reportDriverId" value="" />
+        <div class="fluent-modal-body">
+          <div class="form-group">
+            <label class="form-label">產品線</label>
+            <input type="text" id="reportProductLine" class="form-control" readonly style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">指標行動名稱</label>
+            <input type="text" id="reportDriverName" class="form-control" readonly style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
+          </div>
+          <div style="display: flex; gap: 12px;">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">目標數值</label>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <input type="text" id="reportTargetVal" class="form-control" readonly style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
+                <span id="reportUnitText1" style="font-size: 0.85rem; color: var(--text-secondary); min-width: 24px;">場</span>
+              </div>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="reportActualVal">目前累計完成實績 <span style="color:var(--color-danger, #ef4444);">*</span></label>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <input type="number" id="reportActualVal" class="form-control" step="0.5" min="0" required />
+                <span id="reportUnitText2" style="font-size: 0.85rem; color: var(--text-secondary); min-width: 24px;">場</span>
+              </div>
+            </div>
+          </div>
+          <!-- 快捷 +1 鍵 -->
+          <div style="display: flex; gap: 8px; margin-top: 4px;">
+            <button type="button" id="btnQuickAddOne" class="btn btn-secondary btn-sm" style="font-size: 0.8rem; padding: 4px 10px;">
+              <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+              <span>快速 +1</span>
+            </button>
+            <span class="autofill-hint" style="margin: 0; align-self: center;">點擊可直接在目前實績上累加 1 次</span>
+          </div>
+        </div>
+        <div class="fluent-modal-footer">
+          <button type="button" id="btnCancelDriverReport" class="btn btn-secondary">取消</button>
+          <button type="submit" id="btnSubmitDriverReport" class="btn btn-primary">
+            <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            <span>確認登記實績</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 領先指標：直接設定與編輯對話框 Modal (Zero Emoji 規範) -->
+  <div class="fluent-modal-overlay" id="modalDriverEditSettings" style="display: none;">
+    <div class="fluent-modal-dialog">
+      <div class="fluent-modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+          </svg>
+          <h3 class="fluent-modal-title">設定領先指標 (驅動目標)</h3>
+        </div>
+        <button type="button" id="btnCloseDriverEditModal" class="kpi-drawer-toggle" title="關閉">
+          <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+      <form id="formDriverEditSettings">
+        <input type="hidden" id="editDriverId" value="" />
+        <div class="fluent-modal-body">
+          <div class="form-group">
+            <label class="form-label">產品線</label>
+            <input type="text" id="editProductLine" class="form-control" readonly style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editDriverName">領先指標行動名稱 <span style="color:var(--color-danger, #ef4444);">*</span></label>
+            <input type="text" id="editDriverName" class="form-control" placeholder="例：半導體設備伺服實機試機與規格制定" required />
+            <span class="autofill-hint">請填寫具體、可落實、可衡量的業務前線行動</span>
+          </div>
+          <div style="display: flex; gap: 12px;">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="editTargetVal">目標數值 <span style="color:var(--color-danger, #ef4444);">*</span></label>
+              <input type="number" id="editTargetVal" class="form-control" step="0.5" min="0.1" placeholder="例：4" required />
+            </div>
+            <div class="form-group" style="width: 120px;">
+              <label class="form-label" for="editUnit">單位 <span style="color:var(--color-danger, #ef4444);">*</span></label>
+              <select id="editUnit" class="form-control">
+                <option value="場" selected>場</option>
+                <option value="次">次</option>
+                <option value="家">家</option>
+                <option value="案">案</option>
+                <option value="組">組</option>
+                <option value="通">通</option>
+              </select>
+            </div>
+            <div class="form-group" style="width: 110px;">
+              <label class="form-label" for="editPeriodType">週期 <span style="color:var(--color-danger, #ef4444);">*</span></label>
+              <select id="editPeriodType" class="form-control">
+                <option value="週" selected>週</option>
+                <option value="月">月</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="fluent-modal-footer">
+          <button type="button" id="btnCancelDriverEdit" class="btn btn-secondary">取消</button>
+          <button type="submit" id="btnSubmitDriverEdit" class="btn btn-primary">
+            <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+            <span>保存指標設定</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261023_v1_0_27"></script>
+  <script src="js/app.js?v=20261023_v1_0_28"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_27')
+        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_28')
           .then(function(reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

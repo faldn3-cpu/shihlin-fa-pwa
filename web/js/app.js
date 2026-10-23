@@ -3285,21 +3285,62 @@ document.addEventListener("DOMContentLoaded", () => {
           <span>始於：${escapeHtml(d.start_date || '')}</span>
           <span>${d.can_change ? '<span style="color:#059669; font-weight:600;">已執行滿 4 週 (可微調)</span>' : `<span style="color:#dc2626; font-weight:600;">已執行 ${d.days_active} 天 (尚需 ${d.days_remaining} 天滿 4 週)</span>`}</span>
         </div>
-        <div style="margin-top:6px;">
+        <div class="driver-card-action-bar">
+          <button type="button" class="btn btn-primary btn-sm btn-report-driver-actual"
+            data-id="${d.id}" data-product="${escapeHtml(d.product_line)}" data-name="${escapeHtml(d.driver_name)}"
+            data-target="${d.target_val}" data-actual="${d.actual_val}" data-unit="${escapeHtml(d.unit)}">
+            <svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+            <span>回報實績</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm btn-edit-driver-settings"
+            data-id="${d.id}" data-product="${escapeHtml(d.product_line)}" data-name="${escapeHtml(d.driver_name)}"
+            data-target="${d.target_val}" data-unit="${escapeHtml(d.unit)}" data-period="${escapeHtml(d.period_type || '週')}">
+            <svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            <span>設定指標</span>
+          </button>
           ${d.can_change ? `
-            <button type="button" class="btn btn-primary btn-sm btn-driver-apply-home" style="width:100%; font-size:0.78rem; padding:3px 6px;" data-id="${d.id}" data-product="${escapeHtml(d.product_line)}" data-name="${escapeHtml(d.driver_name)}">
-              申請調整指標 (滿 4 週)
+            <button type="button" class="btn btn-secondary btn-sm btn-driver-apply-home btn-change-span"
+              data-id="${d.id}" data-product="${escapeHtml(d.product_line)}" data-name="${escapeHtml(d.driver_name)}">
+              <svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+              <span>申請調整 (滿 4 週)</span>
             </button>
           ` : `
-            <button type="button" class="btn btn-secondary btn-sm" disabled style="width:100%; font-size:0.78rem; padding:3px 6px; opacity:0.6; cursor:not-allowed;" title="執行未滿 4 週，尚需 ${d.days_remaining} 天">
-              未滿 4 週 (尚需 ${d.days_remaining} 天)
+            <button type="button" class="btn btn-secondary btn-sm btn-change-span" disabled style="opacity:0.55; cursor:not-allowed;" title="執行未滿 4 週，尚需 ${d.days_remaining} 天">
+              <svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+              <span>未滿 4 週 (尚需 ${d.days_remaining} 天)</span>
             </button>
           `}
         </div>
       </div>
     `;
 
-    // 綁定首頁卡片內之申請調整指標按鈕
+    // 綁定首頁卡片內部之按鈕
+    drawerEl.querySelectorAll(".btn-report-driver-actual").forEach(btn => {
+      btn.onclick = () => {
+        openDriverReportActualModal(
+          btn.getAttribute("data-id"),
+          btn.getAttribute("data-product"),
+          btn.getAttribute("data-name"),
+          btn.getAttribute("data-target"),
+          btn.getAttribute("data-actual"),
+          btn.getAttribute("data-unit")
+        );
+      };
+    });
+
+    drawerEl.querySelectorAll(".btn-edit-driver-settings").forEach(btn => {
+      btn.onclick = () => {
+        openDriverEditSettingsModal(
+          btn.getAttribute("data-id"),
+          btn.getAttribute("data-product"),
+          btn.getAttribute("data-name"),
+          btn.getAttribute("data-target"),
+          btn.getAttribute("data-unit"),
+          btn.getAttribute("data-period")
+        );
+      };
+    });
+
     drawerEl.querySelectorAll(".btn-driver-apply-home").forEach(btn => {
       btn.onclick = () => {
         const dId = btn.getAttribute("data-id");
@@ -3418,14 +3459,29 @@ document.addEventListener("DOMContentLoaded", () => {
             <span>始於：${escapeHtml(d.start_date)}</span>
             ${d.can_change ? `<span style="color:#059669; font-weight:600;">已執行 ${d.days_active} 天 (滿 4 週)</span>` : `<span style="color:#dc2626; font-weight:600;">已執行 ${d.days_active} 天 (差 ${d.days_remaining} 天)</span>`}
           </div>
-          <div style="margin-top:6px;">
+          <div class="driver-card-action-bar">
+            <button type="button" class="btn btn-primary btn-sm btn-report-driver-actual"
+              data-id="${d.id}" data-product="${escapeHtml(d.product_line)}" data-name="${escapeHtml(d.driver_name)}"
+              data-target="${d.target_val}" data-actual="${d.actual_val}" data-unit="${escapeHtml(d.unit)}">
+              <svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+              <span>回報實績</span>
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm btn-edit-driver-settings"
+              data-id="${d.id}" data-product="${escapeHtml(d.product_line)}" data-name="${escapeHtml(d.driver_name)}"
+              data-target="${d.target_val}" data-unit="${escapeHtml(d.unit)}" data-period="${escapeHtml(d.period_type || '週')}">
+              <svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+              <span>設定指標</span>
+            </button>
             ${d.can_change ? `
-              <button type="button" class="btn btn-primary btn-sm btn-open-driver-modal" style="width:100%; font-size:0.82rem;" data-id="${d.id}" data-product="${escapeHtml(d.product_line)}" data-name="${escapeHtml(d.driver_name)}">
-                申請調整指標 (滿 4 週)
+              <button type="button" class="btn btn-secondary btn-sm btn-open-driver-modal btn-change-span"
+                data-id="${d.id}" data-product="${escapeHtml(d.product_line)}" data-name="${escapeHtml(d.driver_name)}">
+                <svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+                <span>申請調整 (滿 4 週)</span>
               </button>
             ` : `
-              <button type="button" class="btn btn-secondary btn-sm" disabled style="width:100%; font-size:0.82rem; opacity:0.6; cursor:not-allowed;" title="執行未滿 4 週，尚需 ${d.days_remaining} 天">
-                未滿 4 週 (尚需 ${d.days_remaining} 天)
+              <button type="button" class="btn btn-secondary btn-sm btn-change-span" disabled style="opacity:0.55; cursor:not-allowed;" title="執行未滿 4 週，尚需 ${d.days_remaining} 天">
+                <svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+                <span>未滿 4 週 (尚需 ${d.days_remaining} 天)</span>
               </button>
             `}
           </div>
@@ -3433,7 +3489,33 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }).join("");
 
-    // 綁定申請調整按鈕
+    // 綁定管理頁面卡片按鈕
+    gridEl.querySelectorAll(".btn-report-driver-actual").forEach(btn => {
+      btn.onclick = () => {
+        openDriverReportActualModal(
+          btn.getAttribute("data-id"),
+          btn.getAttribute("data-product"),
+          btn.getAttribute("data-name"),
+          btn.getAttribute("data-target"),
+          btn.getAttribute("data-actual"),
+          btn.getAttribute("data-unit")
+        );
+      };
+    });
+
+    gridEl.querySelectorAll(".btn-edit-driver-settings").forEach(btn => {
+      btn.onclick = () => {
+        openDriverEditSettingsModal(
+          btn.getAttribute("data-id"),
+          btn.getAttribute("data-product"),
+          btn.getAttribute("data-name"),
+          btn.getAttribute("data-target"),
+          btn.getAttribute("data-unit"),
+          btn.getAttribute("data-period")
+        );
+      };
+    });
+
     gridEl.querySelectorAll(".btn-open-driver-modal").forEach(btn => {
       btn.onclick = () => {
         const dId = btn.getAttribute("data-id");
@@ -3606,6 +3688,60 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // 實績回報彈窗控制
+  function openDriverReportActualModal(driverId, productLine, driverName, targetVal, currentActual, unit) {
+    const modal = document.getElementById("modalDriverReportActual");
+    const dIdEl = document.getElementById("reportDriverId");
+    const pLineEl = document.getElementById("reportProductLine");
+    const dNameEl = document.getElementById("reportDriverName");
+    const tValEl = document.getElementById("reportTargetVal");
+    const aValEl = document.getElementById("reportActualVal");
+    const untEl1 = document.getElementById("reportUnitText1");
+    const untEl2 = document.getElementById("reportUnitText2");
+
+    if (!modal) return;
+    if (dIdEl) dIdEl.value = driverId;
+    if (pLineEl) pLineEl.value = productLine;
+    if (dNameEl) dNameEl.value = driverName;
+    if (tValEl) tValEl.value = targetVal;
+    if (aValEl) aValEl.value = currentActual;
+    if (untEl1) untEl1.innerText = unit;
+    if (untEl2) untEl2.innerText = unit;
+
+    modal.style.display = "flex";
+  }
+
+  function closeDriverReportActualModal() {
+    const modal = document.getElementById("modalDriverReportActual");
+    if (modal) modal.style.display = "none";
+  }
+
+  // 指標設定編輯彈窗控制
+  function openDriverEditSettingsModal(driverId, productLine, driverName, targetVal, unit, periodType) {
+    const modal = document.getElementById("modalDriverEditSettings");
+    const dIdEl = document.getElementById("editDriverId");
+    const pLineEl = document.getElementById("editProductLine");
+    const dNameEl = document.getElementById("editDriverName");
+    const tValEl = document.getElementById("editTargetVal");
+    const untEl = document.getElementById("editUnit");
+    const pTypeEl = document.getElementById("editPeriodType");
+
+    if (!modal) return;
+    if (dIdEl) dIdEl.value = driverId;
+    if (pLineEl) pLineEl.value = productLine;
+    if (dNameEl) dNameEl.value = driverName;
+    if (tValEl) tValEl.value = targetVal;
+    if (untEl) untEl.value = unit || "場";
+    if (pTypeEl) pTypeEl.value = periodType || "週";
+
+    modal.style.display = "flex";
+  }
+
+  function closeDriverEditSettingsModal() {
+    const modal = document.getElementById("modalDriverEditSettings");
+    if (modal) modal.style.display = "none";
+  }
+
   // 申請彈窗控制
   function openDriverApplyModal(driverId, productLine, currentName) {
     const modal = document.getElementById("modalDriverChangeApply");
@@ -3632,6 +3768,87 @@ document.addEventListener("DOMContentLoaded", () => {
     if (modal) modal.style.display = "none";
   }
 
+  // 本地快取實績更新
+  function updateLocalDriverActual(driverId, actualVal) {
+    const key = "shihlin_pwa_driver_metrics";
+    let store = {};
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) store = JSON.parse(raw);
+    } catch (e) {}
+
+    Object.keys(store).forEach(salesName => {
+      const list = store[salesName];
+      if (Array.isArray(list)) {
+        const d = list.find(item => item.id == driverId);
+        if (d) {
+          d.actual_val = parseFloat(actualVal);
+          d.rate_pct = d.target_val > 0 ? Math.round((d.actual_val / d.target_val) * 1000) / 10 : 0;
+          if (d.rate_pct >= 90) {
+            d.traffic_light = "green";
+            d.light_text = "達標";
+            d.bar_class = "bar-success";
+          } else if (d.rate_pct >= 75) {
+            d.traffic_light = "yellow";
+            d.light_text = "預警";
+            d.bar_class = "bar-warning";
+          } else if (d.rate_pct >= 50) {
+            d.traffic_light = "red";
+            d.light_text = "低標";
+            d.bar_class = "bar-alert";
+          } else {
+            d.traffic_light = "red";
+            d.light_text = "嚴重落後";
+            d.bar_class = "bar-danger";
+          }
+        }
+      }
+    });
+    localStorage.setItem(key, JSON.stringify(store));
+  }
+
+  // 本地快取設定更新
+  function updateLocalDriverSettings(driverId, driverName, targetVal, unit, periodType) {
+    const key = "shihlin_pwa_driver_metrics";
+    let store = {};
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) store = JSON.parse(raw);
+    } catch (e) {}
+
+    Object.keys(store).forEach(salesName => {
+      const list = store[salesName];
+      if (Array.isArray(list)) {
+        const d = list.find(item => item.id == driverId);
+        if (d) {
+          d.driver_name = driverName;
+          d.target_val = parseFloat(targetVal);
+          d.unit = unit;
+          d.period_type = periodType;
+          d.rate_pct = d.target_val > 0 ? Math.round((d.actual_val / d.target_val) * 1000) / 10 : 0;
+          if (d.rate_pct >= 90) {
+            d.traffic_light = "green";
+            d.light_text = "達標";
+            d.bar_class = "bar-success";
+          } else if (d.rate_pct >= 75) {
+            d.traffic_light = "yellow";
+            d.light_text = "預警";
+            d.bar_class = "bar-warning";
+          } else if (d.rate_pct >= 50) {
+            d.traffic_light = "red";
+            d.light_text = "低標";
+            d.bar_class = "bar-alert";
+          } else {
+            d.traffic_light = "red";
+            d.light_text = "嚴重落後";
+            d.bar_class = "bar-danger";
+          }
+        }
+      }
+    });
+    localStorage.setItem(key, JSON.stringify(store));
+  }
+
   // 設定 Modal 事件
   function setupDriverModalEvents() {
     const btnClose = document.getElementById("btnCloseDriverApplyModal");
@@ -3645,6 +3862,153 @@ document.addEventListener("DOMContentLoaded", () => {
     if (modal) {
       modal.addEventListener("click", (e) => {
         if (e.target === modal) closeDriverApplyModal();
+      });
+    }
+
+    // 1. 回報實績 Modal 事件
+    const modalReport = document.getElementById("modalDriverReportActual");
+    const btnCloseReport = document.getElementById("btnCloseDriverReportModal");
+    const btnCancelReport = document.getElementById("btnCancelDriverReport");
+    const formReport = document.getElementById("formDriverReportActual");
+    const btnQuickAddOne = document.getElementById("btnQuickAddOne");
+
+    if (btnCloseReport) btnCloseReport.addEventListener("click", closeDriverReportActualModal);
+    if (btnCancelReport) btnCancelReport.addEventListener("click", closeDriverReportActualModal);
+    if (modalReport) {
+      modalReport.addEventListener("click", (e) => {
+        if (e.target === modalReport) closeDriverReportActualModal();
+      });
+    }
+
+    if (btnQuickAddOne) {
+      btnQuickAddOne.addEventListener("click", () => {
+        const inp = document.getElementById("reportActualVal");
+        if (inp) {
+          const val = parseFloat(inp.value) || 0;
+          inp.value = (val + 1).toString();
+        }
+      });
+    }
+
+    if (formReport) {
+      formReport.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const driverId = parseInt(document.getElementById("reportDriverId").value);
+        const actualVal = parseFloat(document.getElementById("reportActualVal").value);
+        const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+
+        if (isNaN(actualVal) || actualVal < 0) {
+          alert("實績數值不得為負數！");
+          return;
+        }
+
+        let success = false;
+        let message = "";
+        try {
+          const res = await fetch("/api/scoreboard/drivers/report-actual", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              driver_id: driverId,
+              actual_val: actualVal
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            success = true;
+            message = data.message;
+          } else {
+            const err = await res.json();
+            message = err.detail || "實績回報失敗";
+          }
+        } catch (err) {
+          // 離線備援
+          updateLocalDriverActual(driverId, actualVal);
+          success = true;
+          message = "實績已登記至本地快取！";
+        }
+
+        if (success) {
+          alert(message);
+          closeDriverReportActualModal();
+          loadAndRenderDriverMetrics(activeSales);
+          if (currentViewingDriverSales) {
+            renderDriverManagementPage(currentViewingDriverSales);
+          }
+        } else {
+          alert(message);
+        }
+      });
+    }
+
+    // 2. 設定指標 Modal 事件
+    const modalEdit = document.getElementById("modalDriverEditSettings");
+    const btnCloseEdit = document.getElementById("btnCloseDriverEditModal");
+    const btnCancelEdit = document.getElementById("btnCancelDriverEdit");
+    const formEdit = document.getElementById("formDriverEditSettings");
+
+    if (btnCloseEdit) btnCloseEdit.addEventListener("click", closeDriverEditSettingsModal);
+    if (btnCancelEdit) btnCancelEdit.addEventListener("click", closeDriverEditSettingsModal);
+    if (modalEdit) {
+      modalEdit.addEventListener("click", (e) => {
+        if (e.target === modalEdit) closeDriverEditSettingsModal();
+      });
+    }
+
+    if (formEdit) {
+      formEdit.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const driverId = parseInt(document.getElementById("editDriverId").value);
+        const driverName = document.getElementById("editDriverName").value.trim();
+        const targetVal = parseFloat(document.getElementById("editTargetVal").value);
+        const unit = document.getElementById("editUnit").value;
+        const periodType = document.getElementById("editPeriodType").value;
+        const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+
+        if (!driverName || isNaN(targetVal) || targetVal <= 0) {
+          alert("請輸入有效的指標名稱與目標數值（須大於 0）！");
+          return;
+        }
+
+        let success = false;
+        let message = "";
+        try {
+          const res = await fetch("/api/scoreboard/drivers/update-settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              driver_id: driverId,
+              driver_name: driverName,
+              target_val: targetVal,
+              unit: unit,
+              period_type: periodType
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            success = true;
+            message = data.message;
+          } else {
+            const err = await res.json();
+            message = err.detail || "設定更新失敗";
+          }
+        } catch (err) {
+          // 離線備援
+          updateLocalDriverSettings(driverId, driverName, targetVal, unit, periodType);
+          success = true;
+          message = "指標設定已更新至本地快取！";
+        }
+
+        if (success) {
+          alert(message);
+          closeDriverEditSettingsModal();
+          loadAndRenderDriverMetrics(activeSales);
+          if (currentViewingDriverSales) {
+            renderDriverManagementPage(currentViewingDriverSales);
+          }
+        } else {
+          alert(message);
+        }
       });
     }
 

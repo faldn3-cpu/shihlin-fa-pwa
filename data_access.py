@@ -1006,6 +1006,61 @@ def get_driver_change_requests(sales_name: Optional[str] = None, status: Optiona
         conn.close()
 
 
+def record_driver_actual(driver_id: int, actual_val: float) -> Tuple[bool, str]:
+    """
+    登記前線最新實績數值 (actual_val)
+    支援業務完成拜訪、試機或展示後隨時登記累計進度
+    """
+    if actual_val < 0:
+        return False, "實績數值不得為負數"
+
+    conn = get_connection()
+    try:
+        row = conn.execute("SELECT id, driver_name, target_val, unit FROM lead_driver_metric WHERE id = ? AND status = 'active'", (driver_id,)).fetchone()
+        if not row:
+            return False, "找不到該筆生效中之領先指標紀錄"
+
+        conn.execute("""
+        UPDATE lead_driver_metric
+        SET actual_val = ?
+        WHERE id = ?;
+        """, (float(actual_val), driver_id))
+        conn.commit()
+        return True, f"實績已成功登記為 {actual_val} {row['unit']}！"
+    finally:
+        conn.close()
+
+
+def update_driver_settings(driver_id: int, driver_name: str, target_val: float, unit: str, period_type: str = "週") -> Tuple[bool, str]:
+    """
+    直接設定或編輯領先指標內容 (包含行動名稱、目標數值、單位與週期)
+    """
+    d_name_clean = driver_name.strip()
+    if not d_name_clean:
+        return False, "指標行動名稱不得為空"
+    if target_val <= 0:
+        return False, "目標數值必須大於 0"
+
+    unit_clean = unit.strip() or "次"
+    p_type_clean = period_type.strip() or "週"
+
+    conn = get_connection()
+    try:
+        row = conn.execute("SELECT id, product_line FROM lead_driver_metric WHERE id = ? AND status = 'active'", (driver_id,)).fetchone()
+        if not row:
+            return False, "找不到該筆生效中之領先指標紀錄"
+
+        conn.execute("""
+        UPDATE lead_driver_metric
+        SET driver_name = ?, target_val = ?, unit = ?, period_type = ?
+        WHERE id = ?;
+        """, (d_name_clean, float(target_val), unit_clean, p_type_clean, driver_id))
+        conn.commit()
+        return True, f"「{row['product_line']}」領先指標設定已成功更新！"
+    finally:
+        conn.close()
+
+
 # ==============================================================================
 # 模組自我驗證入口
 # ==============================================================================

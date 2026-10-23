@@ -1,5 +1,5 @@
 // 士林電機 FA 業務戰情與報價系統 - Service Worker
-const CACHE_NAME = 'shihlin-fa-pwa-v1.0.27';
+const CACHE_NAME = 'shihlin-fa-pwa-v1.0.28';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

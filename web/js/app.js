@@ -227,7 +227,6 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (themeMode === "light") {
       document.documentElement.removeAttribute("data-theme");
     } else {
-      // 裝置 (跟隨作業系統)
       if (systemDarkMedia.matches) {
         document.documentElement.setAttribute("data-theme", "dark");
       } else {
@@ -236,22 +235,42 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function applyThemeAccent(color) {
+    if (!color) color = "#0067C0";
+    document.documentElement.style.setProperty("--color-accent", color);
+    document.documentElement.style.setProperty("--color-accent-hover", color);
+  }
+
   function applyFont(fontMode) {
-    if (fontMode === "system") {
-      document.documentElement.style.setProperty(
-        "--app-font-family",
-        "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-      );
-    } else {
-      document.documentElement.style.setProperty(
-        "--app-font-family",
-        "'Microsoft JhengHei', '微軟正黑體', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-      );
-    }
+    const fontMap = {
+      jhenghei: "'Microsoft JhengHei', '微軟正黑體', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      pingfang: "'PingFang TC', 'Heiti TC', 'Microsoft JhengHei', sans-serif",
+      noto: "'Noto Sans TC', 'Source Han Sans TC', 'Microsoft JhengHei', sans-serif",
+      kai: "'DFKai-SB', 'BiauKai', 'KaiTi', 'STKaiti', serif",
+      ming: "'PMingLiU', 'MingLiU', 'SimSun', serif",
+      system: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+      serif: "Georgia, 'Times New Roman', 'PMingLiU', serif",
+      mono: "'Consolas', 'Courier New', 'Monaco', monospace"
+    };
+    const val = fontMap[fontMode] || fontMap.jhenghei;
+    document.documentElement.style.setProperty("--app-font-family", val);
   }
 
   function applyFontSize(size) {
+    if (!size) size = "12pt";
     document.documentElement.style.setProperty("--app-font-size", size);
+  }
+
+  function applyDensity(mode) {
+    document.body.setAttribute("data-density", mode || "normal");
+  }
+
+  function applyBorderRadius(rad) {
+    document.documentElement.style.setProperty("--border-radius", rad || "6px");
+  }
+
+  function applyTabularNums(mode) {
+    document.body.setAttribute("data-tabular", mode || "tabular");
   }
 
   function updateActiveSalesUI(salesName) {
@@ -361,124 +380,276 @@ document.addEventListener("DOMContentLoaded", () => {
   // 渲染業務人員與權限設定總表 (二合一整合表：通路下拉、純Checkbox、上移下移、人員增減刪除)
   function renderSalespersonOrderTable() {
     const tbody = document.getElementById("tbodySalesOrder");
-    if (!tbody) return;
+    const containerMobile = document.getElementById("containerSalesOrderMobile");
+    if (!tbody && !containerMobile) return;
 
     if (!currentSalespersonsDraft) {
       initSalespersonsDraft();
     }
 
-    tbody.innerHTML = "";
-    currentSalespersonsDraft.forEach((sales, idx) => {
-      const tr = document.createElement("tr");
+    // -------------------------------------------------------------
+    // 方案 A：渲染電腦端標準寬表格 (tbodySalesOrder)
+    // -------------------------------------------------------------
+    if (tbody) {
+      tbody.innerHTML = "";
+      currentSalespersonsDraft.forEach((sales, idx) => {
+        const tr = document.createElement("tr");
 
-      // 1. 序號
-      const tdIndex = document.createElement("td");
-      tdIndex.style.textAlign = "center";
-      tdIndex.style.fontWeight = "600";
-      tdIndex.innerText = (idx + 1).toString();
+        // 1. 序號
+        const tdIndex = document.createElement("td");
+        tdIndex.style.textAlign = "center";
+        tdIndex.style.fontWeight = "600";
+        tdIndex.innerText = (idx + 1).toString();
 
-      // 2. 姓名
-      const tdName = document.createElement("td");
-      tdName.style.fontWeight = "600";
-      tdName.innerText = sales.name;
+        // 2. 姓名
+        const tdName = document.createElement("td");
+        tdName.style.fontWeight = "600";
+        tdName.innerText = sales.name;
 
-      // 3. 通路 (直賣 / 經銷 / 空白 下拉選單)
-      const tdGroup = document.createElement("td");
-      tdGroup.style.textAlign = "center";
-      const selGroup = document.createElement("select");
-      selGroup.className = "sales-group-select";
-      selGroup.innerHTML = `
-        <option value="直賣" ${sales.group === "直賣" ? "selected" : ""}>直賣</option>
-        <option value="經銷" ${sales.group === "經銷" ? "selected" : ""}>經銷</option>
-        <option value="" ${(!sales.group || sales.group === "空白") ? "selected" : ""}>空白</option>
-      `;
-      selGroup.onchange = (e) => {
-        sales.group = e.target.value;
-      };
-      tdGroup.appendChild(selGroup);
-
-      // 4. 數據管理權限 (純 Checkbox 置中，無多餘文字)
-      const tdMgr = document.createElement("td");
-      tdMgr.style.textAlign = "center";
-      const chkMgr = document.createElement("input");
-      chkMgr.type = "checkbox";
-      chkMgr.className = "chk-manager-sales";
-      chkMgr.checked = !!sales.isManager;
-      chkMgr.style.width = "16px";
-      chkMgr.style.height = "16px";
-      chkMgr.style.cursor = "pointer";
-      chkMgr.onchange = (e) => {
-        sales.isManager = e.target.checked;
-      };
-      tdMgr.appendChild(chkMgr);
-
-      // 5. 順序調整 (上移 / 下移)
-      const tdOrder = document.createElement("td");
-      tdOrder.style.textAlign = "center";
-
-      const btnUp = document.createElement("button");
-      btnUp.type = "button";
-      btnUp.className = "btn-order-move";
-      btnUp.innerText = "上移 ⬆";
-      btnUp.disabled = (idx === 0);
-      btnUp.onclick = () => {
-        if (idx > 0) {
-          const temp = currentSalespersonsDraft[idx - 1];
-          currentSalespersonsDraft[idx - 1] = currentSalespersonsDraft[idx];
-          currentSalespersonsDraft[idx] = temp;
+        // 3. 通路 (直賣 / 經銷 / 空白[無文字])
+        const tdGroup = document.createElement("td");
+        tdGroup.style.textAlign = "center";
+        const selGroup = document.createElement("select");
+        selGroup.className = "sales-group-select";
+        selGroup.innerHTML = `
+          <option value="直賣" ${sales.group === "直賣" ? "selected" : ""}>直賣</option>
+          <option value="經銷" ${sales.group === "經銷" ? "selected" : ""}>經銷</option>
+          <option value="" ${(!sales.group || sales.group === "空白") ? "selected" : ""}></option>
+        `;
+        selGroup.onchange = (e) => {
+          sales.group = e.target.value;
           renderSalespersonOrderTable();
-        }
-      };
+        };
+        tdGroup.appendChild(selGroup);
 
-      const btnDown = document.createElement("button");
-      btnDown.type = "button";
-      btnDown.className = "btn-order-move";
-      btnDown.innerText = "下移 ⬇";
-      btnDown.disabled = (idx === currentSalespersonsDraft.length - 1);
-      btnDown.onclick = () => {
-        if (idx < currentSalespersonsDraft.length - 1) {
-          const temp = currentSalespersonsDraft[idx + 1];
-          currentSalespersonsDraft[idx + 1] = currentSalespersonsDraft[idx];
-          currentSalespersonsDraft[idx] = temp;
+        // 4. 數據管理權限 (純 Checkbox 置中)
+        const tdMgr = document.createElement("td");
+        tdMgr.style.textAlign = "center";
+        const chkMgr = document.createElement("input");
+        chkMgr.type = "checkbox";
+        chkMgr.className = "chk-manager-sales";
+        chkMgr.checked = !!sales.isManager;
+        chkMgr.style.width = "16px";
+        chkMgr.style.height = "16px";
+        chkMgr.style.cursor = "pointer";
+        chkMgr.onchange = (e) => {
+          sales.isManager = e.target.checked;
           renderSalespersonOrderTable();
-        }
-      };
+        };
+        tdMgr.appendChild(chkMgr);
 
-      tdOrder.appendChild(btnUp);
-      tdOrder.appendChild(btnDown);
+        // 5. 順序調整 (上移 / 下移)
+        const tdOrder = document.createElement("td");
+        tdOrder.style.textAlign = "center";
 
-      // 6. 人員增減 (刪除按鈕，附帶警示確認)
-      const tdActions = document.createElement("td");
-      tdActions.style.textAlign = "center";
-      const btnDel = document.createElement("button");
-      btnDel.type = "button";
-      btnDel.className = "btn-order-delete";
-      btnDel.innerHTML = `<svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> 刪除`;
-      btnDel.onclick = () => {
-        if (currentSalespersonsDraft.length <= 1) {
-          alert("系統名冊至少需保留一名業務人員，無法刪除！");
-          return;
-        }
-        if (confirm(`確定要從名冊中刪除業務人員【${sales.name}】嗎？\n\n(注意：請於操作後點擊右上角「保存」按鈕確認生效)`)) {
-          currentSalespersonsDraft.splice(idx, 1);
+        const btnUp = document.createElement("button");
+        btnUp.type = "button";
+        btnUp.className = "btn-order-move";
+        btnUp.innerText = "上移 ⬆";
+        btnUp.disabled = (idx === 0);
+        btnUp.onclick = () => {
+          if (idx > 0) {
+            const temp = currentSalespersonsDraft[idx - 1];
+            currentSalespersonsDraft[idx - 1] = currentSalespersonsDraft[idx];
+            currentSalespersonsDraft[idx] = temp;
+            renderSalespersonOrderTable();
+          }
+        };
+
+        const btnDown = document.createElement("button");
+        btnDown.type = "button";
+        btnDown.className = "btn-order-move";
+        btnDown.innerText = "下移 ⬇";
+        btnDown.disabled = (idx === currentSalespersonsDraft.length - 1);
+        btnDown.onclick = () => {
+          if (idx < currentSalespersonsDraft.length - 1) {
+            const temp = currentSalespersonsDraft[idx + 1];
+            currentSalespersonsDraft[idx + 1] = currentSalespersonsDraft[idx];
+            currentSalespersonsDraft[idx] = temp;
+            renderSalespersonOrderTable();
+          }
+        };
+
+        tdOrder.appendChild(btnUp);
+        tdOrder.appendChild(btnDown);
+
+        // 6. 人員增減 (刪除按鈕附帶警示確認)
+        const tdActions = document.createElement("td");
+        tdActions.style.textAlign = "center";
+        const btnDel = document.createElement("button");
+        btnDel.type = "button";
+        btnDel.className = "btn-order-delete";
+        btnDel.innerHTML = `<svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> 刪除`;
+        btnDel.onclick = () => {
+          if (currentSalespersonsDraft.length <= 1) {
+            alert("系統名冊至少需保留一名業務人員，無法刪除！");
+            return;
+          }
+          if (confirm(`確定要從名冊中刪除業務人員【${sales.name}】嗎？\n\n(注意：請於操作後點擊右上角「保存」按鈕確認生效)`)) {
+            currentSalespersonsDraft.splice(idx, 1);
+            renderSalespersonOrderTable();
+          }
+        };
+        tdActions.appendChild(btnDel);
+
+        tr.appendChild(tdIndex);
+        tr.appendChild(tdName);
+        tr.appendChild(tdGroup);
+        tr.appendChild(tdMgr);
+        tr.appendChild(tdOrder);
+        tr.appendChild(tdActions);
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    // -------------------------------------------------------------
+    // 方案 B：渲染手機端專用觸控卡片清單 (containerSalesOrderMobile)
+    // -------------------------------------------------------------
+    if (containerMobile) {
+      containerMobile.innerHTML = "";
+      currentSalespersonsDraft.forEach((sales, idx) => {
+        const card = document.createElement("div");
+        card.className = "sales-mobile-card";
+
+        // 第一列：序號標章 + 姓名 + 通路下拉 + 數據管理核取方塊
+        const row1 = document.createElement("div");
+        row1.className = "sales-mobile-card-row1";
+
+        const leftGroup = document.createElement("div");
+        leftGroup.style.display = "flex";
+        leftGroup.style.alignItems = "center";
+        leftGroup.style.gap = "8px";
+
+        const badge = document.createElement("span");
+        badge.className = "sales-order-badge";
+        badge.innerText = `#${idx + 1}`;
+
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "sales-mobile-name";
+        nameSpan.innerText = sales.name;
+
+        leftGroup.appendChild(badge);
+        leftGroup.appendChild(nameSpan);
+
+        const rightGroup = document.createElement("div");
+        rightGroup.style.display = "flex";
+        rightGroup.style.alignItems = "center";
+        rightGroup.style.gap = "10px";
+
+        // 手機端通路選擇
+        const selGroupM = document.createElement("select");
+        selGroupM.className = "sales-group-select mobile-select";
+        selGroupM.innerHTML = `
+          <option value="直賣" ${sales.group === "直賣" ? "selected" : ""}>直賣</option>
+          <option value="經銷" ${sales.group === "經銷" ? "selected" : ""}>經銷</option>
+          <option value="" ${(!sales.group || sales.group === "空白") ? "selected" : ""}></option>
+        `;
+        selGroupM.onchange = (e) => {
+          sales.group = e.target.value;
           renderSalespersonOrderTable();
-        }
-      };
-      tdActions.appendChild(btnDel);
+        };
 
-      tr.appendChild(tdIndex);
-      tr.appendChild(tdName);
-      tr.appendChild(tdGroup);
-      tr.appendChild(tdMgr);
-      tr.appendChild(tdOrder);
-      tr.appendChild(tdActions);
+        // 手機端數據管理權限
+        const labelMgrM = document.createElement("label");
+        labelMgrM.style.display = "flex";
+        labelMgrM.style.alignItems = "center";
+        labelMgrM.style.gap = "4px";
+        labelMgrM.style.margin = "0";
+        labelMgrM.style.fontSize = "0.82rem";
+        labelMgrM.style.cursor = "pointer";
 
-      tbody.appendChild(tr);
-    });
+        const chkMgrM = document.createElement("input");
+        chkMgrM.type = "checkbox";
+        chkMgrM.className = "chk-manager-sales";
+        chkMgrM.checked = !!sales.isManager;
+        chkMgrM.style.width = "16px";
+        chkMgrM.style.height = "16px";
+        chkMgrM.onchange = (e) => {
+          sales.isManager = e.target.checked;
+          renderSalespersonOrderTable();
+        };
+
+        const mgrText = document.createElement("span");
+        mgrText.innerText = "管理";
+
+        labelMgrM.appendChild(chkMgrM);
+        labelMgrM.appendChild(mgrText);
+
+        rightGroup.appendChild(selGroupM);
+        rightGroup.appendChild(labelMgrM);
+
+        row1.appendChild(leftGroup);
+        row1.appendChild(rightGroup);
+
+        // 第二列：上移 / 下移 按鈕 + 刪除按鈕
+        const row2 = document.createElement("div");
+        row2.className = "sales-mobile-card-row2";
+
+        const moveBox = document.createElement("div");
+        moveBox.style.display = "flex";
+        moveBox.style.gap = "6px";
+
+        const btnUpM = document.createElement("button");
+        btnUpM.type = "button";
+        btnUpM.className = "btn-order-move mobile-move";
+        btnUpM.innerText = "上移 ⬆";
+        btnUpM.disabled = (idx === 0);
+        btnUpM.onclick = () => {
+          if (idx > 0) {
+            const temp = currentSalespersonsDraft[idx - 1];
+            currentSalespersonsDraft[idx - 1] = currentSalespersonsDraft[idx];
+            currentSalespersonsDraft[idx] = temp;
+            renderSalespersonOrderTable();
+          }
+        };
+
+        const btnDownM = document.createElement("button");
+        btnDownM.type = "button";
+        btnDownM.className = "btn-order-move mobile-move";
+        btnDownM.innerText = "下移 ⬇";
+        btnDownM.disabled = (idx === currentSalespersonsDraft.length - 1);
+        btnDownM.onclick = () => {
+          if (idx < currentSalespersonsDraft.length - 1) {
+            const temp = currentSalespersonsDraft[idx + 1];
+            currentSalespersonsDraft[idx + 1] = currentSalespersonsDraft[idx];
+            currentSalespersonsDraft[idx] = temp;
+            renderSalespersonOrderTable();
+          }
+        };
+
+        moveBox.appendChild(btnUpM);
+        moveBox.appendChild(btnDownM);
+
+        const btnDelM = document.createElement("button");
+        btnDelM.type = "button";
+        btnDelM.className = "btn-order-delete mobile-del";
+        btnDelM.innerHTML = `<svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> 刪除`;
+        btnDelM.onclick = () => {
+          if (currentSalespersonsDraft.length <= 1) {
+            alert("系統名冊至少需保留一名業務人員，無法刪除！");
+            return;
+          }
+          if (confirm(`確定要從名冊中刪除業務人員【${sales.name}】嗎？\n\n(注意：請於操作後點擊右上角「保存」按鈕確認生效)`)) {
+            currentSalespersonsDraft.splice(idx, 1);
+            renderSalespersonOrderTable();
+          }
+        };
+
+        row2.appendChild(moveBox);
+        row2.appendChild(btnDelM);
+
+        card.appendChild(row1);
+        card.appendChild(row2);
+
+        containerMobile.appendChild(card);
+      });
+    }
   }
 
   function initSettings() {
-    // 1. 外觀主題
+    // 1. 外觀主題模式
+    const selectThemeMode = document.getElementById("selectThemeMode");
     const savedTheme = localStorage.getItem("shihlin_pwa_theme_mode") || "auto";
     if (selectThemeMode) {
       selectThemeMode.value = savedTheme;
@@ -494,7 +665,21 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     applyTheme(savedTheme);
 
-    // 2. 系統字型
+    // 2. 主題色系 (Accent Color)
+    const selectThemeAccent = document.getElementById("selectThemeAccent");
+    const savedAccent = localStorage.getItem("shihlin_pwa_theme_accent") || "#0067C0";
+    if (selectThemeAccent) {
+      selectThemeAccent.value = savedAccent;
+      selectThemeAccent.addEventListener("change", (e) => {
+        const col = e.target.value;
+        localStorage.setItem("shihlin_pwa_theme_accent", col);
+        applyThemeAccent(col);
+      });
+    }
+    applyThemeAccent(savedAccent);
+
+    // 3. 系統字型 (支援 8 款常用字族)
+    const selectSystemFont = document.getElementById("selectSystemFont");
     const savedFont = localStorage.getItem("shihlin_pwa_font_mode") || "jhenghei";
     if (selectSystemFont) {
       selectSystemFont.value = savedFont;
@@ -506,7 +691,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     applyFont(savedFont);
 
-    // 3. 字級大小
+    // 4. 字級大小 (8pt ~ 24pt 完整範圍)
+    const selectFontSize = document.getElementById("selectFontSize");
     const savedSize = localStorage.getItem("shihlin_pwa_font_size") || "12pt";
     if (selectFontSize) {
       selectFontSize.value = savedSize;
@@ -518,7 +704,78 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     applyFontSize(savedSize);
 
-    // 4. 所屬營運區域設定 (北區 / 中區 / 南區，支援保存預設)
+    // 5. 版面密度 (Density)
+    const selectDensityMode = document.getElementById("selectDensityMode");
+    const savedDensity = localStorage.getItem("shihlin_pwa_density_mode") || "normal";
+    if (selectDensityMode) {
+      selectDensityMode.value = savedDensity;
+      selectDensityMode.addEventListener("change", (e) => {
+        const den = e.target.value;
+        localStorage.setItem("shihlin_pwa_density_mode", den);
+        applyDensity(den);
+      });
+    }
+    applyDensity(savedDensity);
+
+    // 6. 介面圓角 (Border Radius)
+    const selectBorderRadius = document.getElementById("selectBorderRadius");
+    const savedRadius = localStorage.getItem("shihlin_pwa_border_radius") || "6px";
+    if (selectBorderRadius) {
+      selectBorderRadius.value = savedRadius;
+      selectBorderRadius.addEventListener("change", (e) => {
+        const rad = e.target.value;
+        localStorage.setItem("shihlin_pwa_border_radius", rad);
+        applyBorderRadius(rad);
+      });
+    }
+    applyBorderRadius(savedRadius);
+
+    // 7. 數字排版 (Tabular Numbers)
+    const selectTabularNums = document.getElementById("selectTabularNums");
+    const savedTabular = localStorage.getItem("shihlin_pwa_tabular_nums") || "tabular";
+    if (selectTabularNums) {
+      selectTabularNums.value = savedTabular;
+      selectTabularNums.addEventListener("change", (e) => {
+        const tab = e.target.value;
+        localStorage.setItem("shihlin_pwa_tabular_nums", tab);
+        applyTabularNums(tab);
+      });
+    }
+    applyTabularNums(savedTabular);
+
+    // 8. 保存全部外觀設定按鈕
+    const btnSaveAppearanceSettings = document.getElementById("btnSaveAppearanceSettings");
+    if (btnSaveAppearanceSettings) {
+      btnSaveAppearanceSettings.addEventListener("click", () => {
+        const theme = selectThemeMode ? selectThemeMode.value : "auto";
+        const accent = selectThemeAccent ? selectThemeAccent.value : "#0067C0";
+        const font = selectSystemFont ? selectSystemFont.value : "jhenghei";
+        const size = selectFontSize ? selectFontSize.value : "12pt";
+        const density = selectDensityMode ? selectDensityMode.value : "normal";
+        const radius = selectBorderRadius ? selectBorderRadius.value : "6px";
+        const tabular = selectTabularNums ? selectTabularNums.value : "tabular";
+
+        localStorage.setItem("shihlin_pwa_theme_mode", theme);
+        localStorage.setItem("shihlin_pwa_theme_accent", accent);
+        localStorage.setItem("shihlin_pwa_font_mode", font);
+        localStorage.setItem("shihlin_pwa_font_size", size);
+        localStorage.setItem("shihlin_pwa_density_mode", density);
+        localStorage.setItem("shihlin_pwa_border_radius", radius);
+        localStorage.setItem("shihlin_pwa_tabular_nums", tabular);
+
+        applyTheme(theme);
+        applyThemeAccent(accent);
+        applyFont(font);
+        applyFontSize(size);
+        applyDensity(density);
+        applyBorderRadius(radius);
+        applyTabularNums(tabular);
+
+        alert("[成功保存] 系統外觀偏好設定已永久保存生效！");
+      });
+    }
+
+    // 9. 所屬營運區域設定 (北區 / 中區 / 南區，支援保存預設)
     const selectActiveRegion = document.getElementById("selectActiveRegion");
     const btnSaveDefaultRegion = document.getElementById("btnSaveDefaultRegion");
     const currentReg = getCurrentRegion();
@@ -542,11 +799,12 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // 5. 動態初始化業務人員排序表與目前業務下拉選單
+    // 10. 動態初始化業務人員排序表與目前業務下拉選單
     renderActiveSalesSelectOptions();
     renderSalespersonOrderTable();
 
     const savedSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+    const selectActiveSales = document.getElementById("selectActiveSales");
     if (selectActiveSales) {
       selectActiveSales.value = savedSales;
       selectActiveSales.addEventListener("change", (e) => {
@@ -559,28 +817,64 @@ document.addEventListener("DOMContentLoaded", () => {
     updateActiveSalesUI(savedSales);
     updateManagerUIVisibility(savedSales);
 
-    // 6. 二合一整合總表：新增人員與保存設定按鈕
+    // 11. 新增業務人員對話框 (彈跳 Modal，完全取代 window.prompt)
+    const modalAddSalesperson = document.getElementById("modalAddSalesperson");
     const btnAddSalesperson = document.getElementById("btnAddSalesperson");
-    if (btnAddSalesperson) {
+    const btnCloseAddSalesModal = document.getElementById("btnCloseAddSalesModal");
+    const btnCancelAddSales = document.getElementById("btnCancelAddSales");
+    const btnConfirmAddSales = document.getElementById("btnConfirmAddSales");
+    const inputNewSalesName = document.getElementById("inputNewSalesName");
+    const selectNewSalesGroup = document.getElementById("selectNewSalesGroup");
+    const chkNewSalesIsManager = document.getElementById("chkNewSalesIsManager");
+
+    if (btnAddSalesperson && modalAddSalesperson) {
       btnAddSalesperson.addEventListener("click", () => {
         if (!currentSalespersonsDraft) initSalespersonsDraft();
-        const inputName = prompt("請輸入新增業務人員姓名：");
-        if (!inputName || !inputName.trim()) return;
-        const cleanName = inputName.trim();
-        if (currentSalespersonsDraft.some(s => s.name === cleanName)) {
-          alert(`業務人員【${cleanName}】已在名冊中，無法重複新增！`);
-          return;
-        }
-        currentSalespersonsDraft.push({
-          id: cleanName,
-          name: cleanName,
-          group: "直賣",
-          isManager: false
-        });
-        renderSalespersonOrderTable();
+        if (inputNewSalesName) inputNewSalesName.value = "";
+        if (selectNewSalesGroup) selectNewSalesGroup.value = "直賣";
+        if (chkNewSalesIsManager) chkNewSalesIsManager.checked = false;
+        modalAddSalesperson.classList.remove("hidden");
+        setTimeout(() => inputNewSalesName && inputNewSalesName.focus(), 80);
       });
     }
 
+    const hideAddModal = () => {
+      if (modalAddSalesperson) modalAddSalesperson.classList.add("hidden");
+    };
+    if (btnCloseAddSalesModal) btnCloseAddSalesModal.addEventListener("click", hideAddModal);
+    if (btnCancelAddSales) btnCancelAddSales.addEventListener("click", hideAddModal);
+
+    if (btnConfirmAddSales) {
+      btnConfirmAddSales.addEventListener("click", () => {
+        const nameVal = inputNewSalesName ? inputNewSalesName.value.trim() : "";
+        if (!nameVal) {
+          alert("請輸入業務人員姓名！");
+          if (inputNewSalesName) inputNewSalesName.focus();
+          return;
+        }
+        if (!currentSalespersonsDraft) initSalespersonsDraft();
+        if (currentSalespersonsDraft.some(s => s.name === nameVal)) {
+          alert(`業務人員【${nameVal}】已在名冊中，無法重複新增！`);
+          return;
+        }
+
+        const grpVal = selectNewSalesGroup ? selectNewSalesGroup.value : "直賣";
+        const isMgrVal = chkNewSalesIsManager ? chkNewSalesIsManager.checked : false;
+
+        currentSalespersonsDraft.push({
+          id: nameVal,
+          name: nameVal,
+          group: grpVal,
+          isManager: isMgrVal
+        });
+
+        hideAddModal();
+        renderSalespersonOrderTable();
+        alert(`已將【${nameVal}】加入名冊編輯清單，請點擊右上角「保存」按鈕確認生效！`);
+      });
+    }
+
+    // 12. 保存名冊與權限設定按鈕
     const btnSaveSalespersonSettings = document.getElementById("btnSaveSalespersonSettings");
     if (btnSaveSalespersonSettings) {
       btnSaveSalespersonSettings.addEventListener("click", () => {

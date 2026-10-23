@@ -2213,3 +2213,147 @@ textarea.form-control {
 .sales-order-table td {
   white-space: nowrap !important;
 }
+
+
+/* ==============================================================================
+   v1.0.18: 雙響應式方案 (電腦端寬表格 / 手機端觸控卡片) & 外觀進階擴充
+   ============================================================================== */
+
+/* 1. 電腦端與手機端容器切換 */
+.sales-order-desktop-container {
+  display: block;
+}
+.sales-order-mobile-container {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .sales-order-desktop-container {
+    display: none !important;
+  }
+  .sales-order-mobile-container {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+    padding: 2px;
+  }
+}
+
+/* 2. 手機端人員卡片樣式 (專為 360px~430px 手機寬度設計，防右邊裁切) */
+.sales-mobile-card {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-light, #e2e8f0);
+  border-radius: var(--border-radius, 6px);
+  padding: 10px 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.sales-mobile-card:active {
+  transform: scale(0.99);
+}
+.sales-mobile-card-row1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sales-mobile-card-row2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px dashed var(--border-light, #e2e8f0);
+  padding-top: 8px;
+  gap: 8px;
+}
+.sales-order-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  background: var(--color-accent-light, #ebf3fc);
+  color: var(--color-accent, #0067c0);
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.sales-mobile-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+.mobile-select {
+  padding: 3px 6px;
+  font-size: 0.82rem;
+  border-radius: 4px;
+}
+.mobile-move {
+  padding: 4px 10px !important;
+  font-size: 0.8rem !important;
+}
+.mobile-del {
+  padding: 4px 10px !important;
+  font-size: 0.8rem !important;
+}
+
+/* 3. 新增人員彈跳視窗 (Fluent Modal Dialog) */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+}
+.modal-overlay.hidden {
+  display: none !important;
+}
+.fluent-dialog {
+  background: var(--bg-panel, #ffffff);
+  border: 1px solid var(--border-card, #e0e0e0);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  width: 92%;
+  max-width: 420px;
+  padding: 18px 20px;
+  box-sizing: border-box;
+  animation: fluentDialogPop 0.18s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+@keyframes fluentDialogPop {
+  from { transform: scale(0.94); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* 4. 版面密度 (Density) & 排版擴充 */
+body[data-density="compact"] .fluent-card {
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+body[data-density="compact"] .form-group {
+  margin-bottom: 8px;
+}
+body[data-density="compact"] .sales-order-table th,
+body[data-density="compact"] .sales-order-table td {
+  padding: 4px 6px !important;
+}
+body[data-density="spacious"] .fluent-card {
+  padding: 24px;
+  margin-bottom: 20px;
+}
+body[data-density="spacious"] .sales-order-table th,
+body[data-density="spacious"] .sales-order-table td {
+  padding: 12px 14px !important;
+}
+body[data-tabular="proportional"] {
+  font-feature-settings: normal !important;
+  font-variant-numeric: normal !important;
+}

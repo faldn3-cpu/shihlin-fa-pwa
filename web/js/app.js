@@ -435,6 +435,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 記憶體編輯工作草稿 (未按「保存」前不覆寫本地永久預設)
   let currentSalespersonsDraft = null;
+  let pendingDeleteSalesName = null;
+
+  function promptDeleteSalesperson(name) {
+    if (!currentSalespersonsDraft) initSalespersonsDraft();
+    if (currentSalespersonsDraft.length <= 1) {
+      alert("系統名冊至少需保留一名業務人員，無法刪除！");
+      return;
+    }
+    pendingDeleteSalesName = name;
+    const modal = document.getElementById("modalConfirmDeleteSalesperson");
+    const spanName = document.getElementById("spanDeleteSalesName");
+    if (spanName) spanName.innerText = name;
+    if (modal) modal.classList.remove("hidden");
+  }
 
   function initSalespersonsDraft() {
     const list = getOrderedSalespersons();
@@ -563,14 +577,7 @@ document.addEventListener("DOMContentLoaded", () => {
         btnDel.className = "btn-order-delete";
         btnDel.innerHTML = `<svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> 刪除`;
         btnDel.onclick = () => {
-          if (currentSalespersonsDraft.length <= 1) {
-            alert("系統名冊至少需保留一名業務人員，無法刪除！");
-            return;
-          }
-          if (confirm(`確定要從名冊中刪除業務人員【${sales.name}】嗎？\n\n(注意：請於操作後點擊右上角「保存」按鈕確認生效)`)) {
-            currentSalespersonsDraft.splice(idx, 1);
-            renderSalespersonOrderTable();
-          }
+          promptDeleteSalesperson(sales.name);
         };
         tdActions.appendChild(btnDel);
 
@@ -708,14 +715,7 @@ document.addEventListener("DOMContentLoaded", () => {
         btnDelM.className = "btn-order-delete mobile-del";
         btnDelM.innerHTML = `<svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> 刪除`;
         btnDelM.onclick = () => {
-          if (currentSalespersonsDraft.length <= 1) {
-            alert("系統名冊至少需保留一名業務人員，無法刪除！");
-            return;
-          }
-          if (confirm(`確定要從名冊中刪除業務人員【${sales.name}】嗎？\n\n(注意：請於操作後點擊右上角「保存」按鈕確認生效)`)) {
-            currentSalespersonsDraft.splice(idx, 1);
-            renderSalespersonOrderTable();
-          }
+          promptDeleteSalesperson(sales.name);
         };
 
         row2.appendChild(moveBox);
@@ -860,6 +860,39 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     if (btnCloseAddSalesModal) btnCloseAddSalesModal.addEventListener("click", hideAddModal);
     if (btnCancelAddSales) btnCancelAddSales.addEventListener("click", hideAddModal);
+
+    // 刪除業務人員確認對話框事件監聽 (取代容易受瀏覽器封鎖之 window.confirm)
+    const modalConfirmDeleteSalesperson = document.getElementById("modalConfirmDeleteSalesperson");
+    const btnCloseDeleteSalesModal = document.getElementById("btnCloseDeleteSalesModal");
+    const btnCancelDeleteSales = document.getElementById("btnCancelDeleteSales");
+    const btnConfirmDeleteSales = document.getElementById("btnConfirmDeleteSales");
+
+    const hideDeleteModal = () => {
+      pendingDeleteSalesName = null;
+      if (modalConfirmDeleteSalesperson) modalConfirmDeleteSalesperson.classList.add("hidden");
+    };
+
+    if (btnCloseDeleteSalesModal) btnCloseDeleteSalesModal.addEventListener("click", hideDeleteModal);
+    if (btnCancelDeleteSales) btnCancelDeleteSales.addEventListener("click", hideDeleteModal);
+
+    if (btnConfirmDeleteSales) {
+      btnConfirmDeleteSales.addEventListener("click", () => {
+        if (!pendingDeleteSalesName) {
+          hideDeleteModal();
+          return;
+        }
+        const targetName = pendingDeleteSalesName;
+        hideDeleteModal();
+
+        if (!currentSalespersonsDraft) initSalespersonsDraft();
+        const targetIdx = currentSalespersonsDraft.findIndex(s => s.name === targetName);
+        if (targetIdx !== -1) {
+          currentSalespersonsDraft.splice(targetIdx, 1);
+          renderSalespersonOrderTable();
+          alert(`已將業務人員【${targetName}】自編輯名冊移除，請點擊右上角「保存」按鈕確認生效！`);
+        }
+      });
+    }
 
     if (btnConfirmAddSales) {
       btnConfirmAddSales.addEventListener("click", () => {

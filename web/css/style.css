@@ -2690,3 +2690,12 @@ input[type="checkbox"] {
   color: #fca5a5 !important;
   border-color: rgba(239, 68, 68, 0.45) !important;
 }
+
+.fluent-btn.danger {
+  background-color: var(--color-danger, #d83b01) !important;
+  border-color: var(--color-danger, #d83b01) !important;
+  color: #FFFFFF !important;
+}
+.fluent-btn.danger:hover {
+  filter: brightness(1.1);
+}

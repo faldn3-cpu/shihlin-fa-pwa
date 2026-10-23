@@ -107,9 +107,16 @@ html[data-theme="dark"],
   box-sizing: border-box;
 }
 
-/* 根節點字級基準綁定 (讓全站 1rem 連鎖等比例縮放) */
+/* 根節點字級基準綁定 (電腦端寬螢幕支援 8pt ~ 24pt 全幅放大) */
 html {
   font-size: var(--app-font-size, 12pt);
+}
+
+/* 行動裝置窄螢幕 (<= 767px)：智慧縮放保護公式，防止 24pt 巨型字撐破 390px 手機邊界 */
+@media (max-width: 767px) {
+  html {
+    font-size: clamp(12px, calc(8px + var(--app-font-size, 12pt) * 0.42), 20px) !important;
+  }
 }
 
 body {
@@ -218,6 +225,12 @@ input, select, textarea, button {
   display: inline-flex;
   align-items: center;
   transition: font-size 0.2s ease, padding 0.2s ease;
+}
+
+@media (max-width: 600px) {
+  .clock-display {
+    display: none !important;
+  }
 }
 
 .user-avatar {
@@ -1726,6 +1739,8 @@ textarea.form-control {
   display: flex;
   flex-direction: column;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .kpi-hero-card:hover {
@@ -1737,6 +1752,8 @@ textarea.form-control {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-bottom: 6px;
 }
 
@@ -1760,6 +1777,9 @@ textarea.form-control {
   font-weight: 700;
   letter-spacing: 0.2px;
   transition: all 0.25s ease;
+  flex-shrink: 0;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 /* 高標達標 (>=100%)：活力翡翠綠漸層 */
@@ -1814,11 +1834,12 @@ textarea.form-control {
 }
 
 .kpi-big-num {
-  font-size: 2.1rem;
+  font-size: min(2.1rem, 13vw);
   font-weight: 800;
   color: var(--text-primary);
   line-height: 1.1;
   font-feature-settings: "tnum";
+  word-break: break-all;
 }
 
 .kpi-unit {
@@ -1834,10 +1855,11 @@ textarea.form-control {
   margin-bottom: 8px;
   display: flex;
   flex-wrap: wrap;
-  gap: 2px 6px;
+  gap: 4px 8px;
   align-items: center;
   line-height: 1.4;
   white-space: normal;
+  word-break: break-word;
 }
 
 /* 頂部月度挑戰目標高亮醒目標籤 */

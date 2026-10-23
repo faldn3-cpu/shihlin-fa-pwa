@@ -335,7 +335,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function applyFontSize(size) {
     if (!size) size = "12pt";
     document.documentElement.style.setProperty("--app-font-size", size);
-    document.documentElement.style.fontSize = size;
+    // 移除行內 style.fontSize，交由 CSS 中的 html { font-size: var(--app-font-size) } 與行動端 @media 智慧縮放
+    document.documentElement.style.removeProperty("font-size");
   }
 
   function applyDensity(mode) {

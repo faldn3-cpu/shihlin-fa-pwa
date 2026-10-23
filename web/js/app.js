@@ -3616,9 +3616,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // 處理主管審核動作
   async function handleReviewAction(requestId, action, reviewerName, comment) {
     const actionText = action === "approve" ? "核准" : "駁回";
-    if (!confirm(`確定要【${actionText}】此筆領先指標變更申請嗎？`)) {
-      return;
-    }
 
     let success = false;
     let message = "";
@@ -3680,6 +3677,7 @@ document.addEventListener("DOMContentLoaded", () => {
       alert(`[審核成功] ${message}`);
       const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
       loadAndRenderDriverMetrics(activeSales);
+      renderManagerReviewPanel(activeSales);
       if (currentViewingDriverSales) {
         renderDriverManagementPage(currentViewingDriverSales);
       }
@@ -4039,8 +4037,10 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        if (!confirm(`確定要送出【${pLine}】領先指標變更申請嗎？\n\n新指標：${newName} (${newVal} ${newUnit})\n變更理由：${reason}`)) {
-          return;
+        const btnSubmit = document.getElementById("btnSubmitDriverApply");
+        if (btnSubmit) {
+          btnSubmit.disabled = true;
+          btnSubmit.innerText = "送出申請中...";
         }
 
         let success = false;
@@ -4086,12 +4086,18 @@ document.addEventListener("DOMContentLoaded", () => {
           saveLocalDriverRequests(reqs);
           success = true;
           message = "更換申請已成功送出，請靜候主管審核！";
+        } finally {
+          if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerText = "送出更換申請 (送主管審核)";
+          }
         }
 
         if (success) {
           alert(`[申請成功] ${message}`);
           closeDriverApplyModal();
           loadAndRenderDriverMetrics(activeSales);
+          renderManagerReviewPanel(activeSales);
           if (currentViewingDriverSales) {
             renderDriverManagementPage(currentViewingDriverSales);
           }

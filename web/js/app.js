@@ -139,6 +139,57 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ============================================================================
+  // 清除快取並強制重整 (Clear Cache & Hard Reload)
+  // ============================================================================
+  async function clearAppCacheAndReload(triggerBtn) {
+    if (triggerBtn) {
+      triggerBtn.disabled = true;
+      triggerBtn.style.opacity = "0.7";
+      const span = triggerBtn.querySelector("span");
+      if (span) span.textContent = "清除中...";
+    }
+
+    try {
+      // 1. 註銷現有所有 Service Worker
+      if ("serviceWorker" in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          await reg.unregister();
+        }
+      }
+
+      // 2. 徹底清空 Cache Storage 中所有快取檔案
+      if ("caches" in window) {
+        const cacheKeys = await caches.keys();
+        await Promise.all(cacheKeys.map(key => caches.delete(key)));
+      }
+    } catch (err) {
+      console.warn("[Cache] 清理快取時發生非預期錯誤:", err);
+    } finally {
+      // 3. 帶上時間戳記強制刷新，繞過瀏覽器本地快取，向伺服器取得最新版本
+      const timestamp = Date.now();
+      const newUrl = window.location.origin + window.location.pathname + "?v=" + timestamp;
+      window.location.replace(newUrl);
+    }
+  }
+
+  const btnClearCacheDrawer = document.getElementById("btnClearCacheDrawer");
+  if (btnClearCacheDrawer) {
+    btnClearCacheDrawer.addEventListener("click", (e) => {
+      e.stopPropagation();
+      clearAppCacheAndReload(btnClearCacheDrawer);
+    });
+  }
+
+  const btnClearCacheSettings = document.getElementById("btnClearCacheSettings");
+  if (btnClearCacheSettings) {
+    btnClearCacheSettings.addEventListener("click", (e) => {
+      e.stopPropagation();
+      clearAppCacheAndReload(btnClearCacheSettings);
+    });
+  }
+
   function switchPage(activeBtn, activePanel) {
     navItems.forEach(item => {
       if (item.btn) item.btn.classList.remove("active");

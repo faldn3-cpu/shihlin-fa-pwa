@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
   
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261022_v1_0_13" />
+  <link rel="stylesheet" href="css/style.css?v=20261023_v1_0_33" />
 </head>
 <body>
 
@@ -84,7 +84,13 @@
         </button>
         <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
         <div class="drawer-divider"></div>
-        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.28 (PWA)</div>
+        <div class="drawer-version-tag">
+          <span class="version-text">士林電機 FA 業務系統 v1.0.33 (PWA)</span>
+          <button id="btnClearCacheDrawer" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
+            <svg class="icon-svg-xs" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            <span>清除暫存</span>
+          </button>
+        </div>
       </div>
     </nav>
   </div>
@@ -737,7 +743,13 @@
           <!-- 由 JavaScript 根據 getOrderedSalespersons() 動態渲染手機卡片 -->
         </div>
 
-        <div class="settings-version-tag">系統版本：v1.0.25 (PWA 離線快取版)</div>
+        <div class="settings-version-tag">
+          <span class="version-text">系統版本：v1.0.33 (PWA 離線快取版)</span>
+          <button id="btnClearCacheSettings" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
+            <svg class="icon-svg-xs" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            <span>清除暫存並更新</span>
+          </button>
+        </div>
       </div>
     </section>
 
@@ -1365,13 +1377,13 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261023_v1_0_32"></script>
+  <script src="js/app.js?v=20261023_v1_0_33"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_32')
+        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_33')
           .then(function(reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

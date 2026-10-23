@@ -287,6 +287,24 @@ def api_save_quotation(quote_data: QuotationCreate):
     }
 
 
+@app.delete("/api/quotations/{quote_no}")
+def api_delete_quotation(quote_no: str):
+    """軟刪除報價單 (移至垃圾桶，保留 30 天防呆緩衝期)"""
+    ok = data_access.soft_delete_quotation(quote_no)
+    if not ok:
+        raise HTTPException(status_code=404, detail="找不到指定的報價單或已在垃圾桶中")
+    return {"status": "success", "message": f"報價單【{quote_no}】已成功移至垃圾桶"}
+
+
+@app.post("/api/quotations/{quote_no}/restore")
+def api_restore_quotation(quote_no: str):
+    """自垃圾桶一鍵復原報價單"""
+    ok = data_access.restore_quotation(quote_no)
+    if not ok:
+        raise HTTPException(status_code=404, detail="找不到欲復原的報價單")
+    return {"status": "success", "message": f"報價單【{quote_no}】已成功自垃圾桶復原"}
+
+
 # ==============================================================================
 # 產品線領先指標 (驅動目標) 與變更審核 API
 # ==============================================================================

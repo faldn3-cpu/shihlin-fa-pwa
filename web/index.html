@@ -1182,6 +1182,10 @@
     <div class="context-menu-divider"></div>
     <div class="context-menu-item" id="menuClearCell">
       <svg class="icon-svg" style="width:16px; height:16px; color:var(--text-tertiary);" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      <span>清空內容 (DEL)</span>
+    </div>
+  </div>
+
   <!-- 領先指標 (驅動目標) 更換申請對話框 Modal -->
   <div class="fluent-modal-overlay" id="modalDriverChangeApply" style="display: none;">
     <div class="fluent-modal-dialog">
@@ -1361,13 +1365,13 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261023_v1_0_28"></script>
+  <script src="js/app.js?v=20261023_v1_0_30"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_28')
+        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_30')
           .then(function(reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

@@ -581,7 +581,7 @@
           </div>
 
           <!-- 專案案場名稱與報價日期 -->
-          <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
+          <div class="form-grid quote-top-meta-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
             <div class="form-group">
               <label for="quoteProjectName" style="font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:0.25rem; display:block;">專案 / 案場名稱</label>
               <input type="text" id="quoteProjectName" placeholder="例：設備報價" style="width:100%; padding:0.65rem 0.875rem; border:1px solid var(--border-color); border-radius:8px; font-size:0.9rem;">
@@ -592,38 +592,125 @@
             </div>
           </div>
 
-          <!-- 報價品項清單 (動態加入 item-row) -->
-          <div class="form-group">
-            <label style="font-weight:600; font-size:0.95rem; margin-bottom:0.5rem; display:block;">報價品項清單</label>
-            <div id="itemsContainer" class="items-list">
-              <!-- 動態加入品項卡片 -->
+          <!-- ================================================================
+               手機端視角：手持觸控卡片流 (寬度 < 768px 自動啟用)
+               ================================================================ -->
+          <div class="quote-mobile-only">
+            <div class="form-group">
+              <label style="font-weight:600; font-size:0.95rem; margin-bottom:0.5rem; display:block;">報價品項清單</label>
+              <div id="itemsContainer" class="items-list">
+                <!-- 動態加入手機品項卡片 -->
+              </div>
+              <button type="button" id="btnAddItem" class="btn btn-secondary btn-block" style="width:100%; margin-top:0.75rem; padding:0.75rem; font-weight:600; font-size:0.95rem; border-style:dashed;">
+                + 新增品項
+              </button>
             </div>
-            <button type="button" id="btnAddItem" class="btn btn-secondary btn-block" style="width:100%; margin-top:0.75rem; padding:0.75rem; font-weight:600; font-size:0.95rem; border-style:dashed;">
-              + 新增品項
-            </button>
-          </div>
 
-          <!-- 小計金額 (未稅) 總額卡片 -->
-          <div class="total-summary-card" style="margin-top:1rem;">
-            <div class="total-summary-top">
-              <div class="total-summary-label-group">
-                <span class="total-summary-title">小計金額 (未稅)</span>
-                <span id="draftItemBadge" class="draft-item-badge">共 0 項</span>
+            <!-- 手機端小計總額卡片 -->
+            <div class="total-summary-card" style="margin-top:1rem;">
+              <div class="total-summary-top">
+                <div class="total-summary-label-group">
+                  <span class="total-summary-title">小計金額 (未稅)</span>
+                  <span id="draftItemBadge" class="draft-item-badge">共 0 項</span>
+                </div>
+              </div>
+              <div class="total-summary-bottom">
+                <span class="total-summary-amount"><span class="currency-symbol">$</span><span id="totalAmount">0</span></span>
               </div>
             </div>
-            <div class="total-summary-bottom">
-              <span class="total-summary-amount"><span class="currency-symbol">$</span><span id="totalAmount">0</span></span>
+
+            <!-- 手機操作按鈕列 -->
+            <div class="form-actions" style="margin-top:1.25rem; display:flex; flex-direction:column; gap:0.75rem;">
+              <button type="button" id="btnLineQuote" class="btn btn-line btn-block" style="width:100%; padding:0.85rem; font-size:1rem;">
+                複製 LINE 報價
+              </button>
+              <button type="button" id="btnSubmitDraft" class="btn btn-primary btn-block" style="width:100%; padding:0.85rem; font-size:1rem;">
+                儲存報價單 (Append-Only)
+              </button>
             </div>
           </div>
 
-          <!-- 操作按鈕列 -->
-          <div class="form-actions" style="margin-top:1.25rem; display:flex; flex-direction:column; gap:0.75rem;">
-            <button type="button" id="btnLineQuote" class="btn btn-line btn-block" style="width:100%; padding:0.85rem; font-size:1rem;">
-              複製 LINE 報價
-            </button>
-            <button type="button" id="btnSubmitDraft" class="btn btn-primary btn-block" style="width:100%; padding:0.85rem; font-size:1rem;">
-              儲存報價單 (Append-Only)
-            </button>
+          <!-- ================================================================
+               電腦端視角：_QuotationApp Excel 寬螢幕多欄試算表 (寬度 >= 768px 自動切換)
+               ================================================================ -->
+          <div class="quote-desktop-only">
+            <!-- 電腦端工具列 -->
+            <div class="quote-desktop-toolbar">
+              <div class="toolbar-left">
+                <button type="button" id="btnDesktopAddItem" class="fluent-btn primary">
+                  <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                  + 新增空白品項
+                </button>
+                <button type="button" id="btnDesktopBrowseProducts" class="fluent-btn secondary">
+                  <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                  從產品庫挑選
+                </button>
+                <button type="button" id="btnDesktopClearItems" class="fluent-btn secondary text-muted">
+                  清空品項
+                </button>
+              </div>
+              <div class="toolbar-right">
+                <span class="desktop-badge-indicator">電腦端 Excel 試算表視角</span>
+              </div>
+            </div>
+
+            <!-- 電腦端 Excel 試算表格 -->
+            <div class="quote-desktop-table-wrapper">
+              <table class="quote-excel-table" id="quoteDesktopTable">
+                <thead>
+                  <tr>
+                    <th style="width:50px; text-align:center;">項次</th>
+                    <th style="width:220px;">產品型號 (點擊挑選)</th>
+                    <th style="width:150px;">品名規格</th>
+                    <th style="width:95px; text-align:center;">現貨庫存</th>
+                    <th style="width:110px; text-align:right;">經銷牌價</th>
+                    <th style="width:90px; text-align:right;">折數 %</th>
+                    <th style="width:110px; text-align:right;">預計單價</th>
+                    <th style="width:80px; text-align:right;">數量</th>
+                    <th style="width:125px; text-align:right;">小計 (未稅)</th>
+                    <th style="min-width:170px;">備註 / 交期</th>
+                    <th style="width:65px; text-align:center;">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="quoteDesktopTableBody">
+                  <!-- 動態注入電腦端表格列 -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- 電腦端底部結算與操作區 -->
+            <div class="quote-desktop-bottom-bar">
+              <div class="desktop-actions-group">
+                <button type="button" id="btnDesktopLineQuote" class="fluent-btn success" style="padding:10px 18px; font-size:0.95rem;">
+                  <svg class="icon-svg" style="width:18px; height:18px;" viewBox="0 0 24 24"><path d="M19 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V6h10v2z"/></svg>
+                  複製 LINE 報價
+                </button>
+                <button type="button" id="btnDesktopSubmitDraft" class="fluent-btn primary" style="padding:10px 20px; font-size:0.95rem;">
+                  <svg class="icon-svg" style="width:18px; height:18px;" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                  儲存報價單 (Append-Only)
+                </button>
+              </div>
+
+              <!-- 結算總計卡片 (未稅、營業稅、含稅) -->
+              <div class="desktop-summary-card">
+                <div class="summary-line">
+                  <span class="summary-label">品項總數</span>
+                  <span id="desktopItemCountBadge" class="summary-val">共 0 項</span>
+                </div>
+                <div class="summary-line">
+                  <span class="summary-label">未稅小計</span>
+                  <span id="desktopSubtotal" class="summary-val money">$ 0</span>
+                </div>
+                <div class="summary-line">
+                  <span class="summary-label">營業稅 (5%)</span>
+                  <span id="desktopTax" class="summary-val money">$ 0</span>
+                </div>
+                <div class="summary-line grand-total">
+                  <span class="summary-label">含稅總計</span>
+                  <span id="desktopGrandTotal" class="summary-val total-money">$ 0</span>
+                </div>
+              </div>
+            </div>
           </div>
         </form>
       </div>

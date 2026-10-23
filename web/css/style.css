@@ -2147,3 +2147,30 @@ textarea.form-control {
   justify-content: flex-end;
   gap: 8px;
 }
+
+
+/* 數據管理權限核取方塊樣式 */
+.manager-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  font-size: 0.9em;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+.manager-checkbox-item:hover {
+  border-color: var(--color-accent);
+  background: var(--bg-hover);
+}
+.manager-checkbox-item input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--color-accent);
+  width: 16px;
+  height: 16px;
+}

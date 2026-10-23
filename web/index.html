@@ -69,13 +69,22 @@
           <span>專案單申請</span>
         </button>
         <div class="drawer-divider"></div>
+        <button id="navItemAdminTargets" class="drawer-nav-item" type="button">
+          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/></svg>
+          <span>業績數據資料庫</span>
+        </button>
+        <button id="navItemDriverMgmt" class="drawer-nav-item" type="button">
+          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          <span>領先指標設定與審核</span>
+        </button>
+        <div class="drawer-divider"></div>
         <button id="navItemSettings" class="drawer-nav-item" type="button">
           <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
           <span>設定</span>
         </button>
         <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
         <div class="drawer-divider"></div>
-        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.15 (PWA)</div>
+        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.16 (PWA)</div>
       </div>
     </nav>
   </div>
@@ -617,13 +626,10 @@
           <div class="form-group" style="margin-top: 1.5rem; border-top: 1px solid var(--border-light); padding-top: 1.25rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
               <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;">業務人員順序排序設定表</label>
-              <div style="display: flex; gap: 6px;">
-                <button type="button" id="btnSaveDefaultSalesOrder" class="btn btn-primary" style="padding: 3px 10px; font-size: 0.8rem;">💾 保存為預設順序</button>
-                <button type="button" id="btnResetSalesOrder" class="btn btn-secondary" style="padding: 3px 10px; font-size: 0.8rem;">恢復原廠順序</button>
-              </div>
+              <button type="button" id="btnSaveDefaultSalesOrder" class="btn btn-primary" style="padding: 3px 10px; font-size: 0.8rem;">💾 保存為預設順序</button>
             </div>
             <span class="autofill-hint" style="display: block; margin-bottom: 0.75rem;">
-              全系統所有業務人員下拉選單與列表皆統一參照此表。點擊「上移 ⬆」或「下移 ⬇」即可即時調整排列順序並自動儲存。
+              全系統所有業務人員下拉選單與列表皆統一參照此表。點擊「上移 ⬆」或「下移 ⬇」調整後，點擊「保存為預設順序」即可永久固定為系統預設排序。
             </span>
             <div style="border: 1px solid var(--border-light); border-radius: 6px; overflow: hidden; max-height: 420px; overflow-y: auto;">
               <table class="sales-order-table" id="tableSalesOrder">
@@ -642,39 +648,77 @@
             </div>
           </div>
 
-          <!-- 領先指標 (驅動目標) 維護專區 (業務個人視角) -->
+          <!-- 數據管理權限設定 (業績數據資料庫 ＆ 領先指標審核共用) -->
           <div class="form-group" style="margin-top: 1.5rem; border-top: 1px solid var(--border-light); padding-top: 1.25rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
-              <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;">三大產品線領先指標 (驅動目標) 管理</label>
-              <span style="font-size: 0.78rem; color: var(--text-tertiary);">防呆規則：執行滿 4 週 (28天) 方可申請調整</span>
-            </div>
-            <span class="autofill-hint" style="display: block; margin-bottom: 0.75rem;">
-              業務各產品線對標具體行動（如實地試機、規格制定、拜訪家數）。達成率未滿或行動失真時，經主管審查可進行策略覆盤調整。
-            </span>
-            <div class="driver-mgmt-grid" id="gridSalesDrivers">
-              <!-- 由 JavaScript 動態渲染目前業務員的 3 條驅動指標卡片 -->
-            </div>
-          </div>
-
-          <!-- 主管專屬：驅動指標變更審核專區 (曾維崧、曾仁君、張何達 可見) -->
-          <div class="driver-review-panel" id="panelDriverReview" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
               <div style="display: flex; align-items: center; gap: 8px;">
                 <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-                <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;">驅動目標變更審核專區</label>
-                <span class="traffic-light-badge success" id="badgeManagerRole" style="font-size:0.75rem;">主管權限</span>
+                <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;">數據管理權限</label>
               </div>
-              <button type="button" id="btnRefreshDriverRequests" class="btn btn-secondary" style="padding: 3px 10px; font-size: 0.8rem;">重新整理待審清單</button>
+              <button type="button" id="btnSaveDefaultManagers" class="btn btn-primary" style="padding: 3px 10px; font-size: 0.8rem;">💾 保存為預設權限</button>
             </div>
             <span class="autofill-hint" style="display: block; margin-bottom: 0.75rem;">
-              主管覆盤審核：評估業務變更理由是否合理。核准後原指標將安全歸檔留存、新指標即刻生效；駁回則維持原指標行動。
+              勾選具備數據管理權限之業務主管與人員。經授權者可使用「業績數據資料庫」貼入最新戰情數據，並在「領先指標設定與審核」頁面進行指標變更審核。
             </span>
-            <div class="driver-review-list" id="listDriverReviewRequests">
-              <!-- 由 JavaScript 動態渲染待審核申請單 -->
+            <div id="containerManagerCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; padding: 12px; background: var(--bg-hover); border-radius: 6px; border: 1px solid var(--border-light);">
+              <!-- 由 JavaScript 動態生成業務人員 Checkbox -->
             </div>
           </div>
-          <div class="settings-version-tag">系統版本：v1.0.15 (PWA 離線快取版)</div>
+          <div class="settings-version-tag">系統版本：v1.0.16 (PWA 離線快取版)</div>
         </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         分頁：領先指標設定與審核 (Driver Management & Review Panel)
+         包含：業務個人三大產品線領先指標維護 ＆ 主管專屬覆盤審核中心
+         ==================================================================== -->
+    <section id="panelDriverMgmt" class="hidden">
+      <div class="fluent-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+            </svg>
+            <div>
+              <h2 class="card-title">領先指標設定與審核</h2>
+              <p class="card-desc">業務個人三大產品線驅動行動管理與主管專屬審核中心</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1. 業務個人視角：三大產品線領先指標 (驅動目標) 管理 -->
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+            <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;">三大產品線領先指標 (驅動目標) 管理</label>
+            <span style="font-size: 0.78rem; color: var(--text-tertiary);">防呆規則：執行滿 4 週 (28天) 方可申請調整</span>
+          </div>
+          <span class="autofill-hint" style="display: block; margin-bottom: 0.75rem;">
+            業務各產品線對標具體行動（如實地試機、規格制定、拜訪家數）。達成率未滿或行動失真時，經主管審查可進行策略覆盤調整。
+          </span>
+          <div class="driver-mgmt-grid" id="gridSalesDrivers">
+            <!-- 由 JavaScript 動態渲染目前業務員的 3 條驅動指標卡片 -->
+          </div>
+        </div>
+
+        <!-- 2. 主管專屬：驅動目標變更審核專區 (具備數據管理權限人員可見) -->
+        <div class="driver-review-panel" id="panelDriverReview" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+              <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;">驅動目標變更審核專區</label>
+              <span class="traffic-light-badge success" id="badgeManagerRole" style="font-size:0.75rem;">主管權限</span>
+            </div>
+            <button type="button" id="btnRefreshDriverRequests" class="btn btn-secondary" style="padding: 3px 10px; font-size: 0.8rem;">重新整理待審清單</button>
+          </div>
+          <span class="autofill-hint" style="display: block; margin-bottom: 0.75rem;">
+            主管覆盤審核：評估業務變更理由是否合理。核准後原指標將安全歸檔留存、新指標即刻生效；駁回則維持原指標行動。
+          </span>
+          <div class="driver-review-list" id="listDriverReviewRequests">
+            <!-- 由 JavaScript 動態渲染待審核申請單 -->
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -1004,13 +1048,13 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261022_v1_0_15"></script>
+  <script src="js/app.js?v=20261023_v1_0_16"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=20261022_v1_0_15')
+        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_16')
           .then(function(reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

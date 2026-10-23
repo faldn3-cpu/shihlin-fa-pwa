@@ -50,6 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const navItemSpecials = document.getElementById("navItemSpecials");
   const navItemSettings = document.getElementById("navItemSettings");
   const navItemAdminTargets = document.getElementById("navItemAdminTargets");
+  const navItemDriverMgmt = document.getElementById("navItemDriverMgmt");
 
   const panelHome = document.getElementById("panelHome");
   const panelCases = document.getElementById("panelCases");
@@ -57,15 +58,70 @@ document.addEventListener("DOMContentLoaded", () => {
   const panelSpecials = document.getElementById("panelSpecials");
   const panelSettings = document.getElementById("panelSettings");
   const panelAdminTargets = document.getElementById("panelAdminTargets");
+  const panelDriverMgmt = document.getElementById("panelDriverMgmt");
 
   const navItems = [
     { btn: navItemHome, panel: panelHome },
     { btn: navItemCases, panel: panelCases },
     { btn: navItemQuotes, panel: panelQuotes },
     { btn: navItemSpecials, panel: panelSpecials },
-    { btn: navItemSettings, panel: panelSettings },
-    { btn: navItemAdminTargets, panel: panelAdminTargets }
+    { btn: navItemAdminTargets, panel: panelAdminTargets },
+    { btn: navItemDriverMgmt, panel: panelDriverMgmt },
+    { btn: navItemSettings, panel: panelSettings }
   ];
+
+  const DEFAULT_MANAGERS = ["曾維崧", "曾仁君", "張何達"];
+
+  function getManagerSalesList() {
+    const saved = localStorage.getItem("shihlin_pwa_manager_sales");
+    if (saved) {
+      try {
+        const list = JSON.parse(saved);
+        if (Array.isArray(list) && list.length > 0) return list;
+      } catch (e) {
+        console.warn("解析管理者名單失敗:", e);
+      }
+    }
+    return [...DEFAULT_MANAGERS];
+  }
+
+  function isSalesManager(name) {
+    const list = getManagerSalesList();
+    return list.includes(name);
+  }
+
+  function renderManagerCheckboxes() {
+    const container = document.getElementById("containerManagerCheckboxes");
+    if (!container) return;
+    const allSales = getOrderedSalespersons();
+    const currentManagers = getManagerSalesList();
+
+    container.innerHTML = allSales.map(s => {
+      const isChecked = currentManagers.includes(s.name) ? "checked" : "";
+      return `
+        <label class="manager-checkbox-item">
+          <input type="checkbox" class="chk-manager-sales" value="${escapeHtml(s.name)}" ${isChecked} />
+          <span>${escapeHtml(s.name)}</span>
+        </label>
+      `;
+    }).join("");
+  }
+
+  function updateManagerUIVisibility(activeSalesName) {
+    const isMgr = isSalesManager(activeSalesName);
+    
+    // 1. 控制功能選單中「業績數據資料庫」的顯示權限
+    const navAdmin = document.getElementById("navItemAdminTargets");
+    if (navAdmin) {
+      navAdmin.style.display = isMgr ? "" : "none";
+    }
+
+    // 2. 控制領先指標審核中心面板顯示
+    const panelReview = document.getElementById("panelDriverReview");
+    if (panelReview) {
+      panelReview.style.display = isMgr ? "block" : "none";
+    }
+  }
 
   function openDrawer() {
     if (drawerOverlay) drawerOverlay.classList.remove("hidden");
@@ -93,6 +149,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (activePanel) {
       activePanel.classList.remove("hidden");
       window.scrollTo({ top: 0, behavior: "smooth" });
+
+      if (activePanel === panelDriverMgmt) {
+        const curSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+        loadAndRenderDriverMetrics(curSales);
+        renderManagerReviewPanel(curSales);
+        updateManagerUIVisibility(curSales);
+      }
     }
     closeDrawer();
   }
@@ -416,31 +479,40 @@ document.addEventListener("DOMContentLoaded", () => {
         const sName = e.target.value;
         localStorage.setItem("shihlin_pwa_active_sales", sName);
         updateActiveSalesUI(sName);
+        updateManagerUIVisibility(sName);
       });
     }
     updateActiveSalesUI(savedSales);
+    updateManagerUIVisibility(savedSales);
 
-    // 6. 業務人員排序保存與恢復按鈕
+    // 6. 業務人員排序保存按鈕 (已移除恢復原廠按鈕)
     const btnSaveDefaultSalesOrder = document.getElementById("btnSaveDefaultSalesOrder");
     if (btnSaveDefaultSalesOrder) {
       btnSaveDefaultSalesOrder.addEventListener("click", () => {
         const currentList = getOrderedSalespersons();
         localStorage.setItem("shihlin_salespersons_default_order", JSON.stringify(currentList));
         localStorage.setItem("shihlin_salespersons_order", JSON.stringify(currentList));
+        renderManagerCheckboxes(); // 同步刷新管理員勾選清單順序
         alert("[成功保存] 已將目前的業務人員排列順序永久保存為系統預設排序！");
       });
     }
 
-    const btnResetSalesOrder = document.getElementById("btnResetSalesOrder");
-    if (btnResetSalesOrder) {
-      btnResetSalesOrder.addEventListener("click", () => {
-        if (confirm("確定要將業務人員排序恢復為系統原廠預設順序嗎？")) {
-          localStorage.removeItem("shihlin_salespersons_order");
-          localStorage.removeItem("shihlin_salespersons_default_order");
-          renderActiveSalesSelectOptions();
-          renderSalespersonOrderTable();
-          alert("已成功恢復原廠預設業務人員順序！");
+    // 7. 數據管理權限保存按鈕
+    renderManagerCheckboxes();
+    const btnSaveDefaultManagers = document.getElementById("btnSaveDefaultManagers");
+    if (btnSaveDefaultManagers) {
+      btnSaveDefaultManagers.addEventListener("click", () => {
+        const checkboxes = document.querySelectorAll(".chk-manager-sales:checked");
+        const selected = Array.from(checkboxes).map(c => c.value);
+        if (selected.length === 0) {
+          alert("請至少保留勾選一位具備數據管理權限之人員！");
+          return;
         }
+        localStorage.setItem("shihlin_pwa_manager_sales", JSON.stringify(selected));
+        const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+        updateManagerUIVisibility(activeSales);
+        renderManagerReviewPanel(activeSales);
+        alert(`[成功保存] 已將【${selected.join("、")}】永久保存為「數據管理權限」名單！`);
       });
     }
   }
@@ -2387,9 +2459,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 6. 產品線領先指標 (驅動目標) 與變更審核管理
   // ============================================================================
 
-  function isSalesManager(name) {
-    return name === "曾維崧" || name === "曾仁君" || name === "張何達";
-  }
+  // (DEFAULT_MANAGERS & manager helpers moved to top of file to avoid TDZ)
 
   function getManagerTitle(name) {
     if (name === "曾維崧") return `FA ${getCurrentRegion()}主管`;
@@ -3008,6 +3078,11 @@ document.addEventListener("DOMContentLoaded", () => {
   setupGlobalDriverToggle();
   renderHomeDashboard();
   setupDriverModalEvents();
+
+  const curSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+  loadAndRenderDriverMetrics(curSales);
+  renderManagerReviewPanel(curSales);
+  updateManagerUIVisibility(curSales);
 
   // 初始載入客戶主檔與後端日報
   loadCustomers();

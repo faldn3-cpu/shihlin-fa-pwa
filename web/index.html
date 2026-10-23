@@ -525,17 +525,117 @@
     </section>
 
     <!-- ====================================================================
-         分頁二：報價單管理 (預留展示)
+         分頁二：報價單管理 (舊版報價單完整移植升級版)
          ==================================================================== -->
     <section id="panelQuotes" class="hidden">
-      <div class="fluent-card">
-        <div class="card-header">
-          <div class="card-title-group">
-            <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/></svg>
-            <h2 class="card-title">報價單管理中心</h2>
+      <!-- 頂部視角切換器 -->
+      <div class="quote-view-switcher" style="display:flex; gap:8px; margin-bottom:12px;">
+        <button type="button" id="btnQuoteViewNew" class="btn btn-secondary active" style="flex:1; padding:8px 12px; font-weight:600; font-size:0.9rem;">
+          新建報價單
+        </button>
+        <button type="button" id="btnQuoteViewHistory" class="btn btn-secondary" style="flex:1; padding:8px 12px; font-weight:600; font-size:0.9rem;">
+          歷史報價紀錄
+        </button>
+      </div>
+
+      <!-- 1. 新建/編輯報價單主區塊 (舊版 draftSection 原汁原味排版) -->
+      <div id="quoteDraftSection" class="quote-draft-container">
+        <form id="draftForm" onsubmit="return false;">
+          
+          <!-- 客戶名稱與詳細卡片 -->
+          <div class="form-group" style="margin-bottom:1rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <label for="customerName" style="margin-bottom:0; font-weight:600; font-size:0.95rem;">客戶名稱<span style="color:var(--color-danger, #ef4444);">*</span></label>
+            </div>
+            <input type="text" id="customerName" placeholder="點擊選擇客戶..." required readonly style="cursor:pointer; width:100%; padding:0.75rem 1rem; border:1px solid var(--border-color); border-radius:8px; font-size:0.95rem; font-weight:600;">
+            
+            <!-- 客戶詳細資料 (展開/收合卡片) -->
+            <div id="customerDetailCard" class="customer-detail-card hidden">
+              <div class="customer-detail-header">
+                <span id="customerDetailSummary">客戶詳細資料</span>
+                <button type="button" id="btnToggleCustomerDetail" class="btn-toggle-detail" title="展開/收合明細" style="background:none; border:none; font-size:1rem; cursor:pointer;">▼</button>
+              </div>
+              <div id="customerDetailBody" class="customer-detail-body hidden">
+                <div class="detail-row">
+                  <span class="detail-label">公司名稱</span>
+                  <span class="detail-val" id="cdCompany">-</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">統一編號</span>
+                  <span class="detail-val" id="cdTaxId">-</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">聯絡人</span>
+                  <span class="detail-val" id="cdContact">-</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">電話</span>
+                  <span class="detail-val" id="cdPhone">-</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">地址</span>
+                  <span class="detail-val" id="cdAddress">-</span>
+                </div>
+              </div>
+            </div>
           </div>
+
+          <!-- 專案案場名稱與報價日期 -->
+          <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
+            <div class="form-group">
+              <label for="quoteProjectName" style="font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:0.25rem; display:block;">專案 / 案場名稱</label>
+              <input type="text" id="quoteProjectName" placeholder="例：設備報價" style="width:100%; padding:0.65rem 0.875rem; border:1px solid var(--border-color); border-radius:8px; font-size:0.9rem;">
+            </div>
+            <div class="form-group">
+              <label for="quoteDate" style="font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:0.25rem; display:block;">報價日期</label>
+              <input type="date" id="quoteDate" style="width:100%; padding:0.65rem 0.875rem; border:1px solid var(--border-color); border-radius:8px; font-size:0.9rem;">
+            </div>
+          </div>
+
+          <!-- 報價品項清單 (動態加入 item-row) -->
+          <div class="form-group">
+            <label style="font-weight:600; font-size:0.95rem; margin-bottom:0.5rem; display:block;">報價品項清單</label>
+            <div id="itemsContainer" class="items-list">
+              <!-- 動態加入品項卡片 -->
+            </div>
+            <button type="button" id="btnAddItem" class="btn btn-secondary btn-block" style="width:100%; margin-top:0.75rem; padding:0.75rem; font-weight:600; font-size:0.95rem; border-style:dashed;">
+              + 新增品項
+            </button>
+          </div>
+
+          <!-- 小計金額 (未稅) 總額卡片 -->
+          <div class="total-summary-card" style="margin-top:1rem;">
+            <div class="total-summary-top">
+              <div class="total-summary-label-group">
+                <span class="total-summary-title">小計金額 (未稅)</span>
+                <span id="draftItemBadge" class="draft-item-badge">共 0 項</span>
+              </div>
+            </div>
+            <div class="total-summary-bottom">
+              <span class="total-summary-amount"><span class="currency-symbol">$</span><span id="totalAmount">0</span></span>
+            </div>
+          </div>
+
+          <!-- 操作按鈕列 -->
+          <div class="form-actions" style="margin-top:1.25rem; display:flex; flex-direction:column; gap:0.75rem;">
+            <button type="button" id="btnLineQuote" class="btn btn-line btn-block" style="width:100%; padding:0.85rem; font-size:1rem;">
+              複製 LINE 報價
+            </button>
+            <button type="button" id="btnSubmitDraft" class="btn btn-primary btn-block" style="width:100%; padding:0.85rem; font-size:1rem;">
+              儲存報價單 (Append-Only)
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 2. 歷史報價紀錄清單 (點選載回表單生成新版次) -->
+      <div id="quoteHistorySection" class="hidden" style="margin-top:0.5rem;">
+        <div style="margin-bottom:12px;">
+          <input type="text" id="inputSearchQuoteHistory" class="search-input" placeholder="搜尋報價單號、客戶名稱、專案..." style="margin-bottom:0;">
         </div>
-        <p style="color:var(--text-secondary);">已備妥三段式單號 (Prefix-Seq-Rev) 與 Append-Only 不覆蓋資料庫窗口，將於里程碑 3 全面連動！</p>
+        <div id="quoteHistoryResults" style="display:flex; flex-direction:column; gap:10px;">
+          <!-- 動態載入歷史報價單卡片 -->
+        </div>
       </div>
     </section>
 
@@ -1373,6 +1473,101 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       舊版報價單專屬對話盒 (Modals)
+       ==================================================================== -->
+  <!-- 1. 客戶搜尋對話框 (Modal) -->
+  <div id="customerModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="margin:0; font-size:1.1rem; font-weight:700;">選擇客戶 (<span id="customerModalCount">0</span>)</h3>
+        <button type="button" id="btnCloseCustomerModal" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="customerModalSearch" class="search-input" placeholder="搜尋客戶名稱、統編、電話...">
+        <div id="customerModalResults" class="customer-results mt-3">
+          <!-- 搜尋結果 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 品項搜尋對話框 (Modal) -->
+  <div id="productModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="productModalTitle" style="margin:0; font-size:1.1rem; font-weight:700;">選擇產品</h3>
+        <button type="button" id="btnCloseModal" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="productSearch" class="search-input" placeholder="搜尋型號或品名 (如 AX5S、SE3、SS2)...">
+        <div id="productResults" class="product-results mt-3">
+          <!-- 搜尋結果 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 交期 / 備註選擇對話框 (Modal) -->
+  <div id="deliveryModal" class="modal hidden">
+    <div class="modal-content" style="height:85vh; height:85dvh; max-height:90vh; display:flex; flex-direction:column; padding:1.25rem 1.25rem 1rem 1.25rem;">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-shrink:0;">
+        <h3 style="margin:0; font-size:1.1rem; font-weight:700;">選擇交期 / 備註</h3>
+        <button type="button" id="btnCloseDeliveryModal" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden;">
+        <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px; flex-shrink:0;">自行手動輸入：</label>
+        <div class="custom-delivery-box" style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-shrink:0;">
+          <input type="text" id="customDeliveryInput" class="search-input" placeholder="輸入自訂交期或特殊備註..." style="flex:1; margin-bottom:0; min-height:42px;">
+          <button type="button" id="btnConfirmCustomDelivery" class="btn btn-primary" style="white-space:nowrap; padding:0.65rem 1.2rem; min-height:42px; flex-shrink:0;">確認</button>
+        </div>
+        <div class="delivery-list-header" style="flex-shrink:0; margin-bottom:8px;">
+          <span style="font-size:0.85rem; font-weight:600; color:var(--text-muted);">常用預設選項 (點擊直接帶入)：</span>
+        </div>
+        <div id="deliveryModalResults" class="delivery-results" style="overflow-y:auto !important; -webkit-overflow-scrolling:touch !important; flex:1; min-height:0; display:flex; flex-direction:column; gap:8px; padding-bottom:24px; touch-action:pan-y;">
+          <!-- 預設選項由 JS 動態產生 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. LINE 報價預覽對話框 (Modal) -->
+  <div id="lineModal" class="modal hidden">
+    <div class="modal-content line-modal-content">
+      <div class="modal-header">
+        <h3 style="margin:0; font-size:1.1rem; font-weight:700;">預覽 LINE 報價訊息</h3>
+        <button type="button" id="btnCloseLineModal" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body" style="overflow:visible;">
+        <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:0.5rem; flex-shrink:0;">
+          您可以在此預覽或修改文字，確認後點擊「一鍵複製」。
+        </p>
+        <textarea id="lineQuoteText" class="line-quote-textarea" style="width:100%; height:200px; padding:10px; font-family:monospace; font-size:0.88rem; border:1px solid var(--border-color); border-radius:8px; resize:vertical; background:var(--bg-input, #ffffff); color:var(--text-main);"></textarea>
+        <div style="display:flex; gap:0.75rem; margin-top:0.75rem; flex-shrink:0;">
+          <button type="button" id="btnCancelLineQuote" class="btn btn-secondary" style="flex:1;">取消</button>
+          <button type="button" id="btnCopyLineQuote" class="btn btn-line" style="flex:2;">一鍵複製並關閉</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 料號切換對話框 (Modal) -->
+  <div id="skuModal" class="modal hidden">
+    <div class="modal-content" style="max-height:80vh; max-height:80dvh; display:flex; flex-direction:column; padding:1.1rem; max-width:440px;">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-shrink:0;">
+        <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-main);">選擇關聯料號</h3>
+        <button type="button" id="btnCloseSkuModal" class="btn-close">&times;</button>
+      </div>
+      <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;" id="skuModalModelTitle">型號：-</div>
+      <div id="skuModalList" style="overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:8px;">
+        <!-- 動態渲染各料號 -->
+      </div>
+      <div class="modal-footer" style="padding-top:0.75rem; border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; margin-top:0.75rem; flex-shrink:0;">
+        <button type="button" id="btnCancelSkuModal" class="btn btn-secondary" style="font-size:0.85rem; padding:6px 16px;">關閉</button>
+      </div>
     </div>
   </div>
 

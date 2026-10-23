@@ -221,6 +221,53 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const systemDarkMedia = window.matchMedia("(prefers-color-scheme: dark)");
 
+  // 6 大核心商務主題色盤 (含深淺雙模高對比自適應引擎)
+  const ACCENT_PALETTES = {
+    blue: {
+      name: "經典科技藍",
+      light: { accent: "#0067C0", btnBg: "#0067C0", btnText: "#FFFFFF", lightBg: "rgba(0, 103, 192, 0.10)" },
+      dark:  { accent: "#2899F5", btnBg: "#0078D4", btnText: "#FFFFFF", lightBg: "rgba(40, 153, 245, 0.16)" }
+    },
+    green: {
+      name: "翡翠商務綠",
+      light: { accent: "#107C41", btnBg: "#107C41", btnText: "#FFFFFF", lightBg: "rgba(16, 124, 65, 0.10)" },
+      dark:  { accent: "#2ECC71", btnBg: "#107C41", btnText: "#FFFFFF", lightBg: "rgba(46, 204, 113, 0.16)" }
+    },
+    orange: {
+      name: "活力朝氣橘",
+      light: { accent: "#D83B01", btnBg: "#D83B01", btnText: "#FFFFFF", lightBg: "rgba(216, 59, 1, 0.10)" },
+      dark:  { accent: "#FF8C00", btnBg: "#D83B01", btnText: "#FFFFFF", lightBg: "rgba(255, 140, 0, 0.16)" }
+    },
+    purple: {
+      name: "專業高階紫",
+      light: { accent: "#5C2D91", btnBg: "#5C2D91", btnText: "#FFFFFF", lightBg: "rgba(92, 45, 145, 0.10)" },
+      dark:  { accent: "#A779E9", btnBg: "#7B38A8", btnText: "#FFFFFF", lightBg: "rgba(167, 121, 233, 0.16)" }
+    },
+    black: {
+      name: "沉穩商務黑",
+      light: { accent: "#2B2B2B", btnBg: "#2B2B2B", btnText: "#FFFFFF", lightBg: "rgba(0, 0, 0, 0.08)" },
+      // 深色模式下反轉為高對比鉑金銀白按鈕與黑字，確保最高易讀性
+      dark:  { accent: "#F0F2F5", btnBg: "#F0F2F5", btnText: "#1A1A1A", lightBg: "rgba(255, 255, 255, 0.12)" }
+    },
+    cyan: {
+      name: "深海科技青",
+      light: { accent: "#008272", btnBg: "#008272", btnText: "#FFFFFF", lightBg: "rgba(0, 130, 114, 0.10)" },
+      dark:  { accent: "#00B7C3", btnBg: "#008272", btnText: "#FFFFFF", lightBg: "rgba(0, 183, 195, 0.16)" }
+    }
+  };
+
+  const HEX_TO_KEY = {
+    "#0067C0": "blue",
+    "#0078D4": "blue",
+    "#107C41": "green",
+    "#D83B01": "orange",
+    "#5C2D91": "purple",
+    "#2B2B2B": "black",
+    "#1A1A1A": "black",
+    "#000000": "black",
+    "#008272": "cyan"
+  };
+
   function applyTheme(themeMode) {
     if (themeMode === "dark") {
       document.documentElement.setAttribute("data-theme", "dark");
@@ -233,24 +280,53 @@ document.addEventListener("DOMContentLoaded", () => {
         document.documentElement.removeAttribute("data-theme");
       }
     }
+
+    // 更新膠囊分段控制器外觀
+    const segThemeMode = document.getElementById("segThemeMode");
+    if (segThemeMode) {
+      segThemeMode.querySelectorAll(".seg-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.val === themeMode);
+      });
+    }
+
+    // 當切換深淺模式時，同步重新計算當前色系之對比配色（特別是黑色系反轉為鉑金銀白按鈕）
+    const currentAccent = localStorage.getItem("shihlin_pwa_theme_accent") || "blue";
+    applyThemeAccent(currentAccent);
   }
 
-  function applyThemeAccent(color) {
-    if (!color) color = "#0067C0";
-    document.documentElement.style.setProperty("--color-accent", color);
-    document.documentElement.style.setProperty("--color-accent-hover", color);
+  function applyThemeAccent(colorKey) {
+    if (!colorKey) colorKey = "blue";
+    const key = HEX_TO_KEY[colorKey] || (ACCENT_PALETTES[colorKey] ? colorKey : "blue");
+    const palette = ACCENT_PALETTES[key] || ACCENT_PALETTES.blue;
+
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    const themeColors = isDark ? palette.dark : palette.light;
+
+    document.documentElement.style.setProperty("--color-accent", themeColors.accent);
+    document.documentElement.style.setProperty("--color-accent-hover", themeColors.accent);
+    document.documentElement.style.setProperty("--color-accent-light", themeColors.lightBg);
+    document.documentElement.style.setProperty("--btn-primary-bg", themeColors.btnBg);
+    document.documentElement.style.setProperty("--btn-primary-text", themeColors.btnText);
+
+    // 同步色票按鈕選取狀態
+    const swatchesContainer = document.getElementById("swatchesThemeAccent");
+    if (swatchesContainer) {
+      swatchesContainer.querySelectorAll(".swatch-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.color === key);
+      });
+    }
   }
 
   function applyFont(fontMode) {
+    // 微軟 Office 繁體中文常用 7 大字型選單
     const fontMap = {
       jhenghei: "'Microsoft JhengHei', '微軟正黑體', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      pingfang: "'PingFang TC', 'Heiti TC', 'Microsoft JhengHei', sans-serif",
-      noto: "'Noto Sans TC', 'Source Han Sans TC', 'Microsoft JhengHei', sans-serif",
-      kai: "'DFKai-SB', 'BiauKai', 'KaiTi', 'STKaiti', serif",
-      ming: "'PMingLiU', 'MingLiU', 'SimSun', serif",
-      system: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-      serif: "Georgia, 'Times New Roman', 'PMingLiU', serif",
-      mono: "'Consolas', 'Courier New', 'Monaco', monospace"
+      ming: "'PMingLiU', '新細明體', 'MingLiU', serif",
+      kai: "'DFKai-SB', '標楷體', 'BiauKai', 'KaiTi', serif",
+      yahei: "'Microsoft YaHei', '微軟雅黑', sans-serif",
+      arial_jhenghei: "Arial, 'Microsoft JhengHei', '微軟正黑體', sans-serif",
+      calibri_jhenghei: "Calibri, 'Microsoft JhengHei', '微軟正黑體', sans-serif",
+      times_ming: "'Times New Roman', 'PMingLiU', '新細明體', serif"
     };
     const val = fontMap[fontMode] || fontMap.jhenghei;
     document.documentElement.style.setProperty("--app-font-family", val);
@@ -271,6 +347,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function applyTabularNums(mode) {
     document.body.setAttribute("data-tabular", mode || "tabular");
+    const segTabularNums = document.getElementById("segTabularNums");
+    if (segTabularNums) {
+      segTabularNums.querySelectorAll(".seg-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.val === mode);
+      });
+    }
   }
 
   function updateActiveSalesUI(salesName) {
@@ -648,15 +730,16 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function initSettings() {
-    // 1. 外觀主題模式
-    const selectThemeMode = document.getElementById("selectThemeMode");
+    // 1. 外觀主題模式 (Segmented Control 膠囊分段控制器)
+    const segThemeMode = document.getElementById("segThemeMode");
     const savedTheme = localStorage.getItem("shihlin_pwa_theme_mode") || "auto";
-    if (selectThemeMode) {
-      selectThemeMode.value = savedTheme;
-      selectThemeMode.addEventListener("change", (e) => {
-        const mode = e.target.value;
-        localStorage.setItem("shihlin_pwa_theme_mode", mode);
-        applyTheme(mode);
+    if (segThemeMode) {
+      segThemeMode.querySelectorAll(".seg-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const mode = btn.dataset.val;
+          localStorage.setItem("shihlin_pwa_theme_mode", mode);
+          applyTheme(mode);
+        });
       });
     }
     systemDarkMedia.addEventListener("change", () => {
@@ -665,20 +748,21 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     applyTheme(savedTheme);
 
-    // 2. 主題色系 (Accent Color)
-    const selectThemeAccent = document.getElementById("selectThemeAccent");
-    const savedAccent = localStorage.getItem("shihlin_pwa_theme_accent") || "#0067C0";
-    if (selectThemeAccent) {
-      selectThemeAccent.value = savedAccent;
-      selectThemeAccent.addEventListener("change", (e) => {
-        const col = e.target.value;
-        localStorage.setItem("shihlin_pwa_theme_accent", col);
-        applyThemeAccent(col);
+    // 2. 主題色系 (彩色圓點色票按鈕 Color Swatches)
+    const swatchesThemeAccent = document.getElementById("swatchesThemeAccent");
+    const savedAccent = localStorage.getItem("shihlin_pwa_theme_accent") || "blue";
+    if (swatchesThemeAccent) {
+      swatchesThemeAccent.querySelectorAll(".swatch-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const colKey = btn.dataset.color;
+          localStorage.setItem("shihlin_pwa_theme_accent", colKey);
+          applyThemeAccent(colKey);
+        });
       });
     }
     applyThemeAccent(savedAccent);
 
-    // 3. 系統字型 (支援 8 款常用字族)
+    // 3. 系統字型 (微軟 Office 繁體常用字型)
     const selectSystemFont = document.getElementById("selectSystemFont");
     const savedFont = localStorage.getItem("shihlin_pwa_font_mode") || "jhenghei";
     if (selectSystemFont) {
@@ -691,7 +775,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     applyFont(savedFont);
 
-    // 4. 字級大小 (8pt ~ 24pt 完整範圍)
+    // 4. 字級大小 (8pt ~ 24pt 純淨文字選單)
     const selectFontSize = document.getElementById("selectFontSize");
     const savedSize = localStorage.getItem("shihlin_pwa_font_size") || "12pt";
     if (selectFontSize) {
@@ -704,102 +788,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     applyFontSize(savedSize);
 
-    // 5. 版面密度 (Density)
-    const selectDensityMode = document.getElementById("selectDensityMode");
-    const savedDensity = localStorage.getItem("shihlin_pwa_density_mode") || "normal";
-    if (selectDensityMode) {
-      selectDensityMode.value = savedDensity;
-      selectDensityMode.addEventListener("change", (e) => {
-        const den = e.target.value;
-        localStorage.setItem("shihlin_pwa_density_mode", den);
-        applyDensity(den);
-      });
-    }
-    applyDensity(savedDensity);
-
-    // 6. 介面圓角 (Border Radius)
-    const selectBorderRadius = document.getElementById("selectBorderRadius");
-    const savedRadius = localStorage.getItem("shihlin_pwa_border_radius") || "6px";
-    if (selectBorderRadius) {
-      selectBorderRadius.value = savedRadius;
-      selectBorderRadius.addEventListener("change", (e) => {
-        const rad = e.target.value;
-        localStorage.setItem("shihlin_pwa_border_radius", rad);
-        applyBorderRadius(rad);
-      });
-    }
-    applyBorderRadius(savedRadius);
-
-    // 7. 數字排版 (Tabular Numbers)
-    const selectTabularNums = document.getElementById("selectTabularNums");
+    // 5. 數字排版 (Segmented Control 膠囊分段控制器)
+    const segTabularNums = document.getElementById("segTabularNums");
     const savedTabular = localStorage.getItem("shihlin_pwa_tabular_nums") || "tabular";
-    if (selectTabularNums) {
-      selectTabularNums.value = savedTabular;
-      selectTabularNums.addEventListener("change", (e) => {
-        const tab = e.target.value;
-        localStorage.setItem("shihlin_pwa_tabular_nums", tab);
-        applyTabularNums(tab);
+    if (segTabularNums) {
+      segTabularNums.querySelectorAll(".seg-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const tab = btn.dataset.val;
+          localStorage.setItem("shihlin_pwa_tabular_nums", tab);
+          applyTabularNums(tab);
+        });
       });
     }
     applyTabularNums(savedTabular);
 
-    // 8. 保存全部外觀設定按鈕
-    const btnSaveAppearanceSettings = document.getElementById("btnSaveAppearanceSettings");
-    if (btnSaveAppearanceSettings) {
-      btnSaveAppearanceSettings.addEventListener("click", () => {
-        const theme = selectThemeMode ? selectThemeMode.value : "auto";
-        const accent = selectThemeAccent ? selectThemeAccent.value : "#0067C0";
-        const font = selectSystemFont ? selectSystemFont.value : "jhenghei";
-        const size = selectFontSize ? selectFontSize.value : "12pt";
-        const density = selectDensityMode ? selectDensityMode.value : "normal";
-        const radius = selectBorderRadius ? selectBorderRadius.value : "6px";
-        const tabular = selectTabularNums ? selectTabularNums.value : "tabular";
-
-        localStorage.setItem("shihlin_pwa_theme_mode", theme);
-        localStorage.setItem("shihlin_pwa_theme_accent", accent);
-        localStorage.setItem("shihlin_pwa_font_mode", font);
-        localStorage.setItem("shihlin_pwa_font_size", size);
-        localStorage.setItem("shihlin_pwa_density_mode", density);
-        localStorage.setItem("shihlin_pwa_border_radius", radius);
-        localStorage.setItem("shihlin_pwa_tabular_nums", tabular);
-
-        applyTheme(theme);
-        applyThemeAccent(accent);
-        applyFont(font);
-        applyFontSize(size);
-        applyDensity(density);
-        applyBorderRadius(radius);
-        applyTabularNums(tabular);
-
-        alert("[成功保存] 系統外觀偏好設定已永久保存生效！");
-      });
-    }
-
-    // 9. 所屬營運區域設定 (北區 / 中區 / 南區，支援保存預設)
+    // 6. 所屬營運區域設定 (北區 / 中區 / 南區，切換即刻生效並自動儲存為預設)
     const selectActiveRegion = document.getElementById("selectActiveRegion");
-    const btnSaveDefaultRegion = document.getElementById("btnSaveDefaultRegion");
     const currentReg = getCurrentRegion();
     if (selectActiveRegion) {
       selectActiveRegion.value = currentReg;
       selectActiveRegion.addEventListener("change", (e) => {
         const rVal = e.target.value;
         localStorage.setItem("shihlin_pwa_current_region", rVal);
-        renderActiveSalesSelectOptions();
-        renderHomeDashboard();
-      });
-    }
-    if (btnSaveDefaultRegion) {
-      btnSaveDefaultRegion.addEventListener("click", () => {
-        const rVal = selectActiveRegion ? selectActiveRegion.value : "北區";
         localStorage.setItem("shihlin_pwa_default_region", rVal);
-        localStorage.setItem("shihlin_pwa_current_region", rVal);
         renderActiveSalesSelectOptions();
         renderHomeDashboard();
-        alert(`[成功保存] 已將【${rVal}】永久保存為全系統預設營運區域！`);
       });
     }
 
-    // 10. 動態初始化業務人員排序表與目前業務下拉選單
+    // 7. 動態初始化業務人員排序表與目前業務下拉選單 (切換即刻生效並自動儲存)
     renderActiveSalesSelectOptions();
     renderSalespersonOrderTable();
 

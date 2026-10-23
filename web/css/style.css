@@ -8,6 +8,7 @@
    ========================================================================== */
 
 :root {
+  color-scheme: light;
   /* 字型與字級 (CSS 變數化，支援設定頁動態變更) */
   --app-font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --app-font-size: 12pt;
@@ -15,6 +16,8 @@
   /* 淺色模式配色 (預設 - Office / Windows Fluent Light) */
   --bg-app: #F3F3F3;
   --bg-panel: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-surface-secondary: #F3F2F1;
   --bg-subtle: #F9F9F9;
   --bg-input: #FFFFFF;
   --bg-hover: #EAEAEA;
@@ -32,6 +35,9 @@
   --color-accent: #0067C0;
   --color-accent-hover: #005A9E;
   --color-accent-light: #EBF3FC;
+  --primary-color: #0067C0;
+  --btn-primary-bg: #0067C0;
+  --btn-primary-text: #FFFFFF;
   --color-success: #107C41;
   --color-warning: #797673;
   --color-danger: #A80000;
@@ -42,9 +48,13 @@
 }
 
 /* 深色模式配色 (柔和深灰藍，不死黑、不刺眼，如同 VS Code / Windows 11 深色) */
+html[data-theme="dark"],
 [data-theme="dark"] {
+  color-scheme: dark;
   --bg-app: #202020;
   --bg-panel: #2B2B2B;
+  --bg-card: #2B2B2B;
+  --bg-surface-secondary: #242424;
   --bg-subtle: #242424;
   --bg-input: #323232;
   --bg-hover: #383838;
@@ -62,6 +72,7 @@
   --color-accent: #4CC2FF;
   --color-accent-hover: #60CDFF;
   --color-accent-light: rgba(76, 194, 255, 0.15);
+  --primary-color: #4CC2FF;
   --color-success: #57C97E;
   --color-warning: #FCE100;
   --color-danger: #FF6B6B;
@@ -2356,4 +2367,326 @@ body[data-density="spacious"] .sales-order-table td {
 body[data-tabular="proportional"] {
   font-feature-settings: normal !important;
   font-variant-numeric: normal !important;
+}
+
+
+/* ==============================================================================
+   v1.0.19: 高對比自適應配色引擎、Segmented Control 膠囊按鈕、彩色圓點色票
+   ============================================================================== */
+
+/* 1. 高對比自適應主按鈕 (支援沉穩黑深色白銀反轉) */
+.fluent-btn.primary, .btn-primary {
+  background-color: var(--btn-primary-bg, var(--color-accent, #0067C0)) !important;
+  color: var(--btn-primary-text, #ffffff) !important;
+  border-color: var(--btn-primary-bg, var(--color-accent, #0067C0)) !important;
+}
+.fluent-btn.primary:hover, .btn-primary:hover {
+  filter: brightness(1.08);
+}
+.fluent-btn.primary svg, .btn-primary svg {
+  fill: currentColor !important;
+}
+
+.settings-hint {
+  font-size: 0.8rem;
+  color: var(--text-tertiary, #888888);
+  margin-top: 5px;
+  display: block;
+  line-height: 1.35;
+}
+
+/* 2. 膠囊分段控制器 (Segmented Control) */
+.segmented-control {
+  display: flex;
+  align-items: center;
+  background: var(--bg-hover, #eaeaea);
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid var(--border-light, #d1d5db);
+  width: 100%;
+  box-sizing: border-box;
+  gap: 2px;
+}
+.seg-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 6px 10px;
+  font-size: 0.86rem;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text-secondary, #4b5563);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+  white-space: nowrap;
+}
+.seg-btn:hover {
+  color: var(--text-primary);
+}
+.seg-btn.active {
+  background: var(--bg-panel, #ffffff);
+  color: var(--color-accent, #0067c0);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+[data-theme="dark"] .segmented-control {
+  background: #1e1e1e;
+  border-color: #383838;
+}
+[data-theme="dark"] .seg-btn.active {
+  background: #333333;
+  color: var(--color-accent, #3a96dd);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+/* 3. 彩色圓點色票按鈕 (Color Swatches) */
+.swatches-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+.swatch-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-panel, #ffffff);
+  border: 1px solid var(--border-light, #d1d5db);
+  border-radius: 6px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+  text-align: left;
+}
+.swatch-btn:hover {
+  background: var(--bg-hover, #f3f4f6);
+}
+.swatch-btn.active {
+  border-color: var(--color-accent, #0067c0);
+  background: var(--color-accent-light, #ebf3fc);
+  font-weight: 700;
+  box-shadow: 0 0 0 2px var(--color-accent, #0067c0);
+}
+.swatch-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.swatch-name {
+  white-space: nowrap;
+}
+[data-theme="dark"] .swatch-btn {
+  background: #2b2b2b;
+  border-color: #404040;
+}
+[data-theme="dark"] .swatch-btn:hover {
+  background: #353535;
+}
+[data-theme="dark"] .swatch-btn.active {
+  background: #333333;
+}
+
+/* ==============================================================================
+   深淺雙模高對比文字與表單選單引擎 (Dark & Light Theme High-Contrast Engine)
+   徹底解決深色模式下原生下拉選單 (<select> 與 <option>) 白底白字無法辨識之痛點
+   ============================================================================== */
+
+/* 全域表單元素與原生選單項目對比校準 */
+select, input, textarea {
+  color-scheme: light;
+  color: var(--text-primary);
+  background-color: var(--bg-input);
+  font-family: inherit;
+}
+
+select option {
+  background-color: var(--bg-panel, #ffffff);
+  color: var(--text-primary, #1e1e1e);
+}
+
+[data-theme="dark"] select,
+[data-theme="dark"] input,
+[data-theme="dark"] textarea {
+  color-scheme: dark !important;
+  color: var(--text-primary, #ffffff) !important;
+  background-color: var(--bg-input, #323232) !important;
+  border-color: var(--border-light, #383838) !important;
+}
+
+[data-theme="dark"] select option {
+  background-color: #2B2B2B !important;
+  color: #FFFFFF !important;
+  color-scheme: dark !important;
+}
+
+/* 業務人員維護表專用通路下拉選單與操作按鈕 */
+.sales-group-select {
+  padding: 3px 8px;
+  font-size: 0.85rem;
+  border: 1px solid var(--border-light, #cbd5e1);
+  border-radius: 4px;
+  background-color: var(--bg-input, #ffffff);
+  color: var(--text-primary, #1e1e1e);
+  font-family: inherit;
+  color-scheme: light;
+  cursor: pointer;
+  outline: none;
+  min-height: 28px;
+}
+
+.sales-group-select:focus {
+  border-color: var(--color-accent);
+}
+
+.sales-group-select option {
+  background-color: var(--bg-panel, #ffffff);
+  color: var(--text-primary, #1e1e1e);
+}
+
+[data-theme="dark"] .sales-group-select {
+  background-color: var(--bg-input, #323232) !important;
+  color: var(--text-primary, #ffffff) !important;
+  border-color: var(--border-light, #383838) !important;
+  color-scheme: dark !important;
+}
+
+[data-theme="dark"] .sales-group-select option {
+  background-color: #2B2B2B !important;
+  color: #FFFFFF !important;
+}
+
+/* 順序調整按鈕 (⬆ / ⬇) 深色自適應 */
+.btn-order-move {
+  padding: 3px 8px;
+  font-size: 0.78rem;
+  border: 1px solid var(--border-light, #cbd5e1);
+  background-color: var(--bg-panel, #ffffff);
+  color: var(--text-primary, #333333);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin: 0 2px;
+}
+
+[data-theme="dark"] .btn-order-move {
+  background-color: var(--bg-input, #323232) !important;
+  color: var(--text-primary, #ffffff) !important;
+  border-color: var(--border-light, #383838) !important;
+}
+
+.btn-order-move:hover:not(:disabled) {
+  background-color: var(--color-accent) !important;
+  color: var(--btn-primary-text, #ffffff) !important;
+  border-color: var(--color-accent) !important;
+}
+
+/* 刪除人員按鈕深色自適應 */
+.btn-order-delete {
+  padding: 3px 8px;
+  font-size: 0.78rem;
+  border: 1px solid var(--border-light, #cbd5e1);
+  background-color: var(--bg-panel, #ffffff);
+  color: var(--color-danger, #d83b01);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: 6px;
+}
+
+[data-theme="dark"] .btn-order-delete {
+  background-color: var(--bg-input, #323232) !important;
+  color: #ff8585 !important;
+  border-color: rgba(255, 107, 107, 0.4) !important;
+}
+
+[data-theme="dark"] .btn-order-delete:hover {
+  background-color: rgba(255, 107, 107, 0.2) !important;
+  color: #ffb4b4 !important;
+  border-color: #ff6b6b !important;
+}
+
+/* 手機端專用觸控卡片深色自適應 */
+[data-theme="dark"] .sales-mobile-card {
+  background-color: var(--bg-panel, #2B2B2B) !important;
+  border-color: var(--border-light, #383838) !important;
+  color: var(--text-primary, #ffffff) !important;
+}
+
+[data-theme="dark"] .sales-mobile-card-row2 {
+  border-top-color: var(--border-light, #383838) !important;
+}
+
+/* 核取方塊 Checkbox 深色自適應 */
+input[type="checkbox"] {
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+/* 首頁總業績目標與實績藥丸標籤 (深色模式高對比) */
+[data-theme="dark"] .stat-badge-pill.target {
+  background-color: var(--bg-hover) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border-light) !important;
+}
+[data-theme="dark"] .stat-badge-pill.target strong {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .stat-badge-pill.actual {
+  background-color: rgba(76, 194, 255, 0.18) !important;
+  color: #60CDFF !important;
+  border-color: rgba(76, 194, 255, 0.35) !important;
+}
+[data-theme="dark"] .stat-badge-pill.actual strong {
+  color: #93C5FD !important;
+}
+
+/* 營運區目標與實績雙數值標籤 (深色模式高對比) */
+[data-theme="dark"] .stat-badge.target {
+  background-color: var(--bg-hover) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border-light) !important;
+}
+[data-theme="dark"] .stat-badge.actual {
+  background-color: rgba(76, 194, 255, 0.18) !important;
+  color: #60CDFF !important;
+  border-color: rgba(76, 194, 255, 0.35) !important;
+}
+[data-theme="dark"] .hero-target-big {
+  color: var(--text-secondary) !important;
+}
+
+/* 紅綠燈達成率百分比徽章 (深色模式柔和高對比) */
+[data-theme="dark"] .traffic-light-badge.success {
+  background: rgba(16, 185, 129, 0.22) !important;
+  color: #6ee7b7 !important;
+  border-color: rgba(110, 231, 183, 0.45) !important;
+}
+[data-theme="dark"] .traffic-light-badge.warning {
+  background: rgba(245, 158, 11, 0.22) !important;
+  color: #fcd34d !important;
+  border-color: rgba(252, 211, 77, 0.45) !important;
+}
+[data-theme="dark"] .traffic-light-badge.danger {
+  background: rgba(239, 68, 68, 0.22) !important;
+  color: #fca5a5 !important;
+  border-color: rgba(252, 165, 165, 0.45) !important;
+}
+
+/* 狀態徽章 (深色模式高對比) */
+[data-theme="dark"] .status-pill.warning {
+  background-color: rgba(252, 225, 0, 0.15) !important;
+  color: #FCE100 !important;
+  border-color: rgba(252, 225, 0, 0.3) !important;
+}
+[data-theme="dark"] .badge-target-highlight {
+  background: rgba(239, 68, 68, 0.25) !important;
+  color: #fca5a5 !important;
+  border-color: rgba(239, 68, 68, 0.45) !important;
 }

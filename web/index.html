@@ -84,7 +84,7 @@
         </button>
         <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
         <div class="drawer-divider"></div>
-        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.18 (PWA)</div>
+        <div class="drawer-version-tag">士林電機 FA 業務系統 v1.0.20 (PWA)</div>
       </div>
     </nav>
   </div>
@@ -552,66 +552,123 @@
          分頁四：系統偏好設定 (Settings Panel)
          ==================================================================== -->
     <section id="panelSettings" class="hidden">
+      <!-- 【區塊一：營運區域與檢視身份】 (獨立置頂卡片) -->
       <div class="fluent-card">
         <div class="card-header">
           <div class="card-title-group">
             <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
-              <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
             </svg>
             <div>
-              <h2 class="card-title">系統偏好設定</h2>
-              <p class="card-desc">個人化外觀主題、字型系列、字級縮放與排版密度設定</p>
+              <h2 class="card-title">營運區域與檢視身份</h2>
+              <p class="card-desc">切換全系統責任營運區域與當前業務戰情視角（即刻生效並自動儲存）</p>
             </div>
           </div>
-          <button type="button" id="btnSaveAppearanceSettings" class="fluent-btn primary" style="display:inline-flex; align-items:center; gap:4px; padding:5px 14px; font-size:0.85rem;">
-            <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
-            保存外觀設定
-          </button>
         </div>
 
-        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
-          <!-- 1. 外觀顯示模式 -->
+        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+          <!-- 1. 所屬營運區域 (切換即刻生效並儲存為預設) -->
           <div class="form-group">
-            <label class="form-label" for="selectThemeMode">外觀顯示模式</label>
-            <select id="selectThemeMode" class="form-control">
-              <option value="auto">跟隨系統</option>
-              <option value="light">淺色模式</option>
-              <option value="dark">深色模式</option>
+            <label class="form-label" for="selectActiveRegion">所屬營運區域</label>
+            <select id="selectActiveRegion" class="form-control">
+              <option value="北區" selected>北區營業處</option>
+              <option value="中區">中區營業處</option>
+              <option value="南區">南區營業處</option>
             </select>
-            <span class="autofill-hint">隨時切換淺深色外觀，並自動記憶於本地瀏覽器</span>
+            <span class="settings-hint">全系統戰情看板、各產品目標與切換按鈕將自動綁定此營運區域</span>
           </div>
 
-          <!-- 2. 主題色系 -->
+          <!-- 2. 目前業務身份 (切換即刻生效) -->
           <div class="form-group">
-            <label class="form-label" for="selectThemeAccent">主題色系</label>
-            <select id="selectThemeAccent" class="form-control">
-              <option value="#0067C0" selected>士林科技藍</option>
-              <option value="#107C41">翡翠商務綠</option>
-              <option value="#D83B01">活力士電橘</option>
-              <option value="#5C2D91">專業高階紫</option>
-              <option value="#2B2B2B">沉穩商務黑</option>
-              <option value="#008272">深海科技青</option>
+            <label class="form-label" for="selectActiveSales">目前業務身份</label>
+            <select id="selectActiveSales" class="form-control">
+              <!-- 由 JavaScript 依據名冊動態生成純淨姓名 -->
             </select>
-            <span class="autofill-hint">自訂主要按鈕、指標進度與選中元件之品牌色調</span>
+            <span class="settings-hint">切換業務後，戰情首頁即刻切換為該人員之個人目標與自製品實績</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 【區塊二：介面外觀與字型設定】 (主視覺設定卡片) -->
+      <div class="fluent-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
+              <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.9-1.9C9.28 19.59 10.6 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-1.17 0-2.27-.34-3.21-.92l-.37-.23-1.84 1.84-.71-.71 1.84-1.84-.23-.37C8.34 14.83 8 13.73 8 12.56c0-2.48 2.02-4.5 4.5-4.5s4.5 2.02 4.5 4.5-2.02 4.44-5 4.44z"/>
+            </svg>
+            <div>
+              <h2 class="card-title">介面外觀與字型設定</h2>
+              <p class="card-desc">個人化深淺主題、高對比品牌色票、微軟繁體商務字型與數字排版</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+          <!-- 1. 外觀顯示模式 (Segmented Control 膠囊分段按鈕) -->
+          <div class="form-group">
+            <label class="form-label">外觀顯示模式</label>
+            <div class="segmented-control" id="segThemeMode">
+              <button type="button" class="seg-btn active" data-val="auto">跟隨系統</button>
+              <button type="button" class="seg-btn" data-val="light">淺色模式</button>
+              <button type="button" class="seg-btn" data-val="dark">深色模式</button>
+            </div>
           </div>
 
-          <!-- 3. 系統字型 (常用字型完整陣容) -->
+          <!-- 2. 數字排版 (Segmented Control 膠囊分段按鈕) -->
+          <div class="form-group">
+            <label class="form-label">數字排版</label>
+            <div class="segmented-control" id="segTabularNums">
+              <button type="button" class="seg-btn active" data-val="tabular">等寬數字 (對齊)</button>
+              <button type="button" class="seg-btn" data-val="proportional">比例數字 (標準)</button>
+            </div>
+          </div>
+
+          <!-- 3. 主題色系 (彩色圓點色票按鈕 Color Swatches) -->
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label class="form-label">主題色系</label>
+            <div class="swatches-container" id="swatchesThemeAccent">
+              <button type="button" class="swatch-btn active" data-color="blue" title="經典科技藍">
+                <span class="swatch-dot" style="background: #0067C0;"></span>
+                <span class="swatch-name">經典科技藍</span>
+              </button>
+              <button type="button" class="swatch-btn" data-color="green" title="翡翠商務綠">
+                <span class="swatch-dot" style="background: #107C41;"></span>
+                <span class="swatch-name">翡翠商務綠</span>
+              </button>
+              <button type="button" class="swatch-btn" data-color="orange" title="活力朝氣橘">
+                <span class="swatch-dot" style="background: #D83B01;"></span>
+                <span class="swatch-name">活力朝氣橘</span>
+              </button>
+              <button type="button" class="swatch-btn" data-color="purple" title="專業高階紫">
+                <span class="swatch-dot" style="background: #5C2D91;"></span>
+                <span class="swatch-name">專業高階紫</span>
+              </button>
+              <button type="button" class="swatch-btn" data-color="black" title="沉穩商務黑">
+                <span class="swatch-dot" style="background: #2B2B2B; border: 1px solid #777;"></span>
+                <span class="swatch-name">沉穩商務黑</span>
+              </button>
+              <button type="button" class="swatch-btn" data-color="cyan" title="深海科技青">
+                <span class="swatch-dot" style="background: #008272;"></span>
+                <span class="swatch-name">深海科技青</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 4. 系統字型 (微軟 Office 繁體常用字型) -->
           <div class="form-group">
             <label class="form-label" for="selectSystemFont">系統字型</label>
             <select id="selectSystemFont" class="form-control">
-              <option value="jhenghei" selected>微軟正黑體</option>
-              <option value="pingfang">蘋方 / 繁黑體</option>
-              <option value="noto">Google 思源黑體</option>
-              <option value="kai">標楷體</option>
-              <option value="ming">新細明體</option>
-              <option value="system">系統無襯線 (Segoe UI)</option>
-              <option value="serif">經典襯線體</option>
-              <option value="mono">等寬代碼體 (Consolas)</option>
+              <option value="jhenghei" style="font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif;" selected>微軟正黑體 (Microsoft JhengHei)</option>
+              <option value="ming" style="font-family: 'PMingLiU', '新細明體', serif;">新細明體 (PMingLiU)</option>
+              <option value="kai" style="font-family: 'DFKai-SB', '標楷體', serif;">標楷體 (DFKai-SB)</option>
+              <option value="yahei" style="font-family: 'Microsoft YaHei', '微軟雅黑', sans-serif;">微軟雅黑 (Microsoft YaHei)</option>
+              <option value="arial_jhenghei" style="font-family: Arial, 'Microsoft JhengHei', sans-serif;">Arial + 微軟正黑體 (英數商務)</option>
+              <option value="calibri_jhenghei" style="font-family: Calibri, 'Microsoft JhengHei', sans-serif;">Calibri + 微軟正黑體 (Office 現代)</option>
+              <option value="times_ming" style="font-family: 'Times New Roman', 'PMingLiU', serif;">Times New Roman + 新細明體 (正式報表)</option>
             </select>
-            <span class="autofill-hint">支援繁體標準中文字型與經典排版字族切換</span>
           </div>
 
-          <!-- 4. 字級大小 (8pt ~ 24pt 完整範圍) -->
+          <!-- 5. 字級大小 (8pt ~ 24pt 純淨文字選單) -->
           <div class="form-group">
             <label class="form-label" for="selectFontSize">字級大小</label>
             <select id="selectFontSize" class="form-control">
@@ -628,107 +685,59 @@
               <option value="22pt">22pt</option>
               <option value="24pt">24pt</option>
             </select>
-            <span class="autofill-hint">動態調整全站字體大小，自適應手機與桌面螢幕閱讀</span>
           </div>
+        </div>
+      </div>
 
-          <!-- 5. 版面密度 -->
-          <div class="form-group">
-            <label class="form-label" for="selectDensityMode">版面密度</label>
-            <select id="selectDensityMode" class="form-control">
-              <option value="normal" selected>標準模式</option>
-              <option value="compact">緊湊模式</option>
-              <option value="spacious">寬鬆模式</option>
-            </select>
-            <span class="autofill-hint">緊湊模式縮小表格間距以容納更多數據，寬鬆模式利於觸控</span>
-          </div>
-
-          <!-- 6. 介面圓角 -->
-          <div class="form-group">
-            <label class="form-label" for="selectBorderRadius">介面圓角</label>
-            <select id="selectBorderRadius" class="form-control">
-              <option value="6px" selected>微軟圓角 (6px)</option>
-              <option value="2px">商務直角 (2px)</option>
-              <option value="12px">柔和圓角 (12px)</option>
-            </select>
-            <span class="autofill-hint">切換卡片、按鈕與輸入框之導角曲率風格</span>
-          </div>
-
-          <!-- 7. 數字排版 -->
-          <div class="form-group">
-            <label class="form-label" for="selectTabularNums">數字排版</label>
-            <select id="selectTabularNums" class="form-control">
-              <option value="tabular" selected>等寬數字</option>
-              <option value="proportional">比例數字</option>
-            </select>
-            <span class="autofill-hint">等寬數字確保百萬金額與達成率欄位數字垂直精確對齊</span>
-          </div>
-
-          <!-- 8. 所屬營運區域 -->
-          <div class="form-group">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-              <label class="form-label" for="selectActiveRegion" style="font-weight: 700; margin: 0;">所屬營運區域</label>
-              <button type="button" id="btnSaveDefaultRegion" class="fluent-btn primary" style="display:inline-flex; align-items:center; gap:4px; padding:3px 10px; font-size:0.8rem;"><svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>保存</button>
+      <!-- 【區塊三：業務人員與權限設定】 (底部管理卡片) -->
+      <div class="fluent-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
+              <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+            </svg>
+            <div>
+              <h2 class="card-title">業務人員與權限設定</h2>
+              <p class="card-desc">名冊增刪、通路標註、數據管理權限配置與看板順序維護</p>
             </div>
-            <select id="selectActiveRegion" class="form-control">
-              <option value="北區" selected>北區營業處</option>
-              <option value="中區">中區營業處</option>
-              <option value="南區">南區營業處</option>
-            </select>
-            <span class="autofill-hint">點擊「保存」後，全系統戰情看板與報表將永久綁定該區域</span>
           </div>
-
-          <!-- 9. 目前登入業務切換 -->
-          <div class="form-group">
-            <label class="form-label" for="selectActiveSales">目前業務身份</label>
-            <select id="selectActiveSales" class="form-control">
-              <!-- 由 JavaScript 依據業務人員排序設定表動態生成 -->
-            </select>
-            <span class="autofill-hint">切換業務後，首頁將即刻切換為該人員的個人目標與實績</span>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" id="btnAddSalesperson" class="fluent-btn" style="display:inline-flex; align-items:center; gap:4px; padding:5px 12px; font-size:0.85rem;">
+              <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+              新增人員
+            </button>
+            <button type="button" id="btnSaveSalespersonSettings" class="fluent-btn primary" style="display:inline-flex; align-items:center; gap:4px; padding:5px 14px; font-size:0.85rem;">
+              <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+              保存
+            </button>
           </div>
         </div>
 
-        <!-- 業務人員名冊與權限設定總表 (二合一整合表：支援電腦端與手機端雙響應式方案) -->
-        <div class="form-group" style="margin-top: 1.5rem; border-top: 1px solid var(--border-light); padding-top: 1.25rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 8px;">
-            <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;">業務人員與權限設定</label>
-            <div style="display: flex; gap: 8px;">
-              <button type="button" id="btnAddSalesperson" class="fluent-btn" style="display:inline-flex; align-items:center; gap:4px; padding:4px 12px; font-size:0.85rem;">
-                <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                新增人員
-              </button>
-              <button type="button" id="btnSaveSalespersonSettings" class="fluent-btn primary" style="display:inline-flex; align-items:center; gap:4px; padding:4px 14px; font-size:0.85rem;">
-                <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
-                保存
-              </button>
-            </div>
-          </div>
-
-          <!-- 方案 A：電腦端寬表格視角 -->
-          <div class="sales-order-desktop-container" style="border: 1px solid var(--border-light); border-radius: 6px; overflow: hidden; max-height: 480px; overflow-y: auto;">
-            <table class="sales-order-table" id="tableSalesOrder">
-              <thead>
-                <tr>
-                  <th style="width: 50px; text-align: center;">序號</th>
-                  <th style="width: 130px;">姓名</th>
-                  <th style="width: 110px; text-align: center;">通路</th>
-                  <th style="width: 120px; text-align: center;">數據管理權限</th>
-                  <th style="width: 130px; text-align: center;">順序調整</th>
-                  <th style="width: 85px; text-align: center;">人員增減</th>
-                </tr>
-              </thead>
-              <tbody id="tbodySalesOrder">
-                <!-- 由 JavaScript 根據 getOrderedSalespersons() 動態渲染 -->
-              </tbody>
-            </table>
-          </div>
-
-          <!-- 方案 B：手機端觸控卡片視角 (專為 360px~430px 手機寬度設計，無右側裁切) -->
-          <div class="sales-order-mobile-container" id="containerSalesOrderMobile" style="max-height: 520px; overflow-y: auto;">
-            <!-- 由 JavaScript 根據 getOrderedSalespersons() 動態渲染手機卡片 -->
-          </div>
+        <!-- 方案 A：電腦端寬表格視角 -->
+        <div class="sales-order-desktop-container" style="border: 1px solid var(--border-light); border-radius: 6px; overflow: hidden; max-height: 480px; overflow-y: auto;">
+          <table class="sales-order-table" id="tableSalesOrder">
+            <thead>
+              <tr>
+                <th style="width: 50px; text-align: center;">序號</th>
+                <th style="width: 130px;">姓名</th>
+                <th style="width: 110px; text-align: center;">通路</th>
+                <th style="width: 120px; text-align: center;">數據管理權限</th>
+                <th style="width: 130px; text-align: center;">順序調整</th>
+                <th style="width: 85px; text-align: center;">人員增減</th>
+              </tr>
+            </thead>
+            <tbody id="tbodySalesOrder">
+              <!-- 由 JavaScript 根據 getOrderedSalespersons() 動態渲染 -->
+            </tbody>
+          </table>
         </div>
 
-        <div class="settings-version-tag">系統版本：v1.0.18 (PWA 離線快取版)</div>
+        <!-- 方案 B：手機端觸控卡片視角 (專為 360px~430px 手機寬度設計，無右側裁切) -->
+        <div class="sales-order-mobile-container" id="containerSalesOrderMobile" style="max-height: 520px; overflow-y: auto;">
+          <!-- 由 JavaScript 根據 getOrderedSalespersons() 動態渲染手機卡片 -->
+        </div>
+
+        <div class="settings-version-tag">系統版本：v1.0.20 (PWA 離線快取版)</div>
       </div>
     </section>
 
@@ -1149,13 +1158,13 @@
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261023_v1_0_18"></script>
+  <script src="js/app.js?v=20261023_v1_0_20"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_18')
+        navigator.serviceWorker.register('./sw.js?v=20261023_v1_0_20')
           .then(function(reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

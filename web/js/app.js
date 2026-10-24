@@ -4219,6 +4219,7 @@ document.addEventListener("DOMContentLoaded", () => {
       addBlankItem();
     }
     updateQuoteNoPreview();
+    enforceDesktopQuotationView();
   }
 
   // 四大子分頁切換邏輯
@@ -4506,6 +4507,18 @@ document.addEventListener("DOMContentLoaded", () => {
       btnRunAnalysis.addEventListener("click", runPriceAnalysis);
     }
   }
+
+  // 視窗寬度自適應模式守護 (確保電腦端 >= 1024px 一律自動維持 Excel 滿版試算表，避免誤入手機卡片)
+  function enforceDesktopQuotationView() {
+    const draftContainer = document.getElementById("quoteDraftSection");
+    const indicator = document.getElementById("viewModeIndicator");
+    if (!draftContainer) return;
+    if (window.innerWidth >= 1024) {
+      draftContainer.classList.remove("force-mobile-view");
+      if (indicator) indicator.textContent = "電腦端 Excel 試算表視角";
+    }
+  }
+  window.addEventListener("resize", enforceDesktopQuotationView);
 
   // 手動視角切換器
   function toggleQuoteViewMode() {

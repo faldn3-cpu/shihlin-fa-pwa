@@ -375,12 +375,75 @@ input, select, textarea, button {
 }
 
 /* ==========================================================================
-   主容器排版
+   主容器排版與電腦端桌面軟體佈局 (比照 _QuotationApp 側邊欄 ＋ 滿版工作區)
    ========================================================================== */
+.app-body-wrapper {
+  display: block;
+  width: 100%;
+}
+
 .main-container {
   max-width: 1400px;
   margin: 16px auto;
   padding: 0 16px 40px;
+}
+
+@media (min-width: 1024px) {
+  .app-body-wrapper {
+    display: flex !important;
+    min-height: calc(100vh - 48px);
+    width: 100%;
+    align-items: stretch;
+  }
+
+  /* 電腦端將抽屜遮罩透明化，成為常駐側邊欄容器 */
+  .drawer-overlay {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    display: block !important;
+    opacity: 1 !important;
+    z-index: 10 !important;
+  }
+  .drawer-overlay.hidden {
+    display: block !important;
+  }
+
+  /* 左側側邊欄固定在左邊 (類似 _QuotationApp 桌面版垂直功能選單) */
+  .app-drawer {
+    position: sticky !important;
+    top: 48px !important;
+    width: 230px !important;
+    min-width: 230px !important;
+    max-width: 230px !important;
+    height: calc(100vh - 48px) !important;
+    box-shadow: none !important;
+    border-right: 1px solid var(--border-light) !important;
+    background-color: var(--bg-panel) !important;
+    animation: none !important;
+    z-index: 10 !important;
+    flex-shrink: 0;
+  }
+
+  .drawer-header {
+    background-color: var(--bg-subtle) !important;
+    border-bottom: 1px solid var(--border-light) !important;
+  }
+  .drawer-header .modal-close-btn {
+    display: none !important; /* 電腦版常駐不需 X 關閉鈕 */
+  }
+
+  /* 電腦端主工作區：取消手機版卡片窄寬度，滿版展開 */
+  .main-container {
+    flex: 1 !important;
+    max-width: none !important;
+    width: calc(100% - 230px) !important;
+    margin: 0 !important;
+    padding: 16px 28px 60px !important;
+    overflow-x: hidden;
+  }
 }
 
 /* 卡片容器 */
@@ -2931,6 +2994,37 @@ input[type="checkbox"] {
   }
   .quote-top-meta-grid {
     grid-template-columns: 2fr 1fr !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .quote-draft-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  .quote-mobile-only {
+    display: none !important;
+  }
+  .quote-desktop-only {
+    display: block !important;
+    width: 100% !important;
+  }
+  /* 電腦端 Excel 試算表格展開滿版高密度 */
+  .quote-desktop-table-wrapper {
+    width: 100% !important;
+    max-height: calc(100vh - 350px) !important;
+    min-height: 280px !important;
+    overflow-y: auto !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  }
+  .quote-excel-table {
+    width: 100% !important;
+  }
+  .quote-excel-table th {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 5 !important;
   }
 }
 

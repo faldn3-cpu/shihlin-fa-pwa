@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>士林電機 FA 業務戰情與報價系統</title>
-  
+
   <!-- PWA 設定與手機桌面 App 圖示 -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#1e3a8a" />
@@ -13,10 +14,11 @@
   <meta name="apple-mobile-web-app-title" content="士電FA戰情" />
   <link rel="icon" type="image/png" href="favicon-v2.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
-  
+
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261024_v1_0_37" />
+  <link rel="stylesheet" href="css/style.css?v=20261030_v1_0_38" />
 </head>
+
 <body>
 
   <!-- 頂部系統標題列 (Office Title Bar - 單行精簡化) -->
@@ -25,7 +27,7 @@
       <!-- 微軟四方格應用程式啟動按鈕 (App Launcher Button) -->
       <button id="btnAppLauncher" class="launcher-btn" type="button" title="開啟系統功能選單" aria-label="系統功能選單">
         <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24">
-          <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z"/>
+          <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z" />
         </svg>
       </button>
       <span class="brand-title">士林電機 FA 業務系統</span>
@@ -47,7 +49,7 @@
         <div class="drawer-header">
           <div class="drawer-title-group">
             <svg class="icon-svg" style="width:18px; height:18px; color:var(--color-accent);" viewBox="0 0 24 24">
-              <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z"/>
+              <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z" />
             </svg>
             <span class="drawer-title">功能選單</span>
           </div>
@@ -55,1257 +57,1631 @@
         </div>
         <div class="drawer-nav-list">
           <button id="navItemHome" class="drawer-nav-item active" type="button">
-            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+            </svg>
             <span>首頁</span>
           </button>
           <button id="navItemCases" class="drawer-nav-item" type="button">
-            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path
+                d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z" />
+            </svg>
             <span>案件管理</span>
           </button>
           <button id="navItemQuotes" class="drawer-nav-item" type="button">
-            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path
+                d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" />
+            </svg>
             <span>報價單管理</span>
           </button>
           <button id="navItemSpecials" class="drawer-nav-item" type="button">
-            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path
+                d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z" />
+            </svg>
             <span>專案單申請</span>
+          </button>
+          <button id="navItemForecast" class="drawer-nav-item" type="button">
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z" />
+            </svg>
+            <span>業績預測</span>
           </button>
           <div class="drawer-divider"></div>
           <button id="navItemAdminTargets" class="drawer-nav-item" type="button">
-            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/></svg>
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path
+                d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z" />
+            </svg>
             <span>業績數據資料庫</span>
           </button>
           <button id="navItemDriverMgmt" class="drawer-nav-item" type="button">
-            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path
+                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+            </svg>
             <span>領先指標設定與審核</span>
           </button>
           <div class="drawer-divider"></div>
           <button id="navItemSettings" class="drawer-nav-item" type="button">
-            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path
+                d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+            </svg>
             <span>設定</span>
           </button>
           <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
           <div class="drawer-divider"></div>
           <div class="drawer-version-tag">
-            <span class="version-text">士林電機 FA 業務系統 v1.0.37</span>
+            <span class="version-text">士林電機 FA 業務系統 v1.0.38</span>
             <button id="btnClearCacheDrawer" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
-              <svg class="icon-svg-xs" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+              <svg class="icon-svg-xs" viewBox="0 0 24 24">
+                <path
+                  d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+              </svg>
               <span>清除快取</span>
             </button>
           </div>
         </div>
       </nav>
-  </div>
+    </div>
 
-  <!-- 主內容容器 -->
-  <main class="main-container">
+    <!-- 主內容容器 -->
+    <main class="main-container">
 
-    <!-- ====================================================================
+      <!-- ====================================================================
          首頁：純粹業務戰情計分板 (Scoreboard Dashboard)
          進入首頁純粹看戰況與目標，點擊下方卡片再進入具體功能
          ==================================================================== -->
-    <section id="panelHome">
-      <div class="scoreboard-top-banner">
-        <!-- 頂部月度目標總結列 (含附圖一紅框處：單一立體切換按鈕) -->
-        <div class="scoreboard-header-bar" id="scoreboardHeaderBar">
-          <div class="scoreboard-metrics-flow" id="scoreboardMetricsFlow">
-            <div class="flow-item flow-item-target">
-              <span class="flow-label" id="labelMainTarget">本月北區目標：</span>
-              <span class="flow-val badge-target-highlight" id="flowTargetVal">9,300萬</span>
+      <section id="panelHome">
+        <div class="scoreboard-top-banner">
+          <!-- 頂部月度目標總結列 (含附圖一紅框處：單一立體切換按鈕) -->
+          <div class="scoreboard-header-bar" id="scoreboardHeaderBar">
+            <div class="scoreboard-metrics-flow" id="scoreboardMetricsFlow">
+              <div class="flow-item flow-item-target">
+                <span class="flow-label" id="labelMainTarget">本月北區目標：</span>
+                <span class="flow-val badge-target-highlight" id="flowTargetVal">9,300萬</span>
+              </div>
+              <div class="flow-item flow-item-actual">
+                <span class="flow-label" id="labelMainActual">北區實績：</span>
+                <span class="flow-val" id="flowActualVal">10,370萬</span>
+              </div>
+              <div class="flow-item flow-item-rate">
+                <span class="flow-label">完成率：</span>
+                <span class="flow-val traffic-light-badge success" id="flowRateVal">112%</span>
+              </div>
             </div>
-            <div class="flow-item flow-item-actual">
-              <span class="flow-label" id="labelMainActual">北區實績：</span>
-              <span class="flow-val" id="flowActualVal">10,370萬</span>
-            </div>
-            <div class="flow-item flow-item-rate">
-              <span class="flow-label">完成率：</span>
-              <span class="flow-val traffic-light-badge success" id="flowRateVal">112%</span>
+
+            <!-- 附圖一紅框處：單一立體切換按鈕 (北區目標 ⮂ 個人目標) -->
+            <div class="scope-btn-wrapper" id="scopeSwitchContainer">
+              <button type="button" class="scope-toggle-btn scope-mode-region" id="btnToggleScope" data-scope="region"
+                title="點擊切換目標視角 (北區/個人)">
+                <span class="scope-btn-dot"></span>
+                <span id="txtScopeBtnLabel">北區目標</span>
+              </button>
             </div>
           </div>
 
-          <!-- 附圖一紅框處：單一立體切換按鈕 (北區目標 ⮂ 個人目標) -->
-          <div class="scope-btn-wrapper" id="scopeSwitchContainer">
-            <button type="button" class="scope-toggle-btn scope-mode-region" id="btnToggleScope" data-scope="region" title="點擊切換目標視角 (北區/個人)">
-              <span class="scope-btn-dot"></span>
-              <span id="txtScopeBtnLabel">北區目標</span>
+          <!-- 單一全局切換列：點擊展開領先指標，成果目標完全折疊 -->
+          <div class="kpi-view-switch-row">
+            <div class="kpi-view-mode-indicator">
+              <span class="mode-dot"></span>
+              <span id="txtCurrentViewMode">目前檢視：業績狀況</span>
+            </div>
+            <button type="button" class="kpi-global-toggle-btn icon-only-btn" id="btnGlobalToggleDriver"
+              title="點擊切換：業績狀況 / 領先指標" aria-expanded="false">
+              <svg class="icon-svg toggle-arrow" viewBox="0 0 24 24">
+                <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
+              </svg>
             </button>
+          </div>
+
+          <!-- 四大核心戰情看板 (支援一鍵折疊成果目標，只保留領先指標) -->
+          <div class="kpi-hero-grid" id="kpiHeroGrid">
+
+            <!-- 卡片 1：總業績 (成果目標模式顯示，領先指標模式時優雅折疊) -->
+            <div class="kpi-hero-card" id="cardHeroPersonal">
+              <div class="kpi-card-header">
+                <span class="kpi-card-title" id="kpiCardTitlePersonal">個人總業績</span>
+                <span id="kpiTrafficPersonal" class="traffic-light-badge warning">99.0%</span>
+              </div>
+              <div class="kpi-outcome-body" id="outcomeBodyPersonal">
+                <div class="kpi-val-row">
+                  <div id="kpiValPersonal" class="kpi-big-num">802</div>
+                  <span class="kpi-unit">萬元</span>
+                </div>
+                <div class="kpi-detail-row" id="kpiDetailPersonal">
+                  <span>目標：810 萬</span> <span>｜</span> <span>實績：802 萬</span> <span>｜</span> <span>差距：8 萬</span>
+                </div>
+                <div class="fluent-progress-bg">
+                  <div id="kpiBarPersonal" class="fluent-progress-bar bar-warning" style="width: 99%;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 卡片 2：士林伺服 -->
+            <div class="kpi-hero-card" id="cardHeroLEB">
+              <div class="kpi-card-header">
+                <span class="kpi-card-title">士林伺服</span>
+                <span id="kpiTrafficLEB" class="traffic-light-badge danger">38%</span>
+              </div>
+              <!-- 成果目標區塊 (點擊展開按鈕時平滑折疊收合) -->
+              <div class="kpi-outcome-body" id="outcomeBodyLEB">
+                <div class="kpi-val-row">
+                  <div id="kpiValLEB" class="kpi-big-num">65.87</div>
+                  <span class="kpi-unit">萬元</span>
+                </div>
+                <div class="kpi-detail-row" id="kpiDetailLEB">
+                  <span>目標：516 萬</span> <span>｜</span> <span>實績：196 萬</span> <span>｜</span> <span>差距：320 萬</span>
+                </div>
+                <div class="fluent-progress-bg">
+                  <div id="kpiBarLEB" class="fluent-progress-bar bar-danger" style="width: 38%;"></div>
+                </div>
+              </div>
+              <!-- 領先指標區塊 (折疊成果目標後，在此完整呈現) -->
+              <div class="kpi-driver-body" id="drawerDriverLEB">
+                <!-- JS 動態渲染領先指標 -->
+              </div>
+            </div>
+
+            <!-- 卡片 3：士林變頻器 -->
+            <div class="kpi-hero-card" id="cardHeroLNH">
+              <div class="kpi-card-header">
+                <span class="kpi-card-title">士林變頻器</span>
+                <span id="kpiTrafficLNH" class="traffic-light-badge danger">47%</span>
+              </div>
+              <!-- 成果目標區塊 (點擊展開按鈕時平滑折疊收合) -->
+              <div class="kpi-outcome-body" id="outcomeBodyLNH">
+                <div class="kpi-val-row">
+                  <div id="kpiValLNH" class="kpi-big-num">55.22</div>
+                  <span class="kpi-unit">萬元</span>
+                </div>
+                <div class="kpi-detail-row" id="kpiDetailLNH">
+                  <span>目標：516 萬</span> <span>｜</span> <span>實績：243 萬</span> <span>｜</span> <span>差距：273 萬</span>
+                </div>
+                <div class="fluent-progress-bg">
+                  <div id="kpiBarLNH" class="fluent-progress-bar bar-danger" style="width: 47%;"></div>
+                </div>
+              </div>
+              <!-- 領先指標區塊 (折疊成果目標後，在此完整呈現) -->
+              <div class="kpi-driver-body" id="drawerDriverLNH">
+                <!-- JS 動態渲染領先指標 -->
+              </div>
+            </div>
+
+            <!-- 卡片 4：士林PLC -->
+            <div class="kpi-hero-card" id="cardHeroPLC">
+              <div class="kpi-card-header">
+                <span class="kpi-card-title">士林PLC</span>
+                <span id="kpiTrafficPLC" class="traffic-light-badge success">117%</span>
+              </div>
+              <!-- 成果目標區塊 (點擊展開按鈕時平滑折疊收合) -->
+              <div class="kpi-outcome-body" id="outcomeBodyPLC">
+                <div class="kpi-val-row">
+                  <div id="kpiValPLC" class="kpi-big-num">9.03</div>
+                  <span class="kpi-unit">萬元</span>
+                </div>
+                <div class="kpi-detail-row" id="kpiDetailPLC">
+                  <span>目標：210 萬</span> <span>｜</span> <span>實績：246 萬</span> <span>｜</span> <span>超標：36 萬</span>
+                </div>
+                <div class="fluent-progress-bg">
+                  <div id="kpiBarPLC" class="fluent-progress-bar bar-success" style="width: 100%;"></div>
+                </div>
+              </div>
+              <!-- 領先指標區塊 (折疊成果目標後，在此完整呈現) -->
+              <div class="kpi-driver-body" id="drawerDriverPLC">
+                <!-- JS 動態渲染領先指標 -->
+              </div>
+            </div>
+
           </div>
         </div>
 
-        <!-- 單一全局切換列：點擊展開領先指標，成果目標完全折疊 -->
-        <div class="kpi-view-switch-row">
-          <div class="kpi-view-mode-indicator">
-            <span class="mode-dot"></span>
-            <span id="txtCurrentViewMode">目前檢視：業績狀況</span>
+        <!-- ====================================================================
+           計分板正下方：選擇需要的功能 (Action Hub 4 大模組大卡片)
+           ==================================================================== -->
+        <div style="margin-top:20px; margin-bottom:8px;">
+          <h3 style="font-size:1.05em; font-weight:600; color:var(--text-secondary); margin:0 0 10px;">請選擇需要執行的業務功能：
+          </h3>
+        </div>
+
+        <div class="action-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+          <div id="btnQuickReport" class="action-card-btn" role="button" tabindex="0" title="點擊前往客戶拜訪日報填寫">
+            <div class="action-icon-circle">
+              <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24">
+                <path
+                  d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+              </svg>
+            </div>
+            <div>
+              <div class="action-btn-title" style="font-size:1.05em;">客戶拜訪日報</div>
+              <div class="action-btn-subtitle">第一層 OGSM 拜訪紀錄、自動帶入免重填</div>
+            </div>
           </div>
-          <button type="button" class="kpi-global-toggle-btn icon-only-btn" id="btnGlobalToggleDriver" title="點擊切換：業績狀況 / 領先指標" aria-expanded="false">
-            <svg class="icon-svg toggle-arrow" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+
+          <div id="btnQuickDeals" class="action-card-btn" role="button" tabindex="0" title="點擊前往商機與專案案件追蹤看板">
+            <div class="action-icon-circle">
+              <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24">
+                <path
+                  d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+              </svg>
+            </div>
+            <div>
+              <div class="action-btn-title" style="font-size:1.05em;">商機與案件追蹤</div>
+              <div class="action-btn-subtitle">第二/三層 CRM 漏斗、競爭品牌分析與推進</div>
+            </div>
+          </div>
+
+          <div id="btnQuickQuotes" class="action-card-btn" role="button" tabindex="0" title="點擊前往報價單管理中心">
+            <div class="action-icon-circle">
+              <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24">
+                <path
+                  d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" />
+              </svg>
+            </div>
+            <div>
+              <div class="action-btn-title" style="font-size:1.05em;">製作業務報價單</div>
+              <div class="action-btn-subtitle">三段式單號 Prefix-Seq-Rev、Append-Only</div>
+            </div>
+          </div>
+
+          <div id="btnQuickSpecials" class="action-card-btn" role="button" tabindex="0" title="點擊前往專案售價申請單">
+            <div class="action-icon-circle">
+              <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24">
+                <path
+                  d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z" />
+              </svg>
+            </div>
+            <div>
+              <div class="action-btn-title" style="font-size:1.05em;">專案售價申請</div>
+              <div class="action-btn-subtitle">低折讓連鎖防呆審批、底價利潤試算</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+         分頁一：日報與案件管理 (三層漏斗：日報 ➔ 商機 ➔ 案件)
+         ==================================================================== -->
+      <section id="panelCases" class="hidden">
+
+        <!-- 區塊 1：客戶每日日報填寫 (第一層 OGSM 行動層) -->
+        <div class="fluent-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24">
+                <path
+                  d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+              </svg>
+              <div>
+                <h2 class="card-title">第一層：客戶每日日報填寫 (OGSM 行動層)</h2>
+                <p class="card-desc">單一窗口免重複輸入規範：選取客戶自動帶入統編、電話與地址；按需展開下方商機與案件卡片。</p>
+              </div>
+            </div>
+          </div>
+
+          <form id="dailyReportForm">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">拜訪日期<span class="required">*</span></label>
+                <input id="inputReportDate" type="date" class="form-control" required />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">業務姓名<span class="required">*</span></label>
+                <input id="inputSalesName" type="text" class="form-control" value="曾維崧" required />
+              </div>
+
+              <div class="form-group" style="grid-column: span 2;">
+                <label class="form-label">客戶公司名稱<span class="required">*</span> (下拉選取自動帶入主檔資料)</label>
+                <select id="selectCustomer" class="form-control" required>
+                  <option value="">-- 請選擇拜訪客戶 (或打字過濾) --</option>
+                </select>
+                <span id="customerAutofillHint" class="autofill-hint hidden">已自動帶入客戶基本資料，無需重複輸入。</span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">客戶統一編號 (自動帶入)</label>
+                <input id="inputTaxId" type="text" class="form-control" readonly placeholder="選擇客戶後自動顯示" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">拜訪對象 / 聯絡人</label>
+                <input id="inputContactName" type="text" class="form-control" placeholder="例如：陳姿蓉特助" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">聯絡電話 (自動帶入)</label>
+                <input id="inputPhone" type="text" class="form-control" readonly placeholder="選擇客戶後自動顯示" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">拜訪形式<span class="required">*</span></label>
+                <select id="selectVisitType" class="form-control">
+                  <option value="實地拜訪">實地到廠拜訪</option>
+                  <option value="電話聯繫">電話聯繫 / 專案溝通</option>
+                  <option value="視訊會議">線上視訊會議</option>
+                  <option value="報價事宜">報價事宜確認</option>
+                  <option value="技術支援">技術 FAE 現場支援</option>
+                </select>
+              </div>
+
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label">交貨地點 / 客戶地址 (自動帶入)</label>
+                <input id="inputAddress" type="text" class="form-control" readonly placeholder="選擇客戶後自動顯示" />
+              </div>
+
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label">洽談重點與行程摘要<span class="required">*</span></label>
+                <textarea id="textContentSummary" class="form-control"
+                  placeholder="記錄今日拜訪核心重點（例如：洽談本季出貨目標，客戶反映交期問題，評估更換士林變頻器意願）" required></textarea>
+              </div>
+            </div>
+
+            <!-- 子卡片 1：產生新商機 (第二層 CRM 機會層) -->
+            <div class="extension-card">
+              <div class="extension-header" id="headerOppToggle">
+                <label class="extension-checkbox-label">
+                  <input id="checkCreateOpp" type="checkbox" />
+                  <span>從此日報挖掘潛在商機 (第二層 CRM)</span>
+                </label>
+                <svg class="icon-svg" style="color:var(--text-tertiary);" viewBox="0 0 24 24">
+                  <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
+                </svg>
+              </div>
+              <div id="bodyOppToggle" class="extension-body">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">產業類別</label>
+                    <select id="inputIndustry" class="form-control">
+                      <option value="自動化設備產業">自動化設備產業 (工具機/輸送/廠房設備)</option>
+                      <option value="電子產業">電子產業 (半導體/PCB/AI)</option>
+                      <option value="節能產業">節能產業 (風車/水泵/空調工程)</option>
+                      <option value="通路商">通路商 (經銷商/二次店/上控)</option>
+                      <option value="盤廠與機械廠">盤廠與機械廠</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">推廣產品系列</label>
+                    <select id="inputProductSeries" class="form-control">
+                      <option value="士林品">士林品 (SE3/SS2 變頻器/AX5S)</option>
+                      <option value="三菱品">三菱品 (FR-A800/E800/iQ-R)</option>
+                      <option value="松下品">松下品 (伺服馬達)</option>
+                      <option value="低壓開關">低壓開關類</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">預計產出季度</label>
+                    <select id="inputEstQuarter" class="form-control">
+                      <option value="Q4">今年 Q4</option>
+                      <option value="Q1">明年 Q1</option>
+                      <option value="Q2">明年 Q2</option>
+                      <option value="Q3">明年 Q3</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">預估潛在規模 (元)</label>
+                    <input id="inputEstScale" type="number" class="form-control" value="0" step="10000" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 子卡片 2：建立正式專案案件 (第三層 Deal 標案層) -->
+            <div class="extension-card">
+              <div class="extension-header" id="headerDealToggle">
+                <label class="extension-checkbox-label">
+                  <input id="checkCreateDeal" type="checkbox" />
+                  <span>規格與標的明確，直接升格為專案案件 (第三層 Deal)</span>
+                </label>
+                <svg class="icon-svg" style="color:var(--text-tertiary);" viewBox="0 0 24 24">
+                  <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
+                </svg>
+              </div>
+              <div id="bodyDealToggle" class="extension-body">
+                <div class="form-grid">
+                  <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">專案案場名稱<span class="required">*</span></label>
+                    <input id="inputProjectName" type="text" class="form-control" placeholder="例如：新竹廠區變頻器升級案" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">主要競爭品牌</label>
+                    <select id="inputCompBrand" class="form-control">
+                      <option value="台達">台達 (Delta)</option>
+                      <option value="三菱">日本三菱 (Mitsubishi)</option>
+                      <option value="富士">日本富士 (Fuji)</option>
+                      <option value="歐系">歐系品牌 (西門子/ABB/施耐德)</option>
+                      <option value="其他">其他品牌</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">競爭通路商</label>
+                    <input id="inputCompChannel" type="text" class="form-control" placeholder="例如：能麒 / 上菱 / 日遠" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">預估成案日期</label>
+                    <input id="inputEstDealDate" type="date" class="form-control" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">預估案件總金額 (元)</label>
+                    <input id="inputEstDealAmount" type="number" class="form-control" value="0" step="10000" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:16px; display:flex; justify-content:flex-end; gap:8px;">
+              <button id="btnResetForm" type="button" class="fluent-btn">清空重填</button>
+              <button id="btnSubmitDailyReport" type="submit" class="fluent-btn primary">
+                <svg class="icon-svg" viewBox="0 0 24 24">
+                  <path
+                    d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" />
+                </svg>
+                儲存日報並連動
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- 區塊 2：今日與近期日報清單 -->
+        <div class="fluent-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="icon-svg" style="color:var(--text-secondary);" viewBox="0 0 24 24">
+                <path
+                  d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z" />
+              </svg>
+              <h3 class="card-title">近期日報紀錄清單</h3>
+            </div>
+            <button id="btnRefreshReports" class="fluent-btn" type="button">重新整頓清單</button>
+          </div>
+          <div class="fluent-table-wrapper">
+            <table class="fluent-table">
+              <thead>
+                <tr>
+                  <th style="width:100px;">拜訪日期</th>
+                  <th style="width:80px;">業務</th>
+                  <th style="width:200px;">客戶名稱</th>
+                  <th style="width:90px;">聯絡人</th>
+                  <th style="width:90px;">形式</th>
+                  <th>洽談重點摘要</th>
+                </tr>
+              </thead>
+              <tbody id="dailyReportsTableBody">
+                <tr>
+                  <td colspan="6" style="text-align:center; color:var(--text-tertiary); padding:20px;">資料載入中...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 區塊 3：Deal 專案案件看板 (可直接連動報價單) -->
+        <div class="fluent-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24">
+                <path
+                  d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+              </svg>
+              <h3 class="card-title">第三層：Deal 專案案件追蹤看板 (支援一鍵發起報價)</h3>
+            </div>
+            <span class="status-pill success">進行中案件</span>
+          </div>
+          <div class="fluent-table-wrapper">
+            <table class="fluent-table">
+              <thead>
+                <tr>
+                  <th style="width:60px;">編號</th>
+                  <th style="width:180px;">客戶名稱</th>
+                  <th>專案名稱</th>
+                  <th style="width:100px;">競爭品牌</th>
+                  <th style="width:110px;">預估金額</th>
+                  <th style="width:100px;">預估成案日</th>
+                  <th style="width:90px;">當前階段</th>
+                  <th style="width:120px; text-align:center;">操作連動</th>
+                </tr>
+              </thead>
+              <tbody id="dealsTableBody">
+                <tr>
+                  <td colspan="8" style="text-align:center; color:var(--text-tertiary); padding:20px;">資料載入中...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ====================================================================
+         分頁二：報價單管理 (舊版報價單完整移植升級版)
+         ==================================================================== -->
+      <section id="panelQuotes" class="hidden">
+        <!-- 頂部四大子分頁導航列 (微軟企業 Fluent 風格 + 純文字與單色向量圖標) -->
+        <div class="quote-sub-tabs" role="tablist">
+          <button type="button" id="tabQuoteCreate" class="sub-tab-btn active" role="tab" aria-selected="true">
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path
+                d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+            </svg>
+            <span>新建 / 編輯報價單</span>
+          </button>
+          <button type="button" id="tabQuoteHistory" class="sub-tab-btn" role="tab" aria-selected="false">
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path
+                d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" />
+            </svg>
+            <span>歷史報價與垃圾桶</span>
+          </button>
+          <button type="button" id="tabQuoteDrafts" class="sub-tab-btn" role="tab" aria-selected="false">
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path
+                d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" />
+            </svg>
+            <span>手機報價草稿匣</span>
+          </button>
+          <button type="button" id="tabQuoteAnalysis" class="sub-tab-btn" role="tab" aria-selected="false">
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path
+                d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
+            </svg>
+            <span>歷史單價分析</span>
+          </button>
+          <button type="button" id="tabQuoteSpecialProducts" class="sub-tab-btn" role="tab" aria-selected="false">
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path
+                d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+            </svg>
+            <span>個人特殊品牌價</span>
           </button>
         </div>
 
-        <!-- 四大核心戰情看板 (支援一鍵折疊成果目標，只保留領先指標) -->
-        <div class="kpi-hero-grid" id="kpiHeroGrid">
-          
-          <!-- 卡片 1：總業績 (成果目標模式顯示，領先指標模式時優雅折疊) -->
-          <div class="kpi-hero-card" id="cardHeroPersonal">
-            <div class="kpi-card-header">
-              <span class="kpi-card-title" id="kpiCardTitlePersonal">個人總業績</span>
-              <span id="kpiTrafficPersonal" class="traffic-light-badge warning">99.0%</span>
-            </div>
-            <div class="kpi-outcome-body" id="outcomeBodyPersonal">
-              <div class="kpi-val-row">
-                <div id="kpiValPersonal" class="kpi-big-num">802</div>
-                <span class="kpi-unit">萬元</span>
-              </div>
-              <div class="kpi-detail-row" id="kpiDetailPersonal">
-                <span>目標：810 萬</span> <span>｜</span> <span>實績：802 萬</span> <span>｜</span> <span>差距：8 萬</span>
-              </div>
-              <div class="fluent-progress-bg">
-                <div id="kpiBarPersonal" class="fluent-progress-bar bar-warning" style="width: 99%;"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 卡片 2：士林伺服 -->
-          <div class="kpi-hero-card" id="cardHeroLEB">
-            <div class="kpi-card-header">
-              <span class="kpi-card-title">士林伺服</span>
-              <span id="kpiTrafficLEB" class="traffic-light-badge danger">38%</span>
-            </div>
-            <!-- 成果目標區塊 (點擊展開按鈕時平滑折疊收合) -->
-            <div class="kpi-outcome-body" id="outcomeBodyLEB">
-              <div class="kpi-val-row">
-                <div id="kpiValLEB" class="kpi-big-num">65.87</div>
-                <span class="kpi-unit">萬元</span>
-              </div>
-              <div class="kpi-detail-row" id="kpiDetailLEB">
-                <span>目標：516 萬</span> <span>｜</span> <span>實績：196 萬</span> <span>｜</span> <span>差距：320 萬</span>
-              </div>
-              <div class="fluent-progress-bg">
-                <div id="kpiBarLEB" class="fluent-progress-bar bar-danger" style="width: 38%;"></div>
-              </div>
-            </div>
-            <!-- 領先指標區塊 (折疊成果目標後，在此完整呈現) -->
-            <div class="kpi-driver-body" id="drawerDriverLEB">
-              <!-- JS 動態渲染領先指標 -->
-            </div>
-          </div>
-
-          <!-- 卡片 3：士林變頻器 -->
-          <div class="kpi-hero-card" id="cardHeroLNH">
-            <div class="kpi-card-header">
-              <span class="kpi-card-title">士林變頻器</span>
-              <span id="kpiTrafficLNH" class="traffic-light-badge danger">47%</span>
-            </div>
-            <!-- 成果目標區塊 (點擊展開按鈕時平滑折疊收合) -->
-            <div class="kpi-outcome-body" id="outcomeBodyLNH">
-              <div class="kpi-val-row">
-                <div id="kpiValLNH" class="kpi-big-num">55.22</div>
-                <span class="kpi-unit">萬元</span>
-              </div>
-              <div class="kpi-detail-row" id="kpiDetailLNH">
-                <span>目標：516 萬</span> <span>｜</span> <span>實績：243 萬</span> <span>｜</span> <span>差距：273 萬</span>
-              </div>
-              <div class="fluent-progress-bg">
-                <div id="kpiBarLNH" class="fluent-progress-bar bar-danger" style="width: 47%;"></div>
-              </div>
-            </div>
-            <!-- 領先指標區塊 (折疊成果目標後，在此完整呈現) -->
-            <div class="kpi-driver-body" id="drawerDriverLNH">
-              <!-- JS 動態渲染領先指標 -->
-            </div>
-          </div>
-
-          <!-- 卡片 4：士林PLC -->
-          <div class="kpi-hero-card" id="cardHeroPLC">
-            <div class="kpi-card-header">
-              <span class="kpi-card-title">士林PLC</span>
-              <span id="kpiTrafficPLC" class="traffic-light-badge success">117%</span>
-            </div>
-            <!-- 成果目標區塊 (點擊展開按鈕時平滑折疊收合) -->
-            <div class="kpi-outcome-body" id="outcomeBodyPLC">
-              <div class="kpi-val-row">
-                <div id="kpiValPLC" class="kpi-big-num">9.03</div>
-                <span class="kpi-unit">萬元</span>
-              </div>
-              <div class="kpi-detail-row" id="kpiDetailPLC">
-                <span>目標：210 萬</span> <span>｜</span> <span>實績：246 萬</span> <span>｜</span> <span>超標：36 萬</span>
-              </div>
-              <div class="fluent-progress-bg">
-                <div id="kpiBarPLC" class="fluent-progress-bar bar-success" style="width: 100%;"></div>
-              </div>
-            </div>
-            <!-- 領先指標區塊 (折疊成果目標後，在此完整呈現) -->
-            <div class="kpi-driver-body" id="drawerDriverPLC">
-              <!-- JS 動態渲染領先指標 -->
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- ====================================================================
-           計分板正下方：選擇需要的功能 (Action Hub 4 大模組大卡片)
-           ==================================================================== -->
-      <div style="margin-top:20px; margin-bottom:8px;">
-        <h3 style="font-size:1.05em; font-weight:600; color:var(--text-secondary); margin:0 0 10px;">請選擇需要執行的業務功能：</h3>
-      </div>
-
-      <div class="action-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
-        <div id="btnQuickReport" class="action-card-btn" role="button" tabindex="0" title="點擊前往客戶拜訪日報填寫">
-          <div class="action-icon-circle">
-            <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-          </div>
-          <div>
-            <div class="action-btn-title" style="font-size:1.05em;">客戶拜訪日報</div>
-            <div class="action-btn-subtitle">第一層 OGSM 拜訪紀錄、自動帶入免重填</div>
-          </div>
-        </div>
-
-        <div id="btnQuickDeals" class="action-card-btn" role="button" tabindex="0" title="點擊前往商機與專案案件追蹤看板">
-          <div class="action-icon-circle">
-            <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-          </div>
-          <div>
-            <div class="action-btn-title" style="font-size:1.05em;">商機與案件追蹤</div>
-            <div class="action-btn-subtitle">第二/三層 CRM 漏斗、競爭品牌分析與推進</div>
-          </div>
-        </div>
-
-        <div id="btnQuickQuotes" class="action-card-btn" role="button" tabindex="0" title="點擊前往報價單管理中心">
-          <div class="action-icon-circle">
-            <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
-          </div>
-          <div>
-            <div class="action-btn-title" style="font-size:1.05em;">製作業務報價單</div>
-            <div class="action-btn-subtitle">三段式單號 Prefix-Seq-Rev、Append-Only</div>
-          </div>
-        </div>
-
-        <div id="btnQuickSpecials" class="action-card-btn" role="button" tabindex="0" title="點擊前往專案售價申請單">
-          <div class="action-icon-circle">
-            <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
-          </div>
-          <div>
-            <div class="action-btn-title" style="font-size:1.05em;">專案售價申請</div>
-            <div class="action-btn-subtitle">低折讓連鎖防呆審批、底價利潤試算</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ====================================================================
-         分頁一：日報與案件管理 (三層漏斗：日報 ➔ 商機 ➔ 案件)
-         ==================================================================== -->
-    <section id="panelCases" class="hidden">
-
-      <!-- 區塊 1：客戶每日日報填寫 (第一層 OGSM 行動層) -->
-      <div class="fluent-card">
-        <div class="card-header">
-          <div class="card-title-group">
-            <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-            <div>
-              <h2 class="card-title">第一層：客戶每日日報填寫 (OGSM 行動層)</h2>
-              <p class="card-desc">單一窗口免重複輸入規範：選取客戶自動帶入統編、電話與地址；按需展開下方商機與案件卡片。</p>
-            </div>
-          </div>
-        </div>
-
-        <form id="dailyReportForm">
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label">拜訪日期<span class="required">*</span></label>
-              <input id="inputReportDate" type="date" class="form-control" required />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">業務姓名<span class="required">*</span></label>
-              <input id="inputSalesName" type="text" class="form-control" value="曾維崧" required />
-            </div>
-
-            <div class="form-group" style="grid-column: span 2;">
-              <label class="form-label">客戶公司名稱<span class="required">*</span> (下拉選取自動帶入主檔資料)</label>
-              <select id="selectCustomer" class="form-control" required>
-                <option value="">-- 請選擇拜訪客戶 (或打字過濾) --</option>
-              </select>
-              <span id="customerAutofillHint" class="autofill-hint hidden">已自動帶入客戶基本資料，無需重複輸入。</span>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">客戶統一編號 (自動帶入)</label>
-              <input id="inputTaxId" type="text" class="form-control" readonly placeholder="選擇客戶後自動顯示" />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">拜訪對象 / 聯絡人</label>
-              <input id="inputContactName" type="text" class="form-control" placeholder="例如：陳姿蓉特助" />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">聯絡電話 (自動帶入)</label>
-              <input id="inputPhone" type="text" class="form-control" readonly placeholder="選擇客戶後自動顯示" />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">拜訪形式<span class="required">*</span></label>
-              <select id="selectVisitType" class="form-control">
-                <option value="實地拜訪">實地到廠拜訪</option>
-                <option value="電話聯繫">電話聯繫 / 專案溝通</option>
-                <option value="視訊會議">線上視訊會議</option>
-                <option value="報價事宜">報價事宜確認</option>
-                <option value="技術支援">技術 FAE 現場支援</option>
-              </select>
-            </div>
-
-            <div class="form-group" style="grid-column: 1 / -1;">
-              <label class="form-label">交貨地點 / 客戶地址 (自動帶入)</label>
-              <input id="inputAddress" type="text" class="form-control" readonly placeholder="選擇客戶後自動顯示" />
-            </div>
-
-            <div class="form-group" style="grid-column: 1 / -1;">
-              <label class="form-label">洽談重點與行程摘要<span class="required">*</span></label>
-              <textarea id="textContentSummary" class="form-control" placeholder="記錄今日拜訪核心重點（例如：洽談本季出貨目標，客戶反映交期問題，評估更換士林變頻器意願）" required></textarea>
-            </div>
-          </div>
-
-          <!-- 子卡片 1：產生新商機 (第二層 CRM 機會層) -->
-          <div class="extension-card">
-            <div class="extension-header" id="headerOppToggle">
-              <label class="extension-checkbox-label">
-                <input id="checkCreateOpp" type="checkbox" />
-                <span>從此日報挖掘潛在商機 (第二層 CRM)</span>
-              </label>
-              <svg class="icon-svg" style="color:var(--text-tertiary);" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
-            </div>
-            <div id="bodyOppToggle" class="extension-body">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">產業類別</label>
-                  <select id="inputIndustry" class="form-control">
-                    <option value="自動化設備產業">自動化設備產業 (工具機/輸送/廠房設備)</option>
-                    <option value="電子產業">電子產業 (半導體/PCB/AI)</option>
-                    <option value="節能產業">節能產業 (風車/水泵/空調工程)</option>
-                    <option value="通路商">通路商 (經銷商/二次店/上控)</option>
-                    <option value="盤廠與機械廠">盤廠與機械廠</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">推廣產品系列</label>
-                  <select id="inputProductSeries" class="form-control">
-                    <option value="士林品">士林品 (SE3/SS2 變頻器/AX5S)</option>
-                    <option value="三菱品">三菱品 (FR-A800/E800/iQ-R)</option>
-                    <option value="松下品">松下品 (伺服馬達)</option>
-                    <option value="低壓開關">低壓開關類</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">預計產出季度</label>
-                  <select id="inputEstQuarter" class="form-control">
-                    <option value="Q4">今年 Q4</option>
-                    <option value="Q1">明年 Q1</option>
-                    <option value="Q2">明年 Q2</option>
-                    <option value="Q3">明年 Q3</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">預估潛在規模 (元)</label>
-                  <input id="inputEstScale" type="number" class="form-control" value="0" step="10000" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 子卡片 2：建立正式專案案件 (第三層 Deal 標案層) -->
-          <div class="extension-card">
-            <div class="extension-header" id="headerDealToggle">
-              <label class="extension-checkbox-label">
-                <input id="checkCreateDeal" type="checkbox" />
-                <span>規格與標的明確，直接升格為專案案件 (第三層 Deal)</span>
-              </label>
-              <svg class="icon-svg" style="color:var(--text-tertiary);" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
-            </div>
-            <div id="bodyDealToggle" class="extension-body">
-              <div class="form-grid">
-                <div class="form-group" style="grid-column: span 2;">
-                  <label class="form-label">專案案場名稱<span class="required">*</span></label>
-                  <input id="inputProjectName" type="text" class="form-control" placeholder="例如：新竹廠區變頻器升級案" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">主要競爭品牌</label>
-                  <select id="inputCompBrand" class="form-control">
-                    <option value="台達">台達 (Delta)</option>
-                    <option value="三菱">日本三菱 (Mitsubishi)</option>
-                    <option value="富士">日本富士 (Fuji)</option>
-                    <option value="歐系">歐系品牌 (西門子/ABB/施耐德)</option>
-                    <option value="其他">其他品牌</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">競爭通路商</label>
-                  <input id="inputCompChannel" type="text" class="form-control" placeholder="例如：能麒 / 上菱 / 日遠" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">預估成案日期</label>
-                  <input id="inputEstDealDate" type="date" class="form-control" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">預估案件總金額 (元)</label>
-                  <input id="inputEstDealAmount" type="number" class="form-control" value="0" step="10000" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div style="margin-top:16px; display:flex; justify-content:flex-end; gap:8px;">
-            <button id="btnResetForm" type="button" class="fluent-btn">清空重填</button>
-            <button id="btnSubmitDailyReport" type="submit" class="fluent-btn primary">
-              <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
-              儲存日報並連動
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <!-- 區塊 2：今日與近期日報清單 -->
-      <div class="fluent-card">
-        <div class="card-header">
-          <div class="card-title-group">
-            <svg class="icon-svg" style="color:var(--text-secondary);" viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
-            <h3 class="card-title">近期日報紀錄清單</h3>
-          </div>
-          <button id="btnRefreshReports" class="fluent-btn" type="button">重新整頓清單</button>
-        </div>
-        <div class="fluent-table-wrapper">
-          <table class="fluent-table">
-            <thead>
-              <tr>
-                <th style="width:100px;">拜訪日期</th>
-                <th style="width:80px;">業務</th>
-                <th style="width:200px;">客戶名稱</th>
-                <th style="width:90px;">聯絡人</th>
-                <th style="width:90px;">形式</th>
-                <th>洽談重點摘要</th>
-              </tr>
-            </thead>
-            <tbody id="dailyReportsTableBody">
-              <tr><td colspan="6" style="text-align:center; color:var(--text-tertiary); padding:20px;">資料載入中...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- 區塊 3：Deal 專案案件看板 (可直接連動報價單) -->
-      <div class="fluent-card">
-        <div class="card-header">
-          <div class="card-title-group">
-            <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-            <h3 class="card-title">第三層：Deal 專案案件追蹤看板 (支援一鍵發起報價)</h3>
-          </div>
-          <span class="status-pill success">進行中案件</span>
-        </div>
-        <div class="fluent-table-wrapper">
-          <table class="fluent-table">
-            <thead>
-              <tr>
-                <th style="width:60px;">編號</th>
-                <th style="width:180px;">客戶名稱</th>
-                <th>專案名稱</th>
-                <th style="width:100px;">競爭品牌</th>
-                <th style="width:110px;">預估金額</th>
-                <th style="width:100px;">預估成案日</th>
-                <th style="width:90px;">當前階段</th>
-                <th style="width:120px; text-align:center;">操作連動</th>
-              </tr>
-            </thead>
-            <tbody id="dealsTableBody">
-              <tr><td colspan="8" style="text-align:center; color:var(--text-tertiary); padding:20px;">資料載入中...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- ====================================================================
-         分頁二：報價單管理 (舊版報價單完整移植升級版)
-         ==================================================================== -->
-    <section id="panelQuotes" class="hidden">
-      <!-- 頂部四大子分頁導航列 (微軟企業 Fluent 風格 + 純文字與單色向量圖標) -->
-      <div class="quote-sub-tabs" role="tablist">
-        <button type="button" id="tabQuoteCreate" class="sub-tab-btn active" role="tab" aria-selected="true">
-          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-          <span>新建 / 編輯報價單</span>
-        </button>
-        <button type="button" id="tabQuoteHistory" class="sub-tab-btn" role="tab" aria-selected="false">
-          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
-          <span>歷史報價與垃圾桶</span>
-        </button>
-        <button type="button" id="tabQuoteDrafts" class="sub-tab-btn" role="tab" aria-selected="false">
-          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
-          <span>手機報價草稿匣</span>
-        </button>
-        <button type="button" id="tabQuoteAnalysis" class="sub-tab-btn" role="tab" aria-selected="false">
-          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
-          <span>歷史單價分析</span>
-        </button>
-      </div>
-
-      <!-- ====================================================================
+        <!-- ====================================================================
            子分頁 A：新建 / 編輯報價單主工作區
            ==================================================================== -->
-      <div id="quoteDraftSection" class="quote-draft-container">
-        <form id="draftForm" onsubmit="return false;">
-          
-          <!-- 電腦端 _QuotationApp 頂部工具列：收合選單 / 收合抬頭 -->
-          <div class="pyside-top-toggle-bar">
-            <button type="button" id="btnToggleSidebar" class="btn-pyside-subtle" title="展開或收合左側功能選單">
-              <svg class="icon-svg-xs" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
-              <span>收合選單</span>
-            </button>
-            <button type="button" id="btnToggleHeaderCompact" class="btn-pyside-subtle" title="展開或收合報價單基本資料">
-              <span id="headerToggleIcon">▲</span>
-              <span id="headerToggleLabel">收合抬頭</span>
-            </button>
-          </div>
+        <div id="quoteDraftSection" class="quote-draft-container">
+          <form id="draftForm" onsubmit="return false;">
 
-          <!-- 報價單基本資料 (雙欄結構化表頭) -->
-          <div id="quoteHeaderContainer" class="pyside-header-container">
-            <div class="pyside-section-title">報價單基本資料</div>
-            
-            <div id="quoteHeaderGrid" class="pyside-header-grid">
-              <!-- 第 1 列：單號與報價日期 -->
-              <div class="grid-row">
-                <div class="grid-cell-label">單號:</div>
-                <div class="grid-cell-content">
-                  <select id="quoteNoMode" class="pyside-select" style="width:100px;">
-                    <option value="auto" selected>自動擷取</option>
-                    <option value="manual">手動輸入</option>
-                  </select>
-                  <input type="text" id="quotePrefixInput" class="pyside-input" style="width:120px;" value="-- 請選擇客戶 --">
-                  <input type="text" id="quoteSeqInput" class="pyside-input" style="width:60px;" value="001">
-                  <input type="text" id="quoteRevInput" class="pyside-input" style="width:50px;" value="00">
-                </div>
-                <div class="grid-cell-label">報價日期:</div>
-                <div class="grid-cell-content">
-                  <input type="date" id="quoteDate" class="pyside-input pyside-date-blue">
-                </div>
-              </div>
-
-              <!-- 第 2 列：公司名稱與統編 -->
-              <div class="grid-row">
-                <div class="grid-cell-label">公司名稱:</div>
-                <div class="grid-cell-content">
-                  <select id="customerSelect" class="pyside-select" style="flex:1;">
-                    <option value="">-- 請選擇客戶 --</option>
-                  </select>
-                  <button type="button" id="btnLinkCrmCase" class="btn-pyside-crm" title="關聯 CRM 商機">
-                    <svg class="icon-svg-xs" viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s2.24-5-5-5z"/></svg>
-                    <span>關聯 CRM</span>
-                  </button>
-                  <span id="linkedDealBadge" class="pyside-badge-crm hidden">已關聯</span>
-                </div>
-                <div class="grid-cell-label">統編:</div>
-                <div class="grid-cell-content">
-                  <input type="text" id="quoteTaxId" class="pyside-input" placeholder="統一編號">
-                </div>
-              </div>
-
-              <!-- 第 3 列：聯絡人與電話 -->
-              <div class="grid-row">
-                <div class="grid-cell-label">聯絡人:</div>
-                <div class="grid-cell-content">
-                  <select id="quoteContactSelect" class="pyside-select" style="flex:1;">
-                    <option value="">-- 選擇聯絡人 --</option>
-                  </select>
-                </div>
-                <div class="grid-cell-label">電話:</div>
-                <div class="grid-cell-content">
-                  <input type="text" id="quotePhone" class="pyside-input" placeholder="電話">
-                </div>
-              </div>
-
-              <!-- 第 4 列：交貨地點與傳真 -->
-              <div class="grid-row">
-                <div class="grid-cell-label">交貨地點:</div>
-                <div class="grid-cell-content">
-                  <input type="text" id="quoteDeliveryLocation" class="pyside-input" placeholder="交貨地點" style="flex:1;">
-                </div>
-                <div class="grid-cell-label">傳真:</div>
-                <div class="grid-cell-content">
-                  <input type="text" id="quoteFax" class="pyside-input" placeholder="傳真">
-                </div>
-              </div>
-
-              <!-- 第 5 列：有效日期與付款方式 -->
-              <div class="grid-row">
-                <div class="grid-cell-label">有效日期:</div>
-                <div class="grid-cell-content">
-                  <input type="date" id="quoteValidDate" class="pyside-input">
-                </div>
-                <div class="grid-cell-label">付款方式:</div>
-                <div class="grid-cell-content">
-                  <input type="text" id="quotePaymentTerms" class="pyside-input" value="月結 30 天電匯">
-                </div>
-              </div>
-
-              <!-- 第 6 列：專案名稱與專案屬性 -->
-              <div class="grid-row">
-                <div class="grid-cell-label">專案名稱:</div>
-                <div class="grid-cell-content">
-                  <input type="text" id="quoteProjectName" class="pyside-input" placeholder="例如: FR-A820-00630-1-N6" style="flex:1;">
-                </div>
-                <div class="grid-cell-label">專案屬性:</div>
-                <div class="grid-cell-content">
-                  <select id="quoteProjectAttribute" class="pyside-select">
-                    <option value="一次性專案" selected>一次性專案</option>
-                    <option value="年度合約">年度合約</option>
-                    <option value="專案特價 (促銷)">專案特價 (促銷)</option>
-                    <option value="經銷例行採購">經銷例行採購</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 表格上方功能按鈕列 (左側選取狀態標籤 + 右側 5 顆經典操作按鈕) -->
-          <div class="pyside-action-bar-top">
-            <div class="active-row-badge-container">
-              <span id="activeRowBadge" class="active-row-pill">第 1 列 | (尚未選擇產品)</span>
-              <button type="button" id="btnClearActiveRow" class="btn-clear-active-row" title="取消選擇">✕</button>
-            </div>
-            <div class="pyside-action-btn-group">
-              <button type="button" id="btnNewQuoteTop" class="btn-pyside-gray" title="開立新的空白報價單">新建報價單</button>
-              <button type="button" id="btnSaveQuoteTop" class="btn-pyside-green" title="儲存報價單至資料庫">儲存報價</button>
-              <button type="button" id="btnLineQuoteTop" class="btn-pyside-line" title="複製完整格式至 LINE 聊天室">
-                <svg class="icon-svg-xs" viewBox="0 0 24 24" style="margin-right:4px;"><path d="M12 2C6.48 2 2 6.03 2 11c0 2.87 1.5 5.4 3.82 7.04-.15.82-.6 2.37-.68 2.73-.11.45.17.44.36.31.25-.17 2.47-1.68 3.51-2.39.95.27 1.95.41 2.99.41 5.52 0 10-4.03 10-9s-4.48-9-10-9z"/></svg>
-                複製 LINE 報價
+            <!-- 電腦端 _QuotationApp 頂部工具列：收合選單 / 收合抬頭 -->
+            <div class="pyside-top-toggle-bar quote-desktop-only">
+              <button type="button" id="btnToggleSidebar" class="btn-pyside-subtle" title="展開或收合左側功能選單">
+                <svg class="icon-svg-xs" viewBox="0 0 24 24">
+                  <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
+                </svg>
+                <span>收合選單</span>
               </button>
-              <button type="button" id="btnExportExcelTop" class="btn-pyside-blue" title="匯出 Excel 試算表">匯出至Excel</button>
-              <button type="button" id="btnPrintPdfTop" class="btn-pyside-red" title="預覽與列印 PDF 報價單">列印 PDF</button>
+              <button type="button" id="btnToggleHeaderCompact" class="btn-pyside-subtle" title="展開或收合報價單基本資料">
+                <span id="headerToggleIcon">▲</span>
+                <span id="headerToggleLabel">收合抬頭</span>
+              </button>
+            </div>
+
+            <!-- 報價單基本資料 (雙欄結構化表頭) -->
+            <div id="quoteHeaderContainer" class="pyside-header-container quote-desktop-only">
+              <div class="pyside-section-title">報價單基本資料</div>
+
+              <div id="quoteHeaderGrid" class="pyside-header-grid">
+                <!-- 第 1 列：單號與報價日期 -->
+                <div class="grid-row">
+                  <div class="grid-cell-label">單號:</div>
+                  <div class="grid-cell-content">
+                    <select id="quoteNoMode" class="pyside-select" style="width:100px;">
+                      <option value="auto" selected>自動擷取</option>
+                      <option value="manual">手動輸入</option>
+                    </select>
+                    <input type="text" id="quotePrefixInput" class="pyside-input" style="width:120px;"
+                      value="-- 請選擇客戶 --">
+                    <input type="text" id="quoteSeqInput" class="pyside-input" style="width:60px;" value="001">
+                    <input type="text" id="quoteRevInput" class="pyside-input" style="width:50px;" value="00">
+                  </div>
+                  <div class="grid-cell-label">報價日期:</div>
+                  <div class="grid-cell-content">
+                    <input type="date" id="quoteDate" class="pyside-input pyside-date-blue">
+                  </div>
+                </div>
+
+                <!-- 第 2 列：公司名稱與統編 -->
+                <div class="grid-row">
+                  <div class="grid-cell-label">公司名稱:</div>
+                  <div class="grid-cell-content">
+                    <select id="customerSelect" class="pyside-select" style="flex:1;">
+                      <option value="">-- 請選擇客戶 --</option>
+                    </select>
+                    <button type="button" id="btnLinkCrmCase" class="btn-pyside-crm" title="關聯 CRM 商機">
+                      <svg class="icon-svg-xs" viewBox="0 0 24 24">
+                        <path
+                          d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s2.24-5-5-5z" />
+                      </svg>
+                      <span>關聯 CRM</span>
+                    </button>
+                    <span id="linkedDealBadge" class="pyside-badge-crm hidden">已關聯</span>
+                  </div>
+                  <div class="grid-cell-label">統編:</div>
+                  <div class="grid-cell-content">
+                    <input type="text" id="quoteTaxId" class="pyside-input" placeholder="統一編號">
+                  </div>
+                </div>
+
+                <!-- 第 3 列：聯絡人與電話 -->
+                <div class="grid-row">
+                  <div class="grid-cell-label">聯絡人:</div>
+                  <div class="grid-cell-content">
+                    <select id="quoteContactSelect" class="pyside-select" style="flex:1;">
+                      <option value="">-- 選擇聯絡人 --</option>
+                    </select>
+                  </div>
+                  <div class="grid-cell-label">電話:</div>
+                  <div class="grid-cell-content">
+                    <input type="text" id="quotePhone" class="pyside-input" placeholder="電話">
+                  </div>
+                </div>
+
+                <!-- 第 4 列：交貨地點與傳真 -->
+                <div class="grid-row">
+                  <div class="grid-cell-label">交貨地點:</div>
+                  <div class="grid-cell-content">
+                    <input type="text" id="quoteDeliveryLocation" class="pyside-input" placeholder="交貨地點"
+                      style="flex:1;">
+                  </div>
+                  <div class="grid-cell-label">傳真:</div>
+                  <div class="grid-cell-content">
+                    <input type="text" id="quoteFax" class="pyside-input" placeholder="傳真">
+                  </div>
+                </div>
+
+                <!-- 第 5 列：有效日期與付款方式 -->
+                <div class="grid-row">
+                  <div class="grid-cell-label">有效日期:</div>
+                  <div class="grid-cell-content">
+                    <input type="date" id="quoteValidDate" class="pyside-input">
+                  </div>
+                  <div class="grid-cell-label">付款方式:</div>
+                  <div class="grid-cell-content">
+                    <input type="text" id="quotePaymentTerms" class="pyside-input" value="月結 30 天電匯">
+                  </div>
+                </div>
+
+                <!-- 第 6 列：專案名稱與專案屬性 -->
+                <div class="grid-row">
+                  <div class="grid-cell-label">專案名稱:</div>
+                  <div class="grid-cell-content">
+                    <input type="text" id="quoteProjectName" class="pyside-input" placeholder="例如: FR-A820-00630-1-N6"
+                      style="flex:1;">
+                  </div>
+                  <div class="grid-cell-label">專案屬性:</div>
+                  <div class="grid-cell-content">
+                    <select id="quoteProjectAttribute" class="pyside-select">
+                      <option value="一次性專案" selected>一次性專案</option>
+                      <option value="年度合約">年度合約</option>
+                      <option value="專案特價 (促銷)">專案特價 (促銷)</option>
+                      <option value="經銷例行採購">經銷例行採購</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 表格上方功能按鈕列 (左側選取狀態標籤 + 右側 5 顆經典操作按鈕) -->
+            <div class="pyside-action-bar-top quote-desktop-only">
+              <div class="active-row-badge-container">
+                <span id="activeRowBadge" class="active-row-pill">第 1 列 | (尚未選擇產品)</span>
+                <button type="button" id="btnClearActiveRow" class="btn-clear-active-row" title="取消選擇">✕</button>
+              </div>
+              <div class="pyside-action-btn-group">
+                <button type="button" id="btnNewQuoteTop" class="btn-pyside-gray" title="開立新的空白報價單">新建報價單</button>
+                <button type="button" id="btnSaveQuoteTop" class="btn-pyside-green" title="儲存報價單至資料庫">儲存報價</button>
+                <button type="button" id="btnLineQuoteTop" class="btn-pyside-line" title="複製完整格式至 LINE 聊天室">
+                  <svg class="icon-svg-xs" viewBox="0 0 24 24" style="margin-right:4px;">
+                    <path
+                      d="M12 2C6.48 2 2 6.03 2 11c0 2.87 1.5 5.4 3.82 7.04-.15.82-.6 2.37-.68 2.73-.11.45.17.44.36.31.25-.17 2.47-1.68 3.51-2.39.95.27 1.95.41 2.99.41 5.52 0 10-4.03 10-9s-4.48-9-10-9z" />
+                  </svg>
+                  複製 LINE 報價
+                </button>
+                <button type="button" id="btnExportExcelTop" class="btn-pyside-blue"
+                  title="匯出 Excel 試算表">匯出至Excel</button>
+                <button type="button" id="btnPrintPdfTop" class="btn-pyside-red" title="預覽與列印 PDF 報價單">列印 PDF</button>
+              </div>
+            </div>
+
+            <!-- 手機端專用：圖三卡片式報價擬稿介面 (螢幕寬度 < 768px 自動切換顯示) -->
+            <div class="quote-mobile-only">
+              <!-- 客戶選擇與報價品項主卡片 -->
+              <div class="mobile-customer-card">
+                <div class="mobile-customer-header-row">
+                  <label for="customerName" class="mobile-section-label">客戶名稱</label>
+                  <button type="button" id="btnMobileLinkCrmCase" class="btn-mobile-crm-link">
+                    <svg class="icon-svg-xs" viewBox="0 0 24 24">
+                      <path
+                        d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" />
+                    </svg>
+                    <span>選擇 CRM 關聯案件</span>
+                  </button>
+                </div>
+                <input type="text" id="customerName" class="mobile-customer-input" placeholder="點擊選擇客戶..." readonly
+                  required>
+
+                <!-- 關聯 CRM 商機選單 (點擊按鈕或選擇客戶後展開) -->
+                <div id="crmLinkedCasesWrap" class="hidden" style="margin-top:0.55rem;">
+                  <select id="crmCaseSelect" class="mobile-crm-select">
+                    <option value="">-- 不關聯特定 CRM 案件 --</option>
+                  </select>
+                </div>
+
+                <!-- 客戶詳細資料收合卡片 -->
+                <div id="customerDetailCard" class="customer-detail-card hidden">
+                  <div class="customer-detail-header" id="btnToggleCustDetail">
+                    <span class="customer-detail-title">客戶詳細資料</span>
+                    <span id="custDetailArrow" class="customer-detail-arrow">▼ 展開</span>
+                  </div>
+                  <div id="customerDetailBody" class="customer-detail-body hidden">
+                    <div class="detail-row"><span class="detail-label">公司全銜：</span><span id="cdCompany"
+                        class="detail-val">-</span></div>
+                    <div class="detail-row"><span class="detail-label">統一編號：</span><span id="cdTaxId"
+                        class="detail-val">-</span></div>
+                    <div class="detail-row" style="align-items:center;">
+                      <span class="detail-label">聯絡窗口：</span>
+                      <div class="detail-val" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <span id="cdContact">-</span>
+                        <select id="cdContactSelect" class="hidden"
+                          style="padding:2px 6px; font-size:0.82rem; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main);"></select>
+                      </div>
+                    </div>
+                    <div class="detail-row"><span class="detail-label">聯絡電話：</span><span id="cdPhone"
+                        class="detail-val">-</span></div>
+                    <div class="detail-row"><span class="detail-label">送貨地址：</span><span id="cdAddress"
+                        class="detail-val">-</span></div>
+                  </div>
+                </div>
+
+                <!-- 報價品項區塊標題與明細卡片容器 -->
+                <div class="mobile-items-section-title">報價品項</div>
+                <div id="itemsContainer" class="items-list">
+                  <!-- 由 JavaScript 動態產生圖三規格品項卡片 -->
+                </div>
+
+                <button type="button" id="btnAddItem" class="btn-mobile-add-item">
+                  + 新增品項
+                </button>
+              </div>
+
+              <!-- 小計金額 (未稅) 卡片 -->
+              <div class="mobile-summary-card">
+                <div class="mobile-summary-left">
+                  <span class="mobile-summary-title">小計金額 (未稅)</span>
+                  <span id="draftItemBadge" class="mobile-summary-count-badge">共 1 項</span>
+                </div>
+                <div class="mobile-summary-amount">$<span id="totalAmount">0</span></div>
+              </div>
+
+              <!-- 底部雙按鈕：複製 LINE 報價 / 送出草稿 (直接寫入資料庫手機草稿匣) -->
+              <div class="mobile-bottom-actions">
+                <button type="button" id="btnLineQuote" class="btn-mobile-line-quote">
+                  <svg class="icon-svg-xs" viewBox="0 0 24 24">
+                    <path
+                      d="M12 2C6.48 2 2 6.03 2 11c0 2.87 1.5 5.4 3.82 7.04-.15.82-.6 2.37-.68 2.73-.11.45.17.44.36.31.25-.17 2.47-1.68 3.51-2.39.95.27 1.95.41 2.99.41 5.52 0 10-4.03 10-9s-4.48-9-10-9z" />
+                  </svg>
+                  <span>複製 LINE 報價</span>
+                </button>
+                <button type="button" id="btnSubmitDraft" class="btn-mobile-submit-draft">
+                  <svg class="icon-svg-xs" viewBox="0 0 24 24">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                  </svg>
+                  <span>送出草稿</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 電腦端 Excel 試算表格 (_QuotationApp 桌面版原生欄位排序) -->
+            <div class="pyside-table-container quote-desktop-only">
+              <table class="pyside-excel-table" id="quoteDesktopTable">
+                <thead>
+                  <tr>
+                    <th style="width:48px; text-align:center;">序號</th>
+                    <th style="width:90px; text-align:center;">可用數量</th>
+                    <th style="width:240px;">型號</th>
+                    <th style="width:75px; text-align:right;">數量</th>
+                    <th style="min-width:180px;">規格</th>
+                    <th style="width:110px; text-align:right;">經銷價</th>
+                    <th style="width:90px; text-align:right;">報價折數%</th>
+                    <th style="width:125px; text-align:right;">小計(未稅)</th>
+                    <th style="min-width:160px;">備註/交期</th>
+                    <th style="width:60px; text-align:center;">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="quoteDesktopTableBody">
+                  <!-- 動態注入表格列 -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- 表格下方工具列 (新增品項、插入小計、舊單匯入、智慧BOM、重整經銷價) -->
+            <div class="pyside-toolbar-bottom quote-desktop-only">
+              <div class="pyside-toolbar-left">
+                <button type="button" id="btnAddNewItem" class="btn-pyside-blue" title="新增一筆產品明細">
+                  + 新增產品明細
+                </button>
+                <button type="button" id="btnInsertSubtotal" class="btn-pyside-orange" title="插入方案小計">
+                  + 插入方案小計
+                </button>
+              </div>
+              <div class="pyside-toolbar-right">
+                <button type="button" id="btnImportOldQuote" class="btn-pyside-teal" title="從舊報價單匯入 (PDF/Excel)">
+                  從舊報價單匯入 (PDF/Excel)
+                </button>
+                <button type="button" id="btnImportBom" class="btn-pyside-teal" title="智慧解析文字 BOM 清單">
+                  智慧 BOM 匯入
+                </button>
+                <button type="button" id="btnRefreshPrices" class="btn-pyside-purple" title="重新自產品資料庫同步經銷牌價">
+                  重整經銷價
+                </button>
+              </div>
+            </div>
+
+            <!-- 左下角結算總額 (合計未稅、營業稅5%、總金額含稅紅字) -->
+            <div class="pyside-summary-container quote-desktop-only">
+              <div class="pyside-totals-box">
+                <div class="total-row">合計(未稅) : <span id="summarySubtotal" class="font-mono">0</span></div>
+                <div class="total-row">營業稅(5%) : <span id="summaryTax" class="font-mono">0</span></div>
+                <div class="total-row total-grand-red">總金額(含稅) : <span id="summaryGrandTotal" class="font-mono">0</span>
+                </div>
+              </div>
+              <!-- 相容原有 summary IDs -->
+              <div style="display:none;">
+                <span id="desktopItemCountBadge">共 0 項</span>
+                <span id="desktopSubtotal">$ 0</span>
+                <span id="desktopTax">$ 0</span>
+                <span id="desktopGrandTotal">$ 0</span>
+                <button type="button" id="btnDesktopSubmitDraft"></button>
+                <button type="button" id="btnDesktopLineQuote"></button>
+                <button type="button" id="btnExportExcel"></button>
+                <button type="button" id="btnPrintPDF"></button>
+                <button type="button" id="btnDesktopAddItem"></button>
+                <button type="button" id="btnDesktopBrowseProducts"></button>
+                <button type="button" id="btnInsertSubtotalRow"></button>
+                <button type="button" id="btnImportSmartBOM"></button>
+                <button type="button" id="btnRefreshDealerPrices"></button>
+                <button type="button" id="btnDesktopClearItems"></button>
+                <button type="button" id="btnApplySpecialPrice"></button>
+              </div>
+            </div>
+
+            <!-- 附加產品外觀圖 (僅於報價單匯出時顯示) -->
+            <div class="pyside-attachment-box quote-desktop-only">
+              <div class="pyside-attachment-title">附加產品外觀圖 (僅於報價單匯出時顯示)</div>
+              <div class="pyside-attachment-body">
+                <label for="quoteImageUploader" class="btn-pyside-dark"
+                  style="cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                  <span>附加圖片 (JPG/PNG)</span>
+                  <input type="file" id="quoteImageUploader" accept="image/png,image/jpeg,image/webp" multiple
+                    style="display:none;">
+                </label>
+                <span class="attachment-hint-text">系統會自動優化壓縮。可附加多張圖片。</span>
+              </div>
+              <div id="quoteAttachmentsPreview" class="quote-attachments-grid">
+                <span class="text-muted" style="font-size:0.82rem;" id="noAttachmentsHint">尚未附加圖片</span>
+              </div>
+            </div>
+
+          </form>
+        </div>
+
+        <!-- ====================================================================
+           子分頁 B：歷史報價紀錄與垃圾桶
+           ==================================================================== -->
+        <div id="quoteHistorySection" class="hidden" style="margin-top:0.5rem;">
+          <div class="history-toolbar-bar"
+            style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px;">
+            <input type="text" id="inputSearchQuoteHistory" class="search-input" placeholder="搜尋單號、客戶名稱、專案..."
+              style="margin-bottom:0; flex:1;">
+            <button type="button" id="btnToggleTrashView" class="fluent-btn secondary"
+              style="padding:8px 12px; font-size:0.85rem;">
+              <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24">
+                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+              </svg>
+              <span id="trashToggleText">檢視垃圾桶 (保留 30 天)</span>
+            </button>
+            <button type="button" id="btnRefreshQuoteHistory" class="fluent-btn secondary"
+              style="padding:8px 12px; font-size:0.85rem;" title="重新整理">
+              <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24">
+                <path
+                  d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+              </svg>
+              重新整理
+            </button>
+          </div>
+          <div id="quoteHistoryResults" style="display:flex; flex-direction:column; gap:10px;">
+            <!-- 動態載入歷史報價單卡片 -->
+          </div>
+        </div>
+
+        <!-- ====================================================================
+           子分頁 C：手機報價草稿匣
+           ==================================================================== -->
+        <div id="quoteDraftsInboxSection" class="hidden" style="margin-top:0.5rem;">
+          <div
+            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding:10px 14px; background:var(--bg-card-subtle); border:1px solid var(--border-color); border-radius:8px;">
+            <div>
+              <span style="font-weight:600; font-size:0.9rem; color:var(--text-main);">手機離線 / 暫存草稿箱</span>
+              <span class="text-muted"
+                style="font-size:0.8rem; margin-left:8px;">在行動裝置外出時儲存的草稿可在此檢視並一鍵載入電腦版進行排版與報價</span>
+            </div>
+            <button type="button" id="btnClearDraftsInbox" class="fluent-btn secondary text-muted"
+              style="font-size:0.8rem; padding:4px 10px;">清空所有草稿</button>
+          </div>
+          <div id="quoteDraftsResults" style="display:flex; flex-direction:column; gap:10px;">
+            <!-- 動態載入手機草稿卡片 -->
+          </div>
+        </div>
+
+        <!-- ====================================================================
+           子分頁 D：歷史單價分析
+           ==================================================================== -->
+        <div id="quoteAnalysisSection" class="hidden" style="margin-top:0.5rem;">
+          <div class="fluent-card" style="margin-bottom:1rem; padding:1rem;">
+            <div style="font-weight:700; font-size:0.95rem; margin-bottom:0.75rem; color:var(--text-main);">
+              歷史報價單價與折讓區間快速查詢</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:10px; align-items:flex-end;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label for="inputAnalysisModel"
+                  style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:0.2rem;">產品型號
+                  (可部分關鍵字)</label>
+                <input type="text" id="inputAnalysisModel" placeholder="例如：AX5N 或 SS2"
+                  style="width:100%; padding:0.6rem 0.8rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.88rem;">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label for="inputAnalysisCustomer"
+                  style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:0.2rem;">客戶名稱
+                  (選填)</label>
+                <input type="text" id="inputAnalysisCustomer" placeholder="搜尋特定客戶歷史成交價..."
+                  style="width:100%; padding:0.6rem 0.8rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.88rem;">
+              </div>
+              <button type="button" id="btnRunPriceAnalysis" class="fluent-btn primary"
+                style="padding:0.6rem 1.2rem; font-size:0.88rem;">
+                <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24">
+                  <path
+                    d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+                </svg>
+                查詢歷史單價
+              </button>
+            </div>
+          </div>
+          <div id="quoteAnalysisResults" class="quote-desktop-table-wrapper">
+            <div style="padding:24px; text-align:center; color:var(--text-muted); font-size:0.88rem;">
+              請輸入產品型號並點擊「查詢歷史單價」以比對過往成交報價與折數分佈。</div>
+          </div>
+        </div>
+
+        <!-- ====================================================================
+           子分頁 E：個人特殊品牌價管理 (業務個人獨立 + 方案 A 自動轉正封存留紀錄)
+           ==================================================================== -->
+        <div id="quoteSpecialProductsSection" class="hidden" style="margin-top:0.5rem;">
+          <div class="fluent-card" style="margin-bottom:1rem; padding:1rem;">
+            <div
+              style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px; margin-bottom:0.75rem;">
+              <div>
+                <div style="font-weight:700; font-size:0.98rem; color:var(--text-main);">個人特殊品經銷牌價表（業務個人專屬，不公開予其他業務）
+                </div>
+                <div style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;">
+                  【方案 A 轉正機制】：當特殊品型號正式發行至「公司共通標準牌價表」時，系統將自動以公司標準品取代，並將您的個人特殊品轉入下方「封存歷史紀錄」留存對照。
+                </div>
+              </div>
+              <span id="specialProductOwnerBadge" class="traffic-light-badge"
+                style="font-size:0.8rem; padding:4px 10px;">所屬業務：曾維崧</span>
+            </div>
+
+            <div
+              style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; align-items:flex-end;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label for="inputSpecialModelNo"
+                  style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:0.2rem;">特殊品型號
+                  <span style="color:var(--color-danger);">*</span></label>
+                <input type="text" id="inputSpecialModelNo" placeholder="例如：SP-AX5N-CUST"
+                  style="width:100%; padding:0.55rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.88rem;">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label for="inputSpecialSpec"
+                  style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:0.2rem;">產品規格
+                  / 說明</label>
+                <input type="text" id="inputSpecialSpec" placeholder="例如：客製韌體專用機"
+                  style="width:100%; padding:0.55rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.88rem;">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label for="inputSpecialPrice"
+                  style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:0.2rem;">個人特殊經銷價(未稅)
+                  <span style="color:var(--color-danger);">*</span></label>
+                <input type="number" id="inputSpecialPrice" placeholder="例如：18500" min="0" step="1"
+                  style="width:100%; padding:0.55rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.88rem;">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label for="inputSpecialStockQty"
+                  style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:0.2rem;">可用庫存數量</label>
+                <input type="number" id="inputSpecialStockQty" placeholder="0" value="0" min="0" step="1"
+                  style="width:100%; padding:0.55rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.88rem;">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label for="inputSpecialNotes"
+                  style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:0.2rem;">備註</label>
+                <input type="text" id="inputSpecialNotes" placeholder="選填備註..."
+                  style="width:100%; padding:0.55rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.88rem;">
+              </div>
+              <button type="button" id="btnSaveSpecialProduct" class="fluent-btn primary"
+                style="padding:0.58rem 1.1rem; font-size:0.88rem; white-space:nowrap;">
+                + 新增 / 更新特殊品
+              </button>
             </div>
           </div>
 
-          <!-- 隱藏但相容舊版之容器 (支援手持螢幕與舊版按鈕引用) -->
-          <div class="quote-mobile-only" style="display:none;">
-            <div id="itemsContainer" class="items-list"></div>
-            <button type="button" id="btnAddItem" class="hidden"></button>
-            <span id="draftItemBadge" class="hidden">共 0 項</span>
-            <span id="totalAmount" class="hidden">0</span>
-            <button type="button" id="btnLineQuote" class="hidden"></button>
-            <button type="button" id="btnSubmitDraft" class="hidden"></button>
+          <!-- 生效中之個人特殊品清單 -->
+          <div class="fluent-card" style="margin-bottom:1rem; padding:1rem;">
+            <div style="font-weight:700; font-size:0.92rem; margin-bottom:0.65rem; color:var(--text-main);">
+              目前生效中之個人特殊品（搜尋產品時將優先帶入）</div>
+            <div id="specialProductsActiveList" style="overflow-x:auto;">
+              <div style="padding:16px; text-align:center; color:var(--text-muted); font-size:0.86rem;">載入中...</div>
+            </div>
           </div>
 
-          <!-- 電腦端 Excel 試算表格 (_QuotationApp 桌面版原生欄位排序) -->
-          <div class="pyside-table-container">
-            <table class="pyside-excel-table" id="quoteDesktopTable">
+          <!-- 方案 A 已轉正封存之歷史紀錄 -->
+          <div class="fluent-card" style="padding:1rem;">
+            <div style="font-weight:700; font-size:0.92rem; margin-bottom:0.65rem; color:var(--text-secondary);">【方案 A
+              封存歷史紀錄】已轉為公司共通標準品之項目</div>
+            <div id="specialProductsArchivedList" style="overflow-x:auto;">
+              <div style="padding:16px; text-align:center; color:var(--text-muted); font-size:0.86rem;">尚無封存紀錄</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+         分頁三：專案售價申請單 (預留展示)
+         ==================================================================== -->
+      <section id="panelSpecials" class="hidden">
+        <div class="fluent-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24">
+                <path
+                  d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42z" />
+              </svg>
+              <h2 class="card-title">專案售價申請單中心</h2>
+            </div>
+          </div>
+          <p style="color:var(--text-secondary);">低折讓自動觸發、自動抓取 Deal 競爭情資與成本毛利，將於里程碑 4 啟用！</p>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+         分頁：業績預測 (Sales Forecast Panel)
+         ==================================================================== -->
+      <section id="panelForecast" class="hidden">
+        <div class="fluent-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24">
+                <path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z" />
+              </svg>
+              <div>
+                <h2 class="card-title">業績預測中心</h2>
+                <p class="card-desc">結合進行中案件、報價單金額與預估成案率之滾動式業績預測看板</p>
+              </div>
+            </div>
+            <span id="forecastSalesBadge" class="traffic-light-badge"
+              style="font-size:0.82rem; padding:4px 10px;">檢視身份：曾維崧</span>
+          </div>
+          <div
+            style="padding:16px; background:var(--bg-card-subtle, rgba(0,0,0,0.03)); border:1px solid var(--border-light); border-radius:8px; margin-top:8px;">
+            <p style="margin:0 0 8px 0; font-weight:700; color:var(--text-primary);">【業績預測模組預留區】</p>
+            <p style="margin:0; font-size:0.9rem; color:var(--text-secondary); line-height:1.6;">
+              此頁面已建立完成。待報價單模組確認完畢後，後續將在此串接「各月份預估出貨金額」、「報價單轉單預測權重」與「三大產品線達成率預測曲線」。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+         分頁四：系統偏好設定 (Settings Panel)
+         ==================================================================== -->
+      <section id="panelSettings" class="hidden">
+        <!-- 【區塊一：營運區域與檢視身份】 (獨立置頂卡片) -->
+        <div class="fluent-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
+                <path
+                  d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+              </svg>
+              <div>
+                <h2 class="card-title">營運區域與檢視身份</h2>
+                <p class="card-desc">切換全系統責任營運區域與當前業務戰情視角（即刻生效並自動儲存）</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+            <!-- 1. 所屬營運區域 (切換即刻生效並儲存為預設) -->
+            <div class="form-group">
+              <label class="form-label" for="selectActiveRegion">所屬營運區域</label>
+              <select id="selectActiveRegion" class="form-control">
+                <option value="北區" selected>北區營業處</option>
+                <option value="中區">中區營業處</option>
+                <option value="南區">南區營業處</option>
+              </select>
+              <span class="settings-hint">全系統戰情看板、各產品目標與切換按鈕將自動綁定此營運區域</span>
+            </div>
+
+            <!-- 2. 目前業務身份 (切換即刻生效) -->
+            <div class="form-group">
+              <label class="form-label" for="selectActiveSales">目前業務身份</label>
+              <select id="selectActiveSales" class="form-control">
+                <!-- 由 JavaScript 依據名冊動態生成純淨姓名 -->
+              </select>
+              <span class="settings-hint">切換業務後，戰情首頁即刻切換為該人員之個人目標與自製品實績</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 【區塊二：介面外觀與字型設定】 (主視覺設定卡片) -->
+        <div class="fluent-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
+                <path
+                  d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.9-1.9C9.28 19.59 10.6 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-1.17 0-2.27-.34-3.21-.92l-.37-.23-1.84 1.84-.71-.71 1.84-1.84-.23-.37C8.34 14.83 8 13.73 8 12.56c0-2.48 2.02-4.5 4.5-4.5s4.5 2.02 4.5 4.5-2.02 4.44-5 4.44z" />
+              </svg>
+              <div>
+                <h2 class="card-title">介面外觀與字型設定</h2>
+                <p class="card-desc">個人化深淺主題、高對比品牌色票、微軟繁體商務字型與數字排版</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+            <!-- 1. 外觀顯示模式 (Segmented Control 膠囊分段按鈕) -->
+            <div class="form-group">
+              <label class="form-label">外觀顯示模式</label>
+              <div class="segmented-control" id="segThemeMode">
+                <button type="button" class="seg-btn active" data-val="auto">跟隨系統</button>
+                <button type="button" class="seg-btn" data-val="light">淺色模式</button>
+                <button type="button" class="seg-btn" data-val="dark">深色模式</button>
+              </div>
+            </div>
+
+            <!-- 2. 數字排版 (Segmented Control 膠囊分段按鈕) -->
+            <div class="form-group">
+              <label class="form-label">數字排版</label>
+              <div class="segmented-control" id="segTabularNums">
+                <button type="button" class="seg-btn active" data-val="tabular">等寬數字 (對齊)</button>
+                <button type="button" class="seg-btn" data-val="proportional">比例數字 (標準)</button>
+              </div>
+            </div>
+
+            <!-- 3. 主題色系 (彩色圓點色票按鈕 Color Swatches) -->
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label class="form-label">主題色系</label>
+              <div class="swatches-container" id="swatchesThemeAccent">
+                <button type="button" class="swatch-btn active" data-color="blue" title="經典科技藍">
+                  <span class="swatch-dot" style="background: #0067C0;"></span>
+                  <span class="swatch-name">經典科技藍</span>
+                </button>
+                <button type="button" class="swatch-btn" data-color="green" title="翡翠商務綠">
+                  <span class="swatch-dot" style="background: #107C41;"></span>
+                  <span class="swatch-name">翡翠商務綠</span>
+                </button>
+                <button type="button" class="swatch-btn" data-color="orange" title="活力朝氣橘">
+                  <span class="swatch-dot" style="background: #D83B01;"></span>
+                  <span class="swatch-name">活力朝氣橘</span>
+                </button>
+                <button type="button" class="swatch-btn" data-color="purple" title="專業高階紫">
+                  <span class="swatch-dot" style="background: #5C2D91;"></span>
+                  <span class="swatch-name">專業高階紫</span>
+                </button>
+                <button type="button" class="swatch-btn" data-color="black" title="沉穩商務黑">
+                  <span class="swatch-dot" style="background: #2B2B2B; border: 1px solid #777;"></span>
+                  <span class="swatch-name">沉穩商務黑</span>
+                </button>
+                <button type="button" class="swatch-btn" data-color="cyan" title="深海科技青">
+                  <span class="swatch-dot" style="background: #008272;"></span>
+                  <span class="swatch-name">深海科技青</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 4. 系統字型 (微軟 Office 繁體常用字型) -->
+            <div class="form-group">
+              <label class="form-label" for="selectSystemFont">系統字型</label>
+              <select id="selectSystemFont" class="form-control">
+                <option value="jhenghei" style="font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif;" selected>微軟正黑體
+                  (Microsoft JhengHei)</option>
+                <option value="ming" style="font-family: 'PMingLiU', '新細明體', serif;">新細明體 (PMingLiU)</option>
+                <option value="kai" style="font-family: 'DFKai-SB', '標楷體', serif;">標楷體 (DFKai-SB)</option>
+                <option value="yahei" style="font-family: 'Microsoft YaHei', '微軟雅黑', sans-serif;">微軟雅黑 (Microsoft YaHei)
+                </option>
+                <option value="arial_jhenghei" style="font-family: Arial, 'Microsoft JhengHei', sans-serif;">Arial +
+                  微軟正黑體 (英數商務)</option>
+                <option value="calibri_jhenghei" style="font-family: Calibri, 'Microsoft JhengHei', sans-serif;">Calibri
+                  + 微軟正黑體 (Office 現代)</option>
+                <option value="times_ming" style="font-family: 'Times New Roman', 'PMingLiU', serif;">Times New Roman +
+                  新細明體 (正式報表)</option>
+              </select>
+            </div>
+
+            <!-- 5. 字級大小 (8pt ~ 24pt 純淨文字選單) -->
+            <div class="form-group">
+              <label class="form-label" for="selectFontSize">字級大小</label>
+              <select id="selectFontSize" class="form-control">
+                <option value="8pt">8pt</option>
+                <option value="9pt">9pt</option>
+                <option value="10pt">10pt</option>
+                <option value="11pt">11pt</option>
+                <option value="12pt" selected>12pt (標準)</option>
+                <option value="13pt">13pt</option>
+                <option value="14pt">14pt</option>
+                <option value="16pt">16pt</option>
+                <option value="18pt">18pt</option>
+                <option value="20pt">20pt</option>
+                <option value="22pt">22pt</option>
+                <option value="24pt">24pt</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 【區塊三：業務人員與權限設定】 (底部管理卡片) -->
+        <div class="fluent-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
+                <path
+                  d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+              </svg>
+              <div>
+                <h2 class="card-title">業務人員與權限設定</h2>
+                <p class="card-desc">名冊增刪、通路標註、數據管理權限配置與看板順序維護</p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="btnAddSalesperson" class="fluent-btn"
+                style="display:inline-flex; align-items:center; gap:4px; padding:5px 12px; font-size:0.85rem;">
+                <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24">
+                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                </svg>
+                新增人員
+              </button>
+              <button type="button" id="btnSaveSalespersonSettings" class="fluent-btn primary"
+                style="display:inline-flex; align-items:center; gap:4px; padding:5px 14px; font-size:0.85rem;">
+                <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24">
+                  <path
+                    d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" />
+                </svg>
+                保存
+              </button>
+            </div>
+          </div>
+
+          <!-- 方案 A：電腦端寬表格視角 -->
+          <div class="sales-order-desktop-container"
+            style="border: 1px solid var(--border-light); border-radius: 6px; overflow: hidden; max-height: 480px; overflow-y: auto;">
+            <table class="sales-order-table" id="tableSalesOrder">
               <thead>
                 <tr>
-                  <th style="width:48px; text-align:center;">序號</th>
-                  <th style="width:90px; text-align:center;">可用數量</th>
-                  <th style="width:240px;">型號</th>
-                  <th style="width:75px; text-align:right;">數量</th>
-                  <th style="min-width:180px;">規格</th>
-                  <th style="width:110px; text-align:right;">經銷價</th>
-                  <th style="width:90px; text-align:right;">報價折數%</th>
-                  <th style="width:125px; text-align:right;">小計(未稅)</th>
-                  <th style="min-width:160px;">備註/交期</th>
-                  <th style="width:60px; text-align:center;">操作</th>
+                  <th style="width: 50px; text-align: center;">序號</th>
+                  <th style="width: 130px;">姓名</th>
+                  <th style="width: 110px; text-align: center;">通路</th>
+                  <th style="width: 120px; text-align: center;">數據管理權限</th>
+                  <th style="width: 130px; text-align: center;">順序調整</th>
+                  <th style="width: 85px; text-align: center;">人員增減</th>
                 </tr>
               </thead>
-              <tbody id="quoteDesktopTableBody">
-                <!-- 動態注入表格列 -->
+              <tbody id="tbodySalesOrder">
+                <!-- 由 JavaScript 根據 getOrderedSalespersons() 動態渲染 -->
               </tbody>
             </table>
           </div>
 
-          <!-- 表格下方工具列 (新增品項、插入小計、舊單匯入、智慧BOM、重整經銷價) -->
-          <div class="pyside-toolbar-bottom">
-            <div class="pyside-toolbar-left">
-              <button type="button" id="btnAddNewItem" class="btn-pyside-blue" title="新增一筆產品明細">
-                + 新增產品明細
-              </button>
-              <button type="button" id="btnInsertSubtotal" class="btn-pyside-orange" title="插入方案小計">
-                + 插入方案小計
-              </button>
-            </div>
-            <div class="pyside-toolbar-right">
-              <button type="button" id="btnImportOldQuote" class="btn-pyside-teal" title="從舊報價單匯入 (PDF/Excel)">
-                從舊報價單匯入 (PDF/Excel)
-              </button>
-              <button type="button" id="btnImportBom" class="btn-pyside-teal" title="智慧解析文字 BOM 清單">
-                智慧 BOM 匯入
-              </button>
-              <button type="button" id="btnRefreshPrices" class="btn-pyside-purple" title="重新自產品資料庫同步經銷牌價">
-                重整經銷價
-              </button>
-            </div>
+          <!-- 方案 B：手機端觸控卡片視角 (專為 360px~430px 手機寬度設計，無右側裁切) -->
+          <div class="sales-order-mobile-container" id="containerSalesOrderMobile"
+            style="max-height: 520px; overflow-y: auto;">
+            <!-- 由 JavaScript 根據 getOrderedSalespersons() 動態渲染手機卡片 -->
           </div>
 
-          <!-- 左下角結算總額 (合計未稅、營業稅5%、總金額含稅紅字) -->
-          <div class="pyside-summary-container">
-            <div class="pyside-totals-box">
-              <div class="total-row">合計(未稅) : <span id="summarySubtotal" class="font-mono">0</span></div>
-              <div class="total-row">營業稅(5%) : <span id="summaryTax" class="font-mono">0</span></div>
-              <div class="total-row total-grand-red">總金額(含稅) : <span id="summaryGrandTotal" class="font-mono">0</span></div>
-            </div>
-            <!-- 相容原有 summary IDs -->
-            <div style="display:none;">
-              <span id="desktopItemCountBadge">共 0 項</span>
-              <span id="desktopSubtotal">$ 0</span>
-              <span id="desktopTax">$ 0</span>
-              <span id="desktopGrandTotal">$ 0</span>
-              <button type="button" id="btnDesktopSubmitDraft"></button>
-              <button type="button" id="btnDesktopLineQuote"></button>
-              <button type="button" id="btnExportExcel"></button>
-              <button type="button" id="btnPrintPDF"></button>
-              <button type="button" id="btnDesktopAddItem"></button>
-              <button type="button" id="btnDesktopBrowseProducts"></button>
-              <button type="button" id="btnInsertSubtotalRow"></button>
-              <button type="button" id="btnImportSmartBOM"></button>
-              <button type="button" id="btnRefreshDealerPrices"></button>
-              <button type="button" id="btnDesktopClearItems"></button>
-              <button type="button" id="btnApplySpecialPrice"></button>
-            </div>
-          </div>
-
-          <!-- 附加產品外觀圖 (僅於報價單匯出時顯示) -->
-          <div class="pyside-attachment-box">
-            <div class="pyside-attachment-title">附加產品外觀圖 (僅於報價單匯出時顯示)</div>
-            <div class="pyside-attachment-body">
-              <label for="quoteImageUploader" class="btn-pyside-dark" style="cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
-                <span>附加圖片 (JPG/PNG)</span>
-                <input type="file" id="quoteImageUploader" accept="image/png,image/jpeg,image/webp" multiple style="display:none;">
-              </label>
-              <span class="attachment-hint-text">系統會自動優化壓縮。可附加多張圖片。</span>
-            </div>
-            <div id="quoteAttachmentsPreview" class="quote-attachments-grid">
-              <span class="text-muted" style="font-size:0.82rem;" id="noAttachmentsHint">尚未附加圖片</span>
-            </div>
-          </div>
-
-        </form>
-      </div>
-
-      <!-- ====================================================================
-           子分頁 B：歷史報價紀錄與垃圾桶
-           ==================================================================== -->
-      <div id="quoteHistorySection" class="hidden" style="margin-top:0.5rem;">
-        <div class="history-toolbar-bar" style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px;">
-          <input type="text" id="inputSearchQuoteHistory" class="search-input" placeholder="搜尋單號、客戶名稱、專案..." style="margin-bottom:0; flex:1;">
-          <button type="button" id="btnToggleTrashView" class="fluent-btn secondary" style="padding:8px 12px; font-size:0.85rem;">
-            <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-            <span id="trashToggleText">檢視垃圾桶 (保留 30 天)</span>
-          </button>
-          <button type="button" id="btnRefreshQuoteHistory" class="fluent-btn secondary" style="padding:8px 12px; font-size:0.85rem;" title="重新整理">
-            <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-            重新整理
-          </button>
-        </div>
-        <div id="quoteHistoryResults" style="display:flex; flex-direction:column; gap:10px;">
-          <!-- 動態載入歷史報價單卡片 -->
-        </div>
-      </div>
-
-      <!-- ====================================================================
-           子分頁 C：手機報價草稿匣
-           ==================================================================== -->
-      <div id="quoteDraftsInboxSection" class="hidden" style="margin-top:0.5rem;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding:10px 14px; background:var(--bg-card-subtle); border:1px solid var(--border-color); border-radius:8px;">
-          <div>
-            <span style="font-weight:600; font-size:0.9rem; color:var(--text-main);">手機離線 / 暫存草稿箱</span>
-            <span class="text-muted" style="font-size:0.8rem; margin-left:8px;">在行動裝置外出時儲存的草稿可在此檢視並一鍵載入電腦版進行排版與報價</span>
-          </div>
-          <button type="button" id="btnClearDraftsInbox" class="fluent-btn secondary text-muted" style="font-size:0.8rem; padding:4px 10px;">清空所有草稿</button>
-        </div>
-        <div id="quoteDraftsResults" style="display:flex; flex-direction:column; gap:10px;">
-          <!-- 動態載入手機草稿卡片 -->
-        </div>
-      </div>
-
-      <!-- ====================================================================
-           子分頁 D：歷史單價分析
-           ==================================================================== -->
-      <div id="quoteAnalysisSection" class="hidden" style="margin-top:0.5rem;">
-        <div class="fluent-card" style="margin-bottom:1rem; padding:1rem;">
-          <div style="font-weight:700; font-size:0.95rem; margin-bottom:0.75rem; color:var(--text-main);">歷史報價單價與折讓區間快速查詢</div>
-          <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:10px; align-items:flex-end;">
-            <div class="form-group" style="margin-bottom:0;">
-              <label for="inputAnalysisModel" style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:0.2rem;">產品型號 (可部分關鍵字)</label>
-              <input type="text" id="inputAnalysisModel" placeholder="例如：AX5N 或 SS2" style="width:100%; padding:0.6rem 0.8rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.88rem;">
-            </div>
-            <div class="form-group" style="margin-bottom:0;">
-              <label for="inputAnalysisCustomer" style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:0.2rem;">客戶名稱 (選填)</label>
-              <input type="text" id="inputAnalysisCustomer" placeholder="搜尋特定客戶歷史成交價..." style="width:100%; padding:0.6rem 0.8rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.88rem;">
-            </div>
-            <button type="button" id="btnRunPriceAnalysis" class="fluent-btn primary" style="padding:0.6rem 1.2rem; font-size:0.88rem;">
-              <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-              查詢歷史單價
+          <div class="settings-version-tag">
+            <span class="version-text">系統版本：v1.0.38</span>
+            <button id="btnClearCacheSettings" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
+              <svg class="icon-svg-xs" viewBox="0 0 24 24">
+                <path
+                  d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+              </svg>
+              <span>清除快取</span>
             </button>
           </div>
         </div>
-        <div id="quoteAnalysisResults" class="quote-desktop-table-wrapper">
-          <div style="padding:24px; text-align:center; color:var(--text-muted); font-size:0.88rem;">請輸入產品型號並點擊「查詢歷史單價」以比對過往成交報價與折數分佈。</div>
-        </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- ====================================================================
-         分頁三：專案售價申請單 (預留展示)
-         ==================================================================== -->
-    <section id="panelSpecials" class="hidden">
-      <div class="fluent-card">
-        <div class="card-header">
-          <div class="card-title-group">
-            <svg class="icon-svg" style="color:var(--color-accent);" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42z"/></svg>
-            <h2 class="card-title">專案售價申請單中心</h2>
+      <!-- 新增業務人員對話框 (優雅取代 prompt，支援電腦與手機端操作) -->
+      <div id="modalAddSalesperson" class="modal-overlay hidden">
+        <div class="fluent-dialog">
+          <div class="dialog-header"
+            style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light); padding-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <svg class="icon-svg" style="width:18px; height:18px; color:var(--color-accent);" viewBox="0 0 24 24">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+              </svg>
+              <h3 style="margin:0; font-size:1.05rem; font-weight:700;">新增業務人員</h3>
+            </div>
+            <button type="button" id="btnCloseAddSalesModal"
+              style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-secondary);">&times;</button>
           </div>
-        </div>
-        <p style="color:var(--text-secondary);">低折讓自動觸發、自動抓取 Deal 競爭情資與成本毛利，將於里程碑 4 啟用！</p>
-      </div>
-    </section>
-
-    <!-- ====================================================================
-         分頁四：系統偏好設定 (Settings Panel)
-         ==================================================================== -->
-    <section id="panelSettings" class="hidden">
-      <!-- 【區塊一：營運區域與檢視身份】 (獨立置頂卡片) -->
-      <div class="fluent-card">
-        <div class="card-header">
-          <div class="card-title-group">
-            <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-            </svg>
-            <div>
-              <h2 class="card-title">營運區域與檢視身份</h2>
-              <p class="card-desc">切換全系統責任營運區域與當前業務戰情視角（即刻生效並自動儲存）</p>
+          <div class="dialog-body" style="padding:16px 0; display:flex; flex-direction:column; gap:12px;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-weight:600; margin-bottom:4px;">業務姓名 <span
+                  style="color:var(--color-danger);">*</span></label>
+              <input type="text" id="inputNewSalesName" class="form-control" placeholder="請輸入業務姓名（如：陳小明）"
+                style="width:100%;" />
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-weight:600; margin-bottom:4px;">所屬通路</label>
+              <select id="selectNewSalesGroup" class="form-control" style="width:100%;">
+                <option value="直賣" selected>直賣</option>
+                <option value="經銷">經銷</option>
+                <option value=""></option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0; display:flex; align-items:center; gap:8px; padding-top:4px;">
+              <input type="checkbox" id="chkNewSalesIsManager" style="width:16px; height:16px; cursor:pointer;" />
+              <label for="chkNewSalesIsManager"
+                style="cursor:pointer; font-weight:600; margin:0; font-size:0.9rem;">賦予數據管理權限</label>
+            </div>
+            <div
+              style="background:var(--bg-subtle, #f1f5f9); border-radius:6px; padding:8px 10px; font-size:0.8rem; color:var(--text-secondary);">
+              【提示】：新增後將即時加入下方名冊，請記得點擊「保存」按鈕確認生效。
             </div>
           </div>
-        </div>
-
-        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
-          <!-- 1. 所屬營運區域 (切換即刻生效並儲存為預設) -->
-          <div class="form-group">
-            <label class="form-label" for="selectActiveRegion">所屬營運區域</label>
-            <select id="selectActiveRegion" class="form-control">
-              <option value="北區" selected>北區營業處</option>
-              <option value="中區">中區營業處</option>
-              <option value="南區">南區營業處</option>
-            </select>
-            <span class="settings-hint">全系統戰情看板、各產品目標與切換按鈕將自動綁定此營運區域</span>
-          </div>
-
-          <!-- 2. 目前業務身份 (切換即刻生效) -->
-          <div class="form-group">
-            <label class="form-label" for="selectActiveSales">目前業務身份</label>
-            <select id="selectActiveSales" class="form-control">
-              <!-- 由 JavaScript 依據名冊動態生成純淨姓名 -->
-            </select>
-            <span class="settings-hint">切換業務後，戰情首頁即刻切換為該人員之個人目標與自製品實績</span>
+          <div class="dialog-footer"
+            style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border-light); padding-top:10px;">
+            <button type="button" class="fluent-btn" id="btnCancelAddSales">取消</button>
+            <button type="button" class="fluent-btn primary" id="btnConfirmAddSales">確認新增</button>
           </div>
         </div>
       </div>
 
-      <!-- 【區塊二：介面外觀與字型設定】 (主視覺設定卡片) -->
-      <div class="fluent-card">
-        <div class="card-header">
-          <div class="card-title-group">
-            <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
-              <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.9-1.9C9.28 19.59 10.6 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-1.17 0-2.27-.34-3.21-.92l-.37-.23-1.84 1.84-.71-.71 1.84-1.84-.23-.37C8.34 14.83 8 13.73 8 12.56c0-2.48 2.02-4.5 4.5-4.5s4.5 2.02 4.5 4.5-2.02 4.44-5 4.44z"/>
-            </svg>
-            <div>
-              <h2 class="card-title">介面外觀與字型設定</h2>
-              <p class="card-desc">個人化深淺主題、高對比品牌色票、微軟繁體商務字型與數字排版</p>
+      <!-- 刪除業務人員確認對話框 (優雅取代 confirm，支援電腦與手機端操作) -->
+      <div id="modalConfirmDeleteSalesperson" class="modal-overlay hidden">
+        <div class="fluent-dialog" style="max-width: 420px;">
+          <div class="dialog-header"
+            style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light); padding-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <svg class="icon-svg" style="width:18px; height:18px; color:var(--color-danger);" viewBox="0 0 24 24">
+                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+              </svg>
+              <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">刪除業務人員確認</h3>
             </div>
+            <button type="button" id="btnCloseDeleteSalesModal"
+              style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-secondary);">&times;</button>
           </div>
-        </div>
-
-        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
-          <!-- 1. 外觀顯示模式 (Segmented Control 膠囊分段按鈕) -->
-          <div class="form-group">
-            <label class="form-label">外觀顯示模式</label>
-            <div class="segmented-control" id="segThemeMode">
-              <button type="button" class="seg-btn active" data-val="auto">跟隨系統</button>
-              <button type="button" class="seg-btn" data-val="light">淺色模式</button>
-              <button type="button" class="seg-btn" data-val="dark">深色模式</button>
-            </div>
+          <div class="dialog-body" style="padding:16px 0; display:flex; flex-direction:column; gap:10px;">
+            <p style="margin:0; font-size:0.95rem; line-height:1.5; color:var(--text-primary);">
+              確定要從名冊中刪除業務人員【<strong id="spanDeleteSalesName"
+                style="color:var(--color-danger); font-size:1.05rem;"></strong>】嗎？
+            </p>
+            <span class="settings-hint" style="margin:0;">
+              注意：刪除後此人員將自編輯名冊中移除，請於操作完成後點擊右上角「保存」按鈕確認生效。
+            </span>
           </div>
-
-          <!-- 2. 數字排版 (Segmented Control 膠囊分段按鈕) -->
-          <div class="form-group">
-            <label class="form-label">數字排版</label>
-            <div class="segmented-control" id="segTabularNums">
-              <button type="button" class="seg-btn active" data-val="tabular">等寬數字 (對齊)</button>
-              <button type="button" class="seg-btn" data-val="proportional">比例數字 (標準)</button>
-            </div>
-          </div>
-
-          <!-- 3. 主題色系 (彩色圓點色票按鈕 Color Swatches) -->
-          <div class="form-group" style="grid-column: 1 / -1;">
-            <label class="form-label">主題色系</label>
-            <div class="swatches-container" id="swatchesThemeAccent">
-              <button type="button" class="swatch-btn active" data-color="blue" title="經典科技藍">
-                <span class="swatch-dot" style="background: #0067C0;"></span>
-                <span class="swatch-name">經典科技藍</span>
-              </button>
-              <button type="button" class="swatch-btn" data-color="green" title="翡翠商務綠">
-                <span class="swatch-dot" style="background: #107C41;"></span>
-                <span class="swatch-name">翡翠商務綠</span>
-              </button>
-              <button type="button" class="swatch-btn" data-color="orange" title="活力朝氣橘">
-                <span class="swatch-dot" style="background: #D83B01;"></span>
-                <span class="swatch-name">活力朝氣橘</span>
-              </button>
-              <button type="button" class="swatch-btn" data-color="purple" title="專業高階紫">
-                <span class="swatch-dot" style="background: #5C2D91;"></span>
-                <span class="swatch-name">專業高階紫</span>
-              </button>
-              <button type="button" class="swatch-btn" data-color="black" title="沉穩商務黑">
-                <span class="swatch-dot" style="background: #2B2B2B; border: 1px solid #777;"></span>
-                <span class="swatch-name">沉穩商務黑</span>
-              </button>
-              <button type="button" class="swatch-btn" data-color="cyan" title="深海科技青">
-                <span class="swatch-dot" style="background: #008272;"></span>
-                <span class="swatch-name">深海科技青</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- 4. 系統字型 (微軟 Office 繁體常用字型) -->
-          <div class="form-group">
-            <label class="form-label" for="selectSystemFont">系統字型</label>
-            <select id="selectSystemFont" class="form-control">
-              <option value="jhenghei" style="font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif;" selected>微軟正黑體 (Microsoft JhengHei)</option>
-              <option value="ming" style="font-family: 'PMingLiU', '新細明體', serif;">新細明體 (PMingLiU)</option>
-              <option value="kai" style="font-family: 'DFKai-SB', '標楷體', serif;">標楷體 (DFKai-SB)</option>
-              <option value="yahei" style="font-family: 'Microsoft YaHei', '微軟雅黑', sans-serif;">微軟雅黑 (Microsoft YaHei)</option>
-              <option value="arial_jhenghei" style="font-family: Arial, 'Microsoft JhengHei', sans-serif;">Arial + 微軟正黑體 (英數商務)</option>
-              <option value="calibri_jhenghei" style="font-family: Calibri, 'Microsoft JhengHei', sans-serif;">Calibri + 微軟正黑體 (Office 現代)</option>
-              <option value="times_ming" style="font-family: 'Times New Roman', 'PMingLiU', serif;">Times New Roman + 新細明體 (正式報表)</option>
-            </select>
-          </div>
-
-          <!-- 5. 字級大小 (8pt ~ 24pt 純淨文字選單) -->
-          <div class="form-group">
-            <label class="form-label" for="selectFontSize">字級大小</label>
-            <select id="selectFontSize" class="form-control">
-              <option value="8pt">8pt</option>
-              <option value="9pt">9pt</option>
-              <option value="10pt">10pt</option>
-              <option value="11pt">11pt</option>
-              <option value="12pt" selected>12pt (標準)</option>
-              <option value="13pt">13pt</option>
-              <option value="14pt">14pt</option>
-              <option value="16pt">16pt</option>
-              <option value="18pt">18pt</option>
-              <option value="20pt">20pt</option>
-              <option value="22pt">22pt</option>
-              <option value="24pt">24pt</option>
-            </select>
+          <div class="dialog-footer"
+            style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border-light); padding-top:12px;">
+            <button type="button" id="btnCancelDeleteSales" class="fluent-btn secondary">取消</button>
+            <button type="button" id="btnConfirmDeleteSales" class="fluent-btn danger">確認刪除</button>
           </div>
         </div>
       </div>
 
-      <!-- 【區塊三：業務人員與權限設定】 (底部管理卡片) -->
-      <div class="fluent-card">
-        <div class="card-header">
-          <div class="card-title-group">
-            <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
-              <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-            </svg>
-            <div>
-              <h2 class="card-title">業務人員與權限設定</h2>
-              <p class="card-desc">名冊增刪、通路標註、數據管理權限配置與看板順序維護</p>
+      <!-- 保存業務人員與權限設定警示確認對話框 (優雅微軟 Fluent 警示視窗) -->
+      <div id="modalConfirmSaveSalespersonSettings" class="modal-overlay hidden">
+        <div class="fluent-dialog" style="max-width: 440px;">
+          <div class="dialog-header"
+            style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light); padding-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <svg class="icon-svg" style="width:20px; height:20px; color:#f59e0b;" viewBox="0 0 24 24">
+                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+              </svg>
+              <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">保存設定警示確認</h3>
             </div>
+            <button type="button" id="btnCloseSaveSalesModal"
+              style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-secondary);">&times;</button>
           </div>
-          <div style="display: flex; gap: 8px;">
-            <button type="button" id="btnAddSalesperson" class="fluent-btn" style="display:inline-flex; align-items:center; gap:4px; padding:5px 12px; font-size:0.85rem;">
-              <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-              新增人員
-            </button>
-            <button type="button" id="btnSaveSalespersonSettings" class="fluent-btn primary" style="display:inline-flex; align-items:center; gap:4px; padding:5px 14px; font-size:0.85rem;">
-              <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
-              保存
-            </button>
-          </div>
-        </div>
-
-        <!-- 方案 A：電腦端寬表格視角 -->
-        <div class="sales-order-desktop-container" style="border: 1px solid var(--border-light); border-radius: 6px; overflow: hidden; max-height: 480px; overflow-y: auto;">
-          <table class="sales-order-table" id="tableSalesOrder">
-            <thead>
-              <tr>
-                <th style="width: 50px; text-align: center;">序號</th>
-                <th style="width: 130px;">姓名</th>
-                <th style="width: 110px; text-align: center;">通路</th>
-                <th style="width: 120px; text-align: center;">數據管理權限</th>
-                <th style="width: 130px; text-align: center;">順序調整</th>
-                <th style="width: 85px; text-align: center;">人員增減</th>
-              </tr>
-            </thead>
-            <tbody id="tbodySalesOrder">
-              <!-- 由 JavaScript 根據 getOrderedSalespersons() 動態渲染 -->
-            </tbody>
-          </table>
-        </div>
-
-        <!-- 方案 B：手機端觸控卡片視角 (專為 360px~430px 手機寬度設計，無右側裁切) -->
-        <div class="sales-order-mobile-container" id="containerSalesOrderMobile" style="max-height: 520px; overflow-y: auto;">
-          <!-- 由 JavaScript 根據 getOrderedSalespersons() 動態渲染手機卡片 -->
-        </div>
-
-        <div class="settings-version-tag">
-          <span class="version-text">系統版本：v1.0.33</span>
-          <button id="btnClearCacheSettings" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
-            <svg class="icon-svg-xs" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-            <span>清除快取</span>
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- 新增業務人員對話框 (優雅取代 prompt，支援電腦與手機端操作) -->
-    <div id="modalAddSalesperson" class="modal-overlay hidden">
-      <div class="fluent-dialog">
-        <div class="dialog-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light); padding-bottom:10px;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <svg class="icon-svg" style="width:18px; height:18px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-            <h3 style="margin:0; font-size:1.05rem; font-weight:700;">新增業務人員</h3>
-          </div>
-          <button type="button" id="btnCloseAddSalesModal" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-secondary);">&times;</button>
-        </div>
-        <div class="dialog-body" style="padding:16px 0; display:flex; flex-direction:column; gap:12px;">
-          <div class="form-group" style="margin:0;">
-            <label class="form-label" style="font-weight:600; margin-bottom:4px;">業務姓名 <span style="color:var(--color-danger);">*</span></label>
-            <input type="text" id="inputNewSalesName" class="form-control" placeholder="請輸入業務姓名（如：陳小明）" style="width:100%;" />
-          </div>
-          <div class="form-group" style="margin:0;">
-            <label class="form-label" style="font-weight:600; margin-bottom:4px;">所屬通路</label>
-            <select id="selectNewSalesGroup" class="form-control" style="width:100%;">
-              <option value="直賣" selected>直賣</option>
-              <option value="經銷">經銷</option>
-              <option value=""></option>
-            </select>
-          </div>
-          <div class="form-group" style="margin:0; display:flex; align-items:center; gap:8px; padding-top:4px;">
-            <input type="checkbox" id="chkNewSalesIsManager" style="width:16px; height:16px; cursor:pointer;" />
-            <label for="chkNewSalesIsManager" style="cursor:pointer; font-weight:600; margin:0; font-size:0.9rem;">賦予數據管理權限</label>
-          </div>
-          <div style="background:var(--bg-subtle, #f1f5f9); border-radius:6px; padding:8px 10px; font-size:0.8rem; color:var(--text-secondary);">
-            【提示】：新增後將即時加入下方名冊，請記得點擊「保存」按鈕確認生效。
-          </div>
-        </div>
-        <div class="dialog-footer" style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border-light); padding-top:10px;">
-          <button type="button" class="fluent-btn" id="btnCancelAddSales">取消</button>
-          <button type="button" class="fluent-btn primary" id="btnConfirmAddSales">確認新增</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 刪除業務人員確認對話框 (優雅取代 confirm，支援電腦與手機端操作) -->
-    <div id="modalConfirmDeleteSalesperson" class="modal-overlay hidden">
-      <div class="fluent-dialog" style="max-width: 420px;">
-        <div class="dialog-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light); padding-bottom:10px;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <svg class="icon-svg" style="width:18px; height:18px; color:var(--color-danger);" viewBox="0 0 24 24">
-              <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-            </svg>
-            <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">刪除業務人員確認</h3>
-          </div>
-          <button type="button" id="btnCloseDeleteSalesModal" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-secondary);">&times;</button>
-        </div>
-        <div class="dialog-body" style="padding:16px 0; display:flex; flex-direction:column; gap:10px;">
-          <p style="margin:0; font-size:0.95rem; line-height:1.5; color:var(--text-primary);">
-            確定要從名冊中刪除業務人員【<strong id="spanDeleteSalesName" style="color:var(--color-danger); font-size:1.05rem;"></strong>】嗎？
-          </p>
-          <span class="settings-hint" style="margin:0;">
-            注意：刪除後此人員將自編輯名冊中移除，請於操作完成後點擊右上角「保存」按鈕確認生效。
-          </span>
-        </div>
-        <div class="dialog-footer" style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border-light); padding-top:12px;">
-          <button type="button" id="btnCancelDeleteSales" class="fluent-btn secondary">取消</button>
-          <button type="button" id="btnConfirmDeleteSales" class="fluent-btn danger">確認刪除</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 保存業務人員與權限設定警示確認對話框 (優雅微軟 Fluent 警示視窗) -->
-    <div id="modalConfirmSaveSalespersonSettings" class="modal-overlay hidden">
-      <div class="fluent-dialog" style="max-width: 440px;">
-        <div class="dialog-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light); padding-bottom:10px;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <svg class="icon-svg" style="width:20px; height:20px; color:#f59e0b;" viewBox="0 0 24 24">
-              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
-            </svg>
-            <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">保存設定警示確認</h3>
-          </div>
-          <button type="button" id="btnCloseSaveSalesModal" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-secondary);">&times;</button>
-        </div>
-        <div class="dialog-body" style="padding:16px 0; display:flex; flex-direction:column; gap:12px;">
-          <div style="background:rgba(245, 158, 11, 0.12); border:1px solid rgba(245, 158, 11, 0.35); border-radius:6px; padding:10px 12px; font-size:0.9rem; line-height:1.5; color:var(--text-primary);">
-            <strong style="color:#d97706;">⚠️ 變更警示：</strong>您即將正式儲存業務人員名冊與權限設定。
-          </div>
-          <div style="font-size:0.9rem; line-height:1.6; color:var(--text-secondary); background:var(--bg-subtle, rgba(255,255,255,0.03)); border-radius:6px; padding:10px 12px; border:1px solid var(--border-light);">
-            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-              <span>名冊業務人員總數：</span>
-              <strong id="spanSaveSummaryTotal" style="color:var(--text-primary);">0 位</strong>
+          <div class="dialog-body" style="padding:16px 0; display:flex; flex-direction:column; gap:12px;">
+            <div
+              style="background:rgba(245, 158, 11, 0.12); border:1px solid rgba(245, 158, 11, 0.35); border-radius:6px; padding:10px 12px; font-size:0.9rem; line-height:1.5; color:var(--text-primary);">
+              <strong style="color:#d97706;">⚠️ 變更警示：</strong>您即將正式儲存業務人員名冊與權限設定。
             </div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
-              <span>具數據管理權限：</span>
-              <strong id="spanSaveSummaryManagers" style="color:var(--text-primary); text-align:right; max-width:65%;">0 位</strong>
+            <div
+              style="font-size:0.9rem; line-height:1.6; color:var(--text-secondary); background:var(--bg-subtle, rgba(255,255,255,0.03)); border-radius:6px; padding:10px 12px; border:1px solid var(--border-light);">
+              <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span>名冊業務人員總數：</span>
+                <strong id="spanSaveSummaryTotal" style="color:var(--text-primary);">0 位</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                <span>具數據管理權限：</span>
+                <strong id="spanSaveSummaryManagers"
+                  style="color:var(--text-primary); text-align:right; max-width:65%;">0 位</strong>
+              </div>
             </div>
+            <p style="margin:0; font-size:0.9rem; line-height:1.5; color:var(--text-primary);">
+              保存後將立即同步套用至全系統看板排序、首頁業務身份切換及數據管理審核權限。確定要保存生效嗎？
+            </p>
           </div>
-          <p style="margin:0; font-size:0.9rem; line-height:1.5; color:var(--text-primary);">
-            保存後將立即同步套用至全系統看板排序、首頁業務身份切換及數據管理審核權限。確定要保存生效嗎？
-          </p>
-        </div>
-        <div class="dialog-footer" style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border-light); padding-top:12px;">
-          <button type="button" id="btnCancelSaveSalesSettings" class="fluent-btn secondary">取消</button>
-          <button type="button" id="btnConfirmSaveSalesSettings" class="fluent-btn primary">確認保存</button>
+          <div class="dialog-footer"
+            style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border-light); padding-top:12px;">
+            <button type="button" id="btnCancelSaveSalesSettings" class="fluent-btn secondary">取消</button>
+            <button type="button" id="btnConfirmSaveSalesSettings" class="fluent-btn primary">確認保存</button>
+          </div>
         </div>
       </div>
-    </div>
 
 
-    <!-- ====================================================================
+      <!-- ====================================================================
          分頁：領先指標設定與審核 (Driver Management & Review Panel)
          包含：業務個人三大產品線領先指標維護 ＆ 主管專屬覆盤審核中心
          ==================================================================== -->
-    <section id="panelDriverMgmt" class="hidden">
-      <div class="fluent-card">
-        <div class="card-header">
-          <div class="card-title-group">
-            <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-            </svg>
-            <div>
-              <h2 class="card-title">領先指標設定與審核</h2>
-              <p class="card-desc">業務個人三大產品線驅動行動管理與主管專屬審核中心</p>
+      <section id="panelDriverMgmt" class="hidden">
+        <div class="fluent-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
+                <path
+                  d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+              </svg>
+              <div>
+                <h2 class="card-title">領先指標設定與審核</h2>
+                <p class="card-desc">業務個人三大產品線驅動行動管理與主管專屬審核中心</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- 1. 業務人員切換列 (主管可快速切換 10 位同仁；一般業務鎖定個人) -->
-        <div class="driver-filter-container" id="containerDriverSalesFilter">
-          <div class="driver-filter-header">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-              <label class="form-label" style="font-size: 0.95rem; font-weight: 700; margin: 0;">業務人員切換：</label>
-              <span id="badgeCurrentDriverViewingSales" class="traffic-light-badge" style="background:var(--bg-hover); color:var(--color-accent); font-weight:700; border:1px solid var(--border-light); font-size:0.8rem; padding:2px 8px;">曾維崧</span>
+          <!-- 1. 業務人員切換列 (主管可快速切換 10 位同仁；一般業務鎖定個人) -->
+          <div class="driver-filter-container" id="containerDriverSalesFilter">
+            <div class="driver-filter-header">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-accent);" viewBox="0 0 24 24">
+                  <path
+                    d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                </svg>
+                <label class="form-label" style="font-size: 0.95rem; font-weight: 700; margin: 0;">業務人員切換：</label>
+                <span id="badgeCurrentDriverViewingSales" class="traffic-light-badge"
+                  style="background:var(--bg-hover); color:var(--color-accent); font-weight:700; border:1px solid var(--border-light); font-size:0.8rem; padding:2px 8px;">曾維崧</span>
+              </div>
+              <span class="driver-filter-role-hint" id="hintDriverFilterRole"
+                style="font-size: 0.78rem; color: var(--text-tertiary);">主管模式：點擊下方任一業務可立即巡視該員指標</span>
             </div>
-            <span class="driver-filter-role-hint" id="hintDriverFilterRole" style="font-size: 0.78rem; color: var(--text-tertiary);">主管模式：點擊下方任一業務可立即巡視該員指標</span>
-          </div>
-          <div class="driver-sales-chips-bar" id="driverSalesFilterBar">
-            <!-- 由 JavaScript 動態渲染 10 位業務膠囊按鈕 -->
-          </div>
-        </div>
-
-        <!-- 2. 三大產品線領先指標 (驅動目標) 卡片區 -->
-        <div class="form-group" style="margin-bottom: 1.5rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
-            <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;" id="labelDriverCardsTitle">三大產品線領先指標 (驅動目標)</label>
-            <span style="font-size: 0.78rem; color: var(--text-tertiary);">防呆規則：執行滿 4 週 (28天) 方可申請調整</span>
-          </div>
-          <span class="autofill-hint" style="display: block; margin-bottom: 0.75rem;">
-            業務各產品線對標具體行動（如實地試機、規格制定、拜訪家數）。達成率未滿或行動失真時，經主管審查可進行策略覆盤調整。
-          </span>
-          <div class="driver-mgmt-grid" id="gridSalesDrivers">
-            <!-- 由 JavaScript 動態渲染目前業務員的 3 條驅動指標卡片 -->
-          </div>
-        </div>
-
-        <!-- 2. 主管專屬：驅動目標變更審核專區 (具備數據管理權限人員可見) -->
-        <div class="driver-review-panel" id="panelDriverReview" style="display: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-              <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;">驅動目標變更審核專區</label>
-              <span class="traffic-light-badge success" id="badgeManagerRole" style="font-size:0.75rem;">主管權限</span>
+            <div class="driver-sales-chips-bar" id="driverSalesFilterBar">
+              <!-- 由 JavaScript 動態渲染 10 位業務膠囊按鈕 -->
             </div>
-            <button type="button" id="btnRefreshDriverRequests" class="btn btn-secondary" style="padding: 3px 10px; font-size: 0.8rem;">重新整理待審清單</button>
           </div>
-          <span class="autofill-hint" style="display: block; margin-bottom: 0.75rem;">
-            主管覆盤審核：評估業務變更理由是否合理。核准後原指標將安全歸檔留存、新指標即刻生效；駁回則維持原指標行動。
-          </span>
-          <div class="driver-review-list" id="listDriverReviewRequests">
-            <!-- 由 JavaScript 動態渲染待審核申請單 -->
+
+          <!-- 2. 三大產品線領先指標 (驅動目標) 卡片區 -->
+          <div class="form-group" style="margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+              <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;"
+                id="labelDriverCardsTitle">三大產品線領先指標 (驅動目標)</label>
+              <span style="font-size: 0.78rem; color: var(--text-tertiary);">防呆規則：執行滿 4 週 (28天) 方可申請調整</span>
+            </div>
+            <span class="autofill-hint" style="display: block; margin-bottom: 0.75rem;">
+              業務各產品線對標具體行動（如實地試機、規格制定、拜訪家數）。達成率未滿或行動失真時，經主管審查可進行策略覆盤調整。
+            </span>
+            <div class="driver-mgmt-grid" id="gridSalesDrivers">
+              <!-- 由 JavaScript 動態渲染目前業務員的 3 條驅動指標卡片 -->
+            </div>
           </div>
+
+          <!-- 2. 主管專屬：驅動目標變更審核專區 (具備數據管理權限人員可見) -->
+          <div class="driver-review-panel" id="panelDriverReview" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
+                  <path
+                    d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
+                </svg>
+                <label class="form-label" style="font-size: 1rem; font-weight: 700; margin: 0;">驅動目標變更審核專區</label>
+                <span class="traffic-light-badge success" id="badgeManagerRole" style="font-size:0.75rem;">主管權限</span>
+              </div>
+              <button type="button" id="btnRefreshDriverRequests" class="btn btn-secondary"
+                style="padding: 3px 10px; font-size: 0.8rem;">重新整理待審清單</button>
+            </div>
+            <span class="autofill-hint" style="display: block; margin-bottom: 0.75rem;">
+              主管覆盤審核：評估業務變更理由是否合理。核准後原指標將安全歸檔留存、新指標即刻生效；駁回則維持原指標行動。
+            </span>
+            <div class="driver-review-list" id="listDriverReviewRequests">
+              <!-- 由 JavaScript 動態渲染待審核申請單 -->
+            </div>
+          </div>
+
         </div>
+      </section>
 
-      </div>
-    </section>
-
-    <!-- ====================================================================
+      <!-- ====================================================================
          分頁五：管理員目標資料維護 (左右雙 Excel 接收表格)
          左：挑戰目標總表 / 右：產品出貨明細表 (支援直接按 Ctrl+V 貼入)
          ==================================================================== -->
-    <section id="panelAdminTargets" class="hidden">
-      <div class="fluent-card">
-        <div class="card-header">
-          <div class="card-title-group">
-            <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
-              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/>
-            </svg>
-            <div>
-              <h2 class="card-title">業績數據資料庫</h2>
+      <section id="panelAdminTargets" class="hidden">
+        <div class="fluent-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
+                <path
+                  d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z" />
+              </svg>
+              <div>
+                <h2 class="card-title">業績數據資料庫</h2>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button id="btnLoadSampleExcel" type="button" class="fluent-btn">載入範例</button>
+              <button id="btnResetAdminDefaults" type="button" class="fluent-btn">全部清空</button>
             </div>
           </div>
-          <div style="display:flex; gap:8px;">
-            <button id="btnLoadSampleExcel" type="button" class="fluent-btn">載入範例</button>
-            <button id="btnResetAdminDefaults" type="button" class="fluent-btn">全部清空</button>
+
+          <!-- 左右雙欄表格容器 -->
+          <div class="excel-dual-layout">
+
+            <!-- 左邊表格：挑戰目標總表 -->
+            <div class="excel-sheet-card">
+              <div class="excel-sheet-header">
+                <div class="excel-sheet-title">
+                  <svg class="icon-svg" style="color:var(--color-accent); flex-shrink:0;" viewBox="0 0 24 24">
+                    <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+                  </svg>
+                  <span>【挑戰目標總表】</span>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
+                  <button id="btnPasteTargetDemo" type="button" class="fluent-btn"
+                    style="height:26px; padding:0 8px; font-size:11px;">載入範例</button>
+                  <button id="btnClearTargetTable" type="button" class="fluent-btn"
+                    style="height:26px; padding:0 8px; font-size:11px;">清空</button>
+                </div>
+              </div>
+
+              <div id="containerTableTargets" class="excel-table-scroll" tabindex="0">
+                <table id="tablePastedTargets" class="excel-spreadsheet-grid"></table>
+              </div>
+            </div>
+
+            <!-- 右邊表格：產品出貨明細表 -->
+            <div class="excel-sheet-card">
+              <div class="excel-sheet-header">
+                <div class="excel-sheet-title">
+                  <svg class="icon-svg" style="color:var(--color-success); flex-shrink:0;" viewBox="0 0 24 24">
+                    <path
+                      d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" />
+                  </svg>
+                  <span>【產品出貨明細表】</span>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
+                  <button id="btnPasteShipmentDemo" type="button" class="fluent-btn"
+                    style="height:26px; padding:0 8px; font-size:11px;">載入範例</button>
+                  <button id="btnClearShipmentTable" type="button" class="fluent-btn"
+                    style="height:26px; padding:0 8px; font-size:11px;">清空</button>
+                </div>
+              </div>
+
+              <div id="containerTableShipments" class="excel-table-scroll" tabindex="0">
+                <table id="tablePastedShipments" class="excel-spreadsheet-grid"></table>
+              </div>
+            </div>
+
           </div>
+
+          <div
+            style="display:flex; justify-content:flex-end; align-items:center; margin-top:16px; padding-top:12px; border-top:1px solid var(--border-light);">
+            <button id="btnConfirmTablesReady" type="button" class="fluent-btn primary">
+              資料確認
+            </button>
+          </div>
+
         </div>
+      </section>
 
-        <!-- 左右雙欄表格容器 -->
-        <div class="excel-dual-layout">
-
-          <!-- 左邊表格：挑戰目標總表 -->
-          <div class="excel-sheet-card">
-            <div class="excel-sheet-header">
-              <div class="excel-sheet-title">
-                <svg class="icon-svg" style="color:var(--color-accent); flex-shrink:0;" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-                <span>【挑戰目標總表】</span>
-              </div>
-              <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
-                <button id="btnPasteTargetDemo" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">載入範例</button>
-                <button id="btnClearTargetTable" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">清空</button>
-              </div>
-            </div>
-
-            <div id="containerTableTargets" class="excel-table-scroll" tabindex="0">
-              <table id="tablePastedTargets" class="excel-spreadsheet-grid"></table>
-            </div>
-          </div>
-
-          <!-- 右邊表格：產品出貨明細表 -->
-          <div class="excel-sheet-card">
-            <div class="excel-sheet-header">
-              <div class="excel-sheet-title">
-                <svg class="icon-svg" style="color:var(--color-success); flex-shrink:0;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
-                <span>【產品出貨明細表】</span>
-              </div>
-              <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
-                <button id="btnPasteShipmentDemo" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">載入範例</button>
-                <button id="btnClearShipmentTable" type="button" class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;">清空</button>
-              </div>
-            </div>
-
-            <div id="containerTableShipments" class="excel-table-scroll" tabindex="0">
-              <table id="tablePastedShipments" class="excel-spreadsheet-grid"></table>
-            </div>
-          </div>
-
-        </div>
-
-        <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:16px; padding-top:12px; border-top:1px solid var(--border-light);">
-          <button id="btnConfirmTablesReady" type="button" class="fluent-btn primary">
-            資料確認
-          </button>
-        </div>
-
-      </div>
-    </section>
-
-  </main>
+    </main>
   </div> <!-- .app-body-wrapper -->
 
   <!-- 主管目標設定彈窗 (Modal Dialog) -->
@@ -1313,7 +1689,10 @@
     <div class="fluent-modal-card" style="max-width:580px;">
       <div class="modal-header">
         <div class="card-title-group">
-          <svg class="icon-svg" style="color:var(--color-accent); width:20px; height:20px;" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+          <svg class="icon-svg" style="color:var(--color-accent); width:20px; height:20px;" viewBox="0 0 24 24">
+            <path
+              d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+          </svg>
           <h3 class="card-title" style="font-size:1.1em;">戰情目標與指標方案設定</h3>
         </div>
         <button id="btnCloseTargetModal" type="button" class="modal-close-btn" title="關閉">✕</button>
@@ -1452,11 +1831,15 @@
           </div>
 
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; gap:8px;">
-            <button id="btnResetTargetDefaults" type="button" class="fluent-btn" style="color:var(--text-secondary);">恢復預設值</button>
+            <button id="btnResetTargetDefaults" type="button" class="fluent-btn"
+              style="color:var(--text-secondary);">恢復預設值</button>
             <div style="display:flex; gap:8px;">
               <button id="btnCancelTargetModal" type="button" class="fluent-btn">取消</button>
               <button type="submit" class="fluent-btn primary">
-                <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                <svg class="icon-svg" viewBox="0 0 24 24">
+                  <path
+                    d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" />
+                </svg>
                 儲存目標設定
               </button>
             </div>
@@ -1469,42 +1852,61 @@
   <!-- 微軟風格 Excel 原生右鍵快顯功能選單 (Context Menu) -->
   <div id="excelContextMenu" class="excel-context-menu hidden">
     <div class="context-menu-item" id="menuInsertRowAbove">
-      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-accent);" viewBox="0 0 24 24">
+        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+      </svg>
       <span>在上方插入一列</span>
     </div>
     <div class="context-menu-item" id="menuInsertRowBelow">
-      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-accent);" viewBox="0 0 24 24">
+        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+      </svg>
       <span>在下方插入一列</span>
     </div>
     <div class="context-menu-item danger" id="menuDeleteRow">
-      <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24">
+        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+      </svg>
       <span>刪除此列</span>
     </div>
     <div class="context-menu-divider"></div>
     <div class="context-menu-item" id="menuInsertColLeft">
-      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-success);" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6V6z"/></svg>
+      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-success);" viewBox="0 0 24 24">
+        <path d="M14 6l-6 6 6 6V6z" />
+      </svg>
       <span>在左方插入一欄</span>
     </div>
     <div class="context-menu-item" id="menuInsertColRight">
-      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-success);" viewBox="0 0 24 24"><path d="M10 18l6-6-6-6v12z"/></svg>
+      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-success);" viewBox="0 0 24 24">
+        <path d="M10 18l6-6-6-6v12z" />
+      </svg>
       <span>在右方插入一欄</span>
     </div>
     <div class="context-menu-item danger" id="menuDeleteCol">
-      <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24">
+        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+      </svg>
       <span>刪除此欄</span>
     </div>
     <div class="context-menu-divider"></div>
     <div class="context-menu-item" id="menuAutoFitCol">
-      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M4 18h2V6H4v12zm14-12v12h2V6h-2zM8 13h8v-2H8v2z"/></svg>
+      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-accent);" viewBox="0 0 24 24">
+        <path d="M4 18h2V6H4v12zm14-12v12h2V6h-2zM8 13h8v-2H8v2z" />
+      </svg>
       <span>自動調整此欄寬度 (可雙擊邊線)</span>
     </div>
     <div class="context-menu-item" id="menuAutoFitAllCols">
-      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-accent);" viewBox="0 0 24 24"><path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z"/></svg>
+      <svg class="icon-svg" style="width:16px; height:16px; color:var(--color-accent);" viewBox="0 0 24 24">
+        <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" />
+      </svg>
       <span>自動調整全部欄寬</span>
     </div>
     <div class="context-menu-divider"></div>
     <div class="context-menu-item" id="menuClearCell">
-      <svg class="icon-svg" style="width:16px; height:16px; color:var(--text-tertiary);" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      <svg class="icon-svg" style="width:16px; height:16px; color:var(--text-tertiary);" viewBox="0 0 24 24">
+        <path
+          d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+      </svg>
       <span>清空內容 (DEL)</span>
     </div>
   </div>
@@ -1515,7 +1917,10 @@
       <div class="fluent-modal-header">
         <h3 class="fluent-modal-title" id="modalDriverApplyTitle">申請更換領先指標 (驅動目標)</h3>
         <button type="button" id="btnCloseDriverApplyModal" class="kpi-drawer-toggle" title="關閉">
-          <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24">
+            <path
+              d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+          </svg>
         </button>
       </div>
       <form id="formDriverChangeApply">
@@ -1523,24 +1928,30 @@
         <div class="fluent-modal-body">
           <div class="form-group">
             <label class="form-label">產品線</label>
-            <input type="text" id="applyProductLine" class="form-control" readonly style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
+            <input type="text" id="applyProductLine" class="form-control" readonly
+              style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
           </div>
           <div class="form-group">
             <label class="form-label">當前指標名稱</label>
-            <input type="text" id="applyOldDriverName" class="form-control" readonly style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
+            <input type="text" id="applyOldDriverName" class="form-control" readonly
+              style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="applyNewDriverName">新領先指標名稱 (欲更換的新行動) <span style="color:var(--color-danger, #ef4444);">*</span></label>
+            <label class="form-label" for="applyNewDriverName">新領先指標名稱 (欲更換的新行動) <span
+                style="color:var(--color-danger, #ef4444);">*</span></label>
             <input type="text" id="applyNewDriverName" class="form-control" placeholder="例：先進設備伺服實機調機與規格制定" required />
             <span class="autofill-hint">請描述具體、可落實、可衡量的業務前線行動</span>
           </div>
           <div style="display:flex; gap:12px;">
             <div class="form-group" style="flex:1;">
-              <label class="form-label" for="applyNewTargetVal">新目標數值 <span style="color:var(--color-danger, #ef4444);">*</span></label>
-              <input type="number" id="applyNewTargetVal" class="form-control" step="any" min="0" placeholder="例：4" required />
+              <label class="form-label" for="applyNewTargetVal">新目標數值 <span
+                  style="color:var(--color-danger, #ef4444);">*</span></label>
+              <input type="number" id="applyNewTargetVal" class="form-control" step="any" min="0" placeholder="例：4"
+                required />
             </div>
             <div class="form-group" style="width:120px;">
-              <label class="form-label" for="applyNewUnit">單位 <span style="color:var(--color-danger, #ef4444);">*</span></label>
+              <label class="form-label" for="applyNewUnit">單位 <span
+                  style="color:var(--color-danger, #ef4444);">*</span></label>
               <select id="applyNewUnit" class="form-control">
                 <option value="場" selected>場</option>
                 <option value="次">次</option>
@@ -1552,8 +1963,10 @@
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label" for="applyChangeReason">申請變更理由 (策略覆盤反思) <span style="color:var(--color-danger, #ef4444);">*</span></label>
-            <textarea id="applyChangeReason" class="form-control" rows="3" placeholder="請詳細反思：原驅動目標為何無法轉化為成果？新目標預計帶來何種突破？" required></textarea>
+            <label class="form-label" for="applyChangeReason">申請變更理由 (策略覆盤反思) <span
+                style="color:var(--color-danger, #ef4444);">*</span></label>
+            <textarea id="applyChangeReason" class="form-control" rows="3"
+              placeholder="請詳細反思：原驅動目標為何無法轉化為成果？新目標預計帶來何種突破？" required></textarea>
           </div>
         </div>
         <div class="fluent-modal-footer">
@@ -1570,12 +1983,16 @@
       <div class="fluent-modal-header">
         <div style="display: flex; align-items: center; gap: 8px;">
           <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
-            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+            <path
+              d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
           </svg>
           <h3 class="fluent-modal-title">回報前線實績</h3>
         </div>
         <button type="button" id="btnCloseDriverReportModal" class="kpi-drawer-toggle" title="關閉">
-          <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24">
+            <path
+              d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+          </svg>
         </button>
       </div>
       <form id="formDriverReportActual">
@@ -1583,32 +2000,41 @@
         <div class="fluent-modal-body">
           <div class="form-group">
             <label class="form-label">產品線</label>
-            <input type="text" id="reportProductLine" class="form-control" readonly style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
+            <input type="text" id="reportProductLine" class="form-control" readonly
+              style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
           </div>
           <div class="form-group">
             <label class="form-label">指標行動名稱</label>
-            <input type="text" id="reportDriverName" class="form-control" readonly style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
+            <input type="text" id="reportDriverName" class="form-control" readonly
+              style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
           </div>
           <div style="display: flex; gap: 12px;">
             <div class="form-group" style="flex: 1;">
               <label class="form-label">目標數值</label>
               <div style="display: flex; align-items: center; gap: 6px;">
-                <input type="text" id="reportTargetVal" class="form-control" readonly style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
-                <span id="reportUnitText1" style="font-size: 0.85rem; color: var(--text-secondary); min-width: 24px;">場</span>
+                <input type="text" id="reportTargetVal" class="form-control" readonly
+                  style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
+                <span id="reportUnitText1"
+                  style="font-size: 0.85rem; color: var(--text-secondary); min-width: 24px;">場</span>
               </div>
             </div>
             <div class="form-group" style="flex: 1;">
-              <label class="form-label" for="reportActualVal">目前累計完成實績 <span style="color:var(--color-danger, #ef4444);">*</span></label>
+              <label class="form-label" for="reportActualVal">目前累計完成實績 <span
+                  style="color:var(--color-danger, #ef4444);">*</span></label>
               <div style="display: flex; align-items: center; gap: 6px;">
                 <input type="number" id="reportActualVal" class="form-control" step="any" min="0" required />
-                <span id="reportUnitText2" style="font-size: 0.85rem; color: var(--text-secondary); min-width: 24px;">場</span>
+                <span id="reportUnitText2"
+                  style="font-size: 0.85rem; color: var(--text-secondary); min-width: 24px;">場</span>
               </div>
             </div>
           </div>
           <!-- 快捷 +1 鍵 -->
           <div style="display: flex; gap: 8px; margin-top: 4px;">
-            <button type="button" id="btnQuickAddOne" class="btn btn-secondary btn-sm" style="font-size: 0.8rem; padding: 4px 10px;">
-              <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            <button type="button" id="btnQuickAddOne" class="btn btn-secondary btn-sm"
+              style="font-size: 0.8rem; padding: 4px 10px;">
+              <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+              </svg>
               <span>快速 +1</span>
             </button>
             <span class="autofill-hint" style="margin: 0; align-self: center;">點擊可直接在目前實績上累加 1 次</span>
@@ -1617,7 +2043,9 @@
         <div class="fluent-modal-footer">
           <button type="button" id="btnCancelDriverReport" class="btn btn-secondary">取消</button>
           <button type="submit" id="btnSubmitDriverReport" class="btn btn-primary">
-            <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+            </svg>
             <span>確認登記實績</span>
           </button>
         </div>
@@ -1631,12 +2059,16 @@
       <div class="fluent-modal-header">
         <div style="display: flex; align-items: center; gap: 8px;">
           <svg class="icon-svg" style="width:20px; height:20px; color:var(--color-accent);" viewBox="0 0 24 24">
-            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+            <path
+              d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
           </svg>
           <h3 class="fluent-modal-title">設定領先指標 (驅動目標)</h3>
         </div>
         <button type="button" id="btnCloseDriverEditModal" class="kpi-drawer-toggle" title="關閉">
-          <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          <svg class="icon-svg" style="width:20px; height:20px;" viewBox="0 0 24 24">
+            <path
+              d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+          </svg>
         </button>
       </div>
       <form id="formDriverEditSettings">
@@ -1644,20 +2076,25 @@
         <div class="fluent-modal-body">
           <div class="form-group">
             <label class="form-label">產品線</label>
-            <input type="text" id="editProductLine" class="form-control" readonly style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
+            <input type="text" id="editProductLine" class="form-control" readonly
+              style="background:var(--bg-subtle, rgba(0,0,0,0.04)); cursor:not-allowed;" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="editDriverName">領先指標行動名稱 <span style="color:var(--color-danger, #ef4444);">*</span></label>
+            <label class="form-label" for="editDriverName">領先指標行動名稱 <span
+                style="color:var(--color-danger, #ef4444);">*</span></label>
             <input type="text" id="editDriverName" class="form-control" placeholder="例：半導體設備伺服實機試機與規格制定" required />
             <span class="autofill-hint">請填寫具體、可落實、可衡量的業務前線行動</span>
           </div>
           <div style="display: flex; gap: 12px;">
             <div class="form-group" style="flex: 1;">
-              <label class="form-label" for="editTargetVal">目標數值 <span style="color:var(--color-danger, #ef4444);">*</span></label>
-              <input type="number" id="editTargetVal" class="form-control" step="any" min="0" placeholder="例：4" required />
+              <label class="form-label" for="editTargetVal">目標數值 <span
+                  style="color:var(--color-danger, #ef4444);">*</span></label>
+              <input type="number" id="editTargetVal" class="form-control" step="any" min="0" placeholder="例：4"
+                required />
             </div>
             <div class="form-group" style="width: 120px;">
-              <label class="form-label" for="editUnit">單位 <span style="color:var(--color-danger, #ef4444);">*</span></label>
+              <label class="form-label" for="editUnit">單位 <span
+                  style="color:var(--color-danger, #ef4444);">*</span></label>
               <select id="editUnit" class="form-control">
                 <option value="場" selected>場</option>
                 <option value="次">次</option>
@@ -1668,7 +2105,8 @@
               </select>
             </div>
             <div class="form-group" style="width: 110px;">
-              <label class="form-label" for="editPeriodType">週期 <span style="color:var(--color-danger, #ef4444);">*</span></label>
+              <label class="form-label" for="editPeriodType">週期 <span
+                  style="color:var(--color-danger, #ef4444);">*</span></label>
               <select id="editPeriodType" class="form-control">
                 <option value="週" selected>週</option>
                 <option value="月">月</option>
@@ -1679,7 +2117,10 @@
         <div class="fluent-modal-footer">
           <button type="button" id="btnCancelDriverEdit" class="btn btn-secondary">取消</button>
           <button type="submit" id="btnSubmitDriverEdit" class="btn btn-primary">
-            <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+            <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24">
+              <path
+                d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" />
+            </svg>
             <span>保存指標設定</span>
           </button>
         </div>
@@ -1724,21 +2165,28 @@
 
   <!-- 3. 交期 / 備註選擇對話框 (Modal) -->
   <div id="deliveryModal" class="modal hidden">
-    <div class="modal-content" style="height:85vh; height:85dvh; max-height:90vh; display:flex; flex-direction:column; padding:1.25rem 1.25rem 1rem 1.25rem;">
-      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-shrink:0;">
+    <div class="modal-content"
+      style="height:85vh; height:85dvh; max-height:90vh; display:flex; flex-direction:column; padding:1.25rem 1.25rem 1rem 1.25rem;">
+      <div class="modal-header"
+        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-shrink:0;">
         <h3 style="margin:0; font-size:1.1rem; font-weight:700;">選擇交期 / 備註</h3>
         <button type="button" id="btnCloseDeliveryModal" class="btn-close">&times;</button>
       </div>
       <div class="modal-body" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden;">
-        <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px; flex-shrink:0;">自行手動輸入：</label>
-        <div class="custom-delivery-box" style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-shrink:0;">
-          <input type="text" id="customDeliveryInput" class="search-input" placeholder="輸入自訂交期或特殊備註..." style="flex:1; margin-bottom:0; min-height:42px;">
-          <button type="button" id="btnConfirmCustomDelivery" class="btn btn-primary" style="white-space:nowrap; padding:0.65rem 1.2rem; min-height:42px; flex-shrink:0;">確認</button>
+        <label
+          style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px; flex-shrink:0;">自行手動輸入：</label>
+        <div class="custom-delivery-box"
+          style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-shrink:0;">
+          <input type="text" id="customDeliveryInput" class="search-input" placeholder="輸入自訂交期或特殊備註..."
+            style="flex:1; margin-bottom:0; min-height:42px;">
+          <button type="button" id="btnConfirmCustomDelivery" class="btn btn-primary"
+            style="white-space:nowrap; padding:0.65rem 1.2rem; min-height:42px; flex-shrink:0;">確認</button>
         </div>
         <div class="delivery-list-header" style="flex-shrink:0; margin-bottom:8px;">
           <span style="font-size:0.85rem; font-weight:600; color:var(--text-muted);">常用預設選項 (點擊直接帶入)：</span>
         </div>
-        <div id="deliveryModalResults" class="delivery-results" style="overflow-y:auto !important; -webkit-overflow-scrolling:touch !important; flex:1; min-height:0; display:flex; flex-direction:column; gap:8px; padding-bottom:24px; touch-action:pan-y;">
+        <div id="deliveryModalResults" class="delivery-results"
+          style="overflow-y:auto !important; -webkit-overflow-scrolling:touch !important; flex:1; min-height:0; display:flex; flex-direction:column; gap:8px; padding-bottom:24px; touch-action:pan-y;">
           <!-- 預設選項由 JS 動態產生 -->
         </div>
       </div>
@@ -1756,7 +2204,8 @@
         <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:0.5rem; flex-shrink:0;">
           您可以在此預覽或修改文字，確認後點擊「一鍵複製」。
         </p>
-        <textarea id="lineQuoteText" class="line-quote-textarea" style="width:100%; height:200px; padding:10px; font-family:monospace; font-size:0.88rem; border:1px solid var(--border-color); border-radius:8px; resize:vertical; background:var(--bg-input, #ffffff); color:var(--text-main);"></textarea>
+        <textarea id="lineQuoteText" class="line-quote-textarea"
+          style="width:100%; height:200px; padding:10px; font-family:monospace; font-size:0.88rem; border:1px solid var(--border-color); border-radius:8px; resize:vertical; background:var(--bg-input, #ffffff); color:var(--text-main);"></textarea>
         <div style="display:flex; gap:0.75rem; margin-top:0.75rem; flex-shrink:0;">
           <button type="button" id="btnCancelLineQuote" class="btn btn-secondary" style="flex:1;">取消</button>
           <button type="button" id="btnCopyLineQuote" class="btn btn-line" style="flex:2;">一鍵複製並關閉</button>
@@ -1767,8 +2216,10 @@
 
   <!-- 5. 料號切換對話框 (Modal) -->
   <div id="skuModal" class="modal hidden">
-    <div class="modal-content" style="max-height:80vh; max-height:80dvh; display:flex; flex-direction:column; padding:1.1rem; max-width:440px;">
-      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-shrink:0;">
+    <div class="modal-content"
+      style="max-height:80vh; max-height:80dvh; display:flex; flex-direction:column; padding:1.1rem; max-width:440px;">
+      <div class="modal-header"
+        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-shrink:0;">
         <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-main);">選擇關聯料號</h3>
         <button type="button" id="btnCloseSkuModal" class="btn-close">&times;</button>
       </div>
@@ -1776,8 +2227,10 @@
       <div id="skuModalList" style="overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:8px;">
         <!-- 動態渲染各料號 -->
       </div>
-      <div class="modal-footer" style="padding-top:0.75rem; border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; margin-top:0.75rem; flex-shrink:0;">
-        <button type="button" id="btnCancelSkuModal" class="btn btn-secondary" style="font-size:0.85rem; padding:6px 16px;">關閉</button>
+      <div class="modal-footer"
+        style="padding-top:0.75rem; border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; margin-top:0.75rem; flex-shrink:0;">
+        <button type="button" id="btnCancelSkuModal" class="btn btn-secondary"
+          style="font-size:0.85rem; padding:6px 16px;">關閉</button>
       </div>
     </div>
   </div>
@@ -1791,9 +2244,11 @@
       </div>
       <div class="modal-body">
         <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;">
-          請直接由 Excel、ERP 或客戶規格清單複製「型號」與「數量」（每行一項，例如：<code>AX5N-32MT 2</code> 或 <code>SS2-021 5</code>），系統將自動比對產品庫帶入經銷牌價與規格：
+          請直接由 Excel、ERP 或客戶規格清單複製「型號」與「數量」（每行一項，例如：<code>AX5N-32MT 2</code> 或
+          <code>SS2-021 5</code>），系統將自動比對產品庫帶入經銷牌價與規格：
         </p>
-        <textarea id="smartBomInput" placeholder="例如：&#10;AX5N-32MT 2&#10;SS2-021-0.75K 1&#10;SC3-043-1.5K 3" style="width:100%; height:160px; padding:10px; font-family:Consolas, monospace; font-size:0.88rem; border:1px solid var(--border-color); border-radius:6px; resize:vertical; background:var(--bg-input, #ffffff); color:var(--text-main);"></textarea>
+        <textarea id="smartBomInput" placeholder="例如：&#10;AX5N-32MT 2&#10;SS2-021-0.75K 1&#10;SC3-043-1.5K 3"
+          style="width:100%; height:160px; padding:10px; font-family:Consolas, monospace; font-size:0.88rem; border:1px solid var(--border-color); border-radius:6px; resize:vertical; background:var(--bg-input, #ffffff); color:var(--text-main);"></textarea>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
           <span id="bomParsedCount" style="font-size:0.85rem; color:var(--text-muted);">尚未解析</span>
           <div style="display:flex; gap:8px;">
@@ -1816,11 +2271,13 @@
         <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">
           從已建立的歷史報價單中快速載入品項或以既有報價單為基底微調：
         </p>
-        <div id="importOldQuoteList" style="max-height:260px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+        <div id="importOldQuoteList"
+          style="max-height:260px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
           <!-- 動態載入歷史清單 -->
         </div>
       </div>
-      <div class="modal-footer" style="padding-top:10px; border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; margin-top:10px;">
+      <div class="modal-footer"
+        style="padding-top:10px; border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; margin-top:10px;">
         <button type="button" id="btnCancelImportOldQuote" class="btn btn-secondary">關閉</button>
       </div>
     </div>
@@ -1829,13 +2286,16 @@
   <!-- 8. 清空品項防呆二次確認對話框 (Modal) -->
   <div id="clearConfirmModal" class="modal hidden">
     <div class="modal-content" style="max-width:400px; text-align:center; padding:1.5rem;">
-      <h3 style="margin-top:0; color:var(--color-danger, #ef4444); font-size:1.15rem; font-weight:700;">[防呆警告] 確定要清空所有品項嗎？</h3>
+      <h3 style="margin-top:0; color:var(--color-danger, #ef4444); font-size:1.15rem; font-weight:700;">[防呆警告]
+        確定要清空所有品項嗎？</h3>
       <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5; margin:1rem 0;">
         此操作將清除目前編輯畫面中所有品項與方案小計。若尚未儲存，輸入之數據將遺失！
       </p>
       <div style="display:flex; gap:10px; justify-content:center;">
-        <button type="button" id="btnCancelClearConfirm" class="fluent-btn secondary" style="padding:8px 20px;">取消</button>
-        <button type="button" id="btnExecuteClearConfirm" class="fluent-btn danger" style="padding:8px 20px; background:#ef4444; color:#ffffff;">確定清空</button>
+        <button type="button" id="btnCancelClearConfirm" class="fluent-btn secondary"
+          style="padding:8px 20px;">取消</button>
+        <button type="button" id="btnExecuteClearConfirm" class="fluent-btn danger"
+          style="padding:8px 20px; background:#ef4444; color:#ffffff;">確定清空</button>
       </div>
     </div>
   </div>
@@ -1845,33 +2305,37 @@
     <div class="modal-content" style="max-width:440px; text-align:center; padding:1.5rem;">
       <h3 style="margin-top:0; color:var(--color-danger, #ef4444); font-size:1.15rem; font-weight:700;">[確認移至垃圾桶]</h3>
       <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5; margin:1rem 0;">
-        確定要將報價單【<span id="deleteConfirmQuoteNo" style="font-weight:700; color:var(--text-main); font-family:monospace;"></span>】移至垃圾桶嗎？<br>
+        確定要將報價單【<span id="deleteConfirmQuoteNo"
+          style="font-weight:700; color:var(--text-main); font-family:monospace;"></span>】移至垃圾桶嗎？<br>
         <span style="font-size:0.8rem; color:var(--text-muted);">(資料將保留 30 天防呆緩衝期，期間內可隨時一鍵復原)</span>
       </p>
       <div style="display:flex; gap:10px; justify-content:center;">
-        <button type="button" id="btnCancelDeleteConfirm" class="fluent-btn secondary" style="padding:8px 20px;">取消</button>
-        <button type="button" id="btnExecuteDeleteConfirm" class="fluent-btn danger" style="padding:8px 20px; background:#ef4444; color:#ffffff;">移至垃圾桶</button>
+        <button type="button" id="btnCancelDeleteConfirm" class="fluent-btn secondary"
+          style="padding:8px 20px;">取消</button>
+        <button type="button" id="btnExecuteDeleteConfirm" class="fluent-btn danger"
+          style="padding:8px 20px; background:#ef4444; color:#ffffff;">移至垃圾桶</button>
       </div>
     </div>
   </div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261024_v1_0_37"></script>
+  <script src="js/app.js?v=20261030_v1_0_38"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手助安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=20261024_v1_0_37')
-          .then(function(reg) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('./sw.js?v=20261030_v1_0_38')
+          .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);
           })
-          .catch(function(err) {
+          .catch(function (err) {
             console.warn('[PWA] Service Worker 註冊失敗：', err);
           });
       });
     }
   </script>
 </body>
+
 </html>

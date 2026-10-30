@@ -5,7 +5,7 @@
 【職責】
 1. 作為 PWA 前端網頁與後端資料存取層 (data_access.py) 之間的通訊橋樑。
 2. 提供靜態檔案託管服務，讓使用者開啟瀏覽器即可操作系統。
-3. 提供乾淨嚴謹的 RESTful API 路由，處理日報、商機、案件與報價單資料。
+3. 提供乾淨嚴謹的 RESTful API 路由，處理日報、商機、案件、雙層牌價（共通標準品＋個人特殊品方案 A）、手機報價草稿與正式報價單。
 """
 
 import os
@@ -25,8 +25,8 @@ data_access.init_database()
 
 app = FastAPI(
     title="士林電機 FA 業務戰情與報價系統",
-    description="整合業務日報 (OGSM)、商機 (CRM)、案件 (Deal) 與報價單管理系統",
-    version="1.0.0"
+    description="整合業務日報 (OGSM)、商機 (CRM)、案件 (Deal) 與跨裝置報價單管理系統",
+    version="1.0.38"
 )
 
 # 開啟跨來源資源共用 (CORS)，方便本地開發與 PWA 運作
@@ -55,7 +55,6 @@ class DailyReportCreate(BaseModel):
     visit_type: str = Field(default="實地拜訪", description="拜訪形式")
     content_summary: str = Field(..., description="洽談重點與行程摘要")
     manager_task_id: Optional[int] = None
-    # 擴充子卡片選填欄位：如果勾選產生商機或案件，自動連鎖建立
     create_opportunity: bool = False
     industry_type: Optional[str] = "自動化設備產業"
     product_series: Optional[str] = "士林品"
@@ -95,6 +94,31 @@ class DealCaseCreate(BaseModel):
     win_loss_reason: Optional[str] = ""
 
 
+class CustomerCreate(BaseModel):
+    name: str
+    owner_sales: str = "曾維崧"
+    tax_id: Optional[str] = ""
+    default_contact: Optional[str] = ""
+    phone: Optional[str] = ""
+    fax: Optional[str] = ""
+    address: Optional[str] = ""
+    payment_terms: Optional[str] = "月結 30 天電匯"
+
+
+class SpecialProductCreate(BaseModel):
+    owner_sales: str = "曾維崧"
+    model_no: str
+    spec: Optional[str] = ""
+    list_price: float = 0.0
+    dealer_price: float = 0.0
+    stock_qty: int = 0
+    note: Optional[str] = ""
+
+
+class SpecialProductPromoteRequest(BaseModel):
+    standard_dealer_price: Optional[float] = None
+
+
 class QuotationItemCreate(BaseModel):
     model_no: str
     spec: Optional[str] = ""
@@ -110,6 +134,7 @@ class QuotationItemCreate(BaseModel):
 class QuotationCreate(BaseModel):
     prefix: str
     sequence: Optional[int] = None
+    sales_name: str = "曾維崧"
     deal_id: Optional[int] = None
     quote_date: str
     valid_date: str
@@ -120,7 +145,7 @@ class QuotationCreate(BaseModel):
     fax: Optional[str] = ""
     delivery_address: Optional[str] = ""
     payment_terms: Optional[str] = ""
-    project_name: str
+    project_name: Optional[str] = ""
     project_type: str = "一次性專案"
     subtotal: float = 0.0
     tax_rate: float = 5.0
@@ -128,6 +153,24 @@ class QuotationCreate(BaseModel):
     grand_total: float = 0.0
     status: str = "追蹤中"
     items: List[QuotationItemCreate] = []
+
+
+class QuotationDraftCreate(BaseModel):
+    sales_name: str = "曾維崧"
+    customer_id: Optional[int] = None
+    customer_name: str
+    tax_id: Optional[str] = ""
+    contact_name: Optional[str] = ""
+    phone: Optional[str] = ""
+    fax: Optional[str] = ""
+    delivery_address: Optional[str] = ""
+    payment_terms: Optional[str] = "月結 30 天電匯"
+    project_name: Optional[str] = ""
+    project_type: Optional[str] = "一次性專案"
+    deal_id: Optional[int] = None
+    crm_links: List[Dict[str, Any]] = []
+    items: List[Dict[str, Any]] = []
+    subtotal: float = 0.0
 
 
 class DriverChangeApplyRequest(BaseModel):
@@ -140,7 +183,7 @@ class DriverChangeApplyRequest(BaseModel):
 
 class DriverReviewRequest(BaseModel):
     request_id: int
-    action: str  # 'approve' or 'reject'
+    action: str
     reviewer_name: Optional[str] = ""
     comment: Optional[str] = ""
 
@@ -163,15 +206,62 @@ class DriverUpdateSettingsRequest(BaseModel):
 # ==============================================================================
 
 @app.get("/api/customers")
-def api_get_customers(keyword: str = ""):
-    """查詢客戶主檔清單"""
-    return data_access.get_customers(keyword=keyword)
+def api_get_customers(keyword: str = "", sales_name: Optional[str] = None):
+    """查詢客戶主檔清單（支援依 sales_name 完全獨立隔離）"""
+    return data_access.get_customers(keyword=keyword, sales_name=sales_name)
+
+
+@app.post("/api/customers")
+def api_save_customer(cust: CustomerCreate):
+    """新增或更新業務個人客戶主檔"""
+    cid = data_access.save_customer(cust.model_dump())
+    return {"status": "success", "id": cid, "message": "客戶資料已成功儲存"}
 
 
 @app.get("/api/products")
-def api_search_products(q: str = ""):
-    """搜尋士林產品庫"""
-    return data_access.search_products(query=q)
+def api_search_products(q: str = "", limit: int = 80, sales_name: Optional[str] = None):
+    """搜尋產品庫（合併業務個人未封存特殊品 ＋ 全公司共通標準品，自動執行方案 A 防呆）"""
+    return data_access.search_products(query=q, limit=limit, sales_name=sales_name)
+
+
+@app.get("/api/quotation-settings")
+def api_get_quotation_settings():
+    """取得報價單財務捨入設定、稅率與最新庫存更新時間"""
+    return data_access.get_quotation_finance_settings()
+
+
+@app.get("/api/special-products")
+def api_get_special_products(sales_name: str = "曾維崧", include_archived: bool = True):
+    """取得特定業務員個人的特殊品牌價清單（含方案 A 已轉標準品之封存紀錄）"""
+    return data_access.get_personal_special_products(sales_name=sales_name, include_archived=include_archived)
+
+
+@app.post("/api/special-products")
+def api_save_special_product(sp_data: SpecialProductCreate):
+    """新增或更新業務個人特殊品（若已存在於標準品中，依方案 A 自動轉封存）"""
+    ok, msg, item_id = data_access.save_personal_special_product(sp_data.model_dump())
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"status": "success", "id": item_id, "message": msg}
+
+
+@app.delete("/api/special-products/{item_id}")
+def api_delete_special_product(item_id: int, sales_name: str = "曾維崧"):
+    """刪除業務個人的特殊品項目"""
+    ok = data_access.delete_personal_special_product(item_id, sales_name=sales_name)
+    if not ok:
+        raise HTTPException(status_code=404, detail="找不到指定的個人特殊品或無權限刪除")
+    return {"status": "success", "message": "個人特殊品已刪除"}
+
+
+@app.post("/api/special-products/{item_id}/promote")
+def api_promote_special_to_standard(item_id: int, req: Optional[SpecialProductPromoteRequest] = None):
+    """【方案 A】將個人特殊品正式發行至公司共通標準牌價表，並自動封存個人特殊品留紀錄"""
+    std_price = req.standard_dealer_price if req else None
+    ok, msg = data_access.promote_special_to_standard(item_id, standard_dealer_price=std_price)
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"status": "success", "message": msg}
 
 
 @app.get("/api/daily-reports")
@@ -182,16 +272,13 @@ def api_get_daily_reports(start_date: Optional[str] = None, end_date: Optional[s
 
 @app.post("/api/daily-reports")
 def api_create_daily_report(report: DailyReportCreate):
-    """
-    建立業務日報 (支援三層自動連鎖：可同時產生第二層商機或第三層案件)
-    """
+    """建立業務日報 (支援三層自動連鎖：可同時產生第二層商機或第三層案件)"""
     report_dict = report.model_dump()
     report_id = data_access.save_daily_report(report_dict)
 
     opp_id = None
     deal_id = None
 
-    # 連鎖 A：若勾選建立 CRM 商機
     if report.create_opportunity:
         opp_id = data_access.save_crm_opportunity({
             "daily_report_id": report_id,
@@ -204,7 +291,6 @@ def api_create_daily_report(report: DailyReportCreate):
             "status": "挖掘中"
         })
 
-    # 連鎖 B：若勾選建立正式 Deal 專案
     if report.create_deal and report.project_name:
         deal_id = data_access.save_deal_case({
             "opportunity_id": opp_id,
@@ -260,9 +346,21 @@ def api_create_deal(deal: DealCaseCreate):
 
 
 @app.get("/api/quotations")
-def api_list_quotations(keyword: str = "", status: str = "ALL", include_deleted: bool = False):
-    """查詢報價單清單 (含搜尋與垃圾桶過濾)"""
-    return data_access.list_quotations(keyword=keyword, status=status, include_deleted=include_deleted)
+def api_list_quotations(
+    keyword: str = "",
+    status: str = "ALL",
+    include_deleted: bool = False,
+    sales_name: Optional[str] = None,
+    limit: int = 200
+):
+    """查詢報價單清單 (支援依業務員獨立隔離、關鍵字搜尋與垃圾桶過濾)"""
+    return data_access.list_quotations(
+        keyword=keyword,
+        status=status,
+        include_deleted=include_deleted,
+        sales_name=sales_name,
+        limit=limit
+    )
 
 
 @app.get("/api/quotations/{quote_no}")
@@ -276,7 +374,7 @@ def api_get_quotation(quote_no: str):
 
 @app.post("/api/quotations")
 def api_save_quotation(quote_data: QuotationCreate):
-    """儲存報價單 (Append-Only，修改自動另存新版次)"""
+    """儲存報價單 (Append-Only，修改自動另存新版次，並綁定開單業務)"""
     header_data = quote_data.model_dump()
     items_data = header_data.pop("items", [])
     assigned_quote_no = data_access.save_quotation(header_data, items_data)
@@ -303,6 +401,55 @@ def api_restore_quotation(quote_no: str):
     if not ok:
         raise HTTPException(status_code=404, detail="找不到欲復原的報價單")
     return {"status": "success", "message": f"報價單【{quote_no}】已成功自垃圾桶復原"}
+
+
+@app.get("/api/price-analysis")
+def api_analyze_historical_prices(
+    model_keyword: str = "",
+    customer_keyword: str = "",
+    sales_name: Optional[str] = None,
+    limit: int = 100
+):
+    """歷史報價單價與折讓區間查詢（依業務員 sales_name 完全獨立隔離）"""
+    return data_access.analyze_historical_prices(
+        model_keyword=model_keyword,
+        customer_keyword=customer_keyword,
+        sales_name=sales_name,
+        limit=limit
+    )
+
+
+@app.get("/api/quotation-drafts")
+def api_get_quotation_drafts(sales_name: Optional[str] = None):
+    """取得手機報價草稿匣清單（直接自資料庫讀取，依業務員獨立隔離）"""
+    return data_access.get_quotation_drafts(sales_name=sales_name)
+
+
+@app.post("/api/quotation-drafts")
+def api_save_quotation_draft(draft: QuotationDraftCreate):
+    """手機端送出報價草稿（直接寫入伺服器資料庫，免經雲端硬碟）"""
+    draft_id = data_access.save_quotation_draft(draft.model_dump())
+    return {
+        "status": "success",
+        "draft_id": draft_id,
+        "message": "手機報價草稿已直接存入系統草稿匣！回到電腦桌即可載入轉正式報價單。"
+    }
+
+
+@app.delete("/api/quotation-drafts/{draft_id}")
+def api_delete_quotation_draft(draft_id: int, sales_name: Optional[str] = None):
+    """刪除單筆手機報價草稿"""
+    ok = data_access.delete_quotation_draft(draft_id, sales_name=sales_name)
+    if not ok:
+        raise HTTPException(status_code=404, detail="找不到指定的手機草稿")
+    return {"status": "success", "message": "手機草稿已刪除"}
+
+
+@app.delete("/api/quotation-drafts")
+def api_clear_quotation_drafts(sales_name: str = "曾維崧"):
+    """清空該業務員的所有手機報價草稿"""
+    cnt = data_access.clear_quotation_drafts(sales_name=sales_name)
+    return {"status": "success", "deleted_count": cnt, "message": "已清空您的手機報價草稿匣"}
 
 
 # ==============================================================================
@@ -405,7 +552,6 @@ def serve_index():
         return FileResponse(str(index_file))
     return {"message": "士林電機 FA 系統 Web API 運行中，前端檔案準備中..."}
 
-# 掛載靜態資源目錄 (同時相容 /web、/css、/js、/static 與 PWA 資源)
 if WEB_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(WEB_DIR)), name="static")
     app.mount("/web", StaticFiles(directory=str(WEB_DIR), html=True), name="web")

@@ -4031,4 +4031,475 @@ input[type="checkbox"] {
   color: #fed7aa !important;
 }
 
+/* ==========================================================================
+   _QuotationApp (PySide6 桌面版) 1:1 附圖還原專用樣式表
+   ========================================================================== */
+.app-drawer.collapsed {
+  display: none !important;
+}
+
+.pyside-top-toggle-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.btn-pyside-subtle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #e2e8f0;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-pyside-subtle:hover {
+  background: #cbd5e1;
+  color: #0f172a;
+}
+
+.pyside-header-container {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 10px 16px 14px;
+  margin-bottom: 12px;
+  transition: max-height 0.2s ease-out;
+}
+.pyside-header-container.collapsed {
+  display: none;
+}
+
+.pyside-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  border-bottom: 2px solid #3b82f6;
+  display: inline-block;
+  padding-bottom: 2px;
+  margin-bottom: 10px;
+}
+
+.pyside-header-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pyside-header-grid .grid-row {
+  display: grid;
+  grid-template-columns: 80px 1.5fr 80px 1.2fr;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+@media (max-width: 900px) {
+  .pyside-header-grid .grid-row {
+    grid-template-columns: 80px 1fr;
+  }
+}
+.grid-cell-label {
+  font-weight: 600;
+  color: #475569;
+  text-align: right;
+  white-space: nowrap;
+}
+.grid-cell-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pyside-input, .pyside-select {
+  padding: 4px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  background: #ffffff;
+  color: #1e293b;
+  height: 30px;
+  box-sizing: border-box;
+}
+.pyside-input:focus, .pyside-select:focus {
+  border-color: #2563eb;
+  outline: none;
+}
+.pyside-date-blue {
+  color: #0284c7 !important;
+  font-weight: 700 !important;
+}
+
+.btn-pyside-crm {
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-pyside-crm:hover {
+  background: #0369a1;
+}
+
+.pyside-badge-crm {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.pyside-action-bar-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.active-row-badge-container {
+  display: inline-flex;
+  align-items: center;
+  background: #e2e8f0;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  color: #334155;
+  font-weight: 600;
+  gap: 6px;
+}
+.active-row-pill {
+  white-space: nowrap;
+}
+.btn-clear-active-row {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-weight: bold;
+  padding: 0 2px;
+}
+.btn-clear-active-row:hover {
+  color: #ef4444;
+}
+
+.pyside-action-btn-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn-pyside-gray {
+  background: #64748b;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-pyside-gray:hover { background: #475569; }
+
+.btn-pyside-green {
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-pyside-green:hover { background: #059669; }
+
+.btn-pyside-line {
+  background: #06c755;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-pyside-line:hover { background: #05a747; }
+
+.btn-pyside-blue {
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-pyside-blue:hover { background: #0369a1; }
+
+.btn-pyside-red {
+  background: #b91c1c;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-pyside-red:hover { background: #991b1b; }
+
+.btn-pyside-teal {
+  background: #0d9488;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-pyside-teal:hover { background: #0f766e; }
+
+.btn-pyside-purple {
+  background: #7c3aed;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-pyside-purple:hover { background: #6d28d9; }
+
+.btn-pyside-orange {
+  background: #ea580c;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-pyside-orange:hover { background: #c2410c; }
+
+.btn-pyside-dark {
+  background: #1e293b;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-pyside-dark:hover { background: #0f172a; }
+
+.pyside-table-container {
+  overflow-x: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #ffffff;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.pyside-excel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: left;
+}
+.pyside-excel-table th {
+  background: #f1f5f9;
+  color: #334155;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 8px 6px;
+  border: 1px solid #cbd5e1;
+  white-space: nowrap;
+  user-select: none;
+}
+.pyside-excel-table td {
+  padding: 4px 6px;
+  border: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+.pyside-excel-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+.pyside-excel-table tbody tr.active-row {
+  background-color: #e0f2fe !important;
+}
+
+.cell-stock-gray {
+  background-color: #f8fafc;
+  text-align: center;
+  font-size: 0.82rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.cell-model-combobox {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #ffffff;
+  font-size: 0.85rem;
+  color: #1e293b;
+  cursor: pointer;
+  text-align: left;
+}
+.cell-model-combobox:hover {
+  border-color: #0284c7;
+  background: #f8fafc;
+}
+.cell-model-combobox .dropdown-arrow {
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.pyside-toolbar-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pyside-toolbar-left, .pyside-toolbar-right {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.pyside-summary-container {
+  margin-bottom: 16px;
+}
+.pyside-totals-box {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.8;
+  color: #1e293b;
+}
+.pyside-totals-box .total-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.pyside-totals-box .total-grand-red {
+  font-size: 1.18rem;
+  font-weight: 800;
+  color: #b91c1c;
+}
+
+.pyside-attachment-box {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  margin-top: 10px;
+}
+.pyside-attachment-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+.pyside-attachment-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.attachment-hint-text {
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+/* 深色模式支援 */
+[data-theme="dark"] .pyside-header-container,
+[data-theme="dark"] .pyside-attachment-box {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+[data-theme="dark"] .pyside-excel-table th {
+  background: #0f172a !important;
+  color: #cbd5e1 !important;
+  border-color: #334155 !important;
+}
+[data-theme="dark"] .pyside-excel-table td {
+  border-color: #334155 !important;
+  background: #1e293b !important;
+}
+[data-theme="dark"] .pyside-input, 
+[data-theme="dark"] .pyside-select,
+[data-theme="dark"] .cell-model-combobox {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+[data-theme="dark"] .pyside-totals-box {
+  color: #f1f5f9 !important;
+}
+[data-theme="dark"] .pyside-totals-box .total-grand-red {
+  color: #f87171 !important;
+}
+[data-theme="dark"] .cell-stock-gray {
+  background-color: #0f172a !important;
+  color: #94a3b8 !important;
+}
+
 

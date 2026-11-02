@@ -478,6 +478,9 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem("shihlin_salespersons_order", JSON.stringify(list));
     renderActiveSalesSelectOptions();
     renderSalespersonOrderTable();
+    if (typeof renderAdminImpersonateOptions === "function") {
+      renderAdminImpersonateOptions();
+    }
   }
 
   // 依據排序設定表動態渲染「目前業務身份」下拉選單
@@ -890,15 +893,7 @@ document.addEventListener("DOMContentLoaded", () => {
       selectActiveSales.value = savedSales;
       selectActiveSales.addEventListener("change", (e) => {
         const sName = e.target.value;
-        localStorage.setItem("shihlin_pwa_active_sales", sName);
-        currentViewingDriverSales = sName;
-        updateActiveSalesUI(sName);
-        updateManagerUIVisibility(sName);
-        loadAndRenderDriverMetrics(sName);
-        loadCustomers();
-        if (typeof onQuotationSalespersonChanged === "function") {
-          onQuotationSalespersonChanged(sName);
-        }
+        switchSimulatedSalesperson(sName, true);
       });
     }
     updateActiveSalesUI(savedSales);
@@ -6784,5 +6779,368 @@ document.addEventListener("DOMContentLoaded", () => {
   loadDailyReports();
   loadDeals();
   initQuotationModule();
+
+  // ============================================================================
+  // 15. Google 帳號身分驗證 (Google Identity Services) 與管理員身分模擬切換器
+  //     (對齊舊版 _QuotationApp/pwa 驗證架構，並提供一鍵切換全體業務身分功能)
+  // ============================================================================
+  const GOOGLE_WEB_CLIENT_ID = "668571991428-ffjs6ud0apusi7akb0lmptae24qqtbto.apps.googleusercontent.com";
+  const GOOGLE_AUTH_SCOPES = "https://www.googleapis.com/auth/drive.file profile email";
+  const GAS_WHITELIST_URL = "https://script.google.com/macros/s/AKfycbx48PMWVPysN9gd4OcPq1JmzqkRzwu494C2jFxK71Al13Q4Lr2y5KP3RbS80pgs8CYxGg/exec";
+  const SUPER_ADMIN_EMAILS = ["tsengweisung@gmail.com", "faldn3@gmail.com"];
+
+  let googleTokenClient = null;
+  let googleAccessToken = localStorage.getItem("google_access_token") || null;
+  let authToastTimer = null;
+
+  function isLocalOrTestEnvironment() {
+    const host = window.location.hostname;
+    return (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host.startsWith("192.168.") ||
+      host.startsWith("172.") ||
+      host.startsWith("10.") ||
+      host.endsWith(".local")
+    );
+  }
+
+  function showAuthToast(msg) {
+    const toast = document.getElementById("authToastBanner");
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.classList.remove("hidden");
+    if (authToastTimer) clearTimeout(authToastTimer);
+    authToastTimer = setTimeout(() => {
+      toast.classList.add("hidden");
+    }, 2800);
+  }
+
+  function setLoginStatusMessage(msg, isError = false) {
+    const box = document.getElementById("loginStatusMessage");
+    if (!box) return;
+    if (!msg) {
+      box.classList.add("hidden");
+      box.textContent = "";
+      return;
+    }
+    box.textContent = msg;
+    box.classList.toggle("error", !!isError);
+    box.classList.remove("hidden");
+  }
+
+  // 渲染頂部「管理員身分模擬」下拉選單
+  function renderAdminImpersonateOptions() {
+    const adminSelect = document.getElementById("adminImpersonateSelect");
+    if (!adminSelect) return;
+    const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+    const list = getOrderedSalespersons();
+    adminSelect.innerHTML = list.map(s => {
+      const selected = s.name === activeSales ? "selected" : "";
+      return `<option value="${escapeHtml(s.name)}" ${selected}>${escapeHtml(s.name)}</option>`;
+    }).join("");
+    if (list.some(s => s.name === activeSales)) {
+      adminSelect.value = activeSales;
+    }
+  }
+
+  // 評估是否顯示頂部「管理員身分模擬」工具列
+  function setupAdminImpersonator() {
+    const adminBar = document.getElementById("adminImpersonateBar");
+    if (!adminBar) return;
+
+    let profEmail = "";
+    try {
+      const pStr = localStorage.getItem("saved_user_profile");
+      if (pStr) profEmail = (JSON.parse(pStr).email || "").trim().toLowerCase();
+    } catch (e) {}
+
+    const isAdmin =
+      localStorage.getItem("is_admin_user") === "true" ||
+      SUPER_ADMIN_EMAILS.includes(profEmail);
+
+    if (isAdmin) {
+      localStorage.setItem("is_admin_user", "true");
+      adminBar.classList.remove("hidden");
+      renderAdminImpersonateOptions();
+    } else {
+      adminBar.classList.add("hidden");
+    }
+  }
+
+  // 核心：切換模擬業務身分，同步刷新全系統所有模組視角與資料隔離
+  function switchSimulatedSalesperson(targetSales, showNotice = true) {
+    if (!targetSales) return;
+    localStorage.setItem("shihlin_pwa_active_sales", targetSales);
+    localStorage.setItem("saved_display_name", targetSales);
+    currentViewingDriverSales = targetSales;
+
+    const selectActiveSales = document.getElementById("selectActiveSales");
+    if (selectActiveSales && selectActiveSales.value !== targetSales) {
+      selectActiveSales.value = targetSales;
+    }
+    const adminSelect = document.getElementById("adminImpersonateSelect");
+    if (adminSelect && adminSelect.value !== targetSales) {
+      adminSelect.value = targetSales;
+    }
+
+    // 1. 更新頂部頭像、首頁戰情計分板、業績預測與個人特殊品徽章
+    updateActiveSalesUI(targetSales);
+    // 2. 依被模擬業務的主管權限動態顯示/隱藏「業績數據資料庫」與「領先指標審核中心」
+    updateManagerUIVisibility(targetSales);
+    // 3. 重新載入領先指標與主管審核面板
+    loadAndRenderDriverMetrics(targetSales);
+    renderManagerReviewPanel(targetSales);
+    if (panelDriverMgmt && !panelDriverMgmt.classList.contains("hidden")) {
+      renderDriverManagementPage(targetSales);
+    }
+    // 4. 重新載入客戶、日報與案件
+    loadCustomers();
+    loadDailyReports();
+    loadDeals();
+    // 5. 重新載入報價單模組（獨立客戶、個人特殊品、歷史報價單、手機草稿匣）
+    if (typeof onQuotationSalespersonChanged === "function") {
+      onQuotationSalespersonChanged(targetSales);
+    }
+
+    if (showNotice) {
+      showAuthToast(`[身分切換] 已切換至「${targetSales}」視角（客戶、報價單與權限已同步隔離）`);
+    }
+  }
+
+  // 呼叫 Google UserInfo API 取得登入者姓名與 Email
+  async function fetchGoogleUserProfile(token) {
+    const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      throw new Error("無法取得 Google 帳號個人資訊 (HTTP " + res.status + ")");
+    }
+    return await res.json();
+  }
+
+  // 檢查 Email 是否在白名單內 (對齊舊版 checkWhitelist)
+  async function checkGoogleWhitelist(email) {
+    if (!email) return { allowed: false, msg: "未提供 Google 帳號 Email" };
+    const lowerEmail = email.trim().toLowerCase();
+
+    // 最高管理員帳號直接授權放行
+    if (SUPER_ADMIN_EMAILS.includes(lowerEmail)) {
+      return {
+        allowed: true,
+        name: "曾維崧",
+        is_admin: true
+      };
+    }
+
+    try {
+      const res = await fetch(`${GAS_WHITELIST_URL}?action=check_whitelist&email=${encodeURIComponent(lowerEmail)}`);
+      if (!res.ok) {
+        return { allowed: true };
+      }
+      const data = await res.json();
+      if (data.status === "ok") {
+        return { allowed: true, name: data.name, is_admin: !!data.is_admin };
+      } else if (data.status === "rejected") {
+        return { allowed: false, msg: data.msg || "[存取受限] 您的帳號尚未通過管理員審核。" };
+      }
+      return { allowed: false, msg: data.msg || "白名單驗證失敗" };
+    } catch (err) {
+      console.warn("[Auth] 白名單連線檢查異常，允許離線存取:", err);
+      return { allowed: true };
+    }
+  }
+
+  // 將登入者名稱對應至系統內的業務人員名單
+  function resolveSalespersonName(rawName) {
+    const list = getOrderedSalespersons();
+    if (!rawName) return "曾維崧";
+    const clean = String(rawName).replace(/\(.*?\)/g, "").trim();
+    const matched = list.find(s => s.name === clean || clean.includes(s.name) || s.name.includes(clean));
+    return matched ? matched.name : clean;
+  }
+
+  // Google OAuth2 授權成功回呼
+  async function handleGoogleTokenResponse(response) {
+    if (response.error) {
+      console.warn("[Auth] Google 授權回應錯誤:", response.error, response.error_description);
+      setLoginStatusMessage(`Google 授權未完成（${response.error_description || response.error}）。若於本機測試，可直接點擊下方「管理員測試權限直接進入」。`, true);
+      return;
+    }
+
+    googleAccessToken = response.access_token;
+    const expiresIn = parseInt(response.expires_in, 10) || 3600;
+    const expiresAt = Date.now() + (expiresIn - 60) * 1000;
+    localStorage.setItem("google_access_token", googleAccessToken);
+    localStorage.setItem("google_token_expires_at", expiresAt.toString());
+
+    setLoginStatusMessage("正在驗證您的 Google 帳號與系統白名單權限...", false);
+
+    try {
+      const profile = await fetchGoogleUserProfile(googleAccessToken);
+      const checkResult = await checkGoogleWhitelist(profile.email);
+      if (!checkResult.allowed) {
+        googleAccessToken = null;
+        localStorage.removeItem("google_access_token");
+        localStorage.removeItem("google_token_expires_at");
+        localStorage.removeItem("is_admin_user");
+        setLoginStatusMessage(checkResult.msg || "[存取受限] 您的 Google 帳號尚未授權。", true);
+        return;
+      }
+
+      const userEmail = (profile.email || "").trim().toLowerCase();
+      const isAdmin = SUPER_ADMIN_EMAILS.includes(userEmail) || checkResult.is_admin === true;
+      if (isAdmin) {
+        localStorage.setItem("is_admin_user", "true");
+      } else {
+        localStorage.removeItem("is_admin_user");
+      }
+
+      const resolvedSales = resolveSalespersonName(checkResult.name || profile.name || "曾維崧");
+      localStorage.setItem("has_logged_in", "true");
+      localStorage.setItem("saved_display_name", resolvedSales);
+      localStorage.setItem("saved_user_profile", JSON.stringify(profile));
+      localStorage.setItem("last_active_user_email", userEmail);
+
+      const loginOverlay = document.getElementById("loginOverlaySection");
+      if (loginOverlay) loginOverlay.classList.add("hidden");
+      setLoginStatusMessage("");
+
+      setupAdminImpersonator();
+      switchSimulatedSalesperson(resolvedSales, false);
+      showAuthToast(`[驗證成功] 歡迎 ${resolvedSales}（${profile.email}）`);
+    } catch (err) {
+      console.error("[Auth] Google 驗證程序異常:", err);
+      setLoginStatusMessage("驗證過程發生錯誤：" + (err.message || err), true);
+    }
+  }
+
+  function initGoogleIdentityServices() {
+    if (typeof google === "undefined" || !google.accounts || !google.accounts.oauth2) {
+      return false;
+    }
+    googleTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_WEB_CLIENT_ID,
+      scope: GOOGLE_AUTH_SCOPES,
+      callback: handleGoogleTokenResponse
+    });
+    return true;
+  }
+
+  let gisPollCount = 0;
+  function ensureGisClientReady() {
+    if (initGoogleIdentityServices()) return;
+    if (gisPollCount < 40) {
+      gisPollCount++;
+      setTimeout(ensureGisClientReady, 250);
+    }
+  }
+  ensureGisClientReady();
+
+  // 開啟登入驗證畫面 (供初次進入或點擊「切換帳號」時呼叫)
+  function openLoginOverlay() {
+    const loginOverlay = document.getElementById("loginOverlaySection");
+    if (loginOverlay) {
+      setLoginStatusMessage("");
+      loginOverlay.classList.remove("hidden");
+    }
+  }
+
+  function setupAuthAndImpersonationEvents() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("logout") === "true") {
+      localStorage.removeItem("has_logged_in");
+      localStorage.removeItem("saved_display_name");
+      localStorage.removeItem("saved_user_profile");
+      localStorage.removeItem("google_access_token");
+      localStorage.removeItem("google_token_expires_at");
+      localStorage.removeItem("is_admin_user");
+    }
+
+    const btnGoogleLogin = document.getElementById("btnGoogleLogin");
+    if (btnGoogleLogin) {
+      btnGoogleLogin.addEventListener("click", () => {
+        if (!googleTokenClient && !initGoogleIdentityServices()) {
+          setLoginStatusMessage("Google 驗證元件載入中，若網路受限可點擊下方「管理員測試權限直接進入」。", true);
+          return;
+        }
+        try {
+          setLoginStatusMessage("正在開啟 Google 帳號授權視窗...", false);
+          googleTokenClient.requestAccessToken({ prompt: "select_account" });
+        } catch (err) {
+          setLoginStatusMessage("啟動 Google 登入視窗失敗：" + (err.message || err), true);
+        }
+      });
+    }
+
+    const btnTestEnvQuickLogin = document.getElementById("btnTestEnvQuickLogin");
+    if (btnTestEnvQuickLogin) {
+      btnTestEnvQuickLogin.addEventListener("click", () => {
+        const defaultAdminProfile = {
+          name: "曾維崧",
+          email: "tsengweisung@gmail.com",
+          mode: "admin_test"
+        };
+        localStorage.setItem("has_logged_in", "true");
+        localStorage.setItem("is_admin_user", "true");
+        localStorage.setItem("saved_display_name", "曾維崧");
+        localStorage.setItem("saved_user_profile", JSON.stringify(defaultAdminProfile));
+
+        const loginOverlay = document.getElementById("loginOverlaySection");
+        if (loginOverlay) loginOverlay.classList.add("hidden");
+        setLoginStatusMessage("");
+
+        const targetSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
+        setupAdminImpersonator();
+        switchSimulatedSalesperson(targetSales, false);
+        showAuthToast("[測試權限已啟用] 可由頂部「管理員身分模擬」任意切換全體業務身分");
+      });
+    }
+
+    const adminSelect = document.getElementById("adminImpersonateSelect");
+    if (adminSelect) {
+      adminSelect.addEventListener("change", () => {
+        switchSimulatedSalesperson(adminSelect.value, true);
+      });
+    }
+
+    const btnOpenPermModal = document.getElementById("btnOpenPermModal");
+    if (btnOpenPermModal) {
+      btnOpenPermModal.addEventListener("click", () => {
+        switchPage(navItemSettings, panelSettings);
+        setTimeout(() => {
+          const salesOrderTable = document.getElementById("tableSalesOrder") || document.getElementById("containerSalesOrderMobile");
+          if (salesOrderTable) {
+            salesOrderTable.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 120);
+      });
+    }
+
+    const btnSwitchGoogleAccount = document.getElementById("btnSwitchGoogleAccount");
+    if (btnSwitchGoogleAccount) {
+      btnSwitchGoogleAccount.addEventListener("click", () => {
+        openLoginOverlay();
+      });
+    }
+
+    const headerUserBadge = document.getElementById("headerUserBadge");
+    if (headerUserBadge) {
+      headerUserBadge.addEventListener("click", () => {
+        openLoginOverlay();
+      });
+    }
+
+    // 判斷是否已經完成登入驗證：若尚未登入，立即顯示 Google 身分驗證全螢幕遮罩
+    const hasLoggedIn = localStorage.getItem("has_logged_in") === "true";
+    if (!hasLoggedIn) {
+      openLoginOverlay();
+    } else {
+      setupAdminImpersonator();
+    }
+  }
+
+  setupAuthAndImpersonationEvents();
+
 });
 

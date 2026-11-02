@@ -228,12 +228,7 @@ document.addEventListener("DOMContentLoaded", () => {
         currentViewingDriverSales = currentViewingDriverSales || curSales;
         renderDriverManagementPage(currentViewingDriverSales);
       } else if (activePanel === panelQuotes) {
-        if (window.innerWidth >= 1280) {
-          setSidebarMode(true);
-        } else {
-          setSidebarMode(false);
-          switchQuoteSubTab("create");
-        }
+        setSidebarMode(true);
         initQuotationModule();
         if (typeof updateQuoteDraftsBadge === "function") {
           updateQuoteDraftsBadge();
@@ -4680,7 +4675,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 6. 電腦端表格上方動作按鈕 (新建報價單、儲存報價、複製 LINE 報價、匯出至Excel、列印 PDF)
-    const btnNewTop = document.getElementById("btnNewQuoteAction") || document.getElementById("btnNewQuoteTop");
+    const btnNewTop = document.getElementById("btnNewQuoteTop");
     if (btnNewTop) {
       btnNewTop.addEventListener("click", () => {
         if (confirm("確定要開立新的空白報價單嗎？未儲存的內容將會重設。")) {
@@ -4688,13 +4683,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
     }
-    const btnSaveTop = document.getElementById("btnSaveQuoteAction") || document.getElementById("btnSaveQuoteTop");
+    const btnSaveTop = document.getElementById("btnSaveQuoteTop");
     if (btnSaveTop) btnSaveTop.addEventListener("click", saveFormalQuotation);
-    const btnLineTop = document.getElementById("btnLineQuoteAction") || document.getElementById("btnLineQuoteTop");
+    const btnLineTop = document.getElementById("btnLineQuoteTop");
     if (btnLineTop) btnLineTop.addEventListener("click", openLineQuoteModal);
-    const btnExportTop = document.getElementById("btnExportExcelAction") || document.getElementById("btnExportExcelTop");
+    const btnExportTop = document.getElementById("btnExportExcelTop");
     if (btnExportTop) btnExportTop.addEventListener("click", exportQuoteToExcel);
-    const btnPrintTop = document.getElementById("btnPrintPdfAction") || document.getElementById("btnPrintPdfTop");
+    const btnPrintTop = document.getElementById("btnPrintPdfTop");
     if (btnPrintTop) btnPrintTop.addEventListener("click", printQuotePDF);
 
     // 取消列選取
@@ -4816,45 +4811,10 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-    const exitBtns = [
-      document.getElementById("btnExitQuotationSystem"),
-      document.getElementById("btnExitQuotationWebTop"),
-      document.getElementById("btnExitQuotationWebBottom")
-    ];
-    exitBtns.forEach(btn => {
-      if (btn) {
-        btn.addEventListener("click", () => {
-          switchPage(navItemHome, panelHome);
-        });
-      }
-    });
-
-    // 表格高度調整拖曳桿 (對標 PySide6 拖拉)
-    const resizeHandle = document.getElementById("quoteTableResizeHandle");
-    const tableContainer = document.querySelector(".pyside-table-container");
-    if (resizeHandle && tableContainer) {
-      let isResizing = false;
-      let startY = 0;
-      let startHeight = 0;
-      resizeHandle.addEventListener("mousedown", (e) => {
-        isResizing = true;
-        startY = e.clientY;
-        startHeight = tableContainer.offsetHeight;
-        document.body.style.cursor = "row-resize";
-        e.preventDefault();
-      });
-      window.addEventListener("mousemove", (e) => {
-        if (!isResizing) return;
-        const diff = e.clientY - startY;
-        const newHeight = Math.max(160, Math.min(800, startHeight + diff));
-        tableContainer.style.maxHeight = `${newHeight}px`;
-        tableContainer.style.height = `${newHeight}px`;
-      });
-      window.addEventListener("mouseup", () => {
-        if (isResizing) {
-          isResizing = false;
-          document.body.style.cursor = "";
-        }
+    const btnExitQuote = document.getElementById("btnExitQuotationSystem");
+    if (btnExitQuote) {
+      btnExitQuote.addEventListener("click", () => {
+        switchPage(navItemHome, panelHome);
       });
     }
 
@@ -7803,18 +7763,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
   setupAuthAndImpersonationEvents();
 
-  // 自適應視窗縮放監聽 (嚴格 1280px 閾值：<1280px 切換至網頁版報價單擬稿模式並隱藏其餘 8 頁)
-  function handleQuotationViewportMode() {
-    const isQuotationActive = panelQuotes && !panelQuotes.classList.contains("hidden");
-    if (!isQuotationActive) return;
-
-    if (window.innerWidth < 1280) {
-      setSidebarMode(false);
-      switchQuoteSubTab("create");
-    } else {
-      setSidebarMode(true);
-    }
-  }
-  window.addEventListener("resize", handleQuotationViewportMode);
-
 });
+

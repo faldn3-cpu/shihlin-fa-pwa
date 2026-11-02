@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261102_v1_0_42" />
+  <link rel="stylesheet" href="css/style.css?v=20261102_v1_0_41" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -143,7 +143,7 @@
           <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
           <div class="drawer-divider"></div>
           <div class="drawer-version-tag">
-            <span class="version-text">士林電機 FA 業務系統 v1.0.42</span>
+            <span class="version-text">士林電機 FA 業務系統 v1.0.41</span>
             <button id="btnClearCacheDrawer" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
               <svg class="icon-svg-xs" viewBox="0 0 24 24">
                 <path
@@ -697,7 +697,6 @@
          分頁二：報價單管理 (舊版報價單完整移植升級版)
          ==================================================================== -->
       <section id="panelQuotes" class="hidden">
-        <div class="pyside-desktop-canvas">
         <!-- 頂部四大子分頁導航列 (微軟企業 Fluent 風格 + 純文字與單色向量圖標) -->
         <div class="quote-sub-tabs" role="tablist">
           <button type="button" id="tabQuoteCreate" class="sub-tab-btn active" role="tab" aria-selected="true">
@@ -757,9 +756,9 @@
               </button>
             </div>
 
-            <!-- 報價單基本資料 (雙欄結構化表頭，100% 對標 PySide6 QGroupBox 框線) -->
-            <fieldset id="quoteHeaderContainer" class="pyside-groupbox quote-desktop-only">
-              <legend class="pyside-groupbox-title">報價單基本資料</legend>
+            <!-- 報價單基本資料 (雙欄結構化表頭) -->
+            <div id="quoteHeaderContainer" class="pyside-header-container quote-desktop-only">
+              <div class="pyside-section-title">報價單基本資料</div>
 
               <div id="quoteHeaderGrid" class="pyside-header-grid">
                 <!-- 第 1 列：單號與報價日期 -->
@@ -860,7 +859,7 @@
                   </div>
                 </div>
               </div>
-            </fieldset>
+            </div>
 
             <!-- 表格上方功能按鈕列 (左側選取狀態標籤 + 右側 5 顆經典操作按鈕) -->
             <div class="pyside-action-bar-top quote-desktop-only">
@@ -886,20 +885,6 @@
 
             <!-- 手機端專用：圖三卡片式報價擬稿介面 (螢幕寬度 < 768px 自動切換顯示) -->
             <div class="quote-mobile-only">
-              <!-- 網頁報價單頂部標題與離開按鈕 (自適應小螢幕專用) -->
-              <div class="web-quote-mobile-top-bar">
-                <div class="web-quote-mobile-title">
-                  <span class="web-quote-badge">網頁版</span>
-                  <span>報價單擬稿</span>
-                </div>
-                <button type="button" id="btnExitQuotationWebTop" class="btn-exit-quotation-web" title="返回 FA 業務首頁">
-                  <svg class="icon-svg-xs" viewBox="0 0 24 24">
-                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
-                  </svg>
-                  <span>離開報價單功能</span>
-                </button>
-              </div>
-
               <!-- 客戶選擇與報價品項主卡片 -->
               <div class="mobile-customer-card">
                 <div class="mobile-customer-header-row">
@@ -984,16 +969,6 @@
                   <span>送出草稿</span>
                 </button>
               </div>
-
-              <!-- 網頁報價單底部離開按鈕 -->
-              <div class="web-quote-mobile-bottom-bar">
-                <button type="button" id="btnExitQuotationWebBottom" class="btn-exit-quotation-web-large" title="返回 FA 業務首頁">
-                  <svg class="icon-svg-xs" viewBox="0 0 24 24">
-                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
-                  </svg>
-                  <span>離開報價單功能</span>
-                </button>
-              </div>
             </div>
 
             <!-- 電腦端 Excel 試算表格 (_QuotationApp 桌面版原生欄位排序) -->
@@ -1017,11 +992,6 @@
                   <!-- 動態注入表格列 -->
                 </tbody>
               </table>
-            </div>
-
-            <!-- 表格高度調整拖曳桿 (對標 PySide6 拖拉) -->
-            <div class="pyside-table-resize-handle quote-desktop-only" id="quoteTableResizeHandle" title="按住上下拖曳調整表格高度">
-              <span class="resize-handle-bar"></span>
             </div>
 
             <!-- 表格下方工具列 (新增品項、插入小計、舊單匯入、智慧BOM、重整經銷價) -->
@@ -1076,8 +1046,8 @@
             </div>
 
             <!-- 附加產品外觀圖 (僅於報價單匯出時顯示) -->
-            <fieldset class="pyside-groupbox quote-desktop-only">
-              <legend class="pyside-groupbox-title">附加產品外觀圖 (僅於報價單匯出時顯示)</legend>
+            <div class="pyside-attachment-box quote-desktop-only">
+              <div class="pyside-attachment-title">附加產品外觀圖 (僅於報價單匯出時顯示)</div>
               <div class="pyside-attachment-body">
                 <label for="quoteImageUploader" class="btn-pyside-dark"
                   style="cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
@@ -1090,7 +1060,7 @@
               <div id="quoteAttachmentsPreview" class="quote-attachments-grid">
                 <span class="text-muted" style="font-size:0.82rem;" id="noAttachmentsHint">尚未附加圖片</span>
               </div>
-            </fieldset>
+            </div>
 
           </form>
         </div>
@@ -1644,7 +1614,6 @@
             </div>
           </div>
         </div>
-        </div> <!-- /.pyside-desktop-canvas -->
       </section>
 
       <!-- ====================================================================
@@ -2882,7 +2851,7 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261102_v1_0_42"></script>
+  <script src="js/app.js?v=20261102_v1_0_41"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>

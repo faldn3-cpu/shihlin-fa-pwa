@@ -5000,11 +5000,19 @@ document.addEventListener("DOMContentLoaded", () => {
           <span style="font-size:0.75rem; color:#9a3412;">[區段未稅金額]</span>
         </td>
         <td style="text-align:center;">
-          <button type="button" class="table-btn-remove" onclick="document.getElementById('${rowId}').remove(); calculateTotal();" title="刪除此小計列">&times;</button>
+          <button type="button" class="table-btn-remove btn-remove-subtotal" title="刪除此小計列">&times;</button>
         </td>
       </tr>
     `;
     desktopTableBody.insertAdjacentHTML('beforeend', subtotalHTML);
+    const rowEl = document.getElementById(rowId);
+    const rmBtn = rowEl?.querySelector(".btn-remove-subtotal");
+    if (rmBtn && rowEl) {
+      rmBtn.addEventListener("click", () => {
+        rowEl.remove();
+        calculateTotal();
+      });
+    }
     calculateTotal();
   }
 
@@ -6267,7 +6275,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!resp.ok) throw new Error("讀取報價單明細失敗");
       const data = await resp.json();
 
-      const header = data.header;
+      const header = data.header || data;
       const items = data.items || [];
       currentBaseQuoteNo = header.quote_no;
       currentLoadedDraftId = null;
@@ -6468,13 +6476,18 @@ document.addEventListener("DOMContentLoaded", () => {
     resultsContainer.innerHTML = '<div style="padding:24px; text-align:center; color:var(--text-muted); font-size:0.88rem;">正在分析個人歷史單價與折讓區間...</div>';
 
     try {
-      const url = `/api/price-analysis?sales_name=${encodeURIComponent(activeSales)}&model=${encodeURIComponent(modelQuery)}&customer=${encodeURIComponent(custQuery)}`;
+      const url = `/api/price-analysis?sales_name=${encodeURIComponent(activeSales)}&model_keyword=${encodeURIComponent(modelQuery)}&customer_keyword=${encodeURIComponent(custQuery)}`;
       const resp = await fetch(url);
       if (!resp.ok) throw new Error("讀取歷史單價分析失敗");
       const data = await resp.json();
 
-      const matchedItems = data.records || [];
-      const summary = data.summary || { count: 0, min_price: 0, max_price: 0, avg_price: 0 };
+      const matchedItems = Array.isArray(data) ? data : (data.records || []);
+      const prices = matchedItems.map(m => parseFloat(m.final_unit_price) || 0).filter(v => v > 0);
+      const summary = data.summary || {
+        count: matchedItems.length,
+        min_price: prices.length ? Math.min(...prices) : 0,
+        max_price: prices.length ? Math.max(...prices) : 0
+      };
 
       if (matchedItems.length === 0) {
         resultsContainer.innerHTML = `
@@ -6589,10 +6602,10 @@ document.addEventListener("DOMContentLoaded", () => {
                   <td style="padding:8px 10px;">${escapeHtml(item.spec || '-')}</td>
                   <td style="padding:8px 10px; text-align:right; font-weight:700;">$ ${Number(item.dealer_price || 0).toLocaleString()}</td>
                   <td style="padding:8px 10px; text-align:right;">${Number(item.stock_qty || 0).toLocaleString()}</td>
-                  <td style="padding:8px 10px; color:var(--text-muted); font-size:0.82rem;">${escapeHtml(item.notes || '-')}</td>
+                  <td style="padding:8px 10px; color:var(--text-muted); font-size:0.82rem;">${escapeHtml(item.note || item.notes || '-')}</td>
                   <td style="padding:8px 10px; text-align:center; white-space:nowrap;">
                     <button type="button" class="btn-use-special-prod fluent-btn secondary" data-model="${escapeHtml(item.model_no)}" data-spec="${escapeHtml(item.spec || '')}" data-price="${item.dealer_price || 0}" data-stock="${item.stock_qty || 0}" style="font-size:0.78rem; padding:3px 8px; margin-right:4px;">帶入報價單</button>
-                    <button type="button" class="btn-promote-special-prod fluent-btn primary" data-model="${escapeHtml(item.model_no)}" data-spec="${escapeHtml(item.spec || '')}" data-price="${item.dealer_price || 0}" data-stock="${item.stock_qty || 0}" style="font-size:0.78rem; padding:3px 8px; margin-right:4px;" title="模擬或執行公司正式發行此型號為共通標準品（方案A自動取代並封存）">轉標準品發行(方案A)</button>
+                    <button type="button" class="btn-promote-special-prod fluent-btn primary" data-id="${item.id}" data-model="${escapeHtml(item.model_no)}" data-spec="${escapeHtml(item.spec || '')}" data-price="${item.dealer_price || 0}" data-stock="${item.stock_qty || 0}" style="font-size:0.78rem; padding:3px 8px; margin-right:4px;" title="模擬或執行公司正式發行此型號為共通標準品（方案A自動取代並封存）">轉標準品發行(方案A)</button>
                     <button type="button" class="btn-del-special-prod fluent-btn danger" data-id="${item.id}" data-model="${escapeHtml(item.model_no)}" style="font-size:0.78rem; padding:3px 8px;">刪除</button>
                   </td>
                 </tr>
@@ -6633,14 +6646,12 @@ document.addEventListener("DOMContentLoaded", () => {
               return;
             }
             try {
-              const r = await fetch("/api/special-products/promote", {
+              const spId = btn.dataset.id;
+              const r = await fetch(`/api/special-products/${spId}/promote`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  model_no: modelNo,
-                  dealer_price: stdPrice,
-                  spec: btn.dataset.spec || "正式發行標準品",
-                  stock_qty: parseInt(btn.dataset.stock, 10) || 0
+                  standard_dealer_price: stdPrice
                 })
               });
               const resData = await r.json();
@@ -6734,7 +6745,7 @@ document.addEventListener("DOMContentLoaded", () => {
           spec: spec,
           dealer_price: priceVal,
           stock_qty: stockVal,
-          notes: notes
+          note: notes
         })
       });
       const resData = await resp.json();

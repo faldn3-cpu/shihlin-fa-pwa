@@ -4726,3 +4726,9 @@ input[type="checkbox"] {
 [data-theme="dark"] .stock-disclaimer-text {
   color: #fcd34d !important;
 }
+
+[data-theme="dark"] .item-delivery input[type="text"] {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}

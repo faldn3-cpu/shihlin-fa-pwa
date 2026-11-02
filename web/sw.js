@@ -1,5 +1,5 @@
 // 士林電機 FA 業務戰情與報價系統 - Service Worker
-const CACHE_NAME = 'shihlin-fa-pwa-v1.0.37';
+const CACHE_NAME = 'shihlin-fa-pwa-v1.0.39';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -43,18 +43,18 @@ self.addEventListener('activate', (event) => {
 
 // 網路請求攔截策略：
 // 1. Google 試算表 (GAS) / Google 登入 / 本地 API / POST 請求：直接放行 (Network Only)，確保資料即時
-// 2. HTML 主頁面與核心 JS/CSS：聯網優先 (Network First)，確保隨時載入最新功能
+// 2. HTML 主頁面與核心 JS/CSS：聯網優先 (Network First)，斷線時忽略網址問號後版本參數比對快取，防止 CSS/JS 失聯破版
 // 3. 圖示等靜態素材：快取優先 (Stale-While-Revalidate)
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
 
-  // 1. 外部 API 與 POST 請求直接放行
+  // 1. 外部 API 與非 GET 請求直接放行
   if (
     url.includes('script.google.com') ||
     url.includes('accounts.google.com') ||
     url.includes('googleapis.com') ||
     url.includes('/api/') ||
-    event.request.method === 'POST'
+    event.request.method !== 'GET'
   ) {
     return;
   }
@@ -64,7 +64,7 @@ self.addEventListener('fetch', (event) => {
   const isIndex = url.endsWith('/') || url.includes('index.html');
   const isCode = url.includes('.js') || url.includes('.css');
 
-  // 2. HTML 與程式碼採用 Network First (聯網優先，斷網才用快取)
+  // 2. HTML 與程式碼採用 Network First (聯網優先，斷網才用快取，並忽略 ?v= 參數避免破版)
   if (isNavigate || isHtml || isIndex || isCode) {
     event.respondWith(
       fetch(event.request)
@@ -75,14 +75,16 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         })
-        .catch(() => caches.match(event.request))
+        .catch(() => {
+          return caches.match(event.request, { ignoreSearch: true });
+        })
     );
     return;
   }
 
   // 3. 其他靜態資源採用 Stale-While-Revalidate
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
+    caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
       const fetchPromise = fetch(event.request)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {

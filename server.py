@@ -546,10 +546,13 @@ def api_update_driver_settings(req_data: DriverUpdateSettingsRequest):
 
 @app.get("/")
 def serve_index():
-    """提供首頁入口"""
+    """提供首頁入口 (設定不快取舊版 HTML，確保瀏覽器隨時載入最新介面)"""
     index_file = WEB_DIR / "index.html"
     if index_file.exists():
-        return FileResponse(str(index_file))
+        return FileResponse(
+            str(index_file),
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
+        )
     return {"message": "士林電機 FA 系統 Web API 運行中，前端檔案準備中..."}
 
 if WEB_DIR.exists():
@@ -566,7 +569,12 @@ def serve_manifest():
 
 @app.get("/sw.js")
 def serve_sw():
-    return FileResponse(str(WEB_DIR / "sw.js"))
+    """提供 Service Worker 腳本 (強制不快取，確保快取版本更新即刻生效)"""
+    return FileResponse(
+        str(WEB_DIR / "sw.js"),
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
+    )
 
 @app.get("/favicon-v2.png")
 def serve_favicon():

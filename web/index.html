@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261102_v1_0_40" />
+  <link rel="stylesheet" href="css/style.css?v=20261102_v1_0_41" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -79,11 +79,11 @@
             <svg class="icon-svg" style="width:18px; height:18px; color:var(--color-accent);" viewBox="0 0 24 24">
               <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z" />
             </svg>
-            <span class="drawer-title">功能選單</span>
+            <span class="drawer-title" id="drawerMainTitle">功能選單</span>
           </div>
           <button id="btnCloseDrawer" type="button" class="modal-close-btn" title="關閉選單">✕</button>
         </div>
-        <div class="drawer-nav-list">
+        <div id="mainSidebarNavList" class="drawer-nav-list">
           <button id="navItemHome" class="drawer-nav-item active" type="button">
             <svg class="icon-svg" viewBox="0 0 24 24">
               <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
@@ -143,13 +143,83 @@
           <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
           <div class="drawer-divider"></div>
           <div class="drawer-version-tag">
-            <span class="version-text">士林電機 FA 業務系統 v1.0.40</span>
+            <span class="version-text">士林電機 FA 業務系統 v1.0.41</span>
             <button id="btnClearCacheDrawer" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
               <svg class="icon-svg-xs" viewBox="0 0 24 24">
                 <path
                   d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
               </svg>
               <span>清除快取</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 報價管理系統專屬側邊欄選單 (100% 對標電腦版 _QuotationApp 9 大功能頁 + 底部離開按鈕) -->
+        <div id="quoteSidebarNavList" class="drawer-nav-list quote-sidebar-mode hidden">
+          <button id="btnQuoteNavCreate" class="drawer-nav-item quote-nav-btn active" data-quote-page="create" type="button">
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+            </svg>
+            <span>新建報價單</span>
+          </button>
+          <button id="btnQuoteNavDrafts" class="drawer-nav-item quote-nav-btn" data-quote-page="drafts" type="button">
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" />
+            </svg>
+            <span>手機報價</span>
+            <span id="quoteDraftsCountBadge" class="quote-nav-badge hidden">0</span>
+          </button>
+          <button id="btnQuoteNavHistory" class="drawer-nav-item quote-nav-btn" data-quote-page="history" type="button">
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z" />
+            </svg>
+            <span>報價單管理</span>
+          </button>
+          <button id="btnQuoteNavDashboard" class="drawer-nav-item quote-nav-btn" data-quote-page="dashboard" type="button">
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
+            </svg>
+            <span>大數據分析</span>
+          </button>
+          <button id="btnQuoteNavAnalysis" class="drawer-nav-item quote-nav-btn" data-quote-page="analysis" type="button">
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z" />
+            </svg>
+            <span>歷史單價分析</span>
+          </button>
+          <button id="btnQuoteNavCustomers" class="drawer-nav-item quote-nav-btn" data-quote-page="customers" type="button">
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+            </svg>
+            <span>客戶管理</span>
+          </button>
+          <button id="btnQuoteNavProducts" class="drawer-nav-item quote-nav-btn" data-quote-page="products" type="button">
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z" />
+            </svg>
+            <span>產品管理</span>
+          </button>
+          <button id="btnQuoteNavSettings" class="drawer-nav-item quote-nav-btn" data-quote-page="settings" type="button">
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+            </svg>
+            <span>系統設定</span>
+          </button>
+          <button id="btnQuoteNavHelp" class="drawer-nav-item quote-nav-btn" data-quote-page="help" type="button">
+            <svg class="icon-svg" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" />
+            </svg>
+            <span>使用說明</span>
+          </button>
+
+          <div class="quote-sidebar-footer">
+            <div class="quote-sidebar-meta" id="quoteSidebarMetaInfo">捨入：百位數 / 無條件捨去</div>
+            <div class="quote-sidebar-meta" id="quoteSidebarStockTime">L廠庫存更新：10/15 10:12</div>
+            <button id="btnExitQuotationSystem" class="btn-exit-quotation-system" type="button" title="返回 FA 業務戰情主系統">
+              <svg class="icon-svg" viewBox="0 0 24 24">
+                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+              </svg>
+              <span>離開報價單功能</span>
             </button>
           </div>
         </div>
@@ -1151,11 +1221,396 @@
           </div>
 
           <!-- 方案 A 已轉正封存之歷史紀錄 -->
-          <div class="fluent-card" style="padding:1rem;">
+          <div class="fluent-card" style="margin-bottom:1rem; padding:1rem;">
             <div style="font-weight:700; font-size:0.92rem; margin-bottom:0.65rem; color:var(--text-secondary);">【方案 A
               封存歷史紀錄】已轉為公司共通標準品之項目</div>
             <div id="specialProductsArchivedList" style="overflow-x:auto;">
               <div style="padding:16px; text-align:center; color:var(--text-muted); font-size:0.86rem;">尚無封存紀錄</div>
+            </div>
+          </div>
+
+          <!-- 對標電腦版 _QuotationApp gui_page5.py：共通標準牌價庫檢索 ＋ 內建折數計算機 -->
+          <div class="quote-split-grid">
+            <div class="fluent-card" style="padding:1rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:0.75rem; flex-wrap:wrap;">
+                <div style="font-weight:700; font-size:0.95rem; color:var(--text-main);">全公司共通標準牌價與 L 廠庫存總覽 (9,975 筆)</div>
+                <div style="display:flex; gap:8px; flex:1; max-width:360px;">
+                  <input type="text" id="inputQuoteProdMgmtSearch" class="search-input" placeholder="輸入型號、規格或料號搜尋..." style="margin-bottom:0; flex:1;">
+                  <button type="button" id="btnQuoteProdMgmtSearch" class="fluent-btn primary" style="padding:6px 14px; font-size:0.84rem; white-space:nowrap;">搜尋</button>
+                </div>
+              </div>
+              <div style="overflow-x:auto; max-height:380px;">
+                <table class="pyside-excel-table">
+                  <thead>
+                    <tr>
+                      <th style="width:95px;">來源</th>
+                      <th style="width:180px;">產品型號</th>
+                      <th>產品規格說明</th>
+                      <th style="width:110px; text-align:right;">經銷牌價</th>
+                      <th style="width:95px; text-align:right;">L廠庫存</th>
+                    </tr>
+                  </thead>
+                  <tbody id="quoteProdMgmtTableBody">
+                    <tr><td colspan="5" style="text-align:center; padding:16px; color:var(--text-muted);">請輸入型號關鍵字或點擊搜尋檢視產品牌價與庫存</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="fluent-card" style="padding:1rem;">
+              <div style="font-weight:700; font-size:0.95rem; color:var(--text-main); margin-bottom:0.5rem;">內建快速折數與單價計算機</div>
+              <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.75rem;">輸入算式（例如：18500 * 0.65）或使用下方牌價折數試算器：</div>
+              <div class="form-group" style="margin-bottom:0.65rem;">
+                <label for="inputQuickCalcExpr" style="font-size:0.8rem; color:var(--text-muted);">四則運算式：</label>
+                <div style="display:flex; gap:8px; margin-top:4px;">
+                  <input type="text" id="inputQuickCalcExpr" class="pyside-input" placeholder="例如: 24500 * 0.72" style="flex:1;">
+                  <button type="button" id="btnRunQuickCalc" class="btn-pyside-blue">計算</button>
+                </div>
+              </div>
+              <div id="quickCalcResultDisplay" style="padding:10px 12px; background:rgba(15,23,42,0.6); border:1px solid var(--border-color); border-radius:6px; font-family:monospace; font-size:1.05rem; font-weight:700; color:#38bdf8; margin-bottom:0.75rem;">
+                計算結果：0
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <div>
+                  <label for="inputCalcBasePrice" style="font-size:0.78rem; color:var(--text-muted);">經銷牌價：</label>
+                  <input type="number" id="inputCalcBasePrice" class="pyside-input" placeholder="10000" style="width:100%; margin-top:2px;">
+                </div>
+                <div>
+                  <label for="inputCalcDiscountPct" style="font-size:0.78rem; color:var(--text-muted);">折數 (%)：</label>
+                  <input type="number" id="inputCalcDiscountPct" class="pyside-input" value="75" style="width:100%; margin-top:2px;">
+                </div>
+              </div>
+              <div id="quickCalcDiscountSummary" style="margin-top:8px; font-size:0.84rem; color:var(--text-secondary);">
+                折後未稅價：$0 ｜ 含稅價(5%)：$0
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ====================================================================
+           子分頁 F：大數據分析 (100% 對標 _QuotationApp gui_dashboard.py)
+           ==================================================================== -->
+        <div id="quoteDashboardSection" class="hidden" style="margin-top:0.5rem;">
+          <div class="fluent-card" style="margin-bottom:1rem; padding:0.9rem 1.1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div>
+              <div style="font-weight:700; font-size:1rem; color:var(--text-main);">報價大數據與成交率戰情分析</div>
+              <div style="font-size:0.8rem; color:var(--text-muted);">自動彙整您名下所有歷史報價單之總額、已成交實績、追蹤中金額與客戶貢獻排行</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+              <label style="display:inline-flex; align-items:center; gap:6px; font-size:0.84rem; color:var(--text-main); cursor:pointer;">
+                <input type="checkbox" id="chkQuoteDashLatestOnly" checked>
+                <span>同單號僅統計最終版次 (排除升版過程舊版)</span>
+              </label>
+              <button type="button" id="btnRefreshQuoteDashboard" class="btn-pyside-blue">重新統計</button>
+            </div>
+          </div>
+
+          <div class="quote-dash-kpi-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:12px; margin-bottom:1rem;">
+            <div class="fluent-card" style="padding:1rem; border-left:4px solid #3b82f6;">
+              <div style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">有效報價總額 (未稅)</div>
+              <div id="qDashTotalQuoted" style="font-size:1.45rem; font-weight:800; color:#60a5fa; margin:6px 0; font-family:monospace;">$ 0</div>
+              <div id="qDashTotalCount" style="font-size:0.8rem; color:var(--text-secondary);">有效報價單：0 筆</div>
+            </div>
+            <div class="fluent-card" style="padding:1rem; border-left:4px solid #10b981;">
+              <div style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">已成交總金額 (未稅)</div>
+              <div id="qDashWonAmount" style="font-size:1.45rem; font-weight:800; color:#34d399; margin:6px 0; font-family:monospace;">$ 0</div>
+              <div id="qDashWonCount" style="font-size:0.8rem; color:var(--text-secondary);">已成交筆數：0 筆</div>
+            </div>
+            <div class="fluent-card" style="padding:1rem; border-left:4px solid #f59e0b;">
+              <div style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">整體成交轉換率</div>
+              <div id="qDashWinRateAmt" style="font-size:1.45rem; font-weight:800; color:#fbbf24; margin:6px 0; font-family:monospace;">0.0%</div>
+              <div id="qDashWinRateCnt" style="font-size:0.8rem; color:var(--text-secondary);">件數成交率：0.0%</div>
+            </div>
+            <div class="fluent-card" style="padding:1rem; border-left:4px solid #a855f7;">
+              <div style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">追蹤中未決金額</div>
+              <div id="qDashPendingAmount" style="font-size:1.45rem; font-weight:800; color:#c084fc; margin:6px 0; font-family:monospace;">$ 0</div>
+              <div id="qDashPendingCount" style="font-size:0.8rem; color:var(--text-secondary);">追蹤中：0 筆 ｜ 已失注：0 筆</div>
+            </div>
+          </div>
+
+          <div class="quote-split-grid">
+            <div class="fluent-card" style="padding:1rem;">
+              <div style="font-weight:700; font-size:0.95rem; color:var(--text-main); margin-bottom:0.75rem;">客戶報價與成交貢獻排行榜 (Top 15)</div>
+              <div style="overflow-x:auto;">
+                <table class="pyside-excel-table">
+                  <thead>
+                    <tr>
+                      <th style="width:52px; text-align:center;">排名</th>
+                      <th>客戶名稱</th>
+                      <th style="width:80px; text-align:right;">報價筆數</th>
+                      <th style="width:130px; text-align:right;">累計報價(未稅)</th>
+                      <th style="width:130px; text-align:right;">已成交金額</th>
+                      <th style="width:120px; text-align:right;">追蹤中金額</th>
+                      <th style="width:85px; text-align:right;">成交率</th>
+                    </tr>
+                  </thead>
+                  <tbody id="qDashCustomerRankBody">
+                    <tr><td colspan="7" style="text-align:center; padding:16px; color:var(--text-muted);">載入中...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="fluent-card" style="padding:1rem;">
+              <div style="font-weight:700; font-size:0.95rem; color:var(--text-main); margin-bottom:0.75rem;">專案屬性分佈統計</div>
+              <div style="overflow-x:auto;">
+                <table class="pyside-excel-table">
+                  <thead>
+                    <tr>
+                      <th>專案屬性</th>
+                      <th style="width:70px; text-align:right;">筆數</th>
+                      <th style="width:120px; text-align:right;">報價總額</th>
+                      <th style="width:120px; text-align:right;">已成交金額</th>
+                    </tr>
+                  </thead>
+                  <tbody id="qDashProjectTypeBody">
+                    <tr><td colspan="4" style="text-align:center; padding:16px; color:var(--text-muted);">載入中...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ====================================================================
+           子分頁 G：客戶管理 (100% 對標 _QuotationApp gui_page4.py 左右雙欄 + 供應商設定)
+           ==================================================================== -->
+        <div id="quoteCustomersSection" class="hidden" style="margin-top:0.5rem;">
+          <div class="quote-split-grid">
+            <!-- 左欄：公司資料列表 -->
+            <div class="fluent-card" style="padding:1rem; display:flex; flex-direction:column; gap:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+                <div style="font-weight:700; font-size:0.98rem; color:var(--text-main);">公司資料列表（點擊列載入右側編輯）</div>
+                <span id="qCustCountBadge" class="traffic-light-badge" style="font-size:0.78rem; padding:3px 8px;">共 0 家客戶</span>
+              </div>
+              <input type="text" id="inputQuoteCustSearch" class="search-input" placeholder="搜尋公司名稱、統一編號或聯絡人..." style="margin-bottom:0;">
+              <div style="overflow-x:auto; max-height:480px; flex:1;">
+                <table class="pyside-excel-table">
+                  <thead>
+                    <tr>
+                      <th style="width:64px; text-align:center;">常用</th>
+                      <th>公司名稱</th>
+                      <th style="width:95px;">統一編號</th>
+                      <th style="width:95px;">主要聯絡人</th>
+                      <th style="width:115px;">電話</th>
+                    </tr>
+                  </thead>
+                  <tbody id="quoteCustMgmtTableBody">
+                    <tr><td colspan="5" style="text-align:center; padding:18px; color:var(--text-muted);">載入中...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; padding-top:6px;">
+                <span style="font-size:0.78rem; color:var(--text-muted);" id="qCustSelectedHint">尚未選取客戶</span>
+                <button type="button" id="btnQuoteCustDelete" class="btn-pyside-red" style="padding:6px 14px; font-size:0.82rem;">刪除選取公司</button>
+              </div>
+            </div>
+
+            <!-- 右欄：新增/修改客戶表單 ＋ 供應商/業務簽名檔設定 -->
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              <div class="fluent-card" style="padding:1rem;">
+                <div style="font-weight:700; font-size:0.95rem; color:var(--text-main); margin-bottom:0.75rem;">新增 / 修改客戶與聯絡窗口資料</div>
+                <input type="hidden" id="qCustEditId" value="">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                  <div>
+                    <label for="qCustName" style="font-size:0.78rem; color:var(--text-muted);">公司名稱 <span style="color:var(--color-danger);">*</span></label>
+                    <input type="text" id="qCustName" class="pyside-input" placeholder="完整公司名稱" style="width:100%; margin-top:2px;">
+                  </div>
+                  <div>
+                    <label for="qCustTax" style="font-size:0.78rem; color:var(--text-muted);">統一編號</label>
+                    <input type="text" id="qCustTax" class="pyside-input" placeholder="8 碼統編" style="width:100%; margin-top:2px;">
+                  </div>
+                  <div>
+                    <label for="qCustContact" style="font-size:0.78rem; color:var(--text-muted);">聯絡人姓名</label>
+                    <input type="text" id="qCustContact" class="pyside-input" placeholder="窗口姓名" style="width:100%; margin-top:2px;">
+                  </div>
+                  <div>
+                    <label for="qCustMobile" style="font-size:0.78rem; color:var(--text-muted);">聯絡人手機</label>
+                    <input type="text" id="qCustMobile" class="pyside-input" placeholder="09xx-xxx-xxx" style="width:100%; margin-top:2px;">
+                  </div>
+                  <div>
+                    <label for="qCustPhone" style="font-size:0.78rem; color:var(--text-muted);">公司電話</label>
+                    <input type="text" id="qCustPhone" class="pyside-input" placeholder="03-xxx-xxxx" style="width:100%; margin-top:2px;">
+                  </div>
+                  <div>
+                    <label for="qCustFax" style="font-size:0.78rem; color:var(--text-muted);">公司傳真</label>
+                    <input type="text" id="qCustFax" class="pyside-input" placeholder="傳真號碼" style="width:100%; margin-top:2px;">
+                  </div>
+                  <div>
+                    <label for="qCustEmail" style="font-size:0.78rem; color:var(--text-muted);">聯絡人 Email</label>
+                    <input type="text" id="qCustEmail" class="pyside-input" placeholder="example@company.com" style="width:100%; margin-top:2px;">
+                  </div>
+                  <div>
+                    <label for="qCustPayment" style="font-size:0.78rem; color:var(--text-muted);">預設付款條件</label>
+                    <input type="text" id="qCustPayment" class="pyside-input" value="月結 30 天電匯" style="width:100%; margin-top:2px;">
+                  </div>
+                  <div style="grid-column:1 / -1;">
+                    <label for="qCustAddress" style="font-size:0.78rem; color:var(--text-muted);">交貨 / 公司地址</label>
+                    <input type="text" id="qCustAddress" class="pyside-input" placeholder="完整送貨地址" style="width:100%; margin-top:2px;">
+                  </div>
+                </div>
+
+                <!-- 該公司目前已建檔之多聯絡窗口標籤列 -->
+                <div id="qCustContactsPills" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;"></div>
+
+                <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                  <label style="display:inline-flex; align-items:center; gap:6px; font-size:0.84rem; color:#fbbf24; font-weight:600; cursor:pointer;">
+                    <input type="checkbox" id="qCustFavorite">
+                    <span>[常用] 設為常用客戶（報價選單優先置頂）</span>
+                  </label>
+                  <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <button type="button" id="btnQuoteCustClear" class="btn-pyside-gray">清空表單</button>
+                    <button type="button" id="btnQuoteCustCopyContact" class="btn-pyside-teal" title="在同一家公司下新增另一位聯絡窗口">複製為新聯絡人</button>
+                    <button type="button" id="btnQuoteCustSave" class="btn-pyside-green">儲存客戶資料</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 報價單供應商 / 業務個人簽名檔資訊 -->
+              <div class="fluent-card" style="padding:1rem;">
+                <div style="font-weight:700; font-size:0.95rem; color:var(--text-main); margin-bottom:0.65rem;">供應商與報價業務簽名檔設定（列印 PDF 與 Excel 表頭使用）</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                  <div>
+                    <label for="qSupCompany" style="font-size:0.78rem; color:var(--text-muted);">供應商公司全銜</label>
+                    <input type="text" id="qSupCompany" class="pyside-input" value="士林電機廠股份有限公司" style="width:100%; margin-top:2px;">
+                  </div>
+                  <div>
+                    <label for="qSupTax" style="font-size:0.78rem; color:var(--text-muted);">供應商統編</label>
+                    <input type="text" id="qSupTax" class="pyside-input" value="11039306" style="width:100%; margin-top:2px;">
+                  </div>
+                  <div>
+                    <label for="qSupSales" style="font-size:0.78rem; color:var(--text-muted);">報價承辦業務</label>
+                    <input type="text" id="qSupSales" class="pyside-input" value="曾維崧" style="width:100%; margin-top:2px;">
+                  </div>
+                  <div>
+                    <label for="qSupMobile" style="font-size:0.78rem; color:var(--text-muted);">業務行動電話</label>
+                    <input type="text" id="qSupMobile" class="pyside-input" value="0955-016-706" style="width:100%; margin-top:2px;">
+                  </div>
+                  <div>
+                    <label for="qSupPhone" style="font-size:0.78rem; color:var(--text-muted);">公司電話</label>
+                    <input type="text" id="qSupPhone" class="pyside-input" value="03-590-5200" style="width:100%; margin-top:2px;">
+                  </div>
+                  <div>
+                    <label for="qSupFax" style="font-size:0.78rem; color:var(--text-muted);">公司傳真</label>
+                    <input type="text" id="qSupFax" class="pyside-input" value="03-590-2167" style="width:100%; margin-top:2px;">
+                  </div>
+                  <div>
+                    <label for="qSupEmail" style="font-size:0.78rem; color:var(--text-muted);">業務 Email</label>
+                    <input type="text" id="qSupEmail" class="pyside-input" value="welsong@seec.com.tw" style="width:100%; margin-top:2px;">
+                  </div>
+                  <div>
+                    <label for="qSupLine" style="font-size:0.78rem; color:var(--text-muted);">LINE ID</label>
+                    <input type="text" id="qSupLine" class="pyside-input" value="0955016706" style="width:100%; margin-top:2px;">
+                  </div>
+                  <div style="grid-column:1 / -1;">
+                    <label for="qSupAddress" style="font-size:0.78rem; color:var(--text-muted);">供應商地址</label>
+                    <input type="text" id="qSupAddress" class="pyside-input" value="新竹縣新豐鄉中崙村七鄰234號" style="width:100%; margin-top:2px;">
+                  </div>
+                </div>
+                <div style="margin-top:10px; text-align:right;">
+                  <button type="button" id="btnQuoteSupplierSave" class="btn-pyside-blue">儲存供應商與簽名檔設定</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ====================================================================
+           子分頁 H：系統設定 (100% 對標 _QuotationApp gui_page6.py 財務捨入與報價條款設定)
+           ==================================================================== -->
+        <div id="quoteSettingsSection" class="hidden" style="margin-top:0.5rem;">
+          <div class="quote-split-grid">
+            <div class="fluent-card" style="padding:1.1rem;">
+              <div style="font-weight:700; font-size:0.98rem; color:var(--text-main); margin-bottom:0.85rem;">財務金額與捨入計算設定</div>
+              <div style="display:flex; flex-direction:column; gap:12px;">
+                <div>
+                  <label for="qSetTaxRate" style="font-size:0.84rem; font-weight:600; color:var(--text-secondary);">營業稅率 (%)：</label>
+                  <input type="number" id="qSetTaxRate" class="pyside-input" value="5.0" step="0.1" min="0" max="100" style="width:100%; margin-top:4px;">
+                </div>
+                <div>
+                  <label for="qSetRoundDigits" style="font-size:0.84rem; font-weight:600; color:var(--text-secondary);">單價與小計捨入位數：</label>
+                  <select id="qSetRoundDigits" class="pyside-select" style="width:100%; margin-top:4px;">
+                    <option value="0">個位數 (精確至 1 元)</option>
+                    <option value="1">十位數 (精確至 10 元)</option>
+                    <option value="2" selected>百位數 (精確至 100 元)</option>
+                    <option value="3">千位數 (精確至 1,000 元)</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="qSetRoundMode" style="font-size:0.84rem; font-weight:600; color:var(--text-secondary);">捨入計算方式：</label>
+                  <select id="qSetRoundMode" class="pyside-select" style="width:100%; margin-top:4px;">
+                    <option value="無條件捨去" selected>無條件捨去</option>
+                    <option value="四捨五入">四捨五入</option>
+                    <option value="無條件進位">無條件進位</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="qSetCustSortMode" style="font-size:0.84rem; font-weight:600; color:var(--text-secondary);">客戶下拉選單排序方式：</label>
+                  <select id="qSetCustSortMode" class="pyside-select" style="width:100%; margin-top:4px;">
+                    <option value="依筆畫/字母排序" selected>常用置頂 ＋ 依筆畫/字母排序</option>
+                    <option value="依最近新增排序">常用置頂 ＋ 依最近建檔順序</option>
+                  </select>
+                </div>
+                <div style="padding-top:6px;">
+                  <button type="button" id="btnSaveQuoteSettings" class="btn-pyside-green" style="width:100%; padding:8px 16px;">儲存財務與計算設定</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="fluent-card" style="padding:1.1rem; display:flex; flex-direction:column;">
+              <div style="font-weight:700; font-size:0.98rem; color:var(--text-main); margin-bottom:0.4rem;">報價單交貨與驗收條款設定</div>
+              <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.75rem;">此條款將自動印製於報價單 PDF 及 Excel 底部說明欄：</div>
+              <textarea id="qSetTermsTextarea" rows="10" class="pyside-input" style="width:100%; flex:1; line-height:1.6; font-family:inherit; resize:vertical;"></textarea>
+              <div style="margin-top:10px; text-align:right;">
+                <button type="button" id="btnSaveQuoteTerms" class="btn-pyside-blue" style="padding:8px 18px;">儲存交貨與驗收條款</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ====================================================================
+           子分頁 I：使用說明 (100% 對標 _QuotationApp gui_page7.py)
+           ==================================================================== -->
+        <div id="quoteHelpSection" class="hidden" style="margin-top:0.5rem;">
+          <div class="fluent-card" style="padding:1.25rem; line-height:1.75; color:var(--text-main);">
+            <h3 style="margin-top:0; color:#60a5fa; font-size:1.1rem;">士林電機 FA 報價管理系統 — 完整操作手冊</h3>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px; margin-top:12px;">
+              <div style="padding:12px; background:rgba(15,23,42,0.45); border:1px solid var(--border-color); border-radius:8px;">
+                <div style="font-weight:700; color:#38bdf8; margin-bottom:6px;">1. 新建報價單與三段式單號規則</div>
+                <div style="font-size:0.85rem; color:var(--text-secondary);">
+                  系統採用嚴謹之三段式單號 <code>[公司簡稱]-[流水號3碼]-[版次2碼]</code>（例如 <code>正マ-001-00</code>）。修改舊報價單並儲存時，系統遵守 <strong>Append-Only 歷史不覆寫原則</strong>，自動將版次 +1（例如 <code>-01</code>），完整保留歷次談判軌跡。
+                </div>
+              </div>
+              <div style="padding:12px; background:rgba(15,23,42,0.45); border:1px solid var(--border-color); border-radius:8px;">
+                <div style="font-weight:700; color:#38bdf8; margin-bottom:6px;">2. 方案小計、智慧 BOM 與一鍵匯出</div>
+                <div style="font-size:0.85rem; color:var(--text-secondary);">
+                  表格支援「插入方案小計」分段計算小計金額；可使用「智慧 BOM 匯入」直接貼上客戶詢價文字自動比對型號，並支援一鍵「複製 LINE 報價」、「匯出至 Excel」與「列印正式 PDF 報價單」。
+                </div>
+              </div>
+              <div style="padding:12px; background:rgba(15,23,42,0.45); border:1px solid var(--border-color); border-radius:8px;">
+                <div style="font-weight:700; color:#38bdf8; margin-bottom:6px;">3. 手機外出擬稿與電腦端無縫接軌</div>
+                <div style="font-size:0.85rem; color:var(--text-secondary);">
+                  在外奔波使用手機開啟本系統時，畫面自動呈現直覺卡片式報價介面；點擊「送出草稿」即直接寫入系統資料庫之「手機報價」草稿匣，回到電腦前可一鍵載入轉為正式報價單。
+                </div>
+              </div>
+              <div style="padding:12px; background:rgba(15,23,42,0.45); border:1px solid var(--border-color); border-radius:8px;">
+                <div style="font-weight:700; color:#38bdf8; margin-bottom:6px;">4. 雙層產品牌價與【方案 A】自動轉正機制</div>
+                <div style="font-size:0.85rem; color:var(--text-secondary);">
+                  全公司共用 9,975 筆標準牌價與 L 廠即時庫存，每位業務亦擁有獨立隔離之「個人特殊品牌價」。當特殊品型號正式列入公司共通標準品時，系統依【方案 A】自動採用標準品並將原特殊品轉入封存紀錄。
+                </div>
+              </div>
+              <div style="padding:12px; background:rgba(15,23,42,0.45); border:1px solid var(--border-color); border-radius:8px;">
+                <div style="font-weight:700; color:#38bdf8; margin-bottom:6px;">5. 報價單管理、垃圾桶防呆與大數據分析</div>
+                <div style="font-size:0.85rem; color:var(--text-secondary);">
+                  於「報價單管理」可將報價單標記為「已成交」、「已失注」或「不跟進」，「大數據分析」將即時計算您的有效報價總額、成交金額、轉換率與 Top 15 客戶貢獻排行榜。刪除之報價單將於垃圾桶保留 30 天供隨時復原。
+                </div>
+              </div>
+              <div style="padding:12px; background:rgba(15,23,42,0.45); border:1px solid var(--border-color); border-radius:8px;">
+                <div style="font-weight:700; color:#38bdf8; margin-bottom:6px;">6. 離開報價單功能返回 FA 戰情室</div>
+                <div style="font-size:0.85rem; color:var(--text-secondary);">
+                  點擊左側導覽列最下方之「離開報價單功能」按鈕，即可隨時切換回 FA 業務戰情首頁、案件管理、業績預測與領先指標管理介面。
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2396,13 +2851,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261102_v1_0_40"></script>
+  <script src="js/app.js?v=20261102_v1_0_41"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261102_v1_0_40')
+        navigator.serviceWorker.register('./sw.js?v=20261102_v1_0_41')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

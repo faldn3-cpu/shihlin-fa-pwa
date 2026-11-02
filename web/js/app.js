@@ -194,6 +194,23 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function setSidebarMode(isQuotationMode) {
+    const mainList = document.getElementById("mainSidebarNavList");
+    const quoteList = document.getElementById("quoteSidebarNavList");
+    const drawerTitle = document.getElementById("drawerMainTitle");
+    const appDrawer = document.getElementById("appDrawer");
+    if (isQuotationMode) {
+      if (mainList) mainList.classList.add("hidden");
+      if (quoteList) quoteList.classList.remove("hidden");
+      if (drawerTitle) drawerTitle.textContent = "報價管理系統";
+      if (appDrawer) appDrawer.classList.remove("collapsed");
+    } else {
+      if (mainList) mainList.classList.remove("hidden");
+      if (quoteList) quoteList.classList.add("hidden");
+      if (drawerTitle) drawerTitle.textContent = "功能選單";
+    }
+  }
+
   function switchPage(activeBtn, activePanel) {
     navItems.forEach(item => {
       if (item.btn) item.btn.classList.remove("active");
@@ -206,13 +223,18 @@ document.addEventListener("DOMContentLoaded", () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
 
       if (activePanel === panelDriverMgmt) {
+        setSidebarMode(false);
         const curSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
         currentViewingDriverSales = currentViewingDriverSales || curSales;
         renderDriverManagementPage(currentViewingDriverSales);
-      }
-
-      if (activePanel === panelQuotes) {
+      } else if (activePanel === panelQuotes) {
+        setSidebarMode(true);
         initQuotationModule();
+        if (typeof updateQuoteDraftsBadge === "function") {
+          updateQuoteDraftsBadge();
+        }
+      } else {
+        setSidebarMode(false);
       }
     }
     closeDrawer();
@@ -4259,12 +4281,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const spBadge = document.getElementById("specialProductOwnerBadge");
     if (spBadge) spBadge.textContent = `所屬業務：${salesName}`;
     await populateCustomerSelectDropdown(true);
+    updateQuoteDraftsBadge();
     if (currentActiveQuoteTab === "history") {
       loadQuotationHistory("", isTrashViewActive);
     } else if (currentActiveQuoteTab === "drafts") {
       loadQuotationDraftsInbox();
-    } else if (currentActiveQuoteTab === "special") {
+    } else if (currentActiveQuoteTab === "special" || currentActiveQuoteTab === "products") {
       loadSpecialProductsManager();
+      searchStandardProductsInMgmt();
+    } else if (currentActiveQuoteTab === "dashboard") {
+      loadQuotationDashboard();
+    } else if (currentActiveQuoteTab === "customers") {
+      loadQuotationCustomersPage();
     }
   }
 
@@ -4283,6 +4311,10 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll(".rounding-rule-text").forEach(el => {
           el.textContent = quoteFinanceSettings.round_summary_text || "捨入：百位數 / 無條件捨去";
         });
+        const metaInfo = document.getElementById("quoteSidebarMetaInfo");
+        if (metaInfo) metaInfo.textContent = quoteFinanceSettings.round_summary_text || "捨入：百位數 / 無條件捨去";
+        const stockTime = document.getElementById("quoteSidebarStockTime");
+        if (stockTime) stockTime.textContent = `L廠庫存更新：${quoteFinanceSettings.stock_updated_at || "10/15 10:12"}`;
       }
     } catch (err) {
       console.warn("讀取報價單財務與庫存設定失敗，使用預設值:", err);
@@ -4438,9 +4470,11 @@ document.addEventListener("DOMContentLoaded", () => {
     updateQuoteNoPreview();
   }
 
-  // 五大子分頁切換邏輯 (新建/編輯、歷史與垃圾桶、手機草稿匣、歷史單價分析、個人特殊品牌價)
+  // 九大報價系統功能頁切換邏輯 (100% 對標電腦版 _QuotationApp 左側選單)
   function switchQuoteSubTab(tabName) {
-    currentActiveQuoteTab = tabName;
+    const normalizedTab = tabName === "special" ? "products" : tabName;
+    currentActiveQuoteTab = normalizedTab;
+
     const tabCreate = document.getElementById("tabQuoteCreate");
     const tabHistory = document.getElementById("tabQuoteHistory");
     const tabDrafts = document.getElementById("tabQuoteDrafts");
@@ -4452,33 +4486,56 @@ document.addEventListener("DOMContentLoaded", () => {
     const draftsInboxSec = document.getElementById("quoteDraftsInboxSection");
     const analysisSec = document.getElementById("quoteAnalysisSection");
     const specialSec = document.getElementById("quoteSpecialProductsSection");
+    const dashSec = document.getElementById("quoteDashboardSection");
+    const custSec = document.getElementById("quoteCustomersSection");
+    const setSec = document.getElementById("quoteSettingsSection");
+    const helpSec = document.getElementById("quoteHelpSection");
 
     [tabCreate, tabHistory, tabDrafts, tabAnalysis, tabSpecial].forEach(btn => {
       if (btn) btn.classList.remove("active");
     });
-    [draftSec, histSec, draftsInboxSec, analysisSec, specialSec].forEach(sec => {
+    document.querySelectorAll("#quoteSidebarNavList .quote-nav-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.getAttribute("data-quote-page") === normalizedTab);
+    });
+
+    [draftSec, histSec, draftsInboxSec, analysisSec, specialSec, dashSec, custSec, setSec, helpSec].forEach(sec => {
       if (sec) sec.classList.add("hidden");
     });
 
-    if (tabName === 'create') {
+    if (normalizedTab === "create") {
       if (tabCreate) tabCreate.classList.add("active");
       if (draftSec) draftSec.classList.remove("hidden");
-    } else if (tabName === 'history') {
+    } else if (normalizedTab === "history") {
       if (tabHistory) tabHistory.classList.add("active");
       if (histSec) histSec.classList.remove("hidden");
-      loadQuotationHistory("", isTrashViewActive);
-    } else if (tabName === 'drafts') {
+      const kw = document.getElementById("inputSearchQuoteHistory")?.value.trim() || "";
+      loadQuotationHistory(kw, isTrashViewActive);
+    } else if (normalizedTab === "drafts") {
       if (tabDrafts) tabDrafts.classList.add("active");
       if (draftsInboxSec) draftsInboxSec.classList.remove("hidden");
       loadQuotationDraftsInbox();
-    } else if (tabName === 'analysis') {
+    } else if (normalizedTab === "dashboard") {
+      if (dashSec) dashSec.classList.remove("hidden");
+      loadQuotationDashboard();
+    } else if (normalizedTab === "analysis") {
       if (tabAnalysis) tabAnalysis.classList.add("active");
       if (analysisSec) analysisSec.classList.remove("hidden");
-    } else if (tabName === 'special') {
+    } else if (normalizedTab === "customers") {
+      if (custSec) custSec.classList.remove("hidden");
+      loadQuotationCustomersPage();
+    } else if (normalizedTab === "products") {
       if (tabSpecial) tabSpecial.classList.add("active");
       if (specialSec) specialSec.classList.remove("hidden");
       loadSpecialProductsManager();
+      searchStandardProductsInMgmt();
+    } else if (normalizedTab === "settings") {
+      if (setSec) setSec.classList.remove("hidden");
+      loadQuotationSettingsPage();
+    } else if (normalizedTab === "help") {
+      if (helpSec) helpSec.classList.remove("hidden");
     }
+
+    closeDrawer();
   }
 
   // 更新三段式單號預覽 (Prefix-Seq-Rev)
@@ -4745,6 +4802,77 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnSaveSpecial) {
       btnSaveSpecial.addEventListener("click", savePersonalSpecialProductFromUI);
     }
+
+    // 14. 綁定左側【報價管理系統】專屬 9 大功能頁按鈕與底部【離開報價單功能】按鈕
+    document.querySelectorAll("#quoteSidebarNavList .quote-nav-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const page = btn.getAttribute("data-quote-page") || "create";
+        switchQuoteSubTab(page);
+      });
+    });
+
+    const btnExitQuote = document.getElementById("btnExitQuotationSystem");
+    if (btnExitQuote) {
+      btnExitQuote.addEventListener("click", () => {
+        switchPage(navItemHome, panelHome);
+      });
+    }
+
+    // 15. 報價單管理狀態篩選下拉選單
+    const selHistStatus = document.getElementById("selectQuoteHistoryStatus");
+    if (selHistStatus) {
+      selHistStatus.addEventListener("change", () => {
+        const kw = document.getElementById("inputSearchQuoteHistory")?.value.trim() || "";
+        loadQuotationHistory(kw, isTrashViewActive);
+      });
+    }
+
+    // 16. 大數據分析重新統計與最新版切換
+    const btnRefreshDash = document.getElementById("btnRefreshQuoteDashboard");
+    if (btnRefreshDash) btnRefreshDash.addEventListener("click", loadQuotationDashboard);
+    const chkDashLatest = document.getElementById("chkQuoteDashLatestOnly");
+    if (chkDashLatest) chkDashLatest.addEventListener("change", loadQuotationDashboard);
+
+    // 17. 客戶管理頁面事件綁定
+    const inputCustSearch = document.getElementById("inputQuoteCustSearch");
+    if (inputCustSearch) {
+      inputCustSearch.addEventListener("input", () => renderQuotationCustomersTable());
+    }
+    const btnCustClear = document.getElementById("btnQuoteCustClear");
+    if (btnCustClear) btnCustClear.addEventListener("click", clearQuotationCustomerForm);
+    const btnCustSave = document.getElementById("btnQuoteCustSave");
+    if (btnCustSave) btnCustSave.addEventListener("click", () => saveQuotationCustomerFromUI(false));
+    const btnCustCopy = document.getElementById("btnQuoteCustCopyContact");
+    if (btnCustCopy) btnCustCopy.addEventListener("click", () => saveQuotationCustomerFromUI(true));
+    const btnCustDel = document.getElementById("btnQuoteCustDelete");
+    if (btnCustDel) btnCustDel.addEventListener("click", deleteSelectedQuotationCustomer);
+    const btnSupSave = document.getElementById("btnQuoteSupplierSave");
+    if (btnSupSave) btnSupSave.addEventListener("click", saveQuotationSupplierFromUI);
+
+    // 18. 產品管理：共通標準牌價搜尋與快速折數計算機
+    const btnProdSearch = document.getElementById("btnQuoteProdMgmtSearch");
+    if (btnProdSearch) btnProdSearch.addEventListener("click", searchStandardProductsInMgmt);
+    const inputProdSearch = document.getElementById("inputQuoteProdMgmtSearch");
+    if (inputProdSearch) {
+      inputProdSearch.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          searchStandardProductsInMgmt();
+        }
+      });
+    }
+    const btnQuickCalc = document.getElementById("btnRunQuickCalc");
+    if (btnQuickCalc) btnQuickCalc.addEventListener("click", runQuickExpressionCalc);
+    const inputCalcBase = document.getElementById("inputCalcBasePrice");
+    const inputCalcDisc = document.getElementById("inputCalcDiscountPct");
+    if (inputCalcBase) inputCalcBase.addEventListener("input", updateQuickDiscountCalc);
+    if (inputCalcDisc) inputCalcDisc.addEventListener("input", updateQuickDiscountCalc);
+
+    // 19. 系統設定：儲存財務設定與報價條款
+    const btnSaveSet = document.getElementById("btnSaveQuoteSettings");
+    if (btnSaveSet) btnSaveSet.addEventListener("click", saveQuotationFinanceSettingsFromUI);
+    const btnSaveTerms = document.getElementById("btnSaveQuoteTerms");
+    if (btnSaveTerms) btnSaveTerms.addEventListener("click", saveQuotationTermsFromUI);
   }
 
   function resetQuotationEditor() {
@@ -6171,7 +6299,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 載入歷史報價紀錄與垃圾桶 (嚴格依當前業務隔離)
+  // 載入歷史報價紀錄與垃圾桶 (嚴格依當前業務隔離，並支援標記已成交/未成交/不計入)
   async function loadQuotationHistory(keyword = "", isTrash = false) {
     const resultsContainer = document.getElementById("quoteHistoryResults");
     if (!resultsContainer) return;
@@ -6179,7 +6307,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const activeSales = getActiveSalesName();
-      const url = `/api/quotations?sales_name=${encodeURIComponent(activeSales)}&include_deleted=true${keyword ? `&keyword=${encodeURIComponent(keyword)}` : ''}`;
+      const statusFilter = document.getElementById("selectQuoteHistoryStatus")?.value || "ALL";
+      const url = `/api/quotations?sales_name=${encodeURIComponent(activeSales)}&include_deleted=${isTrash ? 'true' : 'false'}${keyword ? `&keyword=${encodeURIComponent(keyword)}` : ''}${(!isTrash && statusFilter !== 'ALL') ? `&status=${encodeURIComponent(statusFilter)}` : ''}`;
       const resp = await fetch(url);
       if (!resp.ok) throw new Error("讀取報價單資料失敗");
       const allQuotes = await resp.json();
@@ -6195,37 +6324,69 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      resultsContainer.innerHTML = filtered.map(q => `
+      resultsContainer.innerHTML = filtered.map(q => {
+        const st = q.status || "追蹤中";
+        const pillClass = st === "已成交" ? "success" : (st === "已失注" ? "danger" : "info");
+        return `
         <div class="quote-history-card" data-quoteno="${escapeHtml(q.quote_no)}">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
             <div>
               <span style="font-family:monospace; font-weight:700; color:var(--primary-color, #2563eb); font-size:1rem;">${escapeHtml(q.quote_no)}</span>
-              ${q.version > 1 ? `<span style="display:inline-block; margin-left:6px; font-size:0.75rem; padding:1px 6px; background:#eff6ff; color:#2563eb; border-radius:4px; font-weight:600;">Rev.${q.version}</span>` : ''}
+              ${q.revision > 0 ? `<span style="display:inline-block; margin-left:6px; font-size:0.75rem; padding:1px 6px; background:#eff6ff; color:#2563eb; border-radius:4px; font-weight:600;">Rev.${q.revision}</span>` : ''}
             </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span class="status-pill ${q.status === '已成交' ? 'success' : 'info'}">${escapeHtml(q.status || "追蹤中")}</span>
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span class="status-pill ${pillClass}">${escapeHtml(st)}</span>
               ${isTrash ? `
                 <button type="button" class="btn-restore-quote secondary" data-quoteno="${escapeHtml(q.quote_no)}" style="padding:3px 10px; font-size:0.8rem; background:#10b981; color:#fff; border:none; border-radius:4px; cursor:pointer;">一鍵復原</button>
               ` : `
-                <button type="button" class="btn-trash-quote danger" data-quoteno="${escapeHtml(q.quote_no)}" style="padding:3px 8px; font-size:0.8rem; background:transparent; color:#ef4444; border:1px solid #fecaca; border-radius:4px; cursor:pointer;">移至垃圾桶</button>
+                <button type="button" class="status-mini-btn btn-set-quote-status" data-quoteno="${escapeHtml(q.quote_no)}" data-status="已成交" data-sub="${q.subtotal || 0}" title="標記為已成交">標記成交</button>
+                <button type="button" class="status-mini-btn btn-set-quote-status" data-quoteno="${escapeHtml(q.quote_no)}" data-status="已失注" title="標記為未成交/已失注">未成交</button>
+                <button type="button" class="status-mini-btn btn-set-quote-status" data-quoteno="${escapeHtml(q.quote_no)}" data-status="不跟進" title="標記為不計入統計">不計入</button>
+                <button type="button" class="status-mini-btn btn-set-quote-status" data-quoteno="${escapeHtml(q.quote_no)}" data-status="追蹤中" title="恢復為追蹤中">追蹤中</button>
+                <button type="button" class="btn-trash-quote danger" data-quoteno="${escapeHtml(q.quote_no)}" style="padding:3px 8px; font-size:0.78rem; background:transparent; color:#ef4444; border:1px solid #fecaca; border-radius:4px; cursor:pointer;">移至垃圾桶</button>
               `}
             </div>
           </div>
           <div style="font-size:0.92rem; color:var(--text-main, #1e293b); font-weight:600; margin-bottom:4px;">
             ${escapeHtml(q.customer_name)} ｜ ${escapeHtml(q.project_name || "標準設備報價")}
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; color:var(--text-muted, #64748b);">
-            <span>報價日期：${escapeHtml(q.quote_date)} ｜ 聯絡人：${escapeHtml(q.contact_name || '-')}</span>
-            <span style="font-weight:700; color:var(--primary-color, #2563eb); font-size:1.05rem;">$ ${(q.grand_total || 0).toLocaleString()}</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; color:var(--text-muted, #64748b); flex-wrap:wrap; gap:6px;">
+            <span>報價日期：${escapeHtml(q.quote_date)} ｜ 聯絡人：${escapeHtml(q.contact_name || '-')} ｜ 未稅：$ ${Number(q.subtotal || 0).toLocaleString()}</span>
+            <span style="font-weight:700; color:var(--primary-color, #2563eb); font-size:1.05rem;">含稅總計：$ ${Number(q.grand_total || 0).toLocaleString()}</span>
           </div>
         </div>
-      `).join("");
+      `;
+      }).join("");
 
       resultsContainer.querySelectorAll('.quote-history-card').forEach(card => {
         card.addEventListener("click", (e) => {
-          if (e.target.closest('.btn-trash-quote') || e.target.closest('.btn-restore-quote')) return;
+          if (e.target.closest('.btn-trash-quote') || e.target.closest('.btn-restore-quote') || e.target.closest('.btn-set-quote-status')) return;
           const qNo = card.dataset.quoteno;
           loadQuotationToForm(qNo);
+        });
+      });
+
+      resultsContainer.querySelectorAll('.btn-set-quote-status').forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          const qNo = btn.dataset.quoteno;
+          const newStatus = btn.dataset.status;
+          const subAmt = parseFloat(btn.dataset.sub || "0") || 0;
+          try {
+            const r = await fetch(`/api/quotations/${encodeURIComponent(qNo)}/status`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                status: newStatus,
+                won_amount: newStatus === "已成交" ? subAmt : 0
+              })
+            });
+            if (r.ok) {
+              loadQuotationHistory(keyword, isTrash);
+            }
+          } catch (err) {
+            alert("[更新狀態失敗] " + err.message);
+          }
         });
       });
 
@@ -6757,6 +6918,466 @@ document.addEventListener("DOMContentLoaded", () => {
 
       alert(`[${resData.status === 'archived_by_standard' ? '方案 A 自動轉正提醒' : '儲存成功'}] ${resData.message}`);
       loadSpecialProductsManager();
+    } catch (err) {
+      alert("[儲存失敗] " + err.message);
+    }
+  }
+
+  // ============================================================================
+  // 報價管理系統新增完整功能頁：手機草稿徽章、大數據分析、客戶管理、產品搜尋與計算機、系統設定
+  // ============================================================================
+  async function updateQuoteDraftsBadge() {
+    const badge = document.getElementById("quoteDraftsCountBadge");
+    if (!badge) return;
+    try {
+      const activeSales = getActiveSalesName();
+      const r = await fetch(`/api/quotation-drafts?sales_name=${encodeURIComponent(activeSales)}`);
+      if (r.ok) {
+        const list = await r.json();
+        const cnt = Array.isArray(list) ? list.length : 0;
+        badge.textContent = String(cnt);
+        badge.classList.toggle("hidden", cnt === 0);
+      }
+    } catch (e) {}
+  }
+
+  // 子分頁 F：大數據分析 (_QuotationApp gui_dashboard.py)
+  async function loadQuotationDashboard() {
+    const activeSales = getActiveSalesName();
+    const latestOnly = document.getElementById("chkQuoteDashLatestOnly")?.checked !== false;
+    try {
+      const r = await fetch(`/api/quotation-dashboard?sales_name=${encodeURIComponent(activeSales)}&latest_only=${latestOnly}`);
+      if (!r.ok) throw new Error("讀取大數據統計失敗");
+      const d = await r.json();
+
+      const elTotalQuoted = document.getElementById("qDashTotalQuoted");
+      const elTotalCount = document.getElementById("qDashTotalCount");
+      const elWonAmount = document.getElementById("qDashWonAmount");
+      const elWonCount = document.getElementById("qDashWonCount");
+      const elWinRateAmt = document.getElementById("qDashWinRateAmt");
+      const elWinRateCnt = document.getElementById("qDashWinRateCnt");
+      const elPendingAmt = document.getElementById("qDashPendingAmount");
+      const elPendingCnt = document.getElementById("qDashPendingCount");
+
+      if (elTotalQuoted) elTotalQuoted.textContent = `$ ${Number(d.total_quoted_amount || 0).toLocaleString()}`;
+      if (elTotalCount) elTotalCount.textContent = `有效報價單：${d.total_count || 0} 筆（排除不計入 ${d.ignored_count || 0} 筆）`;
+      if (elWonAmount) elWonAmount.textContent = `$ ${Number(d.won_amount || 0).toLocaleString()}`;
+      if (elWonCount) elWonCount.textContent = `已成交筆數：${d.won_count || 0} 筆`;
+      if (elWinRateAmt) elWinRateAmt.textContent = `${Number(d.win_rate_amount_pct || 0).toFixed(1)}%`;
+      if (elWinRateCnt) elWinRateCnt.textContent = `件數成交率：${Number(d.win_rate_count_pct || 0).toFixed(1)}%`;
+      if (elPendingAmt) elPendingAmt.textContent = `$ ${Number(d.pending_amount || 0).toLocaleString()}`;
+      if (elPendingCnt) elPendingCnt.textContent = `追蹤中：${d.pending_count || 0} 筆 ｜ 已失注：${d.lost_count || 0} 筆`;
+
+      const custBody = document.getElementById("qDashCustomerRankBody");
+      if (custBody) {
+        const topCusts = d.top_customers || [];
+        if (topCusts.length === 0) {
+          custBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:16px; color:var(--text-muted);">目前尚無報價統計資料</td></tr>`;
+        } else {
+          custBody.innerHTML = topCusts.map((c, idx) => `
+            <tr>
+              <td style="text-align:center; font-weight:700;">${idx + 1}</td>
+              <td style="font-weight:600;">${escapeHtml(c.customer_name)}</td>
+              <td style="text-align:right;">${c.quote_count}</td>
+              <td style="text-align:right; font-family:monospace;">$ ${Number(c.total_quoted || 0).toLocaleString()}</td>
+              <td style="text-align:right; font-family:monospace; color:#34d399; font-weight:700;">$ ${Number(c.won_amount || 0).toLocaleString()}</td>
+              <td style="text-align:right; font-family:monospace; color:#c084fc;">$ ${Number(c.pending_amount || 0).toLocaleString()}</td>
+              <td style="text-align:right; font-weight:700;">${Number(c.win_rate_pct || 0).toFixed(1)}%</td>
+            </tr>
+          `).join("");
+        }
+      }
+
+      const projBody = document.getElementById("qDashProjectTypeBody");
+      if (projBody) {
+        const pTypes = d.project_types || [];
+        if (pTypes.length === 0) {
+          projBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:16px; color:var(--text-muted);">尚無資料</td></tr>`;
+        } else {
+          projBody.innerHTML = pTypes.map(p => `
+            <tr>
+              <td style="font-weight:600;">${escapeHtml(p.project_type)}</td>
+              <td style="text-align:right;">${p.quote_count}</td>
+              <td style="text-align:right; font-family:monospace;">$ ${Number(p.total_quoted || 0).toLocaleString()}</td>
+              <td style="text-align:right; font-family:monospace; color:#34d399;">$ ${Number(p.won_amount || 0).toLocaleString()}</td>
+            </tr>
+          `).join("");
+        }
+      }
+    } catch (err) {
+      console.warn("大數據分析載入失敗:", err);
+    }
+  }
+
+  // 子分頁 G：客戶管理 (_QuotationApp gui_page4.py)
+  let selectedMgmtCustomerId = null;
+
+  async function loadQuotationCustomersPage() {
+    await populateCustomerSelectDropdown(true);
+    renderQuotationCustomersTable();
+    await loadQuotationSupplierInfo();
+  }
+
+  function renderQuotationCustomersTable() {
+    const tbody = document.getElementById("quoteCustMgmtTableBody");
+    const badge = document.getElementById("qCustCountBadge");
+    const kw = (document.getElementById("inputQuoteCustSearch")?.value || "").trim().toLowerCase();
+    if (!tbody) return;
+
+    const list = (customersCache || []).filter(c => {
+      if (!kw) return true;
+      return (
+        (c.name || "").toLowerCase().includes(kw) ||
+        (c.tax_id || "").toLowerCase().includes(kw) ||
+        (c.default_contact || "").toLowerCase().includes(kw) ||
+        (c.phone || "").toLowerCase().includes(kw)
+      );
+    });
+
+    if (badge) badge.textContent = `共 ${list.length} 家客戶`;
+
+    if (list.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:18px; color:var(--text-muted);">查無相符的客戶資料</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = list.map(c => {
+      const isFav = Number(c.is_favorite || 0) > 0;
+      const isSel = Number(c.id) === Number(selectedMgmtCustomerId);
+      return `
+        <tr class="quote-cust-row ${isSel ? 'selected-row' : ''}" data-cid="${c.id}">
+          <td style="text-align:center; font-weight:700; color:${isFav ? '#fbbf24' : 'var(--text-muted)'};">${isFav ? '[常用]' : '-'}</td>
+          <td style="font-weight:600;">${escapeHtml(c.name)}</td>
+          <td style="font-family:monospace;">${escapeHtml(c.tax_id || '-')}</td>
+          <td>${escapeHtml(c.default_contact || '-')}</td>
+          <td style="font-family:monospace;">${escapeHtml(c.phone || '-')}</td>
+        </tr>
+      `;
+    }).join("");
+
+    tbody.querySelectorAll(".quote-cust-row").forEach(tr => {
+      tr.addEventListener("click", () => {
+        const cid = parseInt(tr.getAttribute("data-cid"), 10);
+        const cust = (customersCache || []).find(x => Number(x.id) === cid);
+        if (cust) {
+          selectCustomerInMgmtForm(cust);
+        }
+      });
+    });
+  }
+
+  function selectCustomerInMgmtForm(cust) {
+    selectedMgmtCustomerId = cust.id;
+    renderQuotationCustomersTable();
+    const hint = document.getElementById("qCustSelectedHint");
+    if (hint) hint.textContent = `已選取：${cust.name} (ID: ${cust.id})`;
+
+    const contacts = Array.isArray(cust.contacts) && cust.contacts.length > 0
+      ? cust.contacts
+      : [{ name: cust.default_contact || "", email: "", mobile: "" }];
+    const primary = contacts[0] || {};
+
+    document.getElementById("qCustEditId").value = String(cust.id || "");
+    document.getElementById("qCustName").value = cust.name || "";
+    document.getElementById("qCustTax").value = cust.tax_id || "";
+    document.getElementById("qCustContact").value = primary.name || cust.default_contact || "";
+    document.getElementById("qCustMobile").value = primary.mobile || "";
+    document.getElementById("qCustEmail").value = primary.email || "";
+    document.getElementById("qCustPhone").value = cust.phone || "";
+    document.getElementById("qCustFax").value = cust.fax || "";
+    document.getElementById("qCustPayment").value = cust.payment_terms || "月結 30 天電匯";
+    document.getElementById("qCustAddress").value = cust.address || "";
+    document.getElementById("qCustFavorite").checked = Number(cust.is_favorite || 0) > 0;
+
+    const pillsBox = document.getElementById("qCustContactsPills");
+    if (pillsBox) {
+      if (contacts.length > 0 && contacts[0].name) {
+        pillsBox.innerHTML = `<span style="font-size:0.76rem; color:var(--text-muted); align-self:center;">已建檔窗口（點擊切換編輯）：</span>` +
+          contacts.map((ct, idx) => `
+            <button type="button" class="contact-pill-btn" data-idx="${idx}">
+              ${escapeHtml(ct.name)}${ct.mobile ? ' (' + escapeHtml(ct.mobile) + ')' : ''}
+            </button>
+          `).join("");
+        pillsBox.querySelectorAll(".contact-pill-btn").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const cObj = contacts[parseInt(btn.getAttribute("data-idx"), 10)];
+            if (cObj) {
+              document.getElementById("qCustContact").value = cObj.name || "";
+              document.getElementById("qCustMobile").value = cObj.mobile || "";
+              document.getElementById("qCustEmail").value = cObj.email || "";
+            }
+          });
+        });
+      } else {
+        pillsBox.innerHTML = "";
+      }
+    }
+  }
+
+  function clearQuotationCustomerForm() {
+    selectedMgmtCustomerId = null;
+    document.getElementById("qCustEditId").value = "";
+    document.getElementById("qCustName").value = "";
+    document.getElementById("qCustTax").value = "";
+    document.getElementById("qCustContact").value = "";
+    document.getElementById("qCustMobile").value = "";
+    document.getElementById("qCustEmail").value = "";
+    document.getElementById("qCustPhone").value = "";
+    document.getElementById("qCustFax").value = "";
+    document.getElementById("qCustPayment").value = "月結 30 天電匯";
+    document.getElementById("qCustAddress").value = "";
+    document.getElementById("qCustFavorite").checked = false;
+    const pillsBox = document.getElementById("qCustContactsPills");
+    if (pillsBox) pillsBox.innerHTML = "";
+    const hint = document.getElementById("qCustSelectedHint");
+    if (hint) hint.textContent = "尚未選取客戶（填寫右側表單可直接新增）";
+    renderQuotationCustomersTable();
+  }
+
+  async function saveQuotationCustomerFromUI(copyAsNewContact = false) {
+    const name = document.getElementById("qCustName")?.value.trim() || "";
+    if (!name) {
+      alert("請輸入公司名稱！");
+      return;
+    }
+    const contactName = document.getElementById("qCustContact")?.value.trim() || "";
+    if (copyAsNewContact && !contactName) {
+      alert("若要複製為新聯絡人，請先在「聯絡人姓名」輸入新窗口姓名！");
+      return;
+    }
+    const activeSales = getActiveSalesName();
+    const payload = {
+      name: name,
+      owner_sales: activeSales,
+      tax_id: document.getElementById("qCustTax")?.value.trim() || "",
+      contact_name: contactName,
+      contact_mobile: document.getElementById("qCustMobile")?.value.trim() || "",
+      contact_email: document.getElementById("qCustEmail")?.value.trim() || "",
+      phone: document.getElementById("qCustPhone")?.value.trim() || "",
+      fax: document.getElementById("qCustFax")?.value.trim() || "",
+      payment_terms: document.getElementById("qCustPayment")?.value.trim() || "月結 30 天電匯",
+      address: document.getElementById("qCustAddress")?.value.trim() || "",
+      is_favorite: !!document.getElementById("qCustFavorite")?.checked,
+      copy_as_new_contact: copyAsNewContact
+    };
+
+    try {
+      const r = await fetch("/api/quotation-customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const res = await r.json();
+      if (!r.ok) throw new Error(res.detail || "儲存客戶失敗");
+      await populateCustomerSelectDropdown(true);
+      const savedCust = (customersCache || []).find(c => Number(c.id) === Number(res.id) || c.name === name);
+      if (savedCust) selectCustomerInMgmtForm(savedCust);
+      else renderQuotationCustomersTable();
+      alert(`[儲存成功] ${res.message}`);
+    } catch (err) {
+      alert("[儲存失敗] " + err.message);
+    }
+  }
+
+  async function deleteSelectedQuotationCustomer() {
+    if (!selectedMgmtCustomerId) {
+      alert("請先從左側列表點選要刪除的客戶公司！");
+      return;
+    }
+    const cust = (customersCache || []).find(c => Number(c.id) === Number(selectedMgmtCustomerId));
+    const custName = cust ? cust.name : `ID ${selectedMgmtCustomerId}`;
+    if (!confirm(`【二次確認】確定要刪除客戶「${custName}」及其聯絡人資料嗎？此動作無法復原。`)) {
+      return;
+    }
+    try {
+      const activeSales = getActiveSalesName();
+      const r = await fetch(`/api/quotation-customers/${selectedMgmtCustomerId}?sales_name=${encodeURIComponent(activeSales)}`, {
+        method: "DELETE"
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.detail || "刪除失敗");
+      }
+      clearQuotationCustomerForm();
+      await populateCustomerSelectDropdown(true);
+      renderQuotationCustomersTable();
+      alert(`[已刪除] 客戶「${custName}」已成功刪除。`);
+    } catch (err) {
+      alert("[刪除失敗] " + err.message);
+    }
+  }
+
+  async function loadQuotationSupplierInfo() {
+    try {
+      const activeSales = getActiveSalesName();
+      const r = await fetch(`/api/quotation-supplier?sales_name=${encodeURIComponent(activeSales)}`);
+      if (r.ok) {
+        const sup = await r.json();
+        document.getElementById("qSupCompany").value = sup.company || "士林電機廠股份有限公司";
+        document.getElementById("qSupTax").value = sup.tax || "11039306";
+        document.getElementById("qSupSales").value = sup.sales || activeSales;
+        document.getElementById("qSupMobile").value = sup.mobile || "";
+        document.getElementById("qSupPhone").value = sup.phone || "";
+        document.getElementById("qSupFax").value = sup.fax || "";
+        document.getElementById("qSupEmail").value = sup.email || "";
+        document.getElementById("qSupLine").value = sup.line || "";
+        document.getElementById("qSupAddress").value = sup.address || "";
+      }
+    } catch (e) {}
+  }
+
+  async function saveQuotationSupplierFromUI() {
+    const activeSales = getActiveSalesName();
+    const payload = {
+      sales_name: activeSales,
+      company: document.getElementById("qSupCompany")?.value.trim() || "",
+      tax: document.getElementById("qSupTax")?.value.trim() || "",
+      sales: document.getElementById("qSupSales")?.value.trim() || activeSales,
+      mobile: document.getElementById("qSupMobile")?.value.trim() || "",
+      phone: document.getElementById("qSupPhone")?.value.trim() || "",
+      fax: document.getElementById("qSupFax")?.value.trim() || "",
+      email: document.getElementById("qSupEmail")?.value.trim() || "",
+      line: document.getElementById("qSupLine")?.value.trim() || "",
+      address: document.getElementById("qSupAddress")?.value.trim() || ""
+    };
+    try {
+      const r = await fetch("/api/quotation-supplier", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const res = await r.json();
+      if (!r.ok) throw new Error(res.detail || "儲存供應商設定失敗");
+      alert(`[儲存成功] ${res.message}`);
+    } catch (err) {
+      alert("[儲存失敗] " + err.message);
+    }
+  }
+
+  // 子分頁 E 擴充：產品管理標準品檢索與內建快速計算機 (_QuotationApp gui_page5.py)
+  async function searchStandardProductsInMgmt() {
+    const tbody = document.getElementById("quoteProdMgmtTableBody");
+    if (!tbody) return;
+    const q = document.getElementById("inputQuoteProdMgmtSearch")?.value.trim() || "";
+    const activeSales = getActiveSalesName();
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:16px; color:var(--text-muted);">搜尋中...</td></tr>`;
+    try {
+      const r = await fetch(`/api/products?q=${encodeURIComponent(q)}&limit=80&sales_name=${encodeURIComponent(activeSales)}`);
+      if (!r.ok) throw new Error("搜尋產品失敗");
+      const list = await r.json();
+      if (!Array.isArray(list) || list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:16px; color:var(--text-muted);">查無相符的產品型號</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = list.map(p => `
+        <tr class="quote-cust-row" data-model="${escapeHtml(p.model_no)}" data-spec="${escapeHtml(p.spec || '')}" data-price="${p.dealer_price || 0}" data-stock="${p.stock_qty || 0}" title="點擊可帶入上方特殊品編輯區或計算機">
+          <td><span class="status-pill ${p.is_special ? 'warning' : 'info'}" style="font-size:0.72rem;">${escapeHtml(p.source_label || '標準品')}</span></td>
+          <td style="font-family:monospace; font-weight:700; color:#60a5fa;">${escapeHtml(p.model_no)}</td>
+          <td style="font-size:0.82rem;">${escapeHtml(p.spec || '-')}</td>
+          <td style="text-align:right; font-family:monospace; font-weight:700;">$ ${Number(p.dealer_price || 0).toLocaleString()}</td>
+          <td style="text-align:right; font-family:monospace; color:${Number(p.stock_qty || 0) > 0 ? '#34d399' : 'var(--text-muted)'};">${Number(p.stock_qty || 0).toLocaleString()}</td>
+        </tr>
+      `).join("");
+
+      tbody.querySelectorAll("tr.quote-cust-row").forEach(tr => {
+        tr.addEventListener("click", () => {
+          const baseInput = document.getElementById("inputCalcBasePrice");
+          if (baseInput) {
+            baseInput.value = tr.getAttribute("data-price") || "0";
+            updateQuickDiscountCalc();
+          }
+        });
+      });
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:16px; color:var(--color-danger);">${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  function runQuickExpressionCalc() {
+    const expr = (document.getElementById("inputQuickCalcExpr")?.value || "").replace(/[^0-9+\-*/().\s]/g, "").trim();
+    const disp = document.getElementById("quickCalcResultDisplay");
+    if (!disp) return;
+    if (!expr) {
+      disp.textContent = "計算結果：0";
+      return;
+    }
+    try {
+      const val = Function(`"use strict"; return (${expr});`)();
+      const num = Number(val);
+      if (isFinite(num)) {
+        const rounded = applyQuoteRounding(num);
+        disp.textContent = `原始值：${num.toLocaleString(undefined, { maximumFractionDigits: 2 })} ｜ 系統捨入後：$ ${rounded.toLocaleString()}`;
+      } else {
+        disp.textContent = "計算結果：算式無效";
+      }
+    } catch (e) {
+      disp.textContent = "計算結果：算式格式錯誤";
+    }
+  }
+
+  function updateQuickDiscountCalc() {
+    const base = parseFloat(document.getElementById("inputCalcBasePrice")?.value || "0") || 0;
+    const disc = parseFloat(document.getElementById("inputCalcDiscountPct")?.value || "100") || 0;
+    const raw = base * (disc / 100.0);
+    const untaxed = applyQuoteRounding(raw);
+    const taxed = Math.round(untaxed * (1 + (parseFloat(quoteFinanceSettings.tax_rate) || 5.0) / 100.0));
+    const summaryEl = document.getElementById("quickCalcDiscountSummary");
+    if (summaryEl) {
+      summaryEl.textContent = `折後未稅價：$ ${untaxed.toLocaleString()} ｜ 含稅價：$ ${taxed.toLocaleString()}`;
+    }
+  }
+
+  // 子分頁 H：系統設定 (_QuotationApp gui_page6.py)
+  async function loadQuotationSettingsPage() {
+    await loadQuotationFinanceSettings();
+    const taxInput = document.getElementById("qSetTaxRate");
+    const digitsSel = document.getElementById("qSetRoundDigits");
+    const modeSel = document.getElementById("qSetRoundMode");
+    const sortSel = document.getElementById("qSetCustSortMode");
+    const termsTxt = document.getElementById("qSetTermsTextarea");
+
+    if (taxInput) taxInput.value = String(quoteFinanceSettings.tax_rate ?? 5.0);
+    if (digitsSel) digitsSel.value = String(quoteFinanceSettings.round_digits ?? 2);
+    if (modeSel) modeSel.value = quoteFinanceSettings.round_mode || "無條件捨去";
+    if (sortSel) sortSel.value = quoteFinanceSettings.customer_sort_mode || "依筆畫/字母排序";
+    if (termsTxt) termsTxt.value = quoteFinanceSettings.quote_terms || "";
+  }
+
+  async function saveQuotationFinanceSettingsFromUI() {
+    const payload = {
+      tax_rate: parseFloat(document.getElementById("qSetTaxRate")?.value || "5.0"),
+      round_digits: parseInt(document.getElementById("qSetRoundDigits")?.value || "2", 10),
+      round_mode: document.getElementById("qSetRoundMode")?.value || "無條件捨去",
+      customer_sort_mode: document.getElementById("qSetCustSortMode")?.value || "依筆畫/字母排序"
+    };
+    try {
+      const r = await fetch("/api/quotation-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const res = await r.json();
+      if (!r.ok) throw new Error(res.detail || "儲存財務設定失敗");
+      await loadQuotationFinanceSettings();
+      calculateTotal();
+      alert(`[儲存成功] ${res.message}（最新捨入規則：${quoteFinanceSettings.round_summary_text}）`);
+    } catch (err) {
+      alert("[儲存失敗] " + err.message);
+    }
+  }
+
+  async function saveQuotationTermsFromUI() {
+    const terms = document.getElementById("qSetTermsTextarea")?.value || "";
+    try {
+      const r = await fetch("/api/quotation-terms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quote_terms: terms })
+      });
+      const res = await r.json();
+      if (!r.ok) throw new Error(res.detail || "儲存條款失敗");
+      quoteFinanceSettings.quote_terms = res.quote_terms || terms;
+      alert(`[儲存成功] ${res.message}`);
     } catch (err) {
       alert("[儲存失敗] " + err.message);
     }

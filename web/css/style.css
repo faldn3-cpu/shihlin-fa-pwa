@@ -5024,3 +5024,157 @@ input[type="checkbox"] {
   display: none !important;
 }
 
+
+/* ==============================================================================
+   v1.0.41 報價管理系統全介面切換模式 (100% 對標電腦版 _QuotationApp 左側選單 + 9 大功能頁 + 離開按鈕)
+   ============================================================================== */
+
+/* 電腦版進入報價系統時，頂部舊子分頁列自動隱藏，由左側完整 9 大選單接管 */
+@media (min-width: 768px) {
+  #panelQuotes .quote-sub-tabs {
+    display: none !important;
+  }
+}
+
+.drawer-nav-list.hidden {
+  display: none !important;
+}
+
+#quoteSidebarNavList {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+#quoteSidebarNavList .quote-nav-btn {
+  position: relative;
+  justify-content: flex-start;
+}
+
+#quoteSidebarNavList .quote-nav-btn.active {
+  background: rgba(37, 99, 235, 0.16);
+  color: #60a5fa;
+  border-left: 3px solid #3b82f6;
+  font-weight: 700;
+}
+
+.quote-nav-badge {
+  margin-left: auto;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 999px;
+  line-height: 1.4;
+}
+
+.quote-nav-badge.hidden {
+  display: none !important;
+}
+
+.quote-sidebar-footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color, #334155);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quote-sidebar-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted, #94a3b8);
+  padding: 0 8px;
+  line-height: 1.35;
+}
+
+.btn-exit-quotation-system {
+  margin-top: 6px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #f59e0b;
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-exit-quotation-system .icon-svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.btn-exit-quotation-system:hover {
+  background: #f59e0b;
+  color: #0f172a;
+}
+
+.quote-split-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+@media (min-width: 980px) {
+  .quote-split-grid {
+    grid-template-columns: 1.15fr 1fr;
+    align-items: start;
+  }
+}
+
+.quote-cust-row {
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.quote-cust-row:hover {
+  background-color: rgba(59, 130, 246, 0.12) !important;
+}
+
+.quote-cust-row.selected-row {
+  background-color: rgba(37, 99, 235, 0.22) !important;
+}
+
+.contact-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  cursor: pointer;
+}
+
+.contact-pill-btn:hover {
+  background: rgba(59, 130, 246, 0.28);
+}
+
+.status-mini-btn {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  border: 1px solid var(--border-color, #475569);
+  background: rgba(30, 41, 59, 0.8);
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.status-mini-btn:hover {
+  border-color: #60a5fa;
+  color: #60a5fa;
+}

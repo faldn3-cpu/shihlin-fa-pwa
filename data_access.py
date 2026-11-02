@@ -781,6 +781,103 @@ def save_customer(data: Dict[str, Any]) -> int:
         conn.close()
 
 
+def save_quotation_customer(data: Dict[str, Any]) -> Tuple[bool, str, int]:
+    """
+    報價管理系統專用：新增或更新客戶主檔與多筆聯絡人清單
+    支援：
+    1. 儲存/更新公司基本資料與常用客戶標記 (is_favorite)
+    2. 新增/更新聯絡人 (contact_master)
+    3. copy_as_new_contact=True 時，直接於同一家公司下新增另一位聯絡窗口
+    """
+    name = str(data.get("name") or "").strip()
+    if not name:
+        return False, "公司名稱不得為空白", 0
+
+    owner_sales = str(data.get("owner_sales") or "曾維崧").strip()
+    tax_id = str(data.get("tax_id") or "").strip()
+    contact_name = str(data.get("contact_name") or data.get("default_contact") or "").strip()
+    contact_email = str(data.get("contact_email") or "").strip()
+    contact_mobile = str(data.get("contact_mobile") or "").strip()
+    phone = str(data.get("phone") or "").strip()
+    fax = str(data.get("fax") or "").strip()
+    address = str(data.get("address") or "").strip()
+    payment_terms = str(data.get("payment_terms") or "月結 30 天電匯").strip()
+    status = str(data.get("status") or "active").strip()
+    is_favorite = 1 if data.get("is_favorite") else 0
+    copy_as_new_contact = bool(data.get("copy_as_new_contact"))
+
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+        INSERT INTO customer_master (
+            name, owner_sales, tax_id, default_contact, phone, fax,
+            address, payment_terms, status, is_favorite
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(name) DO UPDATE SET
+            owner_sales = excluded.owner_sales,
+            tax_id = excluded.tax_id,
+            default_contact = CASE WHEN excluded.default_contact != '' THEN excluded.default_contact ELSE customer_master.default_contact END,
+            phone = excluded.phone,
+            fax = excluded.fax,
+            address = excluded.address,
+            payment_terms = excluded.payment_terms,
+            status = excluded.status,
+            is_favorite = excluded.is_favorite
+        """, (
+            name, owner_sales, tax_id, contact_name, phone, fax,
+            address, payment_terms, status, is_favorite
+        ))
+
+        row = cursor.execute("SELECT id FROM customer_master WHERE name = ?", (name,)).fetchone()
+        cid = int(row["id"]) if row else 0
+
+        if cid and contact_name:
+            existing_ct = cursor.execute("""
+            SELECT id FROM contact_master WHERE customer_id = ? AND name = ?
+            """, (cid, contact_name)).fetchone()
+            if existing_ct:
+                cursor.execute("""
+                UPDATE contact_master
+                SET email = ?, mobile = ?, owner_sales = ?
+                WHERE id = ?
+                """, (contact_email, contact_mobile, owner_sales, existing_ct["id"]))
+            else:
+                if not copy_as_new_contact and data.get("replace_primary_contact"):
+                    cursor.execute("DELETE FROM contact_master WHERE customer_id = ?", (cid,))
+                cursor.execute("""
+                INSERT INTO contact_master (customer_id, owner_sales, name, email, mobile)
+                VALUES (?, ?, ?, ?, ?)
+                """, (cid, owner_sales, contact_name, contact_email, contact_mobile))
+
+        conn.commit()
+        if copy_as_new_contact:
+            return True, f"已為「{name}」新增聯絡窗口「{contact_name}」！", cid
+        return True, f"客戶「{name}」資料已成功儲存！", cid
+    finally:
+        conn.close()
+
+
+def delete_quotation_customer(customer_id: int, sales_name: Optional[str] = None) -> bool:
+    """刪除指定客戶及其聯絡人清單 (依業務員隔離防呆)"""
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        if sales_name:
+            row = cursor.execute(
+                "SELECT id FROM customer_master WHERE id = ? AND owner_sales = ?",
+                (customer_id, sales_name.strip())
+            ).fetchone()
+            if not row:
+                return False
+        cursor.execute("DELETE FROM contact_master WHERE customer_id = ?", (customer_id,))
+        res = cursor.execute("DELETE FROM customer_master WHERE id = ?", (customer_id,))
+        conn.commit()
+        return res.rowcount > 0
+    finally:
+        conn.close()
+
+
 def search_products(query: str = "", limit: int = 80, sales_name: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     搜尋產品牌價庫 (同時涵蓋：1. 該業務未封存之個人特殊品 + 2. 全公司共通標準牌價表)
@@ -852,8 +949,18 @@ def search_products(query: str = "", limit: int = 80, sales_name: Optional[str] 
 # 報價單財務捨入與系統設定存取
 # ==============================================================================
 
+DEFAULT_QUOTE_TERMS = """1. 交貨期限：收到正式訂單後 7~14 個工作天內交貨（特殊訂製品依雙方確認交期為準）。
+2. 交貨地點：貴公司指定之台灣本島廠區（一樓平面卸貨）。
+3. 付款條件：依報價單表頭所載之付款方式辦理。
+4. 保固期限：自交貨日起正常使用下保固壹年（消耗性零件及天災、人為操作不當除外）。
+5. 驗收標準：依原廠出廠標準規格書驗收，貨到 7 日內若無書面異議視為驗收合格。
+6. 本報價單不含現場安裝配線、試車及教育訓練費用（除明細另有註明外）。
+7. 本報價單有效期限如表頭所示，逾期或原物料劇烈波動時本公司保留重新報價之權利。
+8. 訂單確認後請簽名蓋章回傳，即視同正式買賣契約成立。"""
+
+
 def get_quotation_finance_settings() -> Dict[str, Any]:
-    """讀取報價單財務設定（稅率、捨入位數、捨入方式、庫存更新時間、報價條款）"""
+    """讀取報價單財務設定（稅率、捨入位數、捨入方式、客戶排序、庫存更新時間、報價條款）"""
     conn = get_connection()
     try:
         rows = conn.execute("SELECT setting_key, setting_val FROM system_settings").fetchall()
@@ -874,16 +981,110 @@ def get_quotation_finance_settings() -> Dict[str, Any]:
         elif round_mode.upper() == "ROUND":
             round_mode = "四捨五入"
 
+        quote_terms = kv.get("quote_terms", "").strip()
+        if not quote_terms:
+            quote_terms = DEFAULT_QUOTE_TERMS
+
         return {
             "tax_rate": float(kv.get("tax_rate", "5.0")),
             "round_digits": raw_digit,
             "round_factor": round_factor,
             "round_digit_label": digit_label_map.get(round_factor, "百位數"),
             "round_mode": round_mode,
+            "customer_sort_mode": kv.get("customer_sort_mode", "依筆畫/字母排序"),
             "round_summary_text": f"捨入：{digit_label_map.get(round_factor, '百位數')} / {round_mode}",
             "stock_updated_at": kv.get("stock_updated_at", "10/15 10:12"),
-            "quote_terms": kv.get("quote_terms", ""),
+            "quote_terms": quote_terms,
         }
+    finally:
+        conn.close()
+
+
+def save_quotation_finance_settings(data: Dict[str, Any]) -> Dict[str, Any]:
+    """儲存報價單財務設定（稅率、捨入位數、捨入方式、客戶排序、報價條款）"""
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        if "tax_rate" in data and data["tax_rate"] is not None:
+            cursor.execute(
+                "INSERT OR REPLACE INTO system_settings (setting_key, setting_val) VALUES ('tax_rate', ?);",
+                (str(float(data["tax_rate"])),)
+            )
+        if "round_digits" in data and data["round_digits"] is not None:
+            cursor.execute(
+                "INSERT OR REPLACE INTO system_settings (setting_key, setting_val) VALUES ('round_digits', ?);",
+                (str(int(data["round_digits"])),)
+            )
+        if "round_mode" in data and data["round_mode"] is not None:
+            cursor.execute(
+                "INSERT OR REPLACE INTO system_settings (setting_key, setting_val) VALUES ('round_mode', ?);",
+                (str(data["round_mode"]).strip(),)
+            )
+        if "customer_sort_mode" in data and data["customer_sort_mode"] is not None:
+            cursor.execute(
+                "INSERT OR REPLACE INTO system_settings (setting_key, setting_val) VALUES ('customer_sort_mode', ?);",
+                (str(data["customer_sort_mode"]).strip(),)
+            )
+        if "quote_terms" in data and data["quote_terms"] is not None:
+            cursor.execute(
+                "INSERT OR REPLACE INTO system_settings (setting_key, setting_val) VALUES ('quote_terms', ?);",
+                (str(data["quote_terms"]).strip(),)
+            )
+        conn.commit()
+    finally:
+        conn.close()
+    return get_quotation_finance_settings()
+
+
+def get_supplier_info(sales_name: str = "曾維崧") -> Dict[str, Any]:
+    """讀取業務員專屬之供應商/報價簽名檔資訊 (對標 _QuotationApp supplier.json)"""
+    target_sales = (sales_name or "曾維崧").strip()
+    default_supplier = {
+        "company": "士林電機廠股份有限公司",
+        "tax": "11039306",
+        "sales": target_sales,
+        "phone": "03-590-5200",
+        "fax": "03-590-2167",
+        "mobile": "0955-016-706",
+        "line": "0955016706",
+        "email": "welsong@seec.com.tw",
+        "address": "新竹縣新豐鄉中崙村七鄰234號",
+        "custom1": "",
+        "custom2": "",
+    }
+    conn = get_connection()
+    try:
+        key = f"supplier_info_{target_sales}"
+        row = conn.execute("SELECT setting_val FROM system_settings WHERE setting_key = ?", (key,)).fetchone()
+        if row and row["setting_val"]:
+            try:
+                saved = json.loads(row["setting_val"])
+                if isinstance(saved, dict):
+                    default_supplier.update(saved)
+            except Exception:
+                pass
+        return default_supplier
+    finally:
+        conn.close()
+
+
+def save_supplier_info(sales_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    """儲存業務員專屬之供應商/報價簽名檔資訊"""
+    target_sales = (sales_name or data.get("sales") or "曾維崧").strip()
+    current = get_supplier_info(target_sales)
+    for k in ("company", "tax", "sales", "phone", "fax", "mobile", "line", "email", "address", "custom1", "custom2"):
+        if k in data and data[k] is not None:
+            current[k] = str(data[k]).strip()
+
+    conn = get_connection()
+    try:
+        key = f"supplier_info_{target_sales}"
+        conn.execute(
+            "INSERT OR REPLACE INTO system_settings (setting_key, setting_val) VALUES (?, ?);",
+            (key, json.dumps(current, ensure_ascii=False))
+        )
+        conn.commit()
+        return current
     finally:
         conn.close()
 
@@ -1259,6 +1460,182 @@ def restore_quotation(quote_no: str) -> bool:
         """, (quote_no,))
         conn.commit()
         return res.rowcount > 0
+    finally:
+        conn.close()
+
+
+def update_quotation_status(quote_no: str, status_data: Dict[str, Any]) -> Tuple[bool, str]:
+    """
+    更新報價單追蹤狀態（對標 _QuotationApp 報價單管理頁）：
+    支援：追蹤中 / 已成交 (won_amount, won_date) / 已失注 (lost_reason, lost_memo) / 不跟進
+    """
+    conn = get_connection()
+    try:
+        row = conn.execute("SELECT id, subtotal, grand_total FROM quotation_header WHERE quote_no = ?", (quote_no,)).fetchone()
+        if not row:
+            return False, f"找不到報價單號：{quote_no}"
+
+        raw_status = str(status_data.get("status") or "追蹤中").strip()
+        is_won = 0
+        is_lost = 0
+        is_ignored = 0
+        won_amount = float(status_data.get("won_amount") or 0.0)
+        won_date = status_data.get("won_date")
+        lost_reason = status_data.get("lost_reason")
+        lost_memo = status_data.get("lost_memo")
+
+        if raw_status == "已成交":
+            is_won = 1
+            if won_amount <= 0:
+                won_amount = float(row["subtotal"] or row["grand_total"] or 0.0)
+            if not won_date:
+                won_date = str(date.today())
+        elif raw_status in ("已失注", "未成交"):
+            raw_status = "已失注"
+            is_lost = 1
+        elif raw_status in ("不跟進", "不計入"):
+            raw_status = "不跟進"
+            is_ignored = 1
+        else:
+            raw_status = "追蹤中"
+
+        conn.execute("""
+        UPDATE quotation_header
+        SET status = ?, is_won = ?, won_amount = ?, won_date = ?,
+            is_lost = ?, is_ignored = ?, lost_reason = ?, lost_memo = ?
+        WHERE quote_no = ?
+        """, (
+            raw_status, is_won, won_amount, won_date,
+            is_lost, is_ignored, lost_reason, lost_memo, quote_no
+        ))
+        conn.commit()
+        return True, f"報價單【{quote_no}】狀態已更新為「{raw_status}」！"
+    finally:
+        conn.close()
+
+
+def get_quotation_dashboard_stats(
+    sales_name: Optional[str] = None,
+    latest_only: bool = True
+) -> Dict[str, Any]:
+    """
+    報價管理系統【大數據分析】統計引擎 (對標 _QuotationApp gui_dashboard.py)
+    計算：
+    1. 有效報價總額 (未稅 subtotal)、已成交金額、追蹤中金額、已失注金額、成交率 (件數/金額)
+    2. 客戶報價與成交貢獻排行榜 (Top 15)
+    3. 專案屬性分佈 (一次性專案 / 年度合約 / 例行補貨 等)
+    """
+    conn = get_connection()
+    try:
+        sql = "SELECT * FROM quotation_header WHERE is_deleted = 0"
+        params: List[Any] = []
+        if sales_name:
+            sql += " AND sales_name = ?"
+            params.append(sales_name.strip())
+        if latest_only:
+            sql += " AND is_latest = 1"
+
+        rows = conn.execute(sql, params).fetchall()
+
+        total_count = 0
+        ignored_count = 0
+        won_count = 0
+        lost_count = 0
+        pending_count = 0
+
+        total_quoted_amount = 0.0
+        won_amount_sum = 0.0
+        lost_amount_sum = 0.0
+        pending_amount_sum = 0.0
+
+        cust_stats: Dict[str, Dict[str, Any]] = {}
+        proj_stats: Dict[str, Dict[str, Any]] = {}
+
+        for r in rows:
+            status_str = str(r["status"] or "追蹤中")
+            is_ign = int(r["is_ignored"] or 0) == 1 or status_str in ("不跟進", "不計入")
+            if is_ign:
+                ignored_count += 1
+                continue
+
+            sub = float(r["subtotal"] or 0.0)
+            w_amt = float(r["won_amount"] or 0.0)
+            is_w = int(r["is_won"] or 0) == 1 or status_str == "已成交"
+            is_l = int(r["is_lost"] or 0) == 1 or status_str in ("已失注", "未成交")
+
+            total_count += 1
+            total_quoted_amount += sub
+
+            c_name = str(r["customer_name"] or "未命名客戶").strip()
+            if c_name not in cust_stats:
+                cust_stats[c_name] = {
+                    "customer_name": c_name,
+                    "quote_count": 0,
+                    "won_count": 0,
+                    "total_quoted": 0.0,
+                    "won_amount": 0.0,
+                    "pending_amount": 0.0,
+                }
+            cs = cust_stats[c_name]
+            cs["quote_count"] += 1
+            cs["total_quoted"] += sub
+
+            p_type = str(r["project_type"] or "一次性專案").strip()
+            if p_type not in proj_stats:
+                proj_stats[p_type] = {
+                    "project_type": p_type,
+                    "quote_count": 0,
+                    "total_quoted": 0.0,
+                    "won_amount": 0.0,
+                }
+            ps = proj_stats[p_type]
+            ps["quote_count"] += 1
+            ps["total_quoted"] += sub
+
+            if is_w:
+                actual_won = w_amt if w_amt > 0 else sub
+                won_count += 1
+                won_amount_sum += actual_won
+                cs["won_count"] += 1
+                cs["won_amount"] += actual_won
+                ps["won_amount"] += actual_won
+            elif is_l:
+                lost_count += 1
+                lost_amount_sum += sub
+            else:
+                pending_count += 1
+                pending_amount_sum += sub
+                cs["pending_amount"] += sub
+
+        win_rate_count = round((won_count / total_count * 100.0), 1) if total_count > 0 else 0.0
+        win_rate_amount = round((won_amount_sum / total_quoted_amount * 100.0), 1) if total_quoted_amount > 0 else 0.0
+
+        top_customers = sorted(
+            cust_stats.values(),
+            key=lambda x: (x["won_amount"], x["total_quoted"]),
+            reverse=True
+        )[:15]
+        for tc in top_customers:
+            tc["win_rate_pct"] = round((tc["won_count"] / tc["quote_count"] * 100.0), 1) if tc["quote_count"] > 0 else 0.0
+
+        project_types = sorted(proj_stats.values(), key=lambda x: x["total_quoted"], reverse=True)
+
+        return {
+            "sales_name": sales_name or "全體",
+            "total_count": total_count,
+            "ignored_count": ignored_count,
+            "won_count": won_count,
+            "lost_count": lost_count,
+            "pending_count": pending_count,
+            "total_quoted_amount": round(total_quoted_amount, 0),
+            "won_amount": round(won_amount_sum, 0),
+            "lost_amount": round(lost_amount_sum, 0),
+            "pending_amount": round(pending_amount_sum, 0),
+            "win_rate_count_pct": win_rate_count,
+            "win_rate_amount_pct": win_rate_amount,
+            "top_customers": top_customers,
+            "project_types": project_types,
+        }
     finally:
         conn.close()
 

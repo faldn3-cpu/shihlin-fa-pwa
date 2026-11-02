@@ -201,6 +201,54 @@ class DriverUpdateSettingsRequest(BaseModel):
     period_type: str = "週"
 
 
+class QuotationCustomerSaveRequest(BaseModel):
+    name: str
+    owner_sales: str = "曾維崧"
+    tax_id: Optional[str] = ""
+    contact_name: Optional[str] = ""
+    contact_email: Optional[str] = ""
+    contact_mobile: Optional[str] = ""
+    phone: Optional[str] = ""
+    fax: Optional[str] = ""
+    address: Optional[str] = ""
+    payment_terms: Optional[str] = "月結 30 天電匯"
+    status: Optional[str] = "active"
+    is_favorite: Optional[bool] = False
+    copy_as_new_contact: Optional[bool] = False
+    replace_primary_contact: Optional[bool] = False
+
+
+class QuotationSupplierSaveRequest(BaseModel):
+    sales_name: str = "曾維崧"
+    company: Optional[str] = "士林電機廠股份有限公司"
+    tax: Optional[str] = "11039306"
+    sales: Optional[str] = ""
+    phone: Optional[str] = ""
+    fax: Optional[str] = ""
+    mobile: Optional[str] = ""
+    line: Optional[str] = ""
+    email: Optional[str] = ""
+    address: Optional[str] = ""
+    custom1: Optional[str] = ""
+    custom2: Optional[str] = ""
+
+
+class QuotationFinanceSettingsSaveRequest(BaseModel):
+    tax_rate: Optional[float] = None
+    round_digits: Optional[int] = None
+    round_mode: Optional[str] = None
+    customer_sort_mode: Optional[str] = None
+    quote_terms: Optional[str] = None
+
+
+class QuotationStatusUpdateRequest(BaseModel):
+    status: str = "追蹤中"
+    won_amount: Optional[float] = 0.0
+    won_date: Optional[str] = None
+    lost_reason: Optional[str] = None
+    lost_memo: Optional[str] = None
+
+
 # ==============================================================================
 # API 路由實作
 # ==============================================================================
@@ -218,6 +266,37 @@ def api_save_customer(cust: CustomerCreate):
     return {"status": "success", "id": cid, "message": "客戶資料已成功儲存"}
 
 
+@app.post("/api/quotation-customers")
+def api_save_quotation_customer(req: QuotationCustomerSaveRequest):
+    """報價管理系統：新增或更新客戶主檔與多筆聯絡人（支援複製為新聯絡人與常用星號）"""
+    ok, msg, cid = data_access.save_quotation_customer(req.model_dump())
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"status": "success", "id": cid, "message": msg}
+
+
+@app.delete("/api/quotation-customers/{customer_id}")
+def api_delete_quotation_customer(customer_id: int, sales_name: Optional[str] = None):
+    """報價管理系統：刪除指定客戶及其聯絡人清單"""
+    ok = data_access.delete_quotation_customer(customer_id, sales_name=sales_name)
+    if not ok:
+        raise HTTPException(status_code=404, detail="找不到指定的客戶或無權限刪除")
+    return {"status": "success", "message": "客戶資料已成功刪除"}
+
+
+@app.get("/api/quotation-supplier")
+def api_get_quotation_supplier(sales_name: str = "曾維崧"):
+    """報價管理系統：讀取業務員專屬之供應商/簽名檔資訊"""
+    return data_access.get_supplier_info(sales_name=sales_name)
+
+
+@app.post("/api/quotation-supplier")
+def api_save_quotation_supplier(req: QuotationSupplierSaveRequest):
+    """報價管理系統：儲存業務員專屬之供應商/簽名檔資訊"""
+    saved = data_access.save_supplier_info(req.sales_name, req.model_dump())
+    return {"status": "success", "supplier": saved, "message": "供應商與業務簽名檔資訊已儲存"}
+
+
 @app.get("/api/products")
 def api_search_products(q: str = "", limit: int = 80, sales_name: Optional[str] = None):
     """搜尋產品庫（合併業務個人未封存特殊品 ＋ 全公司共通標準品，自動執行方案 A 防呆）"""
@@ -228,6 +307,27 @@ def api_search_products(q: str = "", limit: int = 80, sales_name: Optional[str] 
 def api_get_quotation_settings():
     """取得報價單財務捨入設定、稅率與最新庫存更新時間"""
     return data_access.get_quotation_finance_settings()
+
+
+@app.post("/api/quotation-settings")
+def api_save_quotation_settings(req: QuotationFinanceSettingsSaveRequest):
+    """儲存報價單財務捨入設定、稅率、客戶排序與報價條款"""
+    updated = data_access.save_quotation_finance_settings(req.model_dump(exclude_none=True))
+    return {"status": "success", "settings": updated, "message": "報價系統設定已成功儲存"}
+
+
+@app.get("/api/quotation-terms")
+def api_get_quotation_terms():
+    """讀取報價單交貨驗收條款"""
+    s = data_access.get_quotation_finance_settings()
+    return {"status": "success", "quote_terms": s.get("quote_terms", "")}
+
+
+@app.post("/api/quotation-terms")
+def api_save_quotation_terms(req: QuotationFinanceSettingsSaveRequest):
+    """儲存報價單交貨驗收條款"""
+    updated = data_access.save_quotation_finance_settings({"quote_terms": req.quote_terms or ""})
+    return {"status": "success", "quote_terms": updated.get("quote_terms", ""), "message": "交貨與驗收條款已成功儲存"}
 
 
 @app.get("/api/special-products")
@@ -401,6 +501,21 @@ def api_restore_quotation(quote_no: str):
     if not ok:
         raise HTTPException(status_code=404, detail="找不到欲復原的報價單")
     return {"status": "success", "message": f"報價單【{quote_no}】已成功自垃圾桶復原"}
+
+
+@app.post("/api/quotations/{quote_no}/status")
+def api_update_quotation_status(quote_no: str, req: QuotationStatusUpdateRequest):
+    """報價單管理：更新追蹤狀態（追蹤中 / 已成交 / 已失注 / 不跟進）"""
+    ok, msg = data_access.update_quotation_status(quote_no, req.model_dump())
+    if not ok:
+        raise HTTPException(status_code=404, detail=msg)
+    return {"status": "success", "message": msg}
+
+
+@app.get("/api/quotation-dashboard")
+def api_get_quotation_dashboard(sales_name: Optional[str] = None, latest_only: bool = True):
+    """報價管理系統：大數據分析統計（報價總額、成交金額、成交率、客戶排行、專案分佈）"""
+    return data_access.get_quotation_dashboard_stats(sales_name=sales_name, latest_only=latest_only)
 
 
 @app.get("/api/price-analysis")

@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261102_v1_0_41" />
+  <link rel="stylesheet" href="css/style.css?v=20261104_v1_0_42" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -143,7 +143,7 @@
           <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
           <div class="drawer-divider"></div>
           <div class="drawer-version-tag">
-            <span class="version-text">士林電機 FA 業務系統 v1.0.41</span>
+            <span class="version-text">士林電機 FA 業務系統 v1.0.42</span>
             <button id="btnClearCacheDrawer" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
               <svg class="icon-svg-xs" viewBox="0 0 24 24">
                 <path
@@ -885,6 +885,19 @@
 
             <!-- 手機端專用：圖三卡片式報價擬稿介面 (螢幕寬度 < 768px 自動切換顯示) -->
             <div class="quote-mobile-only">
+              <!-- 網頁版報價單頂部列：視窗小於 1280px 時，左側選單與其他頁面全部隱藏，只留這顆離開按鈕 -->
+              <div class="web-quote-top-bar">
+                <div class="web-quote-top-title">
+                  <span class="web-quote-badge">網頁版</span>
+                  <span>報價單擬稿</span>
+                </div>
+                <button type="button" id="btnExitQuotationWebTop" class="btn-exit-quotation-web" title="返回 FA 業務戰情首頁">
+                  <svg class="icon-svg-xs" viewBox="0 0 24 24">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+                  </svg>
+                  <span>離開報價單功能</span>
+                </button>
+              </div>
               <!-- 客戶選擇與報價品項主卡片 -->
               <div class="mobile-customer-card">
                 <div class="mobile-customer-header-row">
@@ -969,6 +982,16 @@
                   <span>送出草稿</span>
                 </button>
               </div>
+            </div>
+
+            <!-- 網頁版報價單底部離開按鈕 (僅網頁版模式顯示) -->
+            <div class="quote-mobile-only web-quote-bottom-bar">
+              <button type="button" id="btnExitQuotationWebBottom" class="btn-exit-quotation-web-large" title="返回 FA 業務戰情首頁">
+                <svg class="icon-svg-xs" viewBox="0 0 24 24">
+                  <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+                </svg>
+                <span>離開報價單功能</span>
+              </button>
             </div>
 
             <!-- 電腦端 Excel 試算表格 (_QuotationApp 桌面版原生欄位排序) -->
@@ -2851,13 +2874,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261102_v1_0_41"></script>
+  <script src="js/app.js?v=20261104_v1_0_42"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261102_v1_0_41')
+        navigator.serviceWorker.register('./sw.js?v=20261104_v1_0_42')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

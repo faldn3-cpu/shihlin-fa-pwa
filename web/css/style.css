@@ -5178,3 +5178,199 @@ input[type="checkbox"] {
   border-color: #60a5fa;
   color: #60a5fa;
 }
+
+/* ==========================================================================
+   v1.0.42 報價單：電腦版固定寬度 + 1280px 自動切換網頁版報價單模式
+   【規則】所有規則都只在「進入報價單時」（body 帶有 quote-mode 類別）才生效，
+           首頁、案件、設定等其他頁面完全不受影響。
+   - 視窗 >= 1280px：左側只有「一個」報價單側欄（寬 200px，與電腦版相同），
+                     報價單內容固定 1050px 寬並置中，視窗再拉大也不變。
+   - 視窗 <  1280px：左側選單、其餘 8 個頁面全部隱藏，只剩網頁版報價擬稿與離開按鈕。
+   ========================================================================== */
+
+/* 網頁版頂部列與底部離開按鈕（預設樣式，沿用主題色票，淺色與深色模式都看得清楚） */
+.web-quote-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-card);
+  border-radius: 10px;
+}
+
+.web-quote-top-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.web-quote-badge {
+  background-color: var(--color-accent);
+  color: #FFFFFF;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.btn-exit-quotation-web {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-danger);
+  background-color: transparent;
+  border: 1px solid var(--color-danger);
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-exit-quotation-web:hover {
+  background-color: var(--color-danger);
+  color: #FFFFFF;
+}
+
+.btn-exit-quotation-web .icon-svg-xs {
+  fill: currentColor;
+}
+
+.web-quote-bottom-bar {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border-card);
+}
+
+.btn-exit-quotation-web-large {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-exit-quotation-web-large:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.btn-exit-quotation-web-large .icon-svg-xs {
+  fill: currentColor;
+}
+
+/* 視窗 >= 1280px：電腦版固定寬度 */
+@media (min-width: 1280px) {
+  /* 報價單側欄寬度與電腦版 _QuotationApp 相同 (200px) */
+  body.quote-mode .app-drawer {
+    width: 200px !important;
+    min-width: 200px !important;
+    max-width: 200px !important;
+  }
+
+  /* 取消主工作區左右留白，讓 1050px 內容剛好放得下，視窗拉大也不變 */
+  body.quote-mode .main-container {
+    width: calc(100% - 200px) !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    overflow-x: auto;
+  }
+
+  body.quote-mode #panelQuotes {
+    width: 1050px;
+    max-width: 1050px;
+    margin: 0 auto;
+  }
+
+  body.quote-mode #panelQuotes .quote-draft-container {
+    width: 1050px !important;
+    max-width: 1050px !important;
+    margin: 0 auto !important;
+  }
+}
+
+/* 視窗 < 1280px：切換成網頁版報價單模式 */
+@media (max-width: 1279px) {
+  /* 左側選單整個隱藏（不再有任何側欄），啟動選單按鈕也隱藏 */
+  body.quote-mode .drawer-overlay,
+  body.quote-mode .drawer-overlay.hidden {
+    display: none !important;
+  }
+
+  body.quote-mode #btnAppLauncher {
+    display: none !important;
+  }
+
+  body.quote-mode .app-body-wrapper {
+    display: block !important;
+  }
+
+  body.quote-mode .main-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 auto !important;
+    padding: 12px 12px 40px !important;
+  }
+
+  body.quote-mode #panelQuotes {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* 頂部舊子分頁列不顯示 */
+  body.quote-mode #panelQuotes .quote-sub-tabs {
+    display: none !important;
+  }
+
+  /* 電腦版表格版面不顯示，改顯示網頁版卡片版面 */
+  body.quote-mode #panelQuotes .quote-desktop-only {
+    display: none !important;
+  }
+
+  body.quote-mode #panelQuotes .quote-mobile-only {
+    display: block !important;
+  }
+
+  /* 報價單內其餘 8 個頁面直接不見 */
+  body.quote-mode #quoteHistorySection,
+  body.quote-mode #quoteDraftsInboxSection,
+  body.quote-mode #quoteAnalysisSection,
+  body.quote-mode #quoteSpecialProductsSection,
+  body.quote-mode #quoteDashboardSection,
+  body.quote-mode #quoteCustomersSection,
+  body.quote-mode #quoteSettingsSection,
+  body.quote-mode #quoteHelpSection {
+    display: none !important;
+  }
+
+  body.quote-mode #quoteDraftSection {
+    display: block !important;
+    width: 100% !important;
+    max-width: 600px !important;
+    margin: 0 auto !important;
+  }
+}
+
+/* 視窗 >= 1280px 時，網頁版專用的頂部列與底部離開按鈕不顯示 */
+@media (min-width: 1280px) {
+  body.quote-mode #panelQuotes .web-quote-top-bar,
+  body.quote-mode #panelQuotes .web-quote-bottom-bar {
+    display: none !important;
+  }
+}

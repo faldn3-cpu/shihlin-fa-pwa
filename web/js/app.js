@@ -203,11 +203,15 @@ document.addEventListener("DOMContentLoaded", () => {
       if (mainList) mainList.classList.add("hidden");
       if (quoteList) quoteList.classList.remove("hidden");
       if (drawerTitle) drawerTitle.textContent = "報價管理系統";
+      // 標記目前處於報價單模式，讓報價單專用的版面規則只在報價單內生效
+      document.body.classList.add("quote-mode");
       if (appDrawer) appDrawer.classList.remove("collapsed");
     } else {
       if (mainList) mainList.classList.remove("hidden");
       if (quoteList) quoteList.classList.add("hidden");
       if (drawerTitle) drawerTitle.textContent = "功能選單";
+      // 離開報價單模式，移除報價單專用版面標記，其他頁面恢復原樣
+      document.body.classList.remove("quote-mode");
     }
   }
 
@@ -229,6 +233,8 @@ document.addEventListener("DOMContentLoaded", () => {
         renderDriverManagementPage(currentViewingDriverSales);
       } else if (activePanel === panelQuotes) {
         setSidebarMode(true);
+        // 進入報價單時若視窗小於 1280px，直接進入網頁版報價單模式 (只顯示報價擬稿)
+        forceQuoteWebModeIfNarrow();
         initQuotationModule();
         if (typeof updateQuoteDraftsBadge === "function") {
           updateQuoteDraftsBadge();
@@ -4811,6 +4817,15 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
+    const btnExitQuoteWebTop = document.getElementById("btnExitQuotationWebTop");
+    if (btnExitQuoteWebTop) {
+      btnExitQuoteWebTop.addEventListener("click", () => switchPage(navItemHome, panelHome));
+    }
+    const btnExitQuoteWebBottom = document.getElementById("btnExitQuotationWebBottom");
+    if (btnExitQuoteWebBottom) {
+      btnExitQuoteWebBottom.addEventListener("click", () => switchPage(navItemHome, panelHome));
+    }
+
     const btnExitQuote = document.getElementById("btnExitQuotationSystem");
     if (btnExitQuote) {
       btnExitQuote.addEventListener("click", () => {
@@ -7762,6 +7777,27 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   setupAuthAndImpersonationEvents();
+
+  // ============================================================================
+  // 報價單自適應模式 (1280px 分界線)
+  // 視窗 >= 1280px：電腦版 9 大功能頁 + 左側報價單側欄 (版面由 CSS 控制)
+  // 視窗 <  1280px：網頁版報價單，只保留報價擬稿與離開按鈕，其餘頁面全部隱藏
+  // ============================================================================
+  // 目前是否正在報價單頁面內
+  function isQuotationPanelActive() {
+    return typeof panelQuotes !== "undefined" && panelQuotes && !panelQuotes.classList.contains("hidden");
+  }
+
+  // 若在報價單內且視窗偏窄，強制回到「新建報價單」頁，避免停留在已被隱藏的頁面造成空白畫面
+  function forceQuoteWebModeIfNarrow() {
+    if (!isQuotationPanelActive()) return;
+    if (window.matchMedia("(max-width: 1279px)").matches && currentActiveQuoteTab !== "create") {
+      switchQuoteSubTab("create");
+    }
+  }
+
+  // 使用者拉動視窗大小時，即時判斷是否需要切換
+  window.addEventListener("resize", forceQuoteWebModeIfNarrow);
 
 });
 

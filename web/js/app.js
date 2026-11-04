@@ -5058,9 +5058,6 @@ document.addEventListener("DOMContentLoaded", () => {
           <td style="text-align:center; font-weight:700; color:var(--text-muted);" id="d-${itemId}-index">
             ${currentCount}
           </td>
-          <td class="cell-stock-gray" id="d-${itemId}-stock">
-            ${escapeHtml(desktopStockDisplay)}
-          </td>
           <td>
             <button type="button" class="cell-model-combobox ${hasModel ? 'selected' : ''}" id="d-${itemId}-model">
               <span id="d-${itemId}-model-text">${escapeHtml(modelText)}</span>
@@ -5069,17 +5066,23 @@ document.addEventListener("DOMContentLoaded", () => {
             <input type="hidden" id="d-${itemId}-code" value="${escapeHtml(initialData?.model_no || '')}">
           </td>
           <td>
-            <input type="number" id="d-${itemId}-qty" class="table-cell-input number" min="1" value="${qtyVal}" style="width:100%;">
-          </td>
-          <td>
             <span id="d-${itemId}-spec" style="font-size:0.82rem; color:var(--text-secondary);">${escapeHtml(specVal || '-')}</span>
           </td>
           <td style="text-align:right;">
             <span id="d-${itemId}-dealer-price" class="table-cell-readonly money">${escapeHtml(dealerPriceVal > 0 ? '$ ' + dealerPriceVal.toLocaleString() : '-')}</span>
+          </td>
+          <td>
+            <input type="number" id="d-${itemId}-discount" class="table-cell-input number" step="any" value="${discountVal !== '' ? discountVal : 100}" style="width:100%; text-align:right;">
+          </td>
+          <td>
+            <input type="number" id="d-${itemId}-target-price" class="table-cell-input number" step="any" placeholder="-" value="${sugPriceVal}" style="width:100%; text-align:right;" title="預計報價金額 (反推折數)">
+          </td>
+          <td style="text-align:right;">
+            <span id="d-${itemId}-final-price" class="table-cell-readonly money" style="font-weight:600; color:var(--text-primary);">${finalUnitPriceVal > 0 ? '$ ' + finalUnitPriceVal.toLocaleString() : '-'}</span>
             <input type="hidden" id="d-${itemId}-price" value="${finalUnitPriceVal}">
           </td>
           <td>
-            <input type="number" id="d-${itemId}-discount" class="table-cell-input number" step="any" value="${discountVal !== '' ? discountVal : 100}" style="width:100%;">
+            <input type="number" id="d-${itemId}-qty" class="table-cell-input number" min="1" value="${qtyVal}" style="width:100%; text-align:right;">
           </td>
           <td style="text-align:right;">
             <span id="d-${itemId}-subtotal" class="table-cell-readonly money" style="font-weight:700; color:#1e293b;">
@@ -5088,6 +5091,9 @@ document.addEventListener("DOMContentLoaded", () => {
           </td>
           <td>
             <input type="text" id="d-${itemId}-delivery" class="table-cell-input" placeholder="點擊選取交期..." readonly style="cursor:pointer;" value="${escapeHtml(leadTimeVal)}">
+          </td>
+          <td class="cell-stock-gray" id="d-${itemId}-stock" style="text-align:center;">
+            ${escapeHtml(desktopStockDisplay)}
           </td>
           <td style="text-align:center;">
             <button type="button" class="table-btn-remove" id="d-${itemId}-remove" title="刪除品項">&times;</button>
@@ -5132,11 +5138,15 @@ document.addEventListener("DOMContentLoaded", () => {
           <input type="text" class="subtotal-title-input" value="${escapeHtml(title)}" placeholder="輸入方案名稱 (如：方案 A：主驅動系統小計)">
         </td>
         <td style="text-align:right;">
+          <span style="font-size:0.75rem; color:#9a3412;">[數量合計]</span>
+        </td>
+        <td style="text-align:right;">
           <span class="segment-subtotal-val" style="font-family:Consolas, monospace; font-size:1rem; font-weight:700; color:#c2410c;">$ 0</span>
         </td>
         <td>
           <span style="font-size:0.75rem; color:#9a3412;">[區段未稅金額]</span>
         </td>
+        <td style="text-align:center;">-</td>
         <td style="text-align:center;">
           <button type="button" class="table-btn-remove btn-remove-subtotal" title="刪除此小計列">&times;</button>
         </td>
@@ -5247,12 +5257,20 @@ document.addEventListener("DOMContentLoaded", () => {
       return parseFloat(dpStr) || 0;
     }
 
-    function syncUnitAndRowSubtotal(finalUnitPrice) {
+    function syncUnitAndRowSubtotal(finalUnitPrice, targetPrice) {
       const unitP = Math.max(0, Math.round(finalUnitPrice || 0));
       if (mUnitPriceNum) mUnitPriceNum.value = unitP;
       if (dPriceInput) dPriceInput.value = unitP;
       if (mFinalPriceInput) {
         mFinalPriceInput.value = unitP > 0 ? `$${unitP.toLocaleString()}` : "-";
+      }
+      const dFinalSpan = document.getElementById(`d-${itemId}-final-price`);
+      if (dFinalSpan) {
+        dFinalSpan.textContent = unitP > 0 ? `$ ${unitP.toLocaleString()}` : "-";
+      }
+      const dTargetInput = document.getElementById(`d-${itemId}-target-price`);
+      if (dTargetInput && targetPrice !== undefined) {
+        dTargetInput.value = targetPrice > 0 ? Math.round(targetPrice) : "";
       }
       const q = parseInt(dQtyInput?.value || mQtyInput?.value || "1", 10) || 1;
       const sub = Math.round(unitP * q);
@@ -5274,16 +5292,22 @@ document.addEventListener("DOMContentLoaded", () => {
         const rawPrice = dp * (disc / 100);
         const roundedPrice = applyQuoteRounding(rawPrice);
         if (mSugPriceInput) mSugPriceInput.value = Math.round(rawPrice);
-        syncUnitAndRowSubtotal(roundedPrice);
+        const dTargetInput = document.getElementById(`d-${itemId}-target-price`);
+        if (dTargetInput) dTargetInput.value = Math.round(rawPrice);
+        syncUnitAndRowSubtotal(roundedPrice, rawPrice);
       } else {
-        syncUnitAndRowSubtotal(0);
+        syncUnitAndRowSubtotal(0, 0);
       }
     }
 
     // 建議報價變更 -> 反推折數並計算捨入後最終售價
-    function onSugPriceChanged(val) {
+    function onSugPriceChanged(val, fromSource) {
       const rawInput = parseFloat(val);
       const dp = getDealerPrice();
+      if (fromSource === 'desktop' && mSugPriceInput) mSugPriceInput.value = val;
+      const dTargetInput = document.getElementById(`d-${itemId}-target-price`);
+      if (fromSource === 'mobile' && dTargetInput) dTargetInput.value = val;
+
       if (!isNaN(rawInput) && rawInput > 0) {
         const roundedPrice = dp > 0 ? applyQuoteRounding(rawInput) : Math.round(rawInput);
         if (dp > 0) {
@@ -5291,9 +5315,9 @@ document.addEventListener("DOMContentLoaded", () => {
           if (mSugDiscountInput) mSugDiscountInput.value = discStr;
           if (dDiscountInput) dDiscountInput.value = discStr;
         }
-        syncUnitAndRowSubtotal(roundedPrice);
+        syncUnitAndRowSubtotal(roundedPrice, rawInput);
       } else {
-        syncUnitAndRowSubtotal(0);
+        syncUnitAndRowSubtotal(0, 0);
       }
     }
 
@@ -5306,7 +5330,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (mSugDiscountInput) mSugDiscountInput.addEventListener("input", (e) => onDiscountChanged(e.target.value, 'mobile'));
     if (dDiscountInput) dDiscountInput.addEventListener("input", (e) => onDiscountChanged(e.target.value, 'desktop'));
-    if (mSugPriceInput) mSugPriceInput.addEventListener("input", (e) => onSugPriceChanged(e.target.value));
+    if (mSugPriceInput) mSugPriceInput.addEventListener("input", (e) => onSugPriceChanged(e.target.value, 'mobile'));
+    const dTargetPriceInput = document.getElementById(`d-${itemId}-target-price`);
+    if (dTargetPriceInput) dTargetPriceInput.addEventListener("input", (e) => onSugPriceChanged(e.target.value, 'desktop'));
     if (mQtyInput) mQtyInput.addEventListener("input", (e) => onQtyChanged(e.target.value, 'mobile'));
     if (dQtyInput) dQtyInput.addEventListener("input", (e) => onQtyChanged(e.target.value, 'desktop'));
   }

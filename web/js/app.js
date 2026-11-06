@@ -4335,6 +4335,7 @@ document.addEventListener("DOMContentLoaded", () => {
       initQuoteColumnOrderSwapper();
       initQuoteRowOrderSwapper();
       initQuoteTableHeightDragHandle();
+      initQuoteWorkspaceBoundaryResizers();
       isQuotationModuleInitialized = true;
     }
     const qDate = document.getElementById("quoteDate");
@@ -4840,6 +4841,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
       syncExcelTableTotalWidth(tbl);
+
+      // 同時還原該表格容器的預設高度
+      const wrap = tbl.closest(".pyside-table-container, .pyside-full-table-wrap");
+      if (wrap) {
+        const hKey = `shihlin_quote_wrap_height_${tid}`;
+        localStorage.removeItem(hKey);
+        if (tid === "quoteDesktopTable") {
+          localStorage.removeItem("shihlin_quote_table_height_v1");
+          wrap.style.height = "250px";
+        } else {
+          const defH = parseInt(wrap.getAttribute("data-default-height") || "360", 10);
+          wrap.style.height = `${defH}px`;
+        }
+      }
     });
   }
 
@@ -4879,6 +4894,184 @@ document.addEventListener("DOMContentLoaded", () => {
       document.addEventListener("mousemove", onMouseMove);
       document.addEventListener("mouseup", onMouseUp);
     });
+
+    handle.addEventListener("dblclick", () => {
+      const rect = container.getBoundingClientRect();
+      const fitH = Math.max(200, Math.min(680, window.innerHeight - rect.top - 160));
+      container.style.height = `${Math.round(fitH)}px`;
+      localStorage.setItem("shihlin_quote_table_height_v1", String(Math.round(fitH)));
+    });
+  }
+
+  // 全系統共用「右側垂直邊界拖曳拉桿」與第 2~7 頁「底部水平高度拖曳拉桿」（一頁調寬全頁同步，且鎖定表頭不因拉底端橫 bar 而消失）
+  const QUOTE_WORKSPACE_WIDTH_KEY = "shihlin_quote_workspace_width_v1";
+
+  function updateRightBoundaryLinePosition() {
+    const resizer = document.getElementById("quoteRightBoundaryResizer");
+    if (!resizer) return;
+    const drawer = document.getElementById("appDrawer");
+    const sidebarW = (drawer && !drawer.classList.contains("collapsed") && drawer.offsetWidth > 0) ? drawer.offsetWidth : 0;
+    const curW = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--quote-workspace-width"), 10) || 1050;
+    const targetLeft = sidebarW + 15 + curW;
+    resizer.style.left = `${Math.min(window.innerWidth - 10, Math.max(sidebarW + 900, targetLeft))}px`;
+  }
+
+  function applyGlobalQuoteWorkspaceWidth(widthPx, save = true) {
+    const drawer = document.getElementById("appDrawer");
+    const sidebarW = (drawer && !drawer.classList.contains("collapsed") && drawer.offsetWidth > 0) ? drawer.offsetWidth : 200;
+    const maxAllowed = Math.max(960, window.innerWidth - sidebarW - 32);
+    const clampedW = Math.round(Math.max(920, Math.min(maxAllowed, widthPx)));
+    document.documentElement.style.setProperty("--quote-workspace-width", `${clampedW}px`);
+    if (save) {
+      localStorage.setItem(QUOTE_WORKSPACE_WIDTH_KEY, String(clampedW));
+    }
+    updateRightBoundaryLinePosition();
+  }
+
+  function initQuoteWorkspaceBoundaryResizers() {
+    const panelQuotes = document.getElementById("panelQuotes");
+    if (!panelQuotes) return;
+
+    // 1. 建立或取得全系統共用右側垂直邊界拉桿
+    let rightResizer = document.getElementById("quoteRightBoundaryResizer");
+    if (!rightResizer) {
+      rightResizer = document.createElement("div");
+      rightResizer.id = "quoteRightBoundaryResizer";
+      rightResizer.className = "quote-right-boundary-resizer";
+      rightResizer.title = "左右拖曳可調整全系統各頁面的右側可視邊界（雙擊自動撐滿視窗寬度）";
+      rightResizer.innerHTML = `<div class="boundary-grip-pill">||</div>`;
+      panelQuotes.appendChild(rightResizer);
+    }
+
+    // 載入已儲存的工作區寬度（若無儲存且螢幕夠寬，預設給更充裕的可視範圍或維持儲存值）
+    const savedW = parseInt(localStorage.getItem(QUOTE_WORKSPACE_WIDTH_KEY) || "0", 10);
+    if (savedW >= 920) {
+      applyGlobalQuoteWorkspaceWidth(savedW, false);
+    } else {
+      const drawer = document.getElementById("appDrawer");
+      const sidebarW = (drawer && !drawer.classList.contains("collapsed") && drawer.offsetWidth > 0) ? drawer.offsetWidth : 200;
+      const defaultFitW = Math.max(1050, window.innerWidth - sidebarW - 40);
+      applyGlobalQuoteWorkspaceWidth(defaultFitW, false);
+    }
+
+    if (rightResizer.getAttribute("data-bound") !== "true") {
+      rightResizer.setAttribute("data-bound", "true");
+
+      let startX = 0;
+      let startW = 1050;
+
+      const onMouseMove = (e) => {
+        const dx = e.clientX - startX;
+        applyGlobalQuoteWorkspaceWidth(startW + dx, false);
+      };
+
+      const onMouseUp = () => {
+        rightResizer.classList.remove("resizing");
+        document.body.style.cursor = "";
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+        const curW = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--quote-workspace-width"), 10) || 1050;
+        localStorage.setItem(QUOTE_WORKSPACE_WIDTH_KEY, String(curW));
+      };
+
+      rightResizer.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        startX = e.clientX;
+        startW = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--quote-workspace-width"), 10) || 1050;
+        rightResizer.classList.add("resizing");
+        document.body.style.cursor = "ew-resize";
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
+      });
+
+      rightResizer.addEventListener("dblclick", () => {
+        const drawer = document.getElementById("appDrawer");
+        const sidebarW = (drawer && !drawer.classList.contains("collapsed") && drawer.offsetWidth > 0) ? drawer.offsetWidth : 200;
+        const fullW = Math.max(1050, window.innerWidth - sidebarW - 36);
+        applyGlobalQuoteWorkspaceWidth(fullW, true);
+      });
+
+      window.addEventListener("resize", () => {
+        updateRightBoundaryLinePosition();
+      });
+    }
+
+    // 2. 為第 2~7 頁所有 .pyside-full-table-wrap 自動掛載「底部橫向高度調整拉桿」並將高度控制在螢幕可視範圍內（防止拉底部橫 bar 時上方表頭消失）
+    const tableWraps = panelQuotes.querySelectorAll(".pyside-full-table-wrap");
+    tableWraps.forEach((wrap, idx) => {
+      if (wrap.id === "dashFollowupTableWrap") return; // 第 4 頁待跟進區已有專屬拉桿
+      const innerTable = wrap.querySelector("table");
+      const tableId = innerTable?.id || `quote_wrap_${idx}`;
+      const hStorageKey = `shihlin_quote_wrap_height_${tableId}`;
+
+      // 去除會撐破整個視窗的 flex:1 與過大 min-height，改為固定內部捲動高度，讓表頭 sticky 永遠固定在上方
+      wrap.style.flex = "none";
+      wrap.style.minHeight = "160px";
+
+      if (!wrap.hasAttribute("data-default-height")) {
+        let defH = 380;
+        if (tableId === "quoteHistoryTable") defH = Math.max(280, Math.min(520, window.innerHeight - 230));
+        else if (tableId === "quoteDraftsTable") defH = Math.max(300, Math.min(540, window.innerHeight - 210));
+        else if (tableId === "quoteAnalysisTable") defH = 240;
+        else if (tableId === "quoteCustMgmtTable" || tableId === "quoteProdMgmtTable") defH = Math.max(280, Math.min(480, window.innerHeight - 250));
+        else defH = parseInt(wrap.style.height, 10) || 220;
+        wrap.setAttribute("data-default-height", String(Math.round(defH)));
+      }
+
+      const savedH = parseInt(localStorage.getItem(hStorageKey) || "0", 10);
+      if (savedH >= 150) {
+        wrap.style.height = `${savedH}px`;
+      } else {
+        const defH = parseInt(wrap.getAttribute("data-default-height") || "360", 10);
+        wrap.style.height = `${defH}px`;
+      }
+
+      if (wrap.getAttribute("data-height-handle-bound") === "true") return;
+      wrap.setAttribute("data-height-handle-bound", "true");
+
+      const hHandle = document.createElement("div");
+      hHandle.className = "pyside-universal-height-handle";
+      hHandle.title = "上下拖曳可調整表格高度（雙擊自動貼合螢幕高度，讓頂部表頭與底部橫向捲軸同時可見）";
+      hHandle.innerHTML = `<div class="drag-handle-grip"></div>`;
+      wrap.insertAdjacentElement("afterend", hHandle);
+
+      let startY = 0;
+      let startH = 360;
+
+      const onMoveH = (e) => {
+        const dy = e.clientY - startY;
+        const newH = Math.max(150, startH + dy);
+        wrap.style.height = `${newH}px`;
+      };
+
+      const onUpH = () => {
+        document.body.style.cursor = "";
+        document.removeEventListener("mousemove", onMoveH);
+        document.removeEventListener("mouseup", onUpH);
+        const finalH = wrap.offsetHeight;
+        if (finalH >= 150) {
+          localStorage.setItem(hStorageKey, String(finalH));
+        }
+      };
+
+      hHandle.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        startY = e.clientY;
+        startH = wrap.offsetHeight || parseInt(wrap.style.height, 10) || 360;
+        document.body.style.cursor = "ns-resize";
+        document.addEventListener("mousemove", onMoveH);
+        document.addEventListener("mouseup", onUpH);
+      });
+
+      hHandle.addEventListener("dblclick", () => {
+        const rect = wrap.getBoundingClientRect();
+        const bestH = Math.max(180, Math.min(650, window.innerHeight - rect.top - 95));
+        wrap.style.height = `${Math.round(bestH)}px`;
+        localStorage.setItem(hStorageKey, String(Math.round(bestH)));
+      });
+    });
+
+    setTimeout(updateRightBoundaryLinePosition, 60);
   }
 
   // 初始化並填充業務專屬客戶下拉清單
@@ -5073,6 +5266,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     initQuoteColumnResizer();
     initQuoteColumnOrderSwapper();
+    initQuoteWorkspaceBoundaryResizers();
+    setTimeout(updateRightBoundaryLinePosition, 50);
     closeDrawer();
   }
 
@@ -5122,13 +5317,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const drawer = document.getElementById("appDrawer");
       if (drawer) {
         drawer.classList.toggle("collapsed");
-        const isCol = drawer.classList.contains("collapsed");
+        const isCol = drawer.getAttribute("class")?.includes("collapsed");
         const labelHtml = `<span>${isCol ? "展開選單" : "收合選單"}</span>`;
         const b1 = document.getElementById("btnToggleSidebar");
         if (b1) b1.innerHTML = labelHtml;
         document.querySelectorAll(".btn-toggle-sidebar-any").forEach(b => {
           b.innerHTML = labelHtml;
         });
+        setTimeout(updateRightBoundaryLinePosition, 60);
       }
     };
     const btnToggleSidebar = document.getElementById("btnToggleSidebar");
@@ -5146,10 +5342,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const headerToggleLabel = document.getElementById("headerToggleLabel");
     if (btnToggleHeaderCompact && quoteHeaderContainer) {
       btnToggleHeaderCompact.addEventListener("click", () => {
-        quoteHeaderContainer.classList.toggle("collapsed");
-        const isCollapsed = quoteHeaderContainer.classList.contains("collapsed");
+        const isCollapsed = quoteHeaderContainer.classList.toggle("collapsed");
+        quoteHeaderContainer.classList.toggle("hidden", isCollapsed);
         if (headerToggleIcon) headerToggleIcon.textContent = "";
         if (headerToggleLabel) headerToggleLabel.textContent = isCollapsed ? "展開抬頭" : "收合抬頭";
+        setTimeout(updateRightBoundaryLinePosition, 50);
       });
     }
 

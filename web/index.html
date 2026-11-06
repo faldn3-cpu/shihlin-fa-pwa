@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261106_v1_0_46" />
+  <link rel="stylesheet" href="css/style.css?v=20261106_v1_0_47" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -2170,10 +2170,10 @@
               <fieldset class="pyside-groupbox pyside-full-groupbox">
                 <legend class="pyside-groupbox-legend">當前版本資訊</legend>
                 <div style="line-height:1.9; font-size:14px;">
-                  <div style="color:var(--color-accent); font-weight:700; font-size:15px;">目前版本 : v1.0.46 (對齊桌面版
+                  <div style="color:var(--color-accent); font-weight:700; font-size:15px;">目前版本 : v1.0.47 (對齊桌面版
                     v5.5.1.6)</div>
-                  <div>更新內容 : 統一外部業務系統高對比配色、支援全表格欄位與明細列順序拖曳互換</div>
-                  <div>發布時間 : 2026-11-06 15:45:00</div>
+                  <div>更新內容 : 新增全系統共用的右側邊界調整桿、全表格底部橫向高度調整桿與表頭固定顯示，並修復收合抬頭按鈕</div>
+                  <div>發布時間 : 2026-11-06 16:50:00</div>
                 </div>
               </fieldset>
 
@@ -3514,13 +3514,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261106_v1_0_46"></script>
+  <script src="js/app.js?v=20261106_v1_0_47"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261106_v1_0_46')
+        navigator.serviceWorker.register('./sw.js?v=20261106_v1_0_47')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

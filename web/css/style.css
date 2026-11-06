@@ -5607,9 +5607,21 @@ html[data-theme="dark"] .btn-exit-quotation-system {
 /* ==============================================================================
    寬螢幕 (>= 1280px) vs 窄螢幕 (< 1280px) 響應式智慧切換規則
    ============================================================================== */
+:root {
+  --quote-workspace-width: 1050px;
+}
+
 @media (min-width: 1280px) {
   #quoteDraftSection .quote-desktop-only {
     display: block !important;
+  }
+
+  /* 修正「收合抬頭」被 .quote-desktop-only display:block !important 覆蓋的問題 */
+  #quoteDraftSection .quote-desktop-only.collapsed,
+  #quoteDraftSection .quote-desktop-only.hidden,
+  #quoteDraftSection #quoteHeaderContainer.collapsed,
+  #quoteDraftSection #quoteHeaderContainer.hidden {
+    display: none !important;
   }
 
   #quoteDraftSection .pyside-top-toggle-bar.quote-desktop-only,
@@ -5648,8 +5660,71 @@ html[data-theme="dark"] .btn-exit-quotation-system {
 }
 
 /* ==============================================================================
-   電腦版 _QuotationApp gui_page1.py 1050px 固定畫布與元件精準對標樣式
+   電腦版 _QuotationApp 可調式共用右邊界畫布 (--quote-workspace-width) 與元件樣式
    ============================================================================== */
+#panelQuotes {
+  position: relative;
+}
+
+/* 全系統共用「右側垂直邊界拖曳拉桿」（對應使用者紅線位置，一頁調整、全頁同步） */
+.quote-right-boundary-resizer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize;
+  z-index: 95;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  touch-action: none;
+  background: transparent;
+  transition: background-color 0.15s ease;
+}
+
+@media (min-width: 1280px) {
+  body.quotation-system-active .quote-right-boundary-resizer {
+    display: flex;
+  }
+}
+
+.quote-right-boundary-resizer::before {
+  content: "";
+  width: 2px;
+  height: 100%;
+  background-color: var(--border-card);
+  transition: background-color 0.15s ease, width 0.15s ease;
+}
+
+.quote-right-boundary-resizer .boundary-grip-pill {
+  position: absolute;
+  width: 8px;
+  height: 56px;
+  border-radius: 4px;
+  background-color: var(--bg-surface-secondary);
+  border: 1px solid var(--border-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: var(--text-secondary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.quote-right-boundary-resizer:hover::before,
+.quote-right-boundary-resizer.resizing::before {
+  width: 4px;
+  background-color: var(--color-accent);
+}
+
+.quote-right-boundary-resizer:hover .boundary-grip-pill,
+.quote-right-boundary-resizer.resizing .boundary-grip-pill {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #ffffff;
+}
+
 .pyside-top-toggle-bar {
   height: 45px;
   padding: 5px 15px 0 15px;
@@ -5659,8 +5734,8 @@ html[data-theme="dark"] .btn-exit-quotation-system {
 }
 
 .pyside-top-toggle-inner {
-  width: 1050px;
-  max-width: 1050px;
+  width: var(--quote-workspace-width, 1050px);
+  max-width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -5706,11 +5781,11 @@ html[data-theme="dark"] .btn-pyside-subtle:hover {
   }
 }
 
-/* QGroupBox 標準框線容器 (1050px 固定寬度，綁定外部業務系統卡片配色) */
+/* QGroupBox 標準框線容器 (綁定全系統共用工作區寬度 --quote-workspace-width) */
 .pyside-groupbox {
-  width: 1050px;
-  min-width: 1050px;
-  max-width: 1050px;
+  width: var(--quote-workspace-width, 1050px);
+  min-width: 900px;
+  max-width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--border-card);
   border-radius: 8px;
@@ -5739,7 +5814,7 @@ html[data-theme="dark"] .pyside-groupbox-legend {
   color: var(--color-accent);
 }
 
-/* 報價單基本資料 6 列 Grid */
+/* 報價單基本資料 6 列 Grid (隨右邊界拉寬自動等比例延展) */
 .pyside-header-grid {
   display: flex;
   flex-direction: column;
@@ -5748,7 +5823,7 @@ html[data-theme="dark"] .pyside-groupbox-legend {
 
 .pyside-header-grid .grid-row {
   display: grid;
-  grid-template-columns: 75px 460px 75px 1fr;
+  grid-template-columns: 75px minmax(420px, 1.15fr) 75px 1fr;
   align-items: center;
   column-gap: 10px;
   font-size: 14px;
@@ -5834,11 +5909,11 @@ html[data-theme="dark"] .pyside-readonly {
   border-color: var(--border-light) !important;
 }
 
-/* 表格上方雙排工具列容器 (1050px) */
+/* 表格上方雙排工具列容器 (綁定全系統共用工作區寬度 --quote-workspace-width) */
 .pyside-top-bar-container {
-  width: 1050px;
-  min-width: 1050px;
-  max-width: 1050px;
+  width: var(--quote-workspace-width, 1050px);
+  min-width: 900px;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -6152,11 +6227,11 @@ html[data-theme="dark"] .banner-icon-action-btn {
   background-color: #2c3e50;
 }
 
-/* 3. QuoteTableWidget 10 欄試算表格容器 (1050px 寬，支援垂直高度拖曳與水平欄寬拖曳、欄位順序互換，100% 沿用外部業務系統配色) */
+/* 3. QuoteTableWidget 10 欄試算表格容器 (綁定共用工作區寬度，支援垂直高度拖曳與水平欄寬拖曳、欄位順序互換，100% 沿用外部業務系統配色) */
 .pyside-table-container {
-  width: 1050px;
-  min-width: 1050px;
-  max-width: 1050px;
+  width: var(--quote-workspace-width, 1050px);
+  min-width: 900px;
+  max-width: 100%;
   height: 250px;
   min-height: 150px;
   overflow-x: auto;
@@ -6436,11 +6511,11 @@ html[data-theme="dark"] .pyside-excel-table tbody tr.subtotal-divider-row td:not
   color: var(--grid-num-red) !important;
 }
 
-/* 4. TableHeightDragHandle 表格高度拖曳條 (1050px x 12px) */
+/* 4. TableHeightDragHandle 表格高度拖曳條与全系統通用底部橫向高度調整拉桿 */
 .pyside-table-drag-handle {
-  width: 1050px;
-  min-width: 1050px;
-  max-width: 1050px;
+  width: var(--quote-workspace-width, 1050px);
+  min-width: 900px;
+  max-width: 100%;
   height: 12px;
   background-color: var(--bg-surface-secondary);
   border: 1px solid var(--border-card);
@@ -6455,31 +6530,60 @@ html[data-theme="dark"] .pyside-excel-table tbody tr.subtotal-divider-row td:not
   user-select: none;
 }
 
-.pyside-table-drag-handle:hover {
-  background-color: var(--bg-hover);
+.pyside-universal-height-handle {
+  width: 100%;
+  height: 12px;
+  background-color: var(--bg-surface-secondary);
+  border: 1px solid var(--border-card);
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+  box-sizing: border-box;
+  user-select: none;
+  flex-shrink: 0;
 }
 
-.pyside-table-drag-handle .drag-handle-grip {
-  width: 30px;
-  height: 2px;
+.pyside-table-drag-handle:hover,
+.pyside-universal-height-handle:hover,
+.pyside-dash-drag-handle:hover {
+  background-color: var(--color-accent-light);
+  border-color: var(--color-accent);
+}
+
+.pyside-table-drag-handle .drag-handle-grip,
+.pyside-universal-height-handle .drag-handle-grip {
+  width: 36px;
+  height: 3px;
   background-color: var(--text-tertiary);
-  border-radius: 1px;
+  border-radius: 2px;
 }
 
-html[data-theme="dark"] .pyside-table-drag-handle {
+.pyside-table-drag-handle:hover .drag-handle-grip,
+.pyside-universal-height-handle:hover .drag-handle-grip,
+.pyside-dash-drag-handle:hover .drag-handle-grip {
+  background-color: var(--color-accent);
+}
+
+html[data-theme="dark"] .pyside-table-drag-handle,
+html[data-theme="dark"] .pyside-universal-height-handle {
   background-color: var(--bg-surface-secondary);
   border-color: var(--border-card);
 }
 
-html[data-theme="dark"] .pyside-table-drag-handle .drag-handle-grip {
+html[data-theme="dark"] .pyside-table-drag-handle .drag-handle-grip,
+html[data-theme="dark"] .pyside-universal-height-handle .drag-handle-grip {
   background-color: var(--text-tertiary);
 }
 
-/* 5. 表格下方工具列 (1050px) */
+/* 5. 表格下方工具列 (綁定全系統共用工作區寬度 --quote-workspace-width) */
 .pyside-toolbar-bottom {
-  width: 1050px;
-  min-width: 1050px;
-  max-width: 1050px;
+  width: var(--quote-workspace-width, 1050px);
+  min-width: 900px;
+  max-width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -6494,11 +6598,11 @@ html[data-theme="dark"] .pyside-table-drag-handle .drag-handle-grip {
   align-items: center;
 }
 
-/* 6. 左下角會計結算總額 (300px 寬度對齊 gui_page1.py footer_container) */
+/* 6. 左下角會計結算總額 (綁定全系統共用工作區寬度) */
 .pyside-summary-container {
-  width: 1050px;
-  min-width: 1050px;
-  max-width: 1050px;
+  width: var(--quote-workspace-width, 1050px);
+  min-width: 900px;
+  max-width: 100%;
   margin-bottom: 12px;
 }
 
@@ -6770,14 +6874,16 @@ html[data-theme="dark"] .pyside-model-combo-arrow {
   color: var(--text-secondary);
 }
 
-/* 第 2~9 頁共通外框與自適應容器 (綁定外部業務系統配色) */
+/* 第 2~9 頁共通外框與自適應容器 (綁定全系統共用工作區寬度 --quote-workspace-width 與外部業務系統配色) */
 .pyside-page-wrapper {
+  width: var(--quote-workspace-width, 1050px);
+  min-width: 900px;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 6px 10px 36px 10px;
+  padding: 6px 15px 36px 15px;
   color: var(--text-primary);
-  min-height: calc(100vh - 110px);
   box-sizing: border-box;
 }
 
@@ -6797,7 +6903,7 @@ html[data-theme="dark"] .pyside-page-wrapper {
   overflow-x: auto;
   overflow-y: auto;
   border: 1px solid var(--border-card);
-  border-radius: 6px;
+  border-radius: 6px 6px 0 0;
   background-color: var(--bg-card);
   box-sizing: border-box;
 }

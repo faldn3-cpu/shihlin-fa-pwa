@@ -5764,7 +5764,8 @@ html[data-theme="dark"] .pyside-table-container {
 }
 
 .pyside-excel-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
   font-size: 14px;
@@ -5786,6 +5787,7 @@ html[data-theme="dark"] .pyside-table-container {
   overflow: hidden;
   text-overflow: ellipsis;
   user-select: none;
+  box-sizing: border-box;
 }
 
 html[data-theme="dark"] .pyside-excel-table th {
@@ -5827,10 +5829,12 @@ html[data-theme="dark"] .pyside-excel-table td.cell-vertical-index {
   position: absolute;
   top: 0;
   right: 0;
-  width: 6px;
+  width: 8px;
   height: 100%;
   cursor: col-resize;
-  z-index: 6;
+  z-index: 10;
+  user-select: none;
+  touch-action: none;
 }
 
 .col-resizer:hover,
@@ -5848,6 +5852,7 @@ html[data-theme="dark"] .pyside-excel-table td.cell-vertical-index {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .pyside-excel-table tbody tr:nth-child(even) td:not(.cell-vertical-index) {

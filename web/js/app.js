@@ -4377,55 +4377,142 @@ document.addEventListener("DOMContentLoaded", () => {
     quoteSidebarClockTimer = setInterval(updateClock, 1000);
   }
 
-  // 100% 還原 _QuotationApp ColumnWidthManager 表頭欄位拖曳調整寬度與記憶機制
-  function initQuoteColumnResizer() {
-    const table = document.getElementById("quoteDesktopTable");
+  // 100% 還原 _QuotationApp ColumnWidthManager 表頭欄位拖曳調整寬度與記憶機制 (支援全系統第 1~7 頁所有表格)
+  const QUOTE_TABLE_STORAGE_PREFIX = "shihlin_quote_col_widths_v2_";
+
+  function syncExcelTableTotalWidth(table) {
     if (!table) return;
-    const savedWidthsRaw = localStorage.getItem("shihlin_quote_table_col_widths_v1");
-    let savedWidths = {};
-    try {
-      if (savedWidthsRaw) savedWidths = JSON.parse(savedWidthsRaw) || {};
-    } catch (e) {}
+    const allTh = Array.from(table.querySelectorAll("thead th"));
+    if (allTh.length === 0) return;
+    let sumW = 0;
+    allTh.forEach(th => {
+      const explicitW = parseInt(th.style.width, 10);
+      sumW += (!isNaN(explicitW) && explicitW > 0) ? explicitW : (th.offsetWidth || 80);
+    });
+    if (sumW > 0) {
+      table.style.width = `${sumW}px`;
+      table.style.minWidth = `${sumW}px`;
+    }
+  }
 
-    const thList = table.querySelectorAll("th.resizable-th");
-    thList.forEach(th => {
-      const colKey = th.getAttribute("data-col");
-      if (colKey && savedWidths[colKey]) {
-        th.style.width = `${savedWidths[colKey]}px`;
-      }
-      const resizer = th.querySelector(".col-resizer");
-      if (!resizer) return;
+  function applySingleColumnWidth(th, widthPx) {
+    if (!th || !(widthPx > 0)) return;
+    const wStr = `${Math.round(widthPx)}px`;
+    th.style.width = wStr;
+    th.style.minWidth = wStr;
+    th.style.maxWidth = wStr;
+  }
 
-      let startX = 0;
-      let startWidth = 0;
+  function initQuoteColumnResizer() {
+    const tables = document.querySelectorAll("#panelQuotation .pyside-excel-table");
+    tables.forEach((table, tIdx) => {
+      const tableKey = table.id || `quote_table_${tIdx}`;
+      const storageKey = `${QUOTE_TABLE_STORAGE_PREFIX}${tableKey}`;
 
-      const onMouseMove = (e) => {
-        const dx = e.clientX - startX;
-        const newWidth = Math.max(45, startWidth + dx);
-        th.style.width = `${newWidth}px`;
-      };
+      let savedWidths = {};
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (raw) savedWidths = JSON.parse(raw) || {};
+      } catch (e) {}
 
-      const onMouseUp = () => {
-        resizer.classList.remove("resizing");
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
-        const currentWidths = {};
-        table.querySelectorAll("th.resizable-th").forEach(header => {
-          const k = header.getAttribute("data-col");
-          if (k) currentWidths[k] = parseInt(header.style.width, 10) || header.offsetWidth;
+      const thList = Array.from(table.querySelectorAll("thead th"));
+      thList.forEach((th, colIdx) => {
+        if (th.classList.contains("col-corner-header")) return;
+
+        // 紀錄原始推薦寬度，供第 8 頁「還原預設欄寬」按鈕使用
+        if (!th.hasAttribute("data-default-width")) {
+          const initW = parseInt(th.style.width, 10) || th.offsetWidth || 100;
+          th.setAttribute("data-default-width", String(initW));
+        }
+
+        if (!th.classList.contains("resizable-th")) {
+          th.classList.add("resizable-th");
+        }
+        const colKey = th.getAttribute("data-col") || `col_${colIdx}`;
+        th.setAttribute("data-col", colKey);
+
+        if (savedWidths[colKey] && Number(savedWidths[colKey]) >= 36) {
+          applySingleColumnWidth(th, Number(savedWidths[colKey]));
+        } else {
+          const defW = parseInt(th.getAttribute("data-default-width"), 10);
+          if (defW > 0) applySingleColumnWidth(th, defW);
+        }
+
+        let resizer = th.querySelector(".col-resizer");
+        if (!resizer) {
+          resizer = document.createElement("span");
+          resizer.className = "col-resizer";
+          th.appendChild(resizer);
+        }
+
+        if (resizer.getAttribute("data-bound") === "true") return;
+        resizer.setAttribute("data-bound", "true");
+
+        let startX = 0;
+        let startWidth = 0;
+
+        const onMouseMove = (e) => {
+          const dx = e.clientX - startX;
+          const newWidth = Math.max(40, startWidth + dx);
+          applySingleColumnWidth(th, newWidth);
+          syncExcelTableTotalWidth(table);
+        };
+
+        const onMouseUp = () => {
+          resizer.classList.remove("resizing");
+          document.body.style.cursor = "";
+          document.removeEventListener("mousemove", onMouseMove);
+          document.removeEventListener("mouseup", onMouseUp);
+
+          const currentWidths = {};
+          table.querySelectorAll("thead th.resizable-th").forEach(header => {
+            const k = header.getAttribute("data-col");
+            const w = parseInt(header.style.width, 10) || header.offsetWidth;
+            if (k && w > 0) currentWidths[k] = w;
+          });
+          localStorage.setItem(storageKey, JSON.stringify(currentWidths));
+        };
+
+        resizer.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          startX = e.clientX;
+          startWidth = parseInt(th.style.width, 10) || th.offsetWidth || 100;
+          resizer.classList.add("resizing");
+          document.body.style.cursor = "col-resize";
+          document.addEventListener("mousemove", onMouseMove);
+          document.addEventListener("mouseup", onMouseUp);
         });
-        localStorage.setItem("shihlin_quote_table_col_widths_v1", JSON.stringify(currentWidths));
-      };
-
-      resizer.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        startX = e.clientX;
-        startWidth = th.offsetWidth;
-        resizer.classList.add("resizing");
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp);
       });
+
+      syncExcelTableTotalWidth(table);
+    });
+  }
+
+  function resetQuoteTableColumnWidthsByTarget(targetPage) {
+    const pageTableMap = {
+      page1: ["quoteDesktopTable"],
+      page2: ["quoteDraftsTable"],
+      page3: ["quoteHistoryTable"],
+      page5: ["quoteAnalysisTable"],
+      page6: ["quoteCustMgmtTable"],
+      page7: ["quoteProdMgmtTable"]
+    };
+    const ids = pageTableMap[targetPage] || ["quoteDesktopTable"];
+    ids.forEach(tid => {
+      localStorage.removeItem(`${QUOTE_TABLE_STORAGE_PREFIX}${tid}`);
+      if (tid === "quoteDesktopTable") {
+        localStorage.removeItem("shihlin_quote_table_col_widths_v1");
+      }
+      const tbl = document.getElementById(tid);
+      if (!tbl) return;
+      tbl.querySelectorAll("thead th.resizable-th").forEach(th => {
+        const defW = parseInt(th.getAttribute("data-default-width") || "100", 10);
+        if (defW > 0) {
+          applySingleColumnWidth(th, defW);
+        }
+      });
+      syncExcelTableTotalWidth(tbl);
     });
   }
 
@@ -4657,6 +4744,7 @@ document.addEventListener("DOMContentLoaded", () => {
       loadQuotationHelpPage();
     }
 
+    initQuoteColumnResizer();
     closeDrawer();
   }
 
@@ -8829,10 +8917,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".btn-reset-col-width").forEach(btn => {
       btn.addEventListener("click", () => {
         const name = btn.textContent.trim();
-        localStorage.removeItem("shihlin_quote_table_col_widths_v1");
-        document.querySelectorAll("#quoteDesktopTable th.resizable-th").forEach(th => {
-          th.style.width = "";
-        });
+        const targetPage = btn.getAttribute("data-reset-target") || "page1";
+        resetQuoteTableColumnWidthsByTarget(targetPage);
         alert(`[已還原預設欄寬] 「${name}」表格欄寬已重設為系統推薦寬度！`);
       });
     });

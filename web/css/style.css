@@ -6210,3 +6210,1070 @@ html[data-theme="dark"] .btn-mobile-exit-bottom {
   border-color: #60a5fa;
   color: #60a5fa;
 }
+
+/* ==========================================================================
+   v1.0.43：報價管理系統 9 大分頁 100% 還原 _QuotationApp v5.5.1.6 專屬樣式
+   ========================================================================== */
+
+/* 側邊欄 SVG 線條圖示與手機報價紅點 */
+.quote-nav-btn {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  position: relative;
+}
+
+.quote-nav-svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  stroke: currentColor;
+}
+
+.quote-nav-red-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #e74c3c;
+  border-radius: 50%;
+  margin-left: auto;
+  display: inline-block;
+  box-shadow: 0 0 4px rgba(231, 76, 60, 0.7);
+}
+
+/* 新建報價單表格內「型號」下拉選單圓角白底方框（100% 對標附圖 1） */
+.pyside-model-combo-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 30px;
+  background-color: #ffffff;
+  border: 1.5px solid #555555;
+  border-radius: 5px;
+  box-sizing: border-box;
+  padding: 0 22px 0 6px;
+}
+
+html[data-theme="dark"] .pyside-model-combo-wrap {
+  background-color: #262932;
+  border-color: #8E918F;
+}
+
+.pyside-model-combo-wrap input.cell-model-input {
+  border: none !important;
+  background: transparent !important;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  font-size: 14px;
+  color: inherit;
+  outline: none;
+}
+
+.pyside-model-combo-arrow {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: #333333;
+  pointer-events: none;
+}
+
+html[data-theme="dark"] .pyside-model-combo-arrow {
+  color: #C4C7C5;
+}
+
+/* 第 2~9 頁共通外框與自適應容器 */
+.pyside-page-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 10px 36px 10px;
+  color: #1F1F1F;
+  min-height: calc(100vh - 110px);
+  box-sizing: border-box;
+}
+
+html[data-theme="dark"] .pyside-page-wrapper {
+  color: #F8F9FA;
+}
+
+.pyside-full-groupbox {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  margin-bottom: 8px;
+}
+
+.pyside-full-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  border: 1px solid #E1E5EA;
+  border-radius: 6px;
+  background-color: #FFFFFF;
+  box-sizing: border-box;
+}
+
+html[data-theme="dark"] .pyside-full-table-wrap {
+  background-color: #2F333E;
+  border-color: #4A5060;
+}
+
+/* 通用按鈕色系擴充 */
+.btn-pyside-outline {
+  background-color: #FFFFFF;
+  color: #1F1F1F;
+  border: 1px solid #C4C7C5;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.btn-pyside-outline:hover {
+  background-color: #E8F0FE;
+  border-color: #0B57D0;
+  color: #0B57D0;
+}
+
+html[data-theme="dark"] .btn-pyside-outline {
+  background-color: #2F333E;
+  color: #F8F9FA;
+  border-color: #4A5060;
+}
+
+.btn-pyside-darkred {
+  background-color: #c0392b;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-pyside-darkred:hover {
+  background-color: #962d22;
+}
+
+.btn-pyside-lightblue {
+  background-color: #3498db;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-pyside-lightblue:hover {
+  background-color: #2980b9;
+}
+
+/* 分頁器按鈕與文字 */
+.pyside-pagination-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-pyside-page {
+  background-color: #FFFFFF;
+  color: #1F1F1F;
+  border: 1px solid #C4C7C5;
+  border-radius: 6px;
+  height: 32px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-pyside-page:disabled {
+  color: #999999;
+  background-color: #F5F5F5;
+  cursor: not-allowed;
+}
+
+html[data-theme="dark"] .btn-pyside-page {
+  background-color: #2F333E;
+  color: #F8F9FA;
+  border-color: #4A5060;
+}
+
+.pyside-page-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1F1F1F;
+}
+
+html[data-theme="dark"] .pyside-page-label {
+  color: #F8F9FA;
+}
+
+/* 第 2 頁：手機草稿覆核區 (附圖 2) */
+.pyside-p2-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0 6px 0;
+}
+
+.pyside-p2-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #2c3e50;
+}
+
+html[data-theme="dark"] .pyside-p2-title {
+  color: #F8F9FA;
+}
+
+.pyside-p2-sync-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pyside-sync-time {
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
+.pyside-p2-splitter {
+  display: grid;
+  grid-template-columns: 600px 1fr;
+  gap: 14px;
+  flex: 1;
+  min-height: 480px;
+}
+
+@media (max-width: 1100px) {
+  .pyside-p2-splitter {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pyside-p2-right-pane {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 8px;
+}
+
+.pyside-p2-preview-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #2c3e50;
+  margin-bottom: 8px;
+}
+
+html[data-theme="dark"] .pyside-p2-preview-title {
+  color: #F8F9FA;
+}
+
+.pyside-p2-preview-content {
+  flex: 1;
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #1F1F1F;
+  padding: 4px 0;
+  overflow-y: auto;
+}
+
+html[data-theme="dark"] .pyside-p2-preview-content {
+  color: #E2E8F0;
+}
+
+.pyside-p2-divider {
+  height: 1px;
+  background-color: #BDC3C7;
+  margin: 10px 0 14px 0;
+}
+
+.pyside-p2-convert-wrap {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 8px;
+}
+
+.btn-pyside-convert-pill {
+  width: 250px;
+  height: 45px;
+  border-radius: 22px;
+  background-color: #27ae60;
+  color: #ffffff;
+  border: none;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(39, 174, 96, 0.3);
+}
+
+.btn-pyside-convert-pill:hover:not(:disabled) {
+  background-color: #2ecc71;
+}
+
+.btn-pyside-convert-pill:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-p2-del-square {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid #dcdde1;
+  background-color: #ffffff;
+  color: #e74c3c;
+  font-weight: 900;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.btn-p2-del-square:hover {
+  background-color: #fdecea;
+  border-color: #e74c3c;
+}
+
+/* 第 3 頁：報價單管理 (附圖 3) */
+.pyside-p3-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pyside-p3-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1F1F1F;
+  white-space: nowrap;
+}
+
+html[data-theme="dark"] .pyside-p3-label {
+  color: #F8F9FA;
+}
+
+.pyside-date-range-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #FFFFFF;
+  border: 1px solid #C4C7C5;
+  border-radius: 6px;
+  padding: 2px 8px;
+  height: 36px;
+  box-sizing: border-box;
+}
+
+html[data-theme="dark"] .pyside-date-range-box {
+  background-color: #262932;
+  border-color: #4A5060;
+}
+
+.pyside-date-inline {
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: inherit;
+  outline: none;
+}
+
+.pyside-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pyside-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #0B57D0;
+}
+
+.pyside-p3-banner-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pyside-p3-selected-zone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pyside-p3-right-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pyside-p3-bottom-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 4px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pyside-p3-bottom-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 第 4 頁：大數據分析 (附圖 4) */
+.pyside-dash-banner {
+  background: linear-gradient(90deg, #0077b6, #0096c7, #00b4d8);
+  border-radius: 8px;
+  padding: 12px 18px;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 119, 182, 0.25);
+}
+
+.dash-banner-title {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.pyside-dash-ctrl-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background-color: #FFFFFF;
+  border: 1px solid #E1E5EA;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+html[data-theme="dark"] .pyside-dash-ctrl-bar {
+  background-color: #2F333E;
+  border-color: #4A5060;
+}
+
+.pyside-dash-drag-handle {
+  width: 100%;
+  height: 12px;
+  background-color: #e0e0e0;
+  border: 1px solid #c0c0c0;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.pyside-dash-drag-handle .drag-handle-grip {
+  width: 36px;
+  height: 2px;
+  background-color: #888888;
+}
+
+.pyside-dash-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 1100px) {
+  .pyside-dash-kpi-row {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  }
+}
+
+.pyside-dash-kpi-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E1E5EA;
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+html[data-theme="dark"] .pyside-dash-kpi-card {
+  background-color: #2F333E;
+  border-color: #4A5060;
+}
+
+.kpi-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #555555;
+  margin-bottom: 4px;
+}
+
+html[data-theme="dark"] .kpi-card-title {
+  color: #C4C7C5;
+}
+
+.kpi-card-main {
+  font-size: 20px;
+  font-weight: 900;
+  margin-bottom: 2px;
+}
+
+.kpi-card-sub {
+  font-size: 12px;
+  color: #7f8c8d;
+  font-weight: 600;
+}
+
+.pyside-dash-2x2-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 1050px) {
+  .pyside-dash-2x2-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pyside-dash-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 1050px) {
+  .pyside-dash-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pyside-dash-chart-box {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+/* 第 5 頁：歷史單價分析 (附圖 5) */
+.pyside-p5-search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.pyside-p5-focus-badge {
+  width: 420px;
+  max-width: 45%;
+  height: 36px;
+  background-color: #F0F4F9;
+  border: 1px solid #D3E3FD;
+  border-radius: 6px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #555555;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-theme="dark"] .pyside-p5-focus-badge {
+  background-color: #262932;
+  border-color: #4A5060;
+  color: #C4C7C5;
+}
+
+.pyside-p5-stat-cards-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 960px) {
+  .pyside-p5-stat-cards-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.pyside-p5-stat-card {
+  background-color: #FFFFFF;
+  border: 1px solid #dcdde1;
+  border-radius: 6px;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+html[data-theme="dark"] .pyside-p5-stat-card {
+  background-color: #262932;
+  border-color: #4A5060;
+}
+
+.stat-card-title {
+  font-size: 12px;
+  color: #7f8c8d;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.stat-card-val {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.pyside-p5-chart-box {
+  flex: 1;
+  min-height: 220px;
+  background-color: #FFFFFF;
+  border: 1px solid #E1E5EA;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  overflow: hidden;
+}
+
+html[data-theme="dark"] .pyside-p5-chart-box {
+  background-color: #262932;
+  border-color: #4A5060;
+}
+
+/* 第 6 頁 & 第 7 頁：客戶管理 / 產品管理 左右雙欄與小算盤 (附圖 6, 11) */
+.pyside-p6-splitter {
+  display: grid;
+  grid-template-columns: 1.75fr 1fr;
+  gap: 14px;
+  flex: 1;
+}
+
+.pyside-p7-splitter {
+  display: grid;
+  grid-template-columns: 1.85fr 1fr;
+  gap: 14px;
+  flex: 1;
+}
+
+@media (max-width: 1080px) {
+  .pyside-p6-splitter,
+  .pyside-p7-splitter {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pyside-p6-left-pane,
+.pyside-p7-left-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pyside-pane-section-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #1F1F1F;
+}
+
+html[data-theme="dark"] .pyside-pane-section-title {
+  color: #F8F9FA;
+}
+
+.pyside-p7-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pyside-p6-bottom-btns,
+.pyside-p7-bottom-btns {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pyside-form-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pyside-form-row {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.pyside-form-row label {
+  color: #333333;
+  font-weight: 600;
+}
+
+html[data-theme="dark"] .pyside-form-row label {
+  color: #C4C7C5;
+}
+
+.pyside-form-btn-pair {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pyside-mto-check-box,
+.pyside-fav-check-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.pyside-fav-check-box span {
+  color: #d35400;
+}
+
+/* 產品管理小算盤 (CalculatorWidget) */
+.pyside-calc-display {
+  width: 100%;
+  height: 46px;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  background-color: #ecf0f1;
+  color: #2c3e50;
+  font-size: 20px;
+  font-weight: 800;
+  text-align: right;
+  padding: 0 10px;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+
+.pyside-calc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 38px;
+  gap: 6px;
+}
+
+.calc-btn {
+  border: 1px solid #dcdde1;
+  border-radius: 5px;
+  background-color: #ffffff;
+  color: #2c3e50;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.calc-btn:hover {
+  background-color: #f1f2f6;
+}
+
+.calc-btn.calc-red {
+  background-color: #e74c3c;
+  color: #ffffff;
+  border: none;
+}
+
+.calc-btn.calc-blue {
+  background-color: #2980b9;
+  color: #ffffff;
+  border: none;
+}
+
+.calc-btn.calc-equal {
+  grid-row: span 2;
+}
+
+.calc-btn.calc-zero {
+  grid-column: span 2;
+}
+
+/* 第 8 頁 & 第 9 頁：QTabWidget 分頁標籤與內容區 (附圖 7, 8, 9, 10, 12, 13, 14) */
+.pyside-tab-widget {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.pyside-tab-bar {
+  display: flex;
+  gap: 4px;
+  padding-left: 6px;
+  border-bottom: 1px solid #E1E5EA;
+}
+
+.pyside-tab-btn {
+  background-color: #F0F4F9;
+  color: #444746;
+  border: 1px solid #E1E5EA;
+  border-bottom: none;
+  padding: 9px 20px;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pyside-tab-btn.active {
+  background-color: #FFFFFF;
+  color: #0B57D0;
+  font-weight: 800;
+  border-bottom: 2px solid #FFFFFF;
+  margin-bottom: -1px;
+}
+
+html[data-theme="dark"] .pyside-tab-btn {
+  background-color: #262932;
+  color: #C4C7C5;
+  border-color: #4A5060;
+}
+
+html[data-theme="dark"] .pyside-tab-btn.active {
+  background-color: #2F333E;
+  color: #A8C7FA;
+}
+
+.pyside-tab-pane {
+  background-color: #FFFFFF;
+  border: 1px solid #E1E5EA;
+  border-top: none;
+  border-radius: 0 6px 6px 6px;
+  padding: 14px;
+}
+
+html[data-theme="dark"] .pyside-tab-pane {
+  background-color: #2F333E;
+  border-color: #4A5060;
+}
+
+.pyside-settings-form-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pyside-settings-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.pyside-col-reset-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 980px) {
+  .pyside-col-reset-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.btn-pyside-green-pill {
+  width: 100%;
+  height: 44px;
+  border-radius: 22px;
+  background-color: #27ae60;
+  color: #ffffff;
+  border: none;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+.btn-pyside-green-pill:hover {
+  background-color: #2ecc71;
+}
+
+.btn-pyside-purple-pill {
+  width: 100%;
+  height: 44px;
+  border-radius: 22px;
+  background-color: #8e44ad;
+  color: #ffffff;
+  border: none;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-pyside-blue-pill {
+  width: 100%;
+  height: 44px;
+  border-radius: 22px;
+  background-color: #2980b9;
+  color: #ffffff;
+  border: none;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pyside-batch-btn-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.btn-pyside-outline-blue {
+  height: 38px;
+  background-color: #FFFFFF;
+  color: #0B57D0;
+  border: 1px solid #C4C7C5;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-pyside-outline-blue:hover {
+  background-color: #E8F0FE;
+  border-color: #0B57D0;
+}
+
+.pyside-terms-textarea {
+  width: 100%;
+  min-height: 320px;
+  padding: 12px;
+  font-size: 14px;
+  line-height: 1.65;
+  border: 1px solid #C4C7C5;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+/* 第 9 頁：使用說明左側 300px 主題選單與右側內容框 (附圖 13, 14) */
+.pyside-help-topic-list {
+  width: 300px;
+  flex-shrink: 0;
+  border: 1px solid #E1E5EA;
+  border-radius: 6px;
+  background-color: #FFFFFF;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+html[data-theme="dark"] .pyside-help-topic-list {
+  background-color: #262932;
+  border-color: #4A5060;
+}
+
+.pyside-help-topic-item {
+  text-align: left;
+  padding: 14px 14px;
+  border: none;
+  border-bottom: 1px solid #f0f0f0;
+  background: transparent;
+  cursor: pointer;
+  color: #2c3e50;
+}
+
+html[data-theme="dark"] .pyside-help-topic-item {
+  color: #F8F9FA;
+  border-bottom-color: #3B404D;
+}
+
+.pyside-help-topic-item:hover {
+  background-color: #f8f9fa;
+}
+
+.pyside-help-topic-item.active {
+  background-color: #d6eaf8;
+  color: #2980b9;
+  font-weight: 800;
+}
+
+.pyside-help-topic-item .topic-main {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.pyside-help-topic-item .topic-sub {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.pyside-help-content-box {
+  flex: 1;
+  border: 1px solid #dcdde1;
+  border-radius: 6px;
+  background-color: #FFFFFF;
+  padding: 18px 22px;
+  overflow-y: auto;
+  line-height: 1.7;
+  font-size: 14px;
+  color: #2c3e50;
+}
+
+html[data-theme="dark"] .pyside-help-content-box {
+  background-color: #262932;
+  border-color: #4A5060;
+  color: #E2E8F0;
+}
+
+/* 報價系統底部常駐系統提示列 (Status Bar) */
+.pyside-system-statusbar {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 26px;
+  background-color: #F0F4F9;
+  border-top: 1px solid #D3E3FD;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 12px;
+  color: #333333;
+  z-index: 15;
+}
+
+html[data-theme="dark"] .pyside-system-statusbar {
+  background-color: #1E2028;
+  border-top-color: #3B404D;
+  color: #C4C7C5;
+}
+

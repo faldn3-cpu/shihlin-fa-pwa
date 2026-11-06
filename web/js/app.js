@@ -4332,6 +4332,8 @@ document.addEventListener("DOMContentLoaded", () => {
       setupQuotationModals();
       initQuoteSidebarClock();
       initQuoteColumnResizer();
+      initQuoteColumnOrderSwapper();
+      initQuoteRowOrderSwapper();
       initQuoteTableHeightDragHandle();
       isQuotationModuleInitialized = true;
     }
@@ -4377,8 +4379,9 @@ document.addEventListener("DOMContentLoaded", () => {
     quoteSidebarClockTimer = setInterval(updateClock, 1000);
   }
 
-  // 100% 還原 _QuotationApp ColumnWidthManager 表頭欄位拖曳調整寬度與記憶機制 (支援全系統第 1~7 頁所有表格)
+  // 100% 還原 _QuotationApp ColumnWidthManager 表頭欄位拖曳調整寬度與欄位順序互換記憶機制 (支援全系統第 1~7 頁所有表格)
   const QUOTE_TABLE_STORAGE_PREFIX = "shihlin_quote_col_widths_v2_";
+  const QUOTE_COL_ORDER_STORAGE_PREFIX = "shihlin_quote_col_order_v1_";
 
   function syncExcelTableTotalWidth(table) {
     if (!table) return;
@@ -4403,10 +4406,315 @@ document.addEventListener("DOMContentLoaded", () => {
     th.style.maxWidth = wStr;
   }
 
+  // 標記並對齊單一資料列的儲存格順序，使其與目前 thead th 的欄位順序 100% 一致
+  function alignRowCellsToCurrentHeaderOrder(table, tr) {
+    if (!table || !tr) return;
+    const cells = Array.from(tr.children);
+    if (cells.length <= 1) return;
+
+    const headRow = table.querySelector("thead tr");
+    if (!headRow) return;
+    const thList = Array.from(headRow.children);
+    if (cells.length !== thList.length) return;
+
+    // 首次標記該列各儲存格的原始邏輯欄位編號 (0..N)
+    if (!tr.hasAttribute("data-orig-stamped")) {
+      cells.forEach((td, i) => {
+        if (!td.hasAttribute("data-orig-idx")) {
+          td.setAttribute("data-orig-idx", String(i));
+        }
+      });
+      tr.setAttribute("data-orig-stamped", "true");
+    }
+
+    const desiredOrigIndices = thList.map(th => th.getAttribute("data-orig-idx"));
+    const currentOrigIndices = cells.map(td => td.getAttribute("data-orig-idx"));
+    const isSameOrder = desiredOrigIndices.every((val, idx) => val === currentOrigIndices[idx]);
+    if (isSameOrder) return;
+
+    const cellMap = {};
+    cells.forEach(td => {
+      cellMap[td.getAttribute("data-orig-idx")] = td;
+    });
+    desiredOrigIndices.forEach(origIdx => {
+      const targetTd = cellMap[origIdx];
+      if (targetTd) tr.appendChild(targetTd);
+    });
+  }
+
+  // 將表格依據已儲存的欄位順序重新排列 thead 與 tbody 所有列
+  function applySavedColumnOrderToTable(table, customOrder = null) {
+    if (!table) return;
+    const headRow = table.querySelector("thead tr");
+    if (!headRow) return;
+
+    const thList = Array.from(headRow.children);
+    thList.forEach((th, idx) => {
+      if (!th.hasAttribute("data-orig-idx")) {
+        th.setAttribute("data-orig-idx", String(idx));
+      }
+    });
+
+    const tableKey = table.id || "quote_table_default";
+    let targetOrder = customOrder;
+    if (!targetOrder) {
+      try {
+        const raw = localStorage.getItem(`${QUOTE_COL_ORDER_STORAGE_PREFIX}${tableKey}`);
+        if (raw) targetOrder = JSON.parse(raw);
+      } catch (e) {}
+    }
+
+    if (Array.isArray(targetOrder) && targetOrder.length === thList.length) {
+      const thMap = {};
+      thList.forEach(th => {
+        thMap[th.getAttribute("data-orig-idx")] = th;
+      });
+      targetOrder.forEach(origIdx => {
+        const th = thMap[String(origIdx)];
+        if (th) headRow.appendChild(th);
+      });
+    }
+
+    const tbody = table.querySelector("tbody");
+    if (tbody) {
+      Array.from(tbody.querySelectorAll("tr")).forEach(tr => {
+        alignRowCellsToCurrentHeaderOrder(table, tr);
+      });
+    }
+  }
+
+  // 初始化所有報價系統表格的「表頭左右拖曳互換順序」與動態列自動對齊守護
+  function initQuoteColumnOrderSwapper() {
+    const tables = document.querySelectorAll("#panelQuotes .pyside-excel-table");
+    tables.forEach((table, tIdx) => {
+      if (!table.id) table.id = `quote_auto_table_${tIdx}`;
+      const tableKey = table.id;
+      const orderStorageKey = `${QUOTE_COL_ORDER_STORAGE_PREFIX}${tableKey}`;
+
+      const headRow = table.querySelector("thead tr");
+      if (!headRow) return;
+      const thList = Array.from(headRow.children);
+      thList.forEach((th, idx) => {
+        if (!th.hasAttribute("data-orig-idx")) {
+          th.setAttribute("data-orig-idx", String(idx));
+        }
+      });
+
+      // 先套用先前儲存的欄位順序
+      applySavedColumnOrderToTable(table);
+
+      // 綁定 MutationObserver：當 tbody 動態新增或重繪任何資料列時，自動同步欄位順序
+      const tbody = table.querySelector("tbody");
+      if (tbody && !tbody.hasAttribute("data-col-order-observed")) {
+        tbody.setAttribute("data-col-order-observed", "true");
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach(m => {
+            m.addedNodes.forEach(node => {
+              if (node && node.nodeType === 1 && node.tagName === "TR") {
+                alignRowCellsToCurrentHeaderOrder(table, node);
+              }
+            });
+          });
+        });
+        observer.observe(tbody, { childList: true });
+      }
+
+      // 為每個非項次角的表頭綁定拖曳互換事件
+      thList.forEach(th => {
+        if (th.classList.contains("col-corner-header")) return;
+        if (th.getAttribute("data-order-drag-bound") === "true") return;
+        th.setAttribute("data-order-drag-bound", "true");
+        th.setAttribute("draggable", "true");
+        if (!th.getAttribute("title")) {
+          th.setAttribute("title", "按住表頭左右拖曳可互換欄位順序；拖曳右緣可調整欄寬");
+        }
+
+        th.addEventListener("dragstart", (e) => {
+          if (th.querySelector(".col-resizer.resizing")) {
+            e.preventDefault();
+            return;
+          }
+          th.classList.add("th-dragging");
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", th.getAttribute("data-orig-idx") || "");
+        });
+
+        th.addEventListener("dragend", () => {
+          th.classList.remove("th-dragging");
+          headRow.querySelectorAll("th").forEach(h => {
+            h.classList.remove("th-drag-over-left", "th-drag-over-right");
+          });
+        });
+
+        th.addEventListener("dragover", (e) => {
+          const draggingTh = headRow.querySelector("th.th-dragging");
+          if (!draggingTh || draggingTh === th || th.classList.contains("col-corner-header")) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+
+          const rect = th.getBoundingClientRect();
+          const isLeftHalf = (e.clientX - rect.left) < rect.width / 2;
+          th.classList.toggle("th-drag-over-left", isLeftHalf);
+          th.classList.toggle("th-drag-over-right", !isLeftHalf);
+        });
+
+        th.addEventListener("dragleave", () => {
+          th.classList.remove("th-drag-over-left", "th-drag-over-right");
+        });
+
+        th.addEventListener("drop", (e) => {
+          e.preventDefault();
+          th.classList.remove("th-drag-over-left", "th-drag-over-right");
+          const draggingTh = headRow.querySelector("th.th-dragging");
+          if (!draggingTh || draggingTh === th || th.classList.contains("col-corner-header")) return;
+
+          const rect = th.getBoundingClientRect();
+          const insertBefore = (e.clientX - rect.left) < rect.width / 2;
+          if (insertBefore) {
+            headRow.insertBefore(draggingTh, th);
+          } else {
+            headRow.insertBefore(draggingTh, th.nextSibling);
+          }
+
+          // 儲存最新表頭順序並立即同步重排所有 tbody 資料列
+          const newOrder = Array.from(headRow.children).map(h => h.getAttribute("data-orig-idx"));
+          localStorage.setItem(orderStorageKey, JSON.stringify(newOrder));
+          applySavedColumnOrderToTable(table, newOrder);
+        });
+      });
+    });
+  }
+
+  // 新建報價單明細列上下順序互換 (支援按住左側項次上下拖曳互換 + 工具列上移/下移按鈕)
+  function moveDesktopItemRow(rowEl, direction) {
+    const tbody = document.getElementById("quoteDesktopTableBody");
+    if (!tbody || !rowEl) return;
+
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    const idx = rows.indexOf(rowEl);
+    if (idx < 0) return;
+
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= rows.length) return;
+
+    const targetRow = rows[targetIdx];
+    if (direction < 0) {
+      tbody.insertBefore(rowEl, targetRow);
+    } else {
+      tbody.insertBefore(rowEl, targetRow.nextSibling);
+    }
+
+    syncMobileItemsOrderWithDesktop();
+    refreshItemIndices();
+    calculateTotal();
+    updateDesktopBannerForRow(rowEl);
+  }
+
+  function syncMobileItemsOrderWithDesktop() {
+    const tbody = document.getElementById("quoteDesktopTableBody");
+    const itemsContainer = document.getElementById("itemsContainer");
+    if (!tbody || !itemsContainer) return;
+
+    tbody.querySelectorAll("tr.desktop-item-row").forEach(dRow => {
+      const itemId = dRow.getAttribute("data-itemid");
+      const mRow = itemId ? document.getElementById(itemId) : null;
+      if (mRow) {
+        itemsContainer.appendChild(mRow);
+      }
+    });
+  }
+
+  function initQuoteRowOrderSwapper() {
+    const tbody = document.getElementById("quoteDesktopTableBody");
+    if (!tbody || tbody.getAttribute("data-row-swap-bound") === "true") return;
+    tbody.setAttribute("data-row-swap-bound", "true");
+
+    let draggingRow = null;
+
+    tbody.addEventListener("mousedown", (e) => {
+      const indexCell = e.target.closest("td.cell-vertical-index");
+      const tr = e.target.closest("tr");
+      if (!tr) return;
+      if (indexCell) {
+        tr.setAttribute("draggable", "true");
+      } else {
+        tr.removeAttribute("draggable");
+      }
+    });
+
+    tbody.addEventListener("dragstart", (e) => {
+      const tr = e.target.closest("tr");
+      if (!tr || tr.getAttribute("draggable") !== "true") {
+        e.preventDefault();
+        return;
+      }
+      draggingRow = tr;
+      tr.classList.add("row-dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", tr.id || "row");
+    });
+
+    tbody.addEventListener("dragend", () => {
+      if (draggingRow) {
+        draggingRow.classList.remove("row-dragging");
+        draggingRow.removeAttribute("draggable");
+      }
+      draggingRow = null;
+      tbody.querySelectorAll("tr").forEach(r => {
+        r.classList.remove("row-drag-over-top", "row-drag-over-bottom");
+      });
+    });
+
+    tbody.addEventListener("dragover", (e) => {
+      if (!draggingRow) return;
+      const targetTr = e.target.closest("tr");
+      if (!targetTr || targetTr === draggingRow || targetTr.parentElement !== tbody) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+
+      const rect = targetTr.getBoundingClientRect();
+      const isTopHalf = (e.clientY - rect.top) < rect.height / 2;
+      targetTr.classList.toggle("row-drag-over-top", isTopHalf);
+      targetTr.classList.toggle("row-drag-over-bottom", !isTopHalf);
+    });
+
+    tbody.addEventListener("dragleave", (e) => {
+      const targetTr = e.target.closest("tr");
+      if (targetTr) {
+        targetTr.classList.remove("row-drag-over-top", "row-drag-over-bottom");
+      }
+    });
+
+    tbody.addEventListener("drop", (e) => {
+      if (!draggingRow) return;
+      e.preventDefault();
+      const targetTr = e.target.closest("tr");
+      tbody.querySelectorAll("tr").forEach(r => {
+        r.classList.remove("row-drag-over-top", "row-drag-over-bottom");
+      });
+      if (!targetTr || targetTr === draggingRow || targetTr.parentElement !== tbody) return;
+
+      const rect = targetTr.getBoundingClientRect();
+      const insertBefore = (e.clientY - rect.top) < rect.height / 2;
+      if (insertBefore) {
+        tbody.insertBefore(draggingRow, targetTr);
+      } else {
+        tbody.insertBefore(draggingRow, targetTr.nextSibling);
+      }
+
+      const movedRow = draggingRow;
+      syncMobileItemsOrderWithDesktop();
+      refreshItemIndices();
+      calculateTotal();
+      updateDesktopBannerForRow(movedRow);
+    });
+  }
+
   function initQuoteColumnResizer() {
     const tables = document.querySelectorAll("#panelQuotes .pyside-excel-table");
     tables.forEach((table, tIdx) => {
-      const tableKey = table.id || `quote_table_${tIdx}`;
+      if (!table.id) table.id = `quote_auto_table_${tIdx}`;
+      const tableKey = table.id;
       const storageKey = `${QUOTE_TABLE_STORAGE_PREFIX}${tableKey}`;
 
       let savedWidths = {};
@@ -4417,6 +4725,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const thList = Array.from(table.querySelectorAll("thead th"));
       thList.forEach((th, colIdx) => {
+        if (!th.hasAttribute("data-orig-idx")) {
+          th.setAttribute("data-orig-idx", String(colIdx));
+        }
         if (th.classList.contains("col-corner-header")) return;
 
         // 紀錄原始推薦寬度，供第 8 頁「還原預設欄寬」按鈕使用
@@ -4428,7 +4739,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!th.classList.contains("resizable-th")) {
           th.classList.add("resizable-th");
         }
-        const colKey = th.getAttribute("data-col") || `col_${colIdx}`;
+        const origIdx = th.getAttribute("data-orig-idx") || String(colIdx);
+        const colKey = th.getAttribute("data-col") || `col_${origIdx}`;
         th.setAttribute("data-col", colKey);
 
         if (savedWidths[colKey] && Number(savedWidths[colKey]) >= 36) {
@@ -4460,6 +4772,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const onMouseUp = () => {
           resizer.classList.remove("resizing");
+          th.setAttribute("draggable", "true");
           document.body.style.cursor = "";
           document.removeEventListener("mousemove", onMouseMove);
           document.removeEventListener("mouseup", onMouseUp);
@@ -4476,6 +4789,7 @@ document.addEventListener("DOMContentLoaded", () => {
         resizer.addEventListener("mousedown", (e) => {
           e.preventDefault();
           e.stopPropagation();
+          th.setAttribute("draggable", "false");
           startX = e.clientX;
           startWidth = parseInt(th.style.width, 10) || th.offsetWidth || 100;
           resizer.classList.add("resizing");
@@ -4501,11 +4815,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const ids = pageTableMap[targetPage] || ["quoteDesktopTable"];
     ids.forEach(tid => {
       localStorage.removeItem(`${QUOTE_TABLE_STORAGE_PREFIX}${tid}`);
+      localStorage.removeItem(`${QUOTE_COL_ORDER_STORAGE_PREFIX}${tid}`);
       if (tid === "quoteDesktopTable") {
         localStorage.removeItem("shihlin_quote_table_col_widths_v1");
       }
       const tbl = document.getElementById(tid);
       if (!tbl) return;
+
+      // 同時還原預設欄位順序 (0..N)
+      const headRow = tbl.querySelector("thead tr");
+      if (headRow) {
+        const ths = Array.from(headRow.children);
+        const defaultOrder = ths
+          .map(th => parseInt(th.getAttribute("data-orig-idx") || "0", 10))
+          .sort((a, b) => a - b)
+          .map(n => String(n));
+        applySavedColumnOrderToTable(tbl, defaultOrder);
+      }
+
       tbl.querySelectorAll("thead th.resizable-th").forEach(th => {
         const defW = parseInt(th.getAttribute("data-default-width") || "100", 10);
         if (defW > 0) {
@@ -4745,6 +5072,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     initQuoteColumnResizer();
+    initQuoteColumnOrderSwapper();
     closeDrawer();
   }
 
@@ -5409,8 +5737,14 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       if (actionsBox) {
         actionsBox.innerHTML = `
+          <button type="button" class="banner-icon-action-btn" id="btnBannerMoveUpSub" title="將此列向上移動一列">▲ 上移</button>
+          <button type="button" class="banner-icon-action-btn" id="btnBannerMoveDownSub" title="將此列向下移動一列">▼ 下移</button>
           <button type="button" class="banner-icon-action-btn danger" id="btnBannerDeleteSubtotal" title="刪除此方案小計列">刪除此明細</button>
         `;
+        const upSubBtn = document.getElementById("btnBannerMoveUpSub");
+        if (upSubBtn) upSubBtn.addEventListener("click", () => moveDesktopItemRow(rowEl, -1));
+        const downSubBtn = document.getElementById("btnBannerMoveDownSub");
+        if (downSubBtn) downSubBtn.addEventListener("click", () => moveDesktopItemRow(rowEl, 1));
         const delSubBtn = document.getElementById("btnBannerDeleteSubtotal");
         if (delSubBtn) {
           delSubBtn.addEventListener("click", () => {
@@ -5446,11 +5780,18 @@ document.addEventListener("DOMContentLoaded", () => {
       if (sku) {
         html += `<button type="button" class="banner-sku-copy-btn" id="btnBannerCopySku" title="點擊複製料號: ${escapeHtml(sku)}">料號: ${escapeHtml(sku)}</button>`;
       }
+      html += `<button type="button" class="banner-icon-action-btn" id="btnBannerMoveUpRow" title="將此明細向上移動一列 (亦可直接按住左側項次上下拖曳)">▲ 上移</button>`;
+      html += `<button type="button" class="banner-icon-action-btn" id="btnBannerMoveDownRow" title="將此明細向下移動一列 (亦可直接按住左側項次上下拖曳)">▼ 下移</button>`;
       if (model) {
         html += `<button type="button" class="banner-icon-action-btn" id="btnBannerHistoryPrice" title="查詢此型號的歷史報價紀錄">查詢歷史價格</button>`;
       }
       html += `<button type="button" class="banner-icon-action-btn danger" id="btnBannerDeleteRow" title="刪除此筆產品明細">刪除此明細</button>`;
       actionsBox.innerHTML = html;
+
+      const upBtn = document.getElementById("btnBannerMoveUpRow");
+      if (upBtn) upBtn.addEventListener("click", () => moveDesktopItemRow(rowEl, -1));
+      const downBtn = document.getElementById("btnBannerMoveDownRow");
+      if (downBtn) downBtn.addEventListener("click", () => moveDesktopItemRow(rowEl, 1));
 
       const copySkuBtn = document.getElementById("btnBannerCopySku");
       if (copySkuBtn && sku) {

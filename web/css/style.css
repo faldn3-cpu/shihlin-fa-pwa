@@ -12,7 +12,7 @@
   /* 字型與字級 (CSS 變數化，支援設定頁動態變更) */
   --app-font-family: "Microsoft JhengHei", "微軟正黑體", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --app-font-size: 12pt;
-  
+
   /* 淺色模式配色 (預設 - Office / Windows Fluent Light) */
   --bg-app: #F3F3F3;
   --bg-panel: #FFFFFF;
@@ -22,16 +22,16 @@
   --bg-input: #FFFFFF;
   --bg-hover: #EAEAEA;
   --bg-active: #E0E0E0;
-  
+
   --text-primary: #1F1F1F;
   --text-secondary: #5A5A5A;
   --text-tertiary: #767676;
   --text-disabled: #A19F9D;
-  
+
   --border-light: #E5E5E5;
   --border-card: #E0E0E0;
   --border-focus: #0067C0;
-  
+
   --color-accent: #0067C0;
   --color-accent-hover: #005A9E;
   --color-accent-light: #EBF3FC;
@@ -44,7 +44,7 @@
 
   --header-height: 48px;
   --border-radius: 6px;
-  --shadow-card: 0 1.6px 3.6px 0 rgba(0,0,0,0.06), 0 0.3px 0.9px 0 rgba(0,0,0,0.03);
+  --shadow-card: 0 1.6px 3.6px 0 rgba(0, 0, 0, 0.06), 0 0.3px 0.9px 0 rgba(0, 0, 0, 0.03);
 
   /* 語意化雙模數字與儲存格底色變數 (淺色模式 - Office 高對比標準) */
   --grid-num-blue: #1D4ED8;
@@ -71,16 +71,16 @@ html[data-theme="dark"],
   --bg-input: #323232;
   --bg-hover: #383838;
   --bg-active: #404040;
-  
+
   --text-primary: #FFFFFF;
   --text-secondary: #CCCCCC;
   --text-tertiary: #999999;
   --text-disabled: #666666;
-  
+
   --border-light: #383838;
   --border-card: #3D3D3D;
   --border-focus: #4CC2FF;
-  
+
   --color-accent: #4CC2FF;
   --color-accent-hover: #60CDFF;
   --color-accent-light: rgba(76, 194, 255, 0.15);
@@ -88,7 +88,7 @@ html[data-theme="dark"],
   --color-success: #57C97E;
   --color-warning: #FCE100;
   --color-danger: #FF6B6B;
-  --shadow-card: 0 2px 6px 0 rgba(0,0,0,0.4);
+  --shadow-card: 0 2px 6px 0 rgba(0, 0, 0, 0.4);
 
   /* 語意化雙模數字與儲存格底色變數 (深色模式 - 柔和明亮高對比，絕不死黑刺眼) */
   --grid-num-blue: #60A5FA;
@@ -103,7 +103,9 @@ html[data-theme="dark"],
   --grid-bg-total: rgba(14, 165, 233, 0.22);
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -132,7 +134,10 @@ body {
 }
 
 /* 表單元件與按鈕繼承字型與比例 */
-input, select, textarea, button {
+input,
+select,
+textarea,
+button {
   font-family: inherit;
 }
 
@@ -292,8 +297,13 @@ input, select, textarea, button {
 }
 
 @keyframes drawerSlideIn {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
 }
 
 .drawer-header {
@@ -407,6 +417,7 @@ input, select, textarea, button {
     opacity: 1 !important;
     z-index: 10 !important;
   }
+
   .drawer-overlay.hidden {
     display: block !important;
   }
@@ -431,8 +442,10 @@ input, select, textarea, button {
     background-color: var(--bg-subtle) !important;
     border-bottom: 1px solid var(--border-light) !important;
   }
+
   .drawer-header .modal-close-btn {
-    display: none !important; /* 電腦版常駐不需 X 關閉鈕 */
+    display: none !important;
+    /* 電腦版常駐不需 X 關閉鈕 */
   }
 
   /* 電腦端主工作區：取消手機版卡片窄寬度，滿版展開 */
@@ -580,7 +593,7 @@ input, select, textarea, button {
   background-color: #ffffff;
   color: #334155;
   border: 1px solid #cbd5e1;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .stat-badge-pill.target strong {
@@ -592,7 +605,7 @@ input, select, textarea, button {
   background-color: #ffffff;
   color: #1e40af;
   border: 1px solid #93c5fd;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .stat-badge-pill.actual strong {
@@ -710,7 +723,8 @@ input, select, textarea, button {
   gap: 8px;
 }
 
-.prod-personal-block, .prod-team-block {
+.prod-personal-block,
+.prod-team-block {
   display: flex;
   flex-direction: column;
 }
@@ -1028,6 +1042,7 @@ textarea.form-control {
   background-color: rgba(16, 124, 65, 0.15);
   color: var(--color-success);
 }
+
 .status-pill.warning {
   background-color: rgba(121, 118, 115, 0.15);
   color: #797673;
@@ -1079,6 +1094,7 @@ textarea.form-control {
     opacity: 0;
     transform: translateY(-12px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -1317,7 +1333,8 @@ textarea.form-control {
   user-select: none;
 }
 
-.excel-paste-prompt:hover, .excel-paste-prompt:focus {
+.excel-paste-prompt:hover,
+.excel-paste-prompt:focus {
   background-color: var(--bg-hover);
   border-color: var(--color-accent-hover);
 }
@@ -1390,7 +1407,8 @@ textarea.form-control {
   z-index: 10;
 }
 
-.col-resizer:hover, .col-resizer.resizing {
+.col-resizer:hover,
+.col-resizer.resizing {
   background-color: #107C41;
 }
 
@@ -1607,7 +1625,8 @@ textarea.form-control {
 
 @media (max-width: 768px) {
   body {
-    font-size: 11pt; /* 手機微調為 11pt 防止元素溢出 */
+    font-size: 11pt;
+    /* 手機微調為 11pt 防止元素溢出 */
   }
 
   .office-title-bar {
@@ -1620,7 +1639,8 @@ textarea.form-control {
   }
 
   .sales-display {
-    display: none; /* 手機端隱藏文字姓名，保留頭像 [曾] 與時間以防換行 */
+    display: none;
+    /* 手機端隱藏文字姓名，保留頭像 [曾] 與時間以防換行 */
   }
 
   .clock-display {
@@ -1633,12 +1653,14 @@ textarea.form-control {
     margin: 10px auto;
   }
 
-  .fluent-card, .scoreboard-top-banner {
+  .fluent-card,
+  .scoreboard-top-banner {
     padding: 14px 12px;
   }
 
   .form-grid {
-    grid-template-columns: 1fr; /* 手機強制單欄排列，避免擠壓 */
+    grid-template-columns: 1fr;
+    /* 手機強制單欄排列，避免擠壓 */
   }
 
   .form-group[style*="grid-column"] {
@@ -1652,7 +1674,8 @@ textarea.form-control {
   }
 
   .scoreboard-sub-grid {
-    grid-template-columns: 1fr; /* 手機端 3 個自製品上下排，清爽好閱讀 */
+    grid-template-columns: 1fr;
+    /* 手機端 3 個自製品上下排，清爽好閱讀 */
     gap: 10px;
   }
 
@@ -1678,7 +1701,8 @@ textarea.form-control {
   }
 
   .fluent-btn {
-    height: 38px; /* 手機加大觸碰高度 */
+    height: 38px;
+    /* 手機加大觸碰高度 */
   }
 }
 
@@ -1768,6 +1792,7 @@ textarea.form-control {
     align-items: flex-start;
     gap: 6px;
   }
+
   .flow-item {
     width: 100%;
   }
@@ -1852,6 +1877,7 @@ textarea.form-control {
   color: #065f46;
   border: 1px solid #86efac;
 }
+
 .fluent-progress-bar.bar-success {
   background: linear-gradient(90deg, #34d399 0%, #10b981 50%, #059669 100%);
 }
@@ -1863,6 +1889,7 @@ textarea.form-control {
   color: #92400e;
   border: 1px solid #fcd34d;
 }
+
 .fluent-progress-bar.bar-warning {
   background: linear-gradient(90deg, #fcd34d 0%, #f59e0b 50%, #d97706 100%);
 }
@@ -1874,6 +1901,7 @@ textarea.form-control {
   color: #991b1b;
   border: 1px solid #fca5a5;
 }
+
 .fluent-progress-bar.bar-alert {
   background: linear-gradient(90deg, #fb923c 0%, #f87171 50%, #ef4444 100%);
 }
@@ -1885,6 +1913,7 @@ textarea.form-control {
   color: #7f1d1d;
   border: 1px solid #f87171;
 }
+
 .fluent-progress-bar.bar-danger {
   background: linear-gradient(90deg, #f87171 0%, #ef4444 50%, #dc2626 100%);
 }
@@ -1943,6 +1972,7 @@ textarea.form-control {
   border-collapse: collapse;
   font-size: 0.9rem;
 }
+
 .sales-order-table th {
   background: var(--bg-subtle, #f8fafc);
   color: var(--text-secondary, #64748b);
@@ -1951,14 +1981,17 @@ textarea.form-control {
   font-weight: 600;
   text-align: left;
 }
+
 .sales-order-table td {
   padding: 8px 10px;
   border-bottom: 1px solid var(--border-light, #e2e8f0);
   vertical-align: middle;
 }
+
 .sales-order-table tr:hover {
   background: var(--bg-hover, #f1f5f9);
 }
+
 .btn-order-move {
   padding: 3px 8px;
   font-size: 0.78rem;
@@ -1969,11 +2002,13 @@ textarea.form-control {
   transition: all 0.15s ease;
   margin: 0 2px;
 }
+
 .btn-order-move:hover:not(:disabled) {
   background: var(--primary-color, #0052cc);
   color: #fff;
   border-color: var(--primary-color, #0052cc);
 }
+
 .btn-order-move:disabled {
   opacity: 0.35;
   cursor: not-allowed;
@@ -1987,6 +2022,7 @@ textarea.form-control {
   display: flex;
   align-items: center;
 }
+
 .scope-toggle-btn {
   border: 1px solid rgba(0, 0, 0, 0.15);
   border-radius: 8px;
@@ -2001,20 +2037,24 @@ textarea.form-control {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.25);
   user-select: none;
 }
+
 .scope-toggle-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
+
 .scope-toggle-btn:active {
   transform: translateY(1px) scale(0.97);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15), inset 0 2px 3px rgba(0, 0, 0, 0.2);
 }
+
 /* 區域目標模式 (微軟沉穩商務藍漸層，白字立體感) */
 .scope-toggle-btn.scope-mode-region {
   background: linear-gradient(180deg, #0078d4 0%, #005a9e 100%);
   color: #ffffff !important;
   border-color: #004578;
 }
+
 .scope-toggle-btn.scope-mode-region .scope-btn-dot {
   width: 7px;
   height: 7px;
@@ -2022,12 +2062,14 @@ textarea.form-control {
   background: #60cdff;
   box-shadow: 0 0 5px #60cdff;
 }
+
 /* 個人目標模式 (微軟暖琥珀金漸層，白字立體感) */
 .scope-toggle-btn.scope-mode-personal {
   background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
   color: #ffffff !important;
   border-color: #92400e;
 }
+
 .scope-toggle-btn.scope-mode-personal .scope-btn-dot {
   width: 7px;
   height: 7px;
@@ -2044,6 +2086,7 @@ textarea.form-control {
   margin: 10px 0 6px 0;
   padding: 4px 2px;
 }
+
 .kpi-view-mode-indicator {
   display: flex;
   align-items: center;
@@ -2052,6 +2095,7 @@ textarea.form-control {
   font-weight: 700;
   color: var(--text-primary);
 }
+
 .kpi-view-mode-indicator .mode-dot {
   width: 8px;
   height: 8px;
@@ -2059,6 +2103,7 @@ textarea.form-control {
   background-color: var(--color-accent, #0078d4);
   box-shadow: 0 0 6px rgba(0, 120, 212, 0.6);
 }
+
 /* 純圖示倒箭頭圓角按鈕 */
 .kpi-global-toggle-btn.icon-only-btn {
   width: 32px;
@@ -2075,21 +2120,25 @@ textarea.form-control {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 .kpi-global-toggle-btn.icon-only-btn:hover {
   background: var(--bg-hover);
   border-color: var(--color-accent);
   transform: translateY(-1px);
   box-shadow: 0 3px 7px rgba(0, 0, 0, 0.14);
 }
+
 .kpi-global-toggle-btn.icon-only-btn:active {
   transform: scale(0.95);
 }
+
 .kpi-global-toggle-btn.icon-only-btn .toggle-arrow {
   width: 18px;
   height: 18px;
   transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   fill: currentColor;
 }
+
 .kpi-global-toggle-btn.icon-only-btn.expanded .toggle-arrow {
   transform: rotate(180deg);
 }
@@ -2101,6 +2150,7 @@ textarea.form-control {
   overflow: hidden;
   transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin 0.25s ease;
 }
+
 .kpi-outcome-body.collapsed {
   max-height: 0;
   opacity: 0;
@@ -2115,6 +2165,7 @@ textarea.form-control {
   overflow: hidden;
   transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin 0.25s ease;
 }
+
 .kpi-driver-body.expanded {
   max-height: 260px;
   opacity: 1;
@@ -2138,6 +2189,7 @@ textarea.form-control {
   align-items: center;
   gap: 6px;
 }
+
 .settings-version-tag {
   font-size: 0.75rem;
   color: var(--text-tertiary);
@@ -2151,6 +2203,7 @@ textarea.form-control {
   gap: 12px;
   flex-wrap: wrap;
 }
+
 .btn-clear-cache {
   display: inline-flex;
   align-items: center;
@@ -2169,14 +2222,17 @@ textarea.form-control {
   line-height: 1.4;
   white-space: nowrap;
 }
+
 .btn-clear-cache:hover {
   color: var(--brand-primary, #0B57D0);
   border-color: var(--brand-primary, #0B57D0);
   background: rgba(11, 87, 208, 0.08);
 }
+
 .btn-clear-cache:active {
   transform: scale(0.97);
 }
+
 .icon-svg-xs {
   width: 12px;
   height: 12px;
@@ -2192,18 +2248,21 @@ textarea.form-control {
   flex-direction: column;
   gap: 5px;
 }
+
 .driver-header-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
 }
+
 .driver-title-group {
   display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
 }
+
 .driver-name {
   font-size: 0.88rem;
   font-weight: 600;
@@ -2212,6 +2271,7 @@ textarea.form-control {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .driver-metrics-row {
   display: flex;
   align-items: center;
@@ -2219,6 +2279,7 @@ textarea.form-control {
   font-size: 0.78rem;
   color: var(--text-secondary);
 }
+
 .driver-progress-bg {
   width: 100%;
   height: 6px;
@@ -2226,11 +2287,13 @@ textarea.form-control {
   border-radius: 999px;
   overflow: hidden;
 }
+
 .driver-progress-bar {
   height: 100%;
   border-radius: 999px;
   transition: width 0.3s ease;
 }
+
 .driver-footer-row {
   display: flex;
   justify-content: space-between;
@@ -2248,6 +2311,7 @@ textarea.form-control {
   padding: 12px 14px;
   margin-bottom: 1.25rem;
 }
+
 .driver-filter-header {
   display: flex;
   justify-content: space-between;
@@ -2256,12 +2320,14 @@ textarea.form-control {
   gap: 8px;
   margin-bottom: 10px;
 }
+
 .driver-sales-chips-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
 }
+
 .driver-sales-chip {
   display: inline-flex;
   align-items: center;
@@ -2278,11 +2344,13 @@ textarea.form-control {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
 }
+
 .driver-sales-chip:hover:not(.disabled-other) {
   border-color: var(--color-accent);
   color: var(--color-accent);
   transform: translateY(-1px);
 }
+
 .driver-sales-chip.active {
   background: var(--color-accent) !important;
   color: #ffffff !important;
@@ -2290,6 +2358,7 @@ textarea.form-control {
   font-weight: 700;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
+
 .driver-sales-chip.disabled-other {
   opacity: 0.4;
   cursor: not-allowed;
@@ -2300,6 +2369,7 @@ textarea.form-control {
 .btn-driver-apply-home {
   transition: background-color 0.15s ease, transform 0.1s ease;
 }
+
 .btn-driver-apply-home:hover:not(:disabled) {
   transform: translateY(-1px);
 }
@@ -2311,6 +2381,7 @@ textarea.form-control {
   gap: 6px;
   margin-top: 8px;
 }
+
 .driver-card-action-bar .btn {
   display: inline-flex;
   align-items: center;
@@ -2321,9 +2392,11 @@ textarea.form-control {
   font-weight: 500;
   transition: all 0.15s ease;
 }
+
 .driver-card-action-bar .btn:hover:not(:disabled) {
   transform: translateY(-1px);
 }
+
 .driver-card-action-bar .btn-change-span {
   grid-column: span 2;
 }
@@ -2335,6 +2408,7 @@ textarea.form-control {
   gap: 12px;
   margin-top: 12px;
 }
+
 .driver-mgmt-card {
   border: 1px solid var(--border-light);
   border-radius: 6px;
@@ -2344,27 +2418,32 @@ textarea.form-control {
   flex-direction: column;
   gap: 8px;
 }
+
 .driver-mgmt-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
+
 .driver-mgmt-product {
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--text-primary);
 }
+
 .driver-review-panel {
   margin-top: 1.5rem;
   border-top: 1px solid var(--border-light);
   padding-top: 1.25rem;
 }
+
 .driver-review-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin-top: 10px;
 }
+
 .driver-review-item {
   border: 1px solid var(--border-light);
   border-left: 4px solid var(--color-accent);
@@ -2385,6 +2464,7 @@ textarea.form-control {
   justify-content: center;
   padding: 16px;
 }
+
 .fluent-modal-dialog {
   background: var(--bg-panel);
   border: 1px solid var(--border-card);
@@ -2397,6 +2477,7 @@ textarea.form-control {
   display: flex;
   flex-direction: column;
 }
+
 .fluent-modal-header {
   padding: 14px 18px;
   border-bottom: 1px solid var(--border-light);
@@ -2404,18 +2485,21 @@ textarea.form-control {
   justify-content: space-between;
   align-items: center;
 }
+
 .fluent-modal-title {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
 }
+
 .fluent-modal-body {
   padding: 16px 18px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
+
 .fluent-modal-footer {
   padding: 12px 18px;
   border-top: 1px solid var(--border-light);
@@ -2440,10 +2524,12 @@ textarea.form-control {
   user-select: none;
   transition: all 0.15s ease;
 }
+
 .manager-checkbox-item:hover {
   border-color: var(--color-accent);
   background: var(--bg-hover);
 }
+
 .manager-checkbox-item input[type="checkbox"] {
   cursor: pointer;
   accent-color: var(--color-accent);
@@ -2467,11 +2553,13 @@ textarea.form-control {
   transition: all 0.15s ease;
   margin: 0 2px;
 }
+
 .btn-order-delete:hover:not(:disabled) {
   background: var(--color-danger, #d83b01);
   color: #fff;
   border-color: var(--color-danger, #d83b01);
 }
+
 .sales-group-select {
   padding: 2px 6px;
   font-size: 0.82rem;
@@ -2485,6 +2573,7 @@ textarea.form-control {
 .sales-order-table {
   min-width: 580px !important;
 }
+
 .sales-order-table th,
 .sales-order-table td {
   white-space: nowrap !important;
@@ -2499,6 +2588,7 @@ textarea.form-control {
 .sales-order-desktop-container {
   display: block;
 }
+
 .sales-order-mobile-container {
   display: none;
 }
@@ -2507,6 +2597,7 @@ textarea.form-control {
   .sales-order-desktop-container {
     display: none !important;
   }
+
   .sales-order-mobile-container {
     display: flex !important;
     flex-direction: column;
@@ -2527,15 +2618,18 @@ textarea.form-control {
   gap: 8px;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
+
 .sales-mobile-card:active {
   transform: scale(0.99);
 }
+
 .sales-mobile-card-row1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
+
 .sales-mobile-card-row2 {
   display: flex;
   align-items: center;
@@ -2544,6 +2638,7 @@ textarea.form-control {
   padding-top: 8px;
   gap: 8px;
 }
+
 .sales-order-badge {
   display: inline-flex;
   align-items: center;
@@ -2557,20 +2652,24 @@ textarea.form-control {
   font-size: 0.78rem;
   font-weight: 700;
 }
+
 .sales-mobile-name {
   font-weight: 700;
   font-size: 0.95rem;
   color: var(--text-primary);
 }
+
 .mobile-select {
   padding: 3px 6px;
   font-size: 0.82rem;
   border-radius: 4px;
 }
+
 .mobile-move {
   padding: 4px 10px !important;
   font-size: 0.8rem !important;
 }
+
 .mobile-del {
   padding: 4px 10px !important;
   font-size: 0.8rem !important;
@@ -2590,9 +2689,11 @@ textarea.form-control {
   justify-content: center;
   z-index: 99999;
 }
+
 .modal-overlay.hidden {
   display: none !important;
 }
+
 .fluent-dialog {
   background: var(--bg-panel, #ffffff);
   border: 1px solid var(--border-card, #e0e0e0);
@@ -2604,9 +2705,17 @@ textarea.form-control {
   box-sizing: border-box;
   animation: fluentDialogPop 0.18s cubic-bezier(0.1, 0.9, 0.2, 1);
 }
+
 @keyframes fluentDialogPop {
-  from { transform: scale(0.94); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* 4. 版面密度 (Density) & 排版擴充 */
@@ -2614,21 +2723,26 @@ body[data-density="compact"] .fluent-card {
   padding: 12px 14px;
   margin-bottom: 10px;
 }
+
 body[data-density="compact"] .form-group {
   margin-bottom: 8px;
 }
+
 body[data-density="compact"] .sales-order-table th,
 body[data-density="compact"] .sales-order-table td {
   padding: 4px 6px !important;
 }
+
 body[data-density="spacious"] .fluent-card {
   padding: 24px;
   margin-bottom: 20px;
 }
+
 body[data-density="spacious"] .sales-order-table th,
 body[data-density="spacious"] .sales-order-table td {
   padding: 12px 14px !important;
 }
+
 body[data-tabular="proportional"] {
   font-feature-settings: normal !important;
   font-variant-numeric: normal !important;
@@ -2640,15 +2754,20 @@ body[data-tabular="proportional"] {
    ============================================================================== */
 
 /* 1. 高對比自適應主按鈕 (支援沉穩黑深色白銀反轉) */
-.fluent-btn.primary, .btn-primary {
+.fluent-btn.primary,
+.btn-primary {
   background-color: var(--btn-primary-bg, var(--color-accent, #0067C0)) !important;
   color: var(--btn-primary-text, #ffffff) !important;
   border-color: var(--btn-primary-bg, var(--color-accent, #0067C0)) !important;
 }
-.fluent-btn.primary:hover, .btn-primary:hover {
+
+.fluent-btn.primary:hover,
+.btn-primary:hover {
   filter: brightness(1.08);
 }
-.fluent-btn.primary svg, .btn-primary svg {
+
+.fluent-btn.primary svg,
+.btn-primary svg {
   fill: currentColor !important;
 }
 
@@ -2672,6 +2791,7 @@ body[data-tabular="proportional"] {
   box-sizing: border-box;
   gap: 2px;
 }
+
 .seg-btn {
   flex: 1;
   border: none;
@@ -2687,19 +2807,23 @@ body[data-tabular="proportional"] {
   text-align: center;
   white-space: nowrap;
 }
+
 .seg-btn:hover {
   color: var(--text-primary);
 }
+
 .seg-btn.active {
   background: var(--bg-panel, #ffffff);
   color: var(--color-accent, #0067c0);
   font-weight: 700;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
+
 [data-theme="dark"] .segmented-control {
   background: #1e1e1e;
   border-color: #383838;
 }
+
 [data-theme="dark"] .seg-btn.active {
   background: #333333;
   color: var(--color-accent, #3a96dd);
@@ -2713,6 +2837,7 @@ body[data-tabular="proportional"] {
   gap: 8px;
   margin-top: 4px;
 }
+
 .swatch-btn {
   display: flex;
   align-items: center;
@@ -2728,15 +2853,18 @@ body[data-tabular="proportional"] {
   transition: all 0.15s ease;
   text-align: left;
 }
+
 .swatch-btn:hover {
   background: var(--bg-hover, #f3f4f6);
 }
+
 .swatch-btn.active {
   border-color: var(--color-accent, #0067c0);
   background: var(--color-accent-light, #ebf3fc);
   font-weight: 700;
   box-shadow: 0 0 0 2px var(--color-accent, #0067c0);
 }
+
 .swatch-dot {
   width: 18px;
   height: 18px;
@@ -2744,16 +2872,20 @@ body[data-tabular="proportional"] {
   flex-shrink: 0;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
+
 .swatch-name {
   white-space: nowrap;
 }
+
 [data-theme="dark"] .swatch-btn {
   background: #2b2b2b;
   border-color: #404040;
 }
+
 [data-theme="dark"] .swatch-btn:hover {
   background: #353535;
 }
+
 [data-theme="dark"] .swatch-btn.active {
   background: #333333;
 }
@@ -2764,7 +2896,9 @@ body[data-tabular="proportional"] {
    ============================================================================== */
 
 /* 全域表單元素與原生選單項目對比校準 */
-select, input, textarea {
+select,
+input,
+textarea {
   color-scheme: light;
   color: var(--text-primary);
   background-color: var(--bg-input);
@@ -2900,14 +3034,17 @@ input[type="checkbox"] {
   color: var(--text-secondary) !important;
   border-color: var(--border-light) !important;
 }
+
 [data-theme="dark"] .stat-badge-pill.target strong {
   color: var(--text-primary) !important;
 }
+
 [data-theme="dark"] .stat-badge-pill.actual {
   background-color: rgba(76, 194, 255, 0.18) !important;
   color: #60CDFF !important;
   border-color: rgba(76, 194, 255, 0.35) !important;
 }
+
 [data-theme="dark"] .stat-badge-pill.actual strong {
   color: #93C5FD !important;
 }
@@ -2918,11 +3055,13 @@ input[type="checkbox"] {
   color: var(--text-secondary) !important;
   border-color: var(--border-light) !important;
 }
+
 [data-theme="dark"] .stat-badge.actual {
   background-color: rgba(76, 194, 255, 0.18) !important;
   color: #60CDFF !important;
   border-color: rgba(76, 194, 255, 0.35) !important;
 }
+
 [data-theme="dark"] .hero-target-big {
   color: var(--text-secondary) !important;
 }
@@ -2933,11 +3072,13 @@ input[type="checkbox"] {
   color: #6ee7b7 !important;
   border-color: rgba(110, 231, 183, 0.45) !important;
 }
+
 [data-theme="dark"] .traffic-light-badge.warning {
   background: rgba(245, 158, 11, 0.22) !important;
   color: #fcd34d !important;
   border-color: rgba(252, 211, 77, 0.45) !important;
 }
+
 [data-theme="dark"] .traffic-light-badge.danger {
   background: rgba(239, 68, 68, 0.22) !important;
   color: #fca5a5 !important;
@@ -2950,6 +3091,7 @@ input[type="checkbox"] {
   color: #FCE100 !important;
   border-color: rgba(252, 225, 0, 0.3) !important;
 }
+
 [data-theme="dark"] .badge-target-highlight {
   background: rgba(239, 68, 68, 0.25) !important;
   color: #fca5a5 !important;
@@ -2961,6 +3103,7 @@ input[type="checkbox"] {
   border-color: var(--color-danger, #d83b01) !important;
   color: #FFFFFF !important;
 }
+
 .fluent-btn.danger:hover {
   filter: brightness(1.1);
 }
@@ -2983,6 +3126,7 @@ input[type="checkbox"] {
   .quote-desktop-only {
     display: none !important;
   }
+
   .quote-mobile-only {
     display: block !important;
   }
@@ -2992,9 +3136,11 @@ input[type="checkbox"] {
   .quote-draft-container {
     max-width: 100% !important;
   }
+
   .quote-mobile-only {
     display: none !important;
   }
+
   .quote-top-meta-grid {
     grid-template-columns: 2fr 1fr !important;
   }
@@ -3006,9 +3152,11 @@ input[type="checkbox"] {
     width: 100% !important;
     margin: 0 !important;
   }
+
   .quote-mobile-only {
     display: none !important;
   }
+
   /* 電腦端 Excel 試算表格展開滿版高密度 */
   .quote-desktop-table-wrapper {
     width: 100% !important;
@@ -3017,9 +3165,11 @@ input[type="checkbox"] {
     overflow-y: auto !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
   }
+
   .quote-excel-table {
     width: 100% !important;
   }
+
   .quote-excel-table th {
     position: sticky !important;
     top: 0 !important;
@@ -3036,11 +3186,13 @@ input[type="checkbox"] {
   padding-bottom: 0.65rem;
   border-bottom: 1px solid var(--border-color, #e2e8f0);
 }
+
 .quote-desktop-toolbar .toolbar-left {
   display: flex;
   gap: 8px;
   align-items: center;
 }
+
 .desktop-badge-indicator {
   display: inline-flex;
   align-items: center;
@@ -3061,12 +3213,14 @@ input[type="checkbox"] {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   margin-bottom: 1rem;
 }
+
 .quote-excel-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.88rem;
   text-align: left;
 }
+
 .quote-excel-table th {
   background: #f8fafc;
   color: var(--text-main, #334155);
@@ -3078,18 +3232,22 @@ input[type="checkbox"] {
   white-space: nowrap;
   user-select: none;
 }
+
 .quote-excel-table th:last-child {
   border-right: none;
 }
+
 .quote-excel-table td {
   padding: 6px 8px;
   border-bottom: 1px solid var(--border-color, #e2e8f0);
   border-right: 1px solid var(--border-color, #f1f5f9);
   vertical-align: middle;
 }
+
 .quote-excel-table td:last-child {
   border-right: none;
 }
+
 .quote-excel-table tbody tr:hover {
   background-color: rgba(37, 99, 235, 0.03);
 }
@@ -3104,26 +3262,31 @@ input[type="checkbox"] {
   color: var(--text-main, #1e293b);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
+
 .table-cell-input:focus {
   border-color: var(--primary-color, #2563eb);
   outline: none;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
+
 .table-cell-input.number {
   text-align: right;
   font-family: Consolas, Monaco, monospace;
   font-weight: 600;
 }
+
 .table-cell-readonly {
   font-family: Consolas, Monaco, monospace;
   font-size: 0.88rem;
   color: var(--text-main, #1e293b);
 }
+
 .table-cell-readonly.money {
   font-weight: 700;
   text-align: right;
   display: block;
 }
+
 .table-cell-model-btn {
   width: 100%;
   text-align: left;
@@ -3140,14 +3303,17 @@ input[type="checkbox"] {
   text-overflow: ellipsis;
   display: block;
 }
+
 .table-cell-model-btn:hover {
   border-color: var(--primary-color, #2563eb);
   background: #f8fafc;
 }
+
 .table-cell-model-btn.selected {
   color: var(--text-main, #1e293b);
   border-color: #94a3b8;
 }
+
 .table-btn-remove {
   background: none;
   border: none;
@@ -3159,6 +3325,7 @@ input[type="checkbox"] {
   border-radius: 4px;
   transition: background 0.15s;
 }
+
 .table-btn-remove:hover {
   background: #fee2e2;
 }
@@ -3174,11 +3341,13 @@ input[type="checkbox"] {
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 8px;
 }
+
 .desktop-actions-group {
   display: flex;
   gap: 12px;
   align-items: center;
 }
+
 .desktop-summary-card {
   min-width: 280px;
   background: #ffffff;
@@ -3187,6 +3356,7 @@ input[type="checkbox"] {
   padding: 12px 16px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
+
 .desktop-summary-card .summary-line {
   display: flex;
   justify-content: space-between;
@@ -3195,24 +3365,29 @@ input[type="checkbox"] {
   margin-bottom: 6px;
   color: var(--text-muted, #64748b);
 }
+
 .desktop-summary-card .summary-line .summary-val {
   font-weight: 600;
   color: var(--text-main, #1e293b);
 }
+
 .desktop-summary-card .summary-line .summary-val.money {
   font-family: Consolas, Monaco, monospace;
 }
+
 .desktop-summary-card .summary-line.grand-total {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid var(--border-color, #e2e8f0);
   margin-bottom: 0;
 }
+
 .desktop-summary-card .summary-line.grand-total .summary-label {
   font-weight: 700;
   font-size: 0.95rem;
   color: var(--text-main, #1e293b);
 }
+
 .desktop-summary-card .summary-line.grand-total .total-money {
   font-size: 1.2rem;
   font-weight: 800;
@@ -3279,12 +3454,14 @@ input[type="checkbox"] {
   text-overflow: ellipsis;
   display: block;
 }
+
 .product-picker-input:hover,
 .product-picker-input:focus {
   border-color: var(--primary-color, #2563eb);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
   outline: none;
 }
+
 .product-picker-input.selected {
   color: var(--text-main, #1e293b);
   font-weight: 600;
@@ -3307,6 +3484,7 @@ input[type="checkbox"] {
   padding: 0;
   margin-left: 6px;
 }
+
 .item-copy-btn:hover {
   background: #f1f5f9;
   color: #0f172a;
@@ -3339,6 +3517,7 @@ input[type="checkbox"] {
   align-items: center;
   justify-content: center;
 }
+
 .item-remove:hover,
 .btn-close:hover {
   opacity: 0.8;
@@ -3350,6 +3529,7 @@ input[type="checkbox"] {
   gap: 0.75rem;
   margin-top: 0.5rem;
 }
+
 .item-grid label {
   font-size: 0.75rem;
   font-weight: 600;
@@ -3357,6 +3537,7 @@ input[type="checkbox"] {
   margin-bottom: 0.25rem;
   display: block;
 }
+
 .item-grid input {
   width: 100%;
   padding: 0.65rem 0.875rem;
@@ -3389,6 +3570,7 @@ input[type="checkbox"] {
   color: #92400e;
   margin: 0.1rem 0;
 }
+
 .stock-disclaimer-time {
   font-weight: 600;
   margin-bottom: 0.2rem;
@@ -3398,6 +3580,7 @@ input[type="checkbox"] {
   flex-wrap: wrap;
   gap: 2px;
 }
+
 .stock-disclaimer-text {
   color: #b45309;
 }
@@ -3405,6 +3588,7 @@ input[type="checkbox"] {
 .item-delivery {
   margin-top: 0.75rem;
 }
+
 .item-delivery label {
   font-size: 0.75rem;
   font-weight: 600;
@@ -3412,6 +3596,7 @@ input[type="checkbox"] {
   margin-bottom: 0.25rem;
   display: block;
 }
+
 .item-delivery input[type="text"] {
   width: 100%;
   padding: 0.65rem 0.875rem;
@@ -3431,9 +3616,11 @@ input[type="checkbox"] {
   cursor: default !important;
   border-color: #cbd5e1 !important;
 }
+
 .price-field {
   color: var(--primary-color, #2563eb) !important;
 }
+
 .stock-field {
   color: #059669 !important;
 }
@@ -3446,24 +3633,28 @@ input[type="checkbox"] {
   border-radius: 10px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
+
 .total-summary-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.35rem;
 }
+
 .total-summary-label-group {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: nowrap;
 }
+
 .total-summary-title {
   font-weight: 600;
   font-size: 1rem;
   color: var(--text-main, #1e293b);
   white-space: nowrap;
 }
+
 .draft-item-badge {
   background-color: #e0f2fe;
   color: #0284c7;
@@ -3473,11 +3664,13 @@ input[type="checkbox"] {
   border-radius: 12px;
   white-space: nowrap;
 }
+
 .total-summary-bottom {
   display: flex;
   justify-content: flex-end;
   align-items: baseline;
 }
+
 .total-summary-amount {
   font-size: 1.65rem;
   font-weight: 800;
@@ -3485,6 +3678,7 @@ input[type="checkbox"] {
   letter-spacing: -0.5px;
   line-height: 1.2;
 }
+
 .total-summary-amount .currency-symbol {
   font-size: 1.15rem;
   font-weight: 600;
@@ -3501,8 +3695,14 @@ input[type="checkbox"] {
   cursor: pointer;
   transition: background-color 0.2s;
 }
-.btn-line:hover { background-color: #00a000 !important; }
-.btn-line:active { background-color: #008800 !important; }
+
+.btn-line:hover {
+  background-color: #00a000 !important;
+}
+
+.btn-line:active {
+  background-color: #008800 !important;
+}
 
 /* 客戶詳細資訊卡片 */
 .customer-detail-card {
@@ -3512,6 +3712,7 @@ input[type="checkbox"] {
   background-color: #f8fafc;
   overflow: hidden;
 }
+
 .customer-detail-header {
   padding: 10px 12px;
   display: flex;
@@ -3522,6 +3723,7 @@ input[type="checkbox"] {
   color: var(--primary-color, #2563eb);
   background-color: #eff6ff;
 }
+
 .customer-detail-body {
   padding: 10px 12px;
   display: flex;
@@ -3530,15 +3732,18 @@ input[type="checkbox"] {
   font-size: 0.85rem;
   border-top: 1px solid var(--border-color, #e2e8f0);
 }
+
 .detail-row {
   display: flex;
 }
+
 .detail-label {
   color: var(--text-muted, #64748b);
   font-weight: 500;
   width: 70px;
   flex-shrink: 0;
 }
+
 .detail-val {
   color: var(--text-main, #1e293b);
   font-weight: 600;
@@ -3558,9 +3763,11 @@ input[type="checkbox"] {
   z-index: 1050;
   transition: opacity 0.25s ease;
 }
+
 .modal.hidden {
   display: none !important;
 }
+
 .modal-content {
   background: #ffffff;
   width: 100%;
@@ -3574,9 +3781,15 @@ input[type="checkbox"] {
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
   animation: modalSlideUp 0.25s ease-out;
 }
+
 @keyframes modalSlideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
 }
 
 .modal-header {
@@ -3586,6 +3799,7 @@ input[type="checkbox"] {
   margin-bottom: 0.75rem;
   flex-shrink: 0;
 }
+
 .modal-body {
   display: flex;
   flex-direction: column;
@@ -3593,6 +3807,7 @@ input[type="checkbox"] {
   min-height: 0;
   overflow: hidden;
 }
+
 .line-modal-content {
   height: auto !important;
   max-height: 90vh !important;
@@ -3610,12 +3825,15 @@ input[type="checkbox"] {
   background: #ffffff;
   color: var(--text-main, #1e293b);
 }
+
 .search-input:focus {
   border-color: var(--primary-color, #2563eb);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
-.customer-results, .product-results, .delivery-results {
+.customer-results,
+.product-results,
+.delivery-results {
   overflow-y: auto;
   flex: 1;
   min-height: 0;
@@ -3626,7 +3844,9 @@ input[type="checkbox"] {
   -webkit-overflow-scrolling: touch;
 }
 
-.customer-item, .product-item, .delivery-item {
+.customer-item,
+.product-item,
+.delivery-item {
   padding: 0.75rem 1rem;
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 8px;
@@ -3637,20 +3857,29 @@ input[type="checkbox"] {
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
-.customer-item:hover, .customer-item:active,
-.product-item:hover, .product-item:active,
-.delivery-item:hover, .delivery-item:active,
-.customer-item.selected, .product-item.selected,
+
+.customer-item:hover,
+.customer-item:active,
+.product-item:hover,
+.product-item:active,
+.delivery-item:hover,
+.delivery-item:active,
+.customer-item.selected,
+.product-item.selected,
 .delivery-item.selected {
   background-color: #eff6ff;
   border-color: var(--primary-color, #2563eb);
 }
-.customer-item-name, .product-item-name {
+
+.customer-item-name,
+.product-item-name {
   font-weight: 600;
   font-size: 0.95rem;
   color: var(--text-main, #1e293b);
 }
-.customer-item-sub, .product-item-sub {
+
+.customer-item-sub,
+.product-item-sub {
   font-size: 0.8rem;
   color: var(--text-muted, #64748b);
   margin-top: 0.25rem;
@@ -3672,6 +3901,7 @@ input[type="checkbox"] {
   cursor: pointer;
   transition: all 0.15s ease;
 }
+
 .quote-history-card:hover {
   background-color: #f8fafc;
   border-color: var(--primary-color, #2563eb);
@@ -3683,70 +3913,86 @@ input[type="checkbox"] {
   background-color: #1e293b !important;
   border-color: #334155 !important;
 }
+
 [data-theme="dark"] .product-picker-input {
   background: #0f172a !important;
   border-color: #334155 !important;
   color: #60a5fa !important;
 }
+
 [data-theme="dark"] .item-grid input {
   background: #0f172a !important;
   border-color: #334155 !important;
   color: #f1f5f9 !important;
 }
+
 [data-theme="dark"] .field-readonly {
   background: #1e293b !important;
   color: #94a3b8 !important;
   border-color: #334155 !important;
 }
+
 [data-theme="dark"] .total-summary-card {
   background: #1e293b !important;
   border-color: #334155 !important;
 }
+
 [data-theme="dark"] .total-summary-title {
   color: #f1f5f9 !important;
 }
+
 [data-theme="dark"] .total-summary-amount {
   color: #60a5fa !important;
 }
+
 [data-theme="dark"] .customer-detail-card {
   background: #1e293b !important;
   border-color: #334155 !important;
 }
+
 [data-theme="dark"] .customer-detail-header {
   background: #0f172a !important;
   color: #60a5fa !important;
 }
+
 [data-theme="dark"] .customer-detail-body {
   border-color: #334155 !important;
 }
+
 [data-theme="dark"] .detail-val {
   color: #f1f5f9 !important;
 }
+
 [data-theme="dark"] .modal-content {
   background: #1e293b !important;
   color: #f1f5f9 !important;
 }
+
 [data-theme="dark"] .search-input {
   background: #0f172a !important;
   border-color: #334155 !important;
   color: #f1f5f9 !important;
 }
+
 [data-theme="dark"] .customer-item,
 [data-theme="dark"] .product-item,
 [data-theme="dark"] .delivery-item {
   background: #0f172a !important;
   border-color: #334155 !important;
 }
+
 [data-theme="dark"] .customer-item:hover,
 [data-theme="dark"] .product-item:hover,
 [data-theme="dark"] .delivery-item:hover {
   background: #1e293b !important;
   border-color: #60a5fa !important;
 }
+
 [data-theme="dark"] .customer-item-name,
 [data-theme="dark"] .product-item-name {
   color: #f1f5f9 !important;
 }
+
 [data-theme="dark"] .quote-history-card {
   background: #1e293b !important;
   border-color: #334155 !important;
@@ -3756,46 +4002,57 @@ input[type="checkbox"] {
   background: #0f172a !important;
   border-color: #334155 !important;
 }
+
 [data-theme="dark"] .quote-excel-table th {
   background: #1e293b !important;
   color: #f1f5f9 !important;
   border-bottom-color: #475569 !important;
   border-right-color: #334155 !important;
 }
+
 [data-theme="dark"] .quote-excel-table td {
   border-bottom-color: #334155 !important;
   border-right-color: #1e293b !important;
 }
+
 [data-theme="dark"] .quote-excel-table tbody tr:hover {
   background-color: rgba(59, 130, 246, 0.08) !important;
 }
+
 [data-theme="dark"] .table-cell-input {
   background: #1e293b !important;
   border-color: #475569 !important;
   color: #f8fafc !important;
 }
+
 [data-theme="dark"] .table-cell-readonly {
   color: #f8fafc !important;
 }
+
 [data-theme="dark"] .table-cell-model-btn {
   background: #1e293b !important;
   border-color: #475569 !important;
   color: #60a5fa !important;
 }
+
 [data-theme="dark"] .table-cell-model-btn.selected {
   color: #f8fafc !important;
 }
+
 [data-theme="dark"] .quote-desktop-bottom-bar {
   background: #1e293b !important;
   border-color: #334155 !important;
 }
+
 [data-theme="dark"] .desktop-summary-card {
   background: #0f172a !important;
   border-color: #334155 !important;
 }
+
 [data-theme="dark"] .desktop-summary-card .summary-line .summary-val {
   color: #f1f5f9 !important;
 }
+
 [data-theme="dark"] .desktop-summary-card .summary-line.grand-total .total-money {
   color: #60a5fa !important;
 }
@@ -3811,6 +4068,7 @@ input[type="checkbox"] {
   padding-bottom: 4px;
   overflow-x: auto;
 }
+
 .sub-tab-btn {
   display: inline-flex;
   align-items: center;
@@ -3826,15 +4084,18 @@ input[type="checkbox"] {
   transition: all 0.15s ease;
   white-space: nowrap;
 }
+
 .sub-tab-btn .icon-svg {
   width: 15px;
   height: 15px;
   fill: currentColor;
 }
+
 .sub-tab-btn:hover {
   color: var(--text-main, #1e293b);
   background: var(--bg-card-subtle, #f1f5f9);
 }
+
 .sub-tab-btn.active {
   color: var(--primary-color, #2563eb);
   background: var(--bg-card, #ffffff);
@@ -3852,6 +4113,7 @@ input[type="checkbox"] {
   margin-bottom: 1rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
+
 .quote-header-title-bar {
   display: flex;
   justify-content: space-between;
@@ -3860,11 +4122,13 @@ input[type="checkbox"] {
   padding-bottom: 8px;
   border-bottom: 1px dashed var(--border-color, #e2e8f0);
 }
+
 .quote-header-left-meta {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
 .quote-no-badge {
   font-family: Consolas, Monaco, monospace;
   font-size: 0.82rem;
@@ -3875,6 +4139,7 @@ input[type="checkbox"] {
   border-radius: 4px;
   border: 1px solid rgba(37, 99, 235, 0.2);
 }
+
 .quote-status-badge {
   font-size: 0.75rem;
   font-weight: 600;
@@ -3883,6 +4148,7 @@ input[type="checkbox"] {
   padding: 2px 8px;
   border-radius: 12px;
 }
+
 .btn-toggle-subtle {
   display: inline-flex;
   align-items: center;
@@ -3895,16 +4161,19 @@ input[type="checkbox"] {
   color: var(--text-secondary, #64748b);
   cursor: pointer;
 }
+
 .btn-toggle-subtle:hover {
   background: var(--bg-card-subtle, #f1f5f9);
   color: var(--text-main);
 }
+
 .dual-col-header-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 16px;
   transition: all 0.2s ease;
 }
+
 @media (min-width: 900px) {
   .dual-col-header-grid {
     grid-template-columns: 1.15fr 1fr;
@@ -3917,11 +4186,13 @@ input[type="checkbox"] {
   border-top: 2px solid #f97316 !important;
   border-bottom: 2px solid #f97316 !important;
 }
+
 .subtotal-divider-row td {
   padding: 8px 10px !important;
   color: #9a3412 !important;
   font-weight: 700 !important;
 }
+
 .subtotal-badge {
   display: inline-block;
   background: #f97316;
@@ -3931,6 +4202,7 @@ input[type="checkbox"] {
   border-radius: 4px;
   margin-right: 6px;
 }
+
 .subtotal-title-input {
   border: 1px solid #fdba74;
   background: #ffffff;
@@ -3949,12 +4221,14 @@ input[type="checkbox"] {
   padding: 10px 14px;
   margin-bottom: 1rem;
 }
+
 .attachments-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
 }
+
 .quote-attachments-grid {
   display: flex;
   flex-wrap: wrap;
@@ -3962,6 +4236,7 @@ input[type="checkbox"] {
   align-items: center;
   min-height: 48px;
 }
+
 .quote-attachment-card {
   position: relative;
   width: 70px;
@@ -3974,11 +4249,13 @@ input[type="checkbox"] {
   align-items: center;
   justify-content: center;
 }
+
 .quote-attachment-card img {
   max-width: 100%;
   max-height: 100%;
   object-fit: cover;
 }
+
 .quote-attachment-remove {
   position: absolute;
   top: 2px;
@@ -4000,6 +4277,7 @@ input[type="checkbox"] {
 .quote-draft-container.force-mobile-view .quote-mobile-only {
   display: block !important;
 }
+
 .quote-draft-container.force-mobile-view .quote-desktop-only {
   display: none !important;
 }
@@ -4010,20 +4288,24 @@ input[type="checkbox"] {
   background: #1e293b !important;
   border-color: #334155 !important;
 }
+
 [data-theme="dark"] .sub-tab-btn.active {
   background: #1e293b !important;
   border-color: #334155 !important;
   color: #60a5fa !important;
   border-bottom: 2px solid #60a5fa !important;
 }
+
 [data-theme="dark"] .subtotal-divider-row {
   background: #431407 !important;
   border-top-color: #ea580c !important;
   border-bottom-color: #ea580c !important;
 }
+
 [data-theme="dark"] .subtotal-divider-row td {
   color: #fdba74 !important;
 }
+
 [data-theme="dark"] .subtotal-title-input {
   background: #1c1917 !important;
   border-color: #9a3412 !important;
@@ -4058,6 +4340,7 @@ input[type="checkbox"] {
   cursor: pointer;
   transition: all 0.15s;
 }
+
 .btn-pyside-subtle:hover {
   background: #cbd5e1;
   color: #0f172a;
@@ -4071,6 +4354,7 @@ input[type="checkbox"] {
   margin-bottom: 12px;
   transition: max-height 0.2s ease-out;
 }
+
 .pyside-header-container.collapsed {
   display: none;
 }
@@ -4090,6 +4374,7 @@ input[type="checkbox"] {
   flex-direction: column;
   gap: 6px;
 }
+
 .pyside-header-grid .grid-row {
   display: grid;
   grid-template-columns: 80px 1.5fr 80px 1.2fr;
@@ -4097,24 +4382,28 @@ input[type="checkbox"] {
   gap: 8px;
   font-size: 0.85rem;
 }
+
 @media (max-width: 900px) {
   .pyside-header-grid .grid-row {
     grid-template-columns: 80px 1fr;
   }
 }
+
 .grid-cell-label {
   font-weight: 600;
   color: #475569;
   text-align: right;
   white-space: nowrap;
 }
+
 .grid-cell-content {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.pyside-input, .pyside-select {
+.pyside-input,
+.pyside-select {
   padding: 4px 8px;
   border: 1px solid #cbd5e1;
   border-radius: 4px;
@@ -4124,10 +4413,13 @@ input[type="checkbox"] {
   height: 30px;
   box-sizing: border-box;
 }
-.pyside-input:focus, .pyside-select:focus {
+
+.pyside-input:focus,
+.pyside-select:focus {
   border-color: #2563eb;
   outline: none;
 }
+
 .pyside-date-blue {
   color: #0284c7 !important;
   font-weight: 700 !important;
@@ -4147,6 +4439,7 @@ input[type="checkbox"] {
   align-items: center;
   gap: 4px;
 }
+
 .btn-pyside-crm:hover {
   background: #0369a1;
 }
@@ -4182,9 +4475,11 @@ input[type="checkbox"] {
   font-weight: 600;
   gap: 6px;
 }
+
 .active-row-pill {
   white-space: nowrap;
 }
+
 .btn-clear-active-row {
   background: transparent;
   border: none;
@@ -4194,6 +4489,7 @@ input[type="checkbox"] {
   font-weight: bold;
   padding: 0 2px;
 }
+
 .btn-clear-active-row:hover {
   color: #ef4444;
 }
@@ -4218,7 +4514,10 @@ input[type="checkbox"] {
   align-items: center;
   gap: 4px;
 }
-.btn-pyside-gray:hover { background: #475569; }
+
+.btn-pyside-gray:hover {
+  background: #475569;
+}
 
 .btn-pyside-green {
   background: #10b981;
@@ -4233,7 +4532,10 @@ input[type="checkbox"] {
   align-items: center;
   gap: 4px;
 }
-.btn-pyside-green:hover { background: #059669; }
+
+.btn-pyside-green:hover {
+  background: #059669;
+}
 
 .btn-pyside-line {
   background: #06c755;
@@ -4248,7 +4550,10 @@ input[type="checkbox"] {
   align-items: center;
   gap: 4px;
 }
-.btn-pyside-line:hover { background: #05a747; }
+
+.btn-pyside-line:hover {
+  background: #05a747;
+}
 
 .btn-pyside-blue {
   background: #0284c7;
@@ -4263,7 +4568,10 @@ input[type="checkbox"] {
   align-items: center;
   gap: 4px;
 }
-.btn-pyside-blue:hover { background: #0369a1; }
+
+.btn-pyside-blue:hover {
+  background: #0369a1;
+}
 
 .btn-pyside-red {
   background: #b91c1c;
@@ -4278,7 +4586,10 @@ input[type="checkbox"] {
   align-items: center;
   gap: 4px;
 }
-.btn-pyside-red:hover { background: #991b1b; }
+
+.btn-pyside-red:hover {
+  background: #991b1b;
+}
 
 .btn-pyside-teal {
   background: #0d9488;
@@ -4293,7 +4604,10 @@ input[type="checkbox"] {
   align-items: center;
   gap: 4px;
 }
-.btn-pyside-teal:hover { background: #0f766e; }
+
+.btn-pyside-teal:hover {
+  background: #0f766e;
+}
 
 .btn-pyside-purple {
   background: #7c3aed;
@@ -4308,7 +4622,10 @@ input[type="checkbox"] {
   align-items: center;
   gap: 4px;
 }
-.btn-pyside-purple:hover { background: #6d28d9; }
+
+.btn-pyside-purple:hover {
+  background: #6d28d9;
+}
 
 .btn-pyside-orange {
   background: #ea580c;
@@ -4323,7 +4640,10 @@ input[type="checkbox"] {
   align-items: center;
   gap: 4px;
 }
-.btn-pyside-orange:hover { background: #c2410c; }
+
+.btn-pyside-orange:hover {
+  background: #c2410c;
+}
 
 .btn-pyside-dark {
   background: #1e293b;
@@ -4338,7 +4658,10 @@ input[type="checkbox"] {
   align-items: center;
   gap: 4px;
 }
-.btn-pyside-dark:hover { background: #0f172a; }
+
+.btn-pyside-dark:hover {
+  background: #0f172a;
+}
 
 .pyside-table-container {
   overflow-x: auto;
@@ -4355,6 +4678,7 @@ input[type="checkbox"] {
   font-size: 0.85rem;
   text-align: left;
 }
+
 .pyside-excel-table th {
   background: #f1f5f9;
   color: #334155;
@@ -4365,14 +4689,17 @@ input[type="checkbox"] {
   white-space: nowrap;
   user-select: none;
 }
+
 .pyside-excel-table td {
   padding: 4px 6px;
   border: 1px solid #e2e8f0;
   vertical-align: middle;
 }
+
 .pyside-excel-table tbody tr:hover {
   background-color: #f8fafc;
 }
+
 .pyside-excel-table tbody tr.active-row {
   background-color: #e0f2fe !important;
 }
@@ -4399,10 +4726,12 @@ input[type="checkbox"] {
   cursor: pointer;
   text-align: left;
 }
+
 .cell-model-combobox:hover {
   border-color: #0284c7;
   background: #f8fafc;
 }
+
 .cell-model-combobox .dropdown-arrow {
   color: #64748b;
   font-size: 0.7rem;
@@ -4416,7 +4745,9 @@ input[type="checkbox"] {
   flex-wrap: wrap;
   gap: 8px;
 }
-.pyside-toolbar-left, .pyside-toolbar-right {
+
+.pyside-toolbar-left,
+.pyside-toolbar-right {
   display: flex;
   gap: 6px;
   align-items: center;
@@ -4426,17 +4757,20 @@ input[type="checkbox"] {
 .pyside-summary-container {
   margin-bottom: 16px;
 }
+
 .pyside-totals-box {
   font-size: 0.95rem;
   font-weight: 600;
   line-height: 1.8;
   color: #1e293b;
 }
+
 .pyside-totals-box .total-row {
   display: flex;
   gap: 8px;
   align-items: baseline;
 }
+
 .pyside-totals-box .total-grand-red {
   font-size: 1.18rem;
   font-weight: 800;
@@ -4450,12 +4784,14 @@ input[type="checkbox"] {
   background: #f8fafc;
   margin-top: 10px;
 }
+
 .pyside-attachment-title {
   font-weight: 700;
   font-size: 0.9rem;
   color: #1e293b;
   margin-bottom: 8px;
 }
+
 .pyside-attachment-body {
   display: flex;
   align-items: center;
@@ -4463,6 +4799,7 @@ input[type="checkbox"] {
   margin-bottom: 8px;
   flex-wrap: wrap;
 }
+
 .attachment-hint-text {
   font-size: 0.82rem;
   color: #64748b;
@@ -4474,28 +4811,34 @@ input[type="checkbox"] {
   background: #1e293b !important;
   border-color: #334155 !important;
 }
+
 [data-theme="dark"] .pyside-excel-table th {
   background: #0f172a !important;
   color: #cbd5e1 !important;
   border-color: #334155 !important;
 }
+
 [data-theme="dark"] .pyside-excel-table td {
   border-color: #334155 !important;
   background: #1e293b !important;
 }
-[data-theme="dark"] .pyside-input, 
+
+[data-theme="dark"] .pyside-input,
 [data-theme="dark"] .pyside-select,
 [data-theme="dark"] .cell-model-combobox {
   background: #0f172a !important;
   border-color: #334155 !important;
   color: #f1f5f9 !important;
 }
+
 [data-theme="dark"] .pyside-totals-box {
   color: #f1f5f9 !important;
 }
+
 [data-theme="dark"] .pyside-totals-box .total-grand-red {
   color: #f87171 !important;
 }
+
 [data-theme="dark"] .cell-stock-gray {
   background-color: #0f172a !important;
   color: #94a3b8 !important;
@@ -4545,6 +4888,7 @@ input[type="checkbox"] {
   cursor: pointer;
   transition: background 0.15s;
 }
+
 .btn-mobile-crm-link:hover {
   background: #dbeafe;
 }
@@ -4561,6 +4905,7 @@ input[type="checkbox"] {
   box-sizing: border-box;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
+
 .mobile-customer-input:focus {
   border-color: #2563eb;
   outline: none;
@@ -4600,6 +4945,7 @@ input[type="checkbox"] {
   text-align: center;
   transition: background 0.15s;
 }
+
 .btn-mobile-add-item:hover {
   background: #dbeafe;
 }
@@ -4615,16 +4961,19 @@ input[type="checkbox"] {
   margin-bottom: 1rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
+
 .mobile-summary-left {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
 .mobile-summary-title {
   font-size: 1rem;
   font-weight: 700;
   color: #0f172a;
 }
+
 .mobile-summary-count-badge {
   background: #e0f2fe;
   color: #0284c7;
@@ -4633,6 +4982,7 @@ input[type="checkbox"] {
   padding: 3px 9px;
   border-radius: 12px;
 }
+
 .mobile-summary-amount {
   font-size: 1.55rem;
   font-weight: 800;
@@ -4646,6 +4996,7 @@ input[type="checkbox"] {
   gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
+
 .btn-mobile-line-quote {
   display: inline-flex;
   align-items: center;
@@ -4660,9 +5011,11 @@ input[type="checkbox"] {
   font-weight: 700;
   cursor: pointer;
 }
+
 .btn-mobile-line-quote:hover {
   background: #05a747;
 }
+
 .btn-mobile-submit-draft {
   display: inline-flex;
   align-items: center;
@@ -4677,6 +5030,7 @@ input[type="checkbox"] {
   font-weight: 700;
   cursor: pointer;
 }
+
 .btn-mobile-submit-draft:hover {
   background: #1d4ed8;
 }
@@ -4698,31 +5052,37 @@ input[type="checkbox"] {
   background: #1e293b !important;
   border-color: #334155 !important;
 }
+
 [data-theme="dark"] .mobile-section-label,
 [data-theme="dark"] .mobile-items-section-title,
 [data-theme="dark"] .mobile-summary-title {
   color: #f1f5f9 !important;
 }
+
 [data-theme="dark"] .mobile-customer-input {
   background: #0f172a !important;
   border-color: #334155 !important;
   color: #f1f5f9 !important;
 }
+
 [data-theme="dark"] .btn-mobile-crm-link,
 [data-theme="dark"] .btn-mobile-add-item {
   background: rgba(37, 99, 235, 0.18) !important;
   border-color: rgba(96, 165, 250, 0.4) !important;
   color: #60a5fa !important;
 }
+
 [data-theme="dark"] .stock-disclaimer-box {
   background-color: rgba(245, 158, 11, 0.14) !important;
   border-color: rgba(245, 158, 11, 0.35) !important;
   border-left: 3px solid #f59e0b !important;
   color: #fde68a !important;
 }
+
 [data-theme="dark"] .stock-disclaimer-time {
   color: #fef3c7 !important;
 }
+
 [data-theme="dark"] .stock-disclaimer-text {
   color: #fcd34d !important;
 }
@@ -5039,64 +5399,74 @@ input[type="checkbox"] {
   display: none !important;
 }
 
-/* 當處於報價管理系統且螢幕寬度 >= 1280px 時，隱藏戰情室頂部標題列，讓側邊欄與主工作區 100% 滿版對齊電腦版 _QuotationApp */
+/* 當處於報價管理系統且螢幕寬度 >= 1280px 時，隱藏戰情室頂部標題列，讓側邊欄與主工作區 100% 滿版對齊電腦版 _QuotationApp，並 100% 沿用外部業務系統配色 */
 @media (min-width: 1280px) {
   body.quotation-system-active .office-title-bar {
     display: none !important;
   }
+
   body.quotation-system-active .admin-impersonate-bar {
     top: 0 !important;
   }
+
   body.quotation-system-active .app-body-wrapper {
     min-height: 100vh !important;
     padding-top: 0 !important;
   }
+
   body.quotation-system-active #drawerOverlay {
     position: sticky !important;
     top: 0 !important;
     height: 100vh !important;
     flex-shrink: 0 !important;
   }
+
   body.quotation-system-active #appDrawer {
     width: 200px !important;
     min-width: 200px !important;
     max-width: 200px !important;
     height: 100vh !important;
-    background-color: #F0F4F9 !important;
-    border-right: 1px solid #E1E5EA !important;
+    background-color: var(--bg-surface-secondary) !important;
+    border-right: 1px solid var(--border-card) !important;
     padding: 0 !important;
     box-shadow: none !important;
     display: flex !important;
     flex-direction: column !important;
   }
+
   html[data-theme="dark"] body.quotation-system-active #appDrawer {
-    background-color: #2F333E !important;
-    border-right: 1px solid #4A5060 !important;
+    background-color: var(--bg-surface-secondary) !important;
+    border-right: 1px solid var(--border-card) !important;
   }
+
   body.quotation-system-active #appDrawer.collapsed {
     display: none !important;
   }
+
   body.quotation-system-active #appDrawer .drawer-header {
     display: none !important;
   }
+
   body.quotation-system-active .main-container {
-    background-color: #FFFFFF !important;
+    background-color: var(--bg-app) !important;
     padding: 0 !important;
     max-width: none !important;
     flex: 1 !important;
     min-height: 100vh !important;
     overflow-x: auto !important;
   }
+
   html[data-theme="dark"] body.quotation-system-active .main-container {
-    background-color: #3B404D !important;
+    background-color: var(--bg-app) !important;
   }
+
   body.quotation-system-active #panelQuotes {
     padding: 0 !important;
     margin: 0 !important;
   }
 }
 
-/* 側邊欄：100% 還原 _QuotationApp main.py 200px 膠囊按鈕與時鐘 */
+/* 側邊欄：100% 還原 _QuotationApp main.py 200px 膠囊按鈕與時鐘，綁定外部業務系統主題色 */
 #quoteSidebarNavList {
   display: flex;
   flex-direction: column;
@@ -5106,7 +5476,7 @@ input[type="checkbox"] {
 }
 
 .quote-sidebar-brand-title {
-  color: #1F1F1F;
+  color: var(--text-primary);
   font-size: 20px;
   font-weight: 700;
   padding: 24px 16px 20px 24px;
@@ -5115,7 +5485,7 @@ input[type="checkbox"] {
 }
 
 html[data-theme="dark"] .quote-sidebar-brand-title {
-  color: #F8F9FA;
+  color: var(--text-primary);
 }
 
 #quoteSidebarNavList .quote-nav-btn {
@@ -5124,7 +5494,7 @@ html[data-theme="dark"] .quote-sidebar-brand-title {
   align-items: center;
   justify-content: flex-start;
   background-color: transparent;
-  color: #444746;
+  color: var(--text-secondary);
   border: none;
   border-radius: 25px;
   height: 50px;
@@ -5140,29 +5510,29 @@ html[data-theme="dark"] .quote-sidebar-brand-title {
 }
 
 #quoteSidebarNavList .quote-nav-btn:hover {
-  background-color: #E4E9F1;
-  color: #1F1F1F;
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 #quoteSidebarNavList .quote-nav-btn.active {
-  background-color: #D3E3FD;
-  color: #0B57D0;
+  background-color: var(--color-accent-light);
+  color: var(--color-accent);
   font-weight: 700;
   border-left: none;
 }
 
 html[data-theme="dark"] #quoteSidebarNavList .quote-nav-btn {
-  color: #C4C7C5;
+  color: var(--text-secondary);
 }
 
 html[data-theme="dark"] #quoteSidebarNavList .quote-nav-btn:hover {
-  background-color: #3D4250;
-  color: #F8F9FA;
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 html[data-theme="dark"] #quoteSidebarNavList .quote-nav-btn.active {
-  background-color: rgba(168, 199, 250, 0.18);
-  color: #A8C7FA;
+  background-color: var(--color-accent-light);
+  color: var(--color-accent);
   font-weight: 700;
 }
 
@@ -5190,7 +5560,7 @@ html[data-theme="dark"] #quoteSidebarNavList .quote-nav-btn.active {
 }
 
 .quote-sidebar-clock {
-  color: #444746;
+  color: var(--text-secondary);
   font-size: 13px;
   font-family: Consolas, Monaco, monospace;
   text-align: center;
@@ -5198,7 +5568,7 @@ html[data-theme="dark"] #quoteSidebarNavList .quote-nav-btn.active {
 }
 
 html[data-theme="dark"] .quote-sidebar-clock {
-  color: #C4C7C5;
+  color: var(--text-secondary);
 }
 
 .btn-exit-quotation-system {
@@ -5241,29 +5611,35 @@ html[data-theme="dark"] .btn-exit-quotation-system {
   #quoteDraftSection .quote-desktop-only {
     display: block !important;
   }
+
   #quoteDraftSection .pyside-top-toggle-bar.quote-desktop-only,
   #quoteDraftSection .pyside-toolbar-bottom.quote-desktop-only {
     display: flex !important;
   }
+
   #quoteDraftSection .pyside-table-drag-handle.quote-desktop-only {
     display: flex !important;
   }
+
   #quoteDraftSection .quote-mobile-only {
     display: none !important;
   }
 }
 
 @media (max-width: 1279px) {
+
   /* 窄螢幕下自動切換為 _QuotationApp\pwa 網頁報價單模式，隱藏電腦版寬表格與側邊欄其他 8 頁，僅留離開按鈕 */
   #quoteDraftSection .quote-desktop-only {
     display: none !important;
   }
+
   #quoteDraftSection .quote-mobile-only {
     display: block !important;
     max-width: 760px;
     margin: 0 auto;
     padding: 8px 10px 32px 10px;
   }
+
   #quoteSidebarNavList .quote-nav-btn,
   #quoteSidebarNavList .quote-sidebar-brand-title,
   #quoteSidebarNavList .quote-sidebar-clock {
@@ -5291,9 +5667,9 @@ html[data-theme="dark"] .btn-exit-quotation-system {
 }
 
 .btn-pyside-subtle {
-  background-color: transparent;
-  color: #444746;
-  border: 1px solid #C4C7C5;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-card);
   border-radius: 6px;
   padding: 6px 12px;
   font-size: 13px;
@@ -5306,18 +5682,21 @@ html[data-theme="dark"] .btn-exit-quotation-system {
 }
 
 .btn-pyside-subtle:hover {
-  background-color: #F0F4F9;
-  color: #1F1F1F;
+  background-color: var(--bg-hover);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 html[data-theme="dark"] .btn-pyside-subtle {
-  color: #C4C7C5;
-  border-color: #4A5060;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  border-color: var(--border-card);
 }
 
 html[data-theme="dark"] .btn-pyside-subtle:hover {
-  background-color: #3D4250;
-  color: #F8F9FA;
+  background-color: var(--bg-hover);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 /* 新建報價單工作區內距 (對標 gui_page1.py setContentsMargins(15, 5, 15, 15)) */
@@ -5327,22 +5706,22 @@ html[data-theme="dark"] .btn-pyside-subtle:hover {
   }
 }
 
-/* QGroupBox 標準框線容器 (1050px 固定寬度) */
+/* QGroupBox 標準框線容器 (1050px 固定寬度，綁定外部業務系統卡片配色) */
 .pyside-groupbox {
   width: 1050px;
   min-width: 1050px;
   max-width: 1050px;
   box-sizing: border-box;
-  border: 1px solid #E1E5EA;
+  border: 1px solid var(--border-card);
   border-radius: 8px;
   margin: 8px 0 10px 0;
   padding: 12px 15px 12px 15px;
-  background-color: #FFFFFF;
+  background-color: var(--bg-card);
 }
 
 html[data-theme="dark"] .pyside-groupbox {
-  border-color: #4A5060;
-  background-color: #3B404D;
+  border-color: var(--border-card);
+  background-color: var(--bg-card);
 }
 
 .pyside-groupbox.collapsed {
@@ -5353,11 +5732,11 @@ html[data-theme="dark"] .pyside-groupbox {
   padding: 0 6px;
   font-size: 15px;
   font-weight: 700;
-  color: #0B57D0;
+  color: var(--color-accent);
 }
 
 html[data-theme="dark"] .pyside-groupbox-legend {
-  color: #A8C7FA;
+  color: var(--color-accent);
 }
 
 /* 報價單基本資料 6 列 Grid */
@@ -5376,14 +5755,14 @@ html[data-theme="dark"] .pyside-groupbox-legend {
 }
 
 .grid-cell-label {
-  font-weight: 500;
-  color: #1F1F1F;
+  font-weight: 600;
+  color: var(--text-primary);
   text-align: left;
   white-space: nowrap;
 }
 
 html[data-theme="dark"] .grid-cell-label {
-  color: #F8F9FA;
+  color: var(--text-primary);
 }
 
 .grid-cell-content {
@@ -5395,23 +5774,23 @@ html[data-theme="dark"] .grid-cell-label {
 
 .quote-id-sep {
   font-weight: 700;
-  color: #444746;
+  color: var(--text-secondary);
   padding: 0 1px;
   user-select: none;
 }
 
 html[data-theme="dark"] .quote-id-sep {
-  color: #C4C7C5;
+  color: var(--text-secondary);
 }
 
 .pyside-input,
 .pyside-select {
   padding: 5px 10px;
-  border: 1px solid #C4C7C5;
+  border: 1px solid var(--border-card);
   border-radius: 6px;
   font-size: 14px;
-  background-color: #FFFFFF;
-  color: #1F1F1F;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
   min-height: 32px;
   height: 32px;
   box-sizing: border-box;
@@ -5424,35 +5803,35 @@ html[data-theme="dark"] .quote-id-sep {
 
 .pyside-input:focus,
 .pyside-select:focus {
-  border: 2px solid #0B57D0;
+  border: 2px solid var(--border-focus);
   outline: none;
 }
 
 .pyside-input[readonly],
 .pyside-readonly {
-  background-color: #F0F4F9;
-  color: #444746;
-  border-color: #E1E5EA;
+  background-color: var(--bg-surface-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-light);
 }
 
 html[data-theme="dark"] .pyside-input,
 html[data-theme="dark"] .pyside-select {
-  background-color: #2F333E !important;
-  border-color: #4A5060 !important;
-  color: #F8F9FA !important;
+  background-color: var(--bg-input) !important;
+  border-color: var(--border-card) !important;
+  color: var(--text-primary) !important;
 }
 
 html[data-theme="dark"] .pyside-input:focus,
 html[data-theme="dark"] .pyside-select:focus {
-  border: 1px solid #A8C7FA !important;
-  background-color: #353A47 !important;
+  border: 1px solid var(--border-focus) !important;
+  background-color: var(--bg-hover) !important;
 }
 
 html[data-theme="dark"] .pyside-input[readonly],
 html[data-theme="dark"] .pyside-readonly {
-  background-color: #262932 !important;
-  color: #8E918F !important;
-  border-color: #3B404D !important;
+  background-color: var(--bg-surface-secondary) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border-light) !important;
 }
 
 /* 表格上方雙排工具列容器 (1050px) */
@@ -5491,9 +5870,9 @@ html[data-theme="dark"] .pyside-readonly {
 .pyside-edit-banner-label {
   display: inline-flex;
   align-items: center;
-  background-color: #f8f9fa;
-  color: #6c757d;
-  border: 1px solid #dee2e6;
+  background-color: var(--bg-surface-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-card);
   border-radius: 6px;
   padding: 5px 12px;
   font-size: 13px;
@@ -5507,33 +5886,33 @@ html[data-theme="dark"] .pyside-readonly {
 }
 
 .pyside-edit-banner-label.active-product {
-  background-color: #e8f4f8;
-  color: #0B57D0;
-  border-color: #b8daff;
+  background-color: var(--color-accent-light);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 .pyside-edit-banner-label.active-subtotal {
-  background-color: #fff3cd;
-  color: #856404;
-  border-color: #ffeeba;
+  background-color: var(--grid-bg-orange);
+  color: var(--grid-num-orange);
+  border-color: var(--grid-num-orange);
 }
 
 html[data-theme="dark"] .pyside-edit-banner-label {
-  background-color: #2F333E;
-  color: #C4C7C5;
-  border-color: #4A5060;
+  background-color: var(--bg-surface-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-card);
 }
 
 html[data-theme="dark"] .pyside-edit-banner-label.active-product {
-  background-color: rgba(168, 199, 250, 0.16);
-  color: #A8C7FA;
-  border-color: #5C8CE6;
+  background-color: var(--color-accent-light);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 html[data-theme="dark"] .pyside-edit-banner-label.active-subtotal {
-  background-color: rgba(245, 158, 11, 0.2);
-  color: #fde68a;
-  border-color: #d97706;
+  background-color: var(--grid-bg-orange);
+  color: var(--grid-num-orange);
+  border-color: var(--grid-num-orange);
 }
 
 .pyside-item-actions-container {
@@ -5543,11 +5922,11 @@ html[data-theme="dark"] .pyside-edit-banner-label.active-subtotal {
   flex-wrap: nowrap;
 }
 
-/* 第 2 排動態膠囊與動作按鈕 (_QuotationApp update_banner_for_row 1:1 配色) */
+/* 第 2 排動態膠囊與動作按鈕 */
 .banner-order-badge {
-  background-color: #fff3e0;
-  color: #e65100;
-  border: 1px solid #ffb74d;
+  background-color: var(--grid-bg-orange);
+  color: var(--grid-num-orange);
+  border: 1px solid var(--grid-num-orange);
   border-radius: 4px;
   padding: 3px 8px;
   font-weight: 700;
@@ -5556,9 +5935,9 @@ html[data-theme="dark"] .pyside-edit-banner-label.active-subtotal {
 }
 
 .banner-sku-copy-btn {
-  background-color: #e0f7fa;
-  color: #006064;
-  border: 1px solid #00acc1;
+  background-color: var(--grid-bg-blue);
+  color: var(--grid-num-blue);
+  border: 1px solid var(--grid-num-blue);
   border-radius: 4px;
   padding: 3px 8px;
   font-weight: 700;
@@ -5569,13 +5948,13 @@ html[data-theme="dark"] .pyside-edit-banner-label.active-subtotal {
 }
 
 .banner-sku-copy-btn:hover {
-  background-color: #b2ebf2;
+  opacity: 0.9;
 }
 
 .banner-sku-switch-btn {
-  background-color: #fff1f0;
-  color: #cf1322;
-  border: 1px solid #ffa39e;
+  background-color: var(--grid-bg-red);
+  color: var(--grid-num-red);
+  border: 1px solid var(--grid-num-red);
   border-radius: 4px;
   padding: 3px 8px;
   font-weight: 700;
@@ -5585,16 +5964,16 @@ html[data-theme="dark"] .pyside-edit-banner-label.active-subtotal {
 }
 
 .banner-sku-switch-btn:hover {
-  background-color: #ffccc7;
+  opacity: 0.9;
 }
 
 .banner-icon-action-btn {
   height: 32px;
   padding: 0 10px;
   border-radius: 4px;
-  border: 1px solid #C4C7C5;
-  background-color: #FFFFFF;
-  color: #1F1F1F;
+  border: 1px solid var(--border-card);
+  background-color: var(--bg-card);
+  color: var(--text-primary);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -5605,21 +5984,21 @@ html[data-theme="dark"] .pyside-edit-banner-label.active-subtotal {
 }
 
 .banner-icon-action-btn:hover {
-  background-color: #F0F4F9;
-  border-color: #0B57D0;
-  color: #0B57D0;
+  background-color: var(--bg-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .banner-icon-action-btn.danger:hover {
-  background-color: #fef2f2;
-  border-color: #dc2626;
-  color: #dc2626;
+  background-color: var(--grid-bg-red);
+  border-color: var(--grid-num-red);
+  color: var(--grid-num-red);
 }
 
 html[data-theme="dark"] .banner-icon-action-btn {
-  background-color: #2F333E;
-  border-color: #4A5060;
-  color: #F8F9FA;
+  background-color: var(--bg-card);
+  border-color: var(--border-card);
+  color: var(--text-primary);
 }
 
 /* 5 顆與底部彩色按鈕 (100% 還原 gui_page1.py Hex 色碼) */
@@ -5633,7 +6012,10 @@ html[data-theme="dark"] .banner-icon-action-btn {
   padding: 7px 14px;
   cursor: pointer;
 }
-.btn-pyside-gray:hover { background-color: #6c7a7b; }
+
+.btn-pyside-gray:hover {
+  background-color: #6c7a7b;
+}
 
 .btn-pyside-green {
   background-color: #27ae60;
@@ -5645,7 +6027,10 @@ html[data-theme="dark"] .banner-icon-action-btn {
   padding: 7px 14px;
   cursor: pointer;
 }
-.btn-pyside-green:hover { background-color: #219653; }
+
+.btn-pyside-green:hover {
+  background-color: #219653;
+}
 
 .btn-pyside-line {
   background-color: #00B900;
@@ -5657,7 +6042,10 @@ html[data-theme="dark"] .banner-icon-action-btn {
   padding: 7px 14px;
   cursor: pointer;
 }
-.btn-pyside-line:hover { background-color: #009900; }
+
+.btn-pyside-line:hover {
+  background-color: #009900;
+}
 
 .btn-pyside-blue {
   background-color: #0078D7;
@@ -5669,7 +6057,10 @@ html[data-theme="dark"] .banner-icon-action-btn {
   padding: 7px 14px;
   cursor: pointer;
 }
-.btn-pyside-blue:hover { background-color: #005a9e; }
+
+.btn-pyside-blue:hover {
+  background-color: #005a9e;
+}
 
 .btn-pyside-red {
   background-color: #c0392b;
@@ -5681,7 +6072,10 @@ html[data-theme="dark"] .banner-icon-action-btn {
   padding: 7px 14px;
   cursor: pointer;
 }
-.btn-pyside-red:hover { background-color: #a93226; }
+
+.btn-pyside-red:hover {
+  background-color: #a93226;
+}
 
 .btn-pyside-orange {
   background-color: #d35400;
@@ -5693,7 +6087,10 @@ html[data-theme="dark"] .banner-icon-action-btn {
   padding: 7px 14px;
   cursor: pointer;
 }
-.btn-pyside-orange:hover { background-color: #b84700; }
+
+.btn-pyside-orange:hover {
+  background-color: #b84700;
+}
 
 .btn-pyside-teal {
   background-color: #16a085;
@@ -5705,7 +6102,10 @@ html[data-theme="dark"] .banner-icon-action-btn {
   padding: 7px 14px;
   cursor: pointer;
 }
-.btn-pyside-teal:hover { background-color: #12876f; }
+
+.btn-pyside-teal:hover {
+  background-color: #12876f;
+}
 
 .btn-pyside-teal-dark {
   background-color: #00897b;
@@ -5717,7 +6117,10 @@ html[data-theme="dark"] .banner-icon-action-btn {
   padding: 7px 14px;
   cursor: pointer;
 }
-.btn-pyside-teal-dark:hover { background-color: #00695c; }
+
+.btn-pyside-teal-dark:hover {
+  background-color: #00695c;
+}
 
 .btn-pyside-purple {
   background-color: #8e44ad;
@@ -5729,7 +6132,10 @@ html[data-theme="dark"] .banner-icon-action-btn {
   padding: 7px 14px;
   cursor: pointer;
 }
-.btn-pyside-purple:hover { background-color: #783793; }
+
+.btn-pyside-purple:hover {
+  background-color: #783793;
+}
 
 .btn-pyside-dark {
   background-color: #34495e;
@@ -5741,9 +6147,12 @@ html[data-theme="dark"] .banner-icon-action-btn {
   padding: 7px 14px;
   cursor: pointer;
 }
-.btn-pyside-dark:hover { background-color: #2c3e50; }
 
-/* 3. QuoteTableWidget 10 欄試算表格容器 (1050px 寬，支援垂直高度拖曳與水平欄寬拖曳) */
+.btn-pyside-dark:hover {
+  background-color: #2c3e50;
+}
+
+/* 3. QuoteTableWidget 10 欄試算表格容器 (1050px 寬，支援垂直高度拖曳與水平欄寬拖曳、欄位順序互換，100% 沿用外部業務系統配色) */
 .pyside-table-container {
   width: 1050px;
   min-width: 1050px;
@@ -5752,15 +6161,15 @@ html[data-theme="dark"] .banner-icon-action-btn {
   min-height: 150px;
   overflow-x: auto;
   overflow-y: auto;
-  border: 1px solid #E1E5EA;
+  border: 1px solid var(--border-card);
   border-radius: 8px 8px 0 0;
-  background-color: #FFFFFF;
+  background-color: var(--bg-card);
   box-sizing: border-box;
 }
 
 html[data-theme="dark"] .pyside-table-container {
-  background-color: #2F333E !important;
-  border-color: #4A5060 !important;
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-card) !important;
 }
 
 .pyside-excel-table {
@@ -5775,11 +6184,11 @@ html[data-theme="dark"] .pyside-table-container {
   position: sticky;
   top: 0;
   z-index: 4;
-  background-color: #F0F4F9;
-  color: #444746;
+  background-color: var(--bg-surface-secondary);
+  color: var(--text-primary);
   padding: 9px 6px;
-  border-bottom: 1px solid #E1E5EA;
-  border-right: 1px solid #E1E5EA;
+  border-bottom: 1px solid var(--border-card);
+  border-right: 1px solid var(--border-card);
   font-weight: 700;
   font-size: 13px;
   text-align: center;
@@ -5788,36 +6197,83 @@ html[data-theme="dark"] .pyside-table-container {
   text-overflow: ellipsis;
   user-select: none;
   box-sizing: border-box;
+  cursor: grab;
+  transition: background-color 0.12s ease;
+}
+
+.pyside-excel-table th:active {
+  cursor: grabbing;
 }
 
 html[data-theme="dark"] .pyside-excel-table th {
-  background-color: #262932 !important;
-  color: #C4C7C5 !important;
-  border-bottom: 1px solid #4A5060 !important;
-  border-right: 1px solid #3B404D !important;
+  background-color: var(--bg-surface-secondary) !important;
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--border-card) !important;
+  border-right: 1px solid var(--border-card) !important;
 }
 
-/* 左上角 Corner Button「項次」與左側垂直列號 */
+/* 表頭左右拖曳互換順序視覺提示 */
+.pyside-excel-table th.th-dragging {
+  opacity: 0.55;
+  background-color: var(--color-accent-light) !important;
+}
+
+.pyside-excel-table th.th-drag-over-left {
+  box-shadow: inset 3px 0 0 0 var(--color-accent);
+  background-color: var(--color-accent-light) !important;
+}
+
+.pyside-excel-table th.th-drag-over-right {
+  box-shadow: inset -3px 0 0 0 var(--color-accent);
+  background-color: var(--color-accent-light) !important;
+}
+
+/* 左上角 Corner Button「項次」與左側垂直列號 (支援上下拖曳列順序互換) */
 .pyside-excel-table th.col-corner-header,
 .pyside-excel-table td.cell-vertical-index {
   width: 48px !important;
   min-width: 48px !important;
   max-width: 48px !important;
-  background-color: #F0F4F9;
-  color: #444746;
+  background-color: var(--bg-surface-secondary) !important;
+  color: var(--text-primary) !important;
   font-weight: 700;
   text-align: center;
-  border-right: 1px solid #E1E5EA;
-  border-bottom: 1px solid #E1E5EA;
+  border-right: 1px solid var(--border-card) !important;
+  border-bottom: 1px solid var(--border-card) !important;
   user-select: none;
+}
+
+.pyside-excel-table th.col-corner-header {
+  cursor: default;
+}
+
+#quoteDesktopTable td.cell-vertical-index {
+  cursor: grab;
+}
+
+#quoteDesktopTable td.cell-vertical-index:active {
+  cursor: grabbing;
 }
 
 html[data-theme="dark"] .pyside-excel-table th.col-corner-header,
 html[data-theme="dark"] .pyside-excel-table td.cell-vertical-index {
-  background-color: #262932 !important;
-  color: #C4C7C5 !important;
-  border-right: 1px solid #4A5060 !important;
-  border-bottom: 1px solid #4A5060 !important;
+  background-color: var(--bg-surface-secondary) !important;
+  color: var(--text-primary) !important;
+  border-right: 1px solid var(--border-card) !important;
+  border-bottom: 1px solid var(--border-card) !important;
+}
+
+/* 明細列上下拖曳互換順序視覺提示 */
+.pyside-excel-table tbody tr.row-dragging {
+  opacity: 0.55;
+}
+
+.pyside-excel-table tbody tr.row-drag-over-top td {
+  border-top: 2.5px solid var(--color-accent) !important;
+}
+
+.pyside-excel-table tbody tr.row-drag-over-bottom td {
+  border-bottom: 2.5px solid var(--color-accent) !important;
 }
 
 /* 表頭欄位右緣拖曳手把 */
@@ -5839,16 +6295,16 @@ html[data-theme="dark"] .pyside-excel-table td.cell-vertical-index {
 
 .col-resizer:hover,
 .col-resizer.resizing {
-  background-color: #0B57D0;
+  background-color: var(--color-accent);
 }
 
 .pyside-excel-table td {
   padding: 4px 6px;
-  border-bottom: 1px solid #E1E5EA;
-  border-right: 1px solid #E1E5EA;
+  border-bottom: 1px solid var(--border-light);
+  border-right: 1px solid var(--border-light);
   vertical-align: middle;
-  color: #1F1F1F;
-  background-color: #FFFFFF;
+  color: var(--text-primary);
+  background-color: var(--bg-card);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -5856,60 +6312,75 @@ html[data-theme="dark"] .pyside-excel-table td.cell-vertical-index {
 }
 
 .pyside-excel-table tbody tr:nth-child(even) td:not(.cell-vertical-index) {
-  background-color: #F8FAFD;
+  background-color: var(--bg-subtle);
 }
 
 html[data-theme="dark"] .pyside-excel-table td {
-  border-bottom: 1px solid #3B404D !important;
-  border-right: 1px solid #3B404D !important;
-  color: #F8F9FA !important;
-  background-color: #2F333E !important;
+  border-bottom: 1px solid var(--border-light) !important;
+  border-right: 1px solid var(--border-light) !important;
+  color: var(--text-primary) !important;
+  background-color: var(--bg-card) !important;
 }
 
 html[data-theme="dark"] .pyside-excel-table tbody tr:nth-child(even) td:not(.cell-vertical-index) {
-  background-color: #333844 !important;
+  background-color: var(--bg-subtle) !important;
 }
 
-/* 選取列高亮 (_QuotationApp QTableWidget::item:selected) */
-.pyside-excel-table tbody tr.active-row td:not(.cell-vertical-index) {
-  background-color: #D3E3FD !important;
-  color: #0B57D0 !important;
+/* 選取列高亮 (100% 沿用外部業務系統主題強調底色與高對比主要文字，確保深淺模式皆清晰易讀) */
+.pyside-excel-table tbody tr.active-row td:not(.cell-vertical-index),
+.pyside-excel-table tbody tr.selected-row td:not(.cell-vertical-index) {
+  background-color: var(--color-accent-light) !important;
+  color: var(--text-primary) !important;
 }
 
-html[data-theme="dark"] .pyside-excel-table tbody tr.active-row td:not(.cell-vertical-index) {
-  background-color: rgba(168, 199, 250, 0.25) !important;
-  color: #FFFFFF !important;
+html[data-theme="dark"] .pyside-excel-table tbody tr.active-row td:not(.cell-vertical-index),
+html[data-theme="dark"] .pyside-excel-table tbody tr.selected-row td:not(.cell-vertical-index) {
+  background-color: var(--color-accent-light) !important;
+  color: var(--text-primary) !important;
 }
 
-/* 表格內嵌無邊框直覺編輯框 */
+.pyside-excel-table tbody tr.active-row td .pyside-cell-readonly,
+.pyside-excel-table tbody tr.selected-row td .pyside-cell-readonly,
+.pyside-excel-table tbody tr.active-row td .pyside-cell-input,
+.pyside-excel-table tbody tr.selected-row td .pyside-cell-input {
+  color: var(--text-primary) !important;
+}
+
+/* 表格內嵌編輯框 (綁定外部業務系統輸入框色系) */
 .pyside-cell-input {
   width: 100%;
   height: 28px;
-  border: 1px solid transparent;
+  border: 1px solid var(--border-card);
   border-radius: 4px;
-  background: transparent;
-  color: inherit;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
   font-size: 14px;
-  padding: 2px 4px;
+  padding: 2px 6px;
   box-sizing: border-box;
 }
 
 .pyside-cell-input:hover {
-  border-color: #C4C7C5;
-  background-color: rgba(255, 255, 255, 0.6);
+  border-color: var(--color-accent);
 }
 
 .pyside-cell-input:focus {
-  border-color: #0B57D0;
-  background-color: #FFFFFF;
-  color: #1F1F1F;
+  border-color: var(--border-focus);
+  background-color: var(--bg-input);
+  color: var(--text-primary);
   outline: none;
+  box-shadow: 0 0 0 1px var(--border-focus);
+}
+
+html[data-theme="dark"] .pyside-cell-input {
+  background-color: var(--bg-input);
+  border-color: var(--border-card);
+  color: var(--text-primary);
 }
 
 html[data-theme="dark"] .pyside-cell-input:focus {
-  border-color: #A8C7FA;
-  background-color: #262932;
-  color: #F8F9FA;
+  border-color: var(--border-focus);
+  background-color: var(--bg-input);
+  color: var(--text-primary);
 }
 
 .pyside-cell-input.align-right {
@@ -5927,7 +6398,7 @@ html[data-theme="dark"] .pyside-cell-input:focus {
   width: 100%;
   padding: 4px 4px;
   font-size: 14px;
-  color: #555555;
+  color: var(--text-primary);
   box-sizing: border-box;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -5935,7 +6406,7 @@ html[data-theme="dark"] .pyside-cell-input:focus {
 }
 
 html[data-theme="dark"] .pyside-cell-readonly {
-  color: #C4C7C5;
+  color: var(--text-primary);
 }
 
 .pyside-cell-readonly.align-right {
@@ -5948,26 +6419,31 @@ html[data-theme="dark"] .pyside-cell-readonly {
   font-family: Consolas, Monaco, monospace;
 }
 
-/* 方案小計列 (_QuotationApp insert_subtotal_row 樣式：#c0392b 粗體紅字) */
+/* 方案小計列 (綁定業務系統高對比語意紅底紅字) */
 .pyside-excel-table tbody tr.subtotal-divider-row td:not(.cell-vertical-index) {
-  background-color: #FFF8F6 !important;
-  color: #c0392b !important;
+  background-color: var(--grid-bg-red) !important;
+  color: var(--grid-num-red) !important;
   font-weight: 700 !important;
 }
 
 html[data-theme="dark"] .pyside-excel-table tbody tr.subtotal-divider-row td:not(.cell-vertical-index) {
-  background-color: rgba(192, 57, 43, 0.18) !important;
-  color: #f87171 !important;
+  background-color: var(--grid-bg-red) !important;
+  color: var(--grid-num-red) !important;
 }
 
-/* 4. TableHeightDragHandle 表格高度拖曳條 (100% 還原 gui_components.py：1050px x 12px) */
+.pyside-excel-table tbody tr.subtotal-divider-row td .pyside-cell-readonly,
+.pyside-excel-table tbody tr.subtotal-divider-row td .pyside-cell-input {
+  color: var(--grid-num-red) !important;
+}
+
+/* 4. TableHeightDragHandle 表格高度拖曳條 (1050px x 12px) */
 .pyside-table-drag-handle {
   width: 1050px;
   min-width: 1050px;
   max-width: 1050px;
   height: 12px;
-  background-color: #e0e0e0;
-  border: 1px solid #c0c0c0;
+  background-color: var(--bg-surface-secondary);
+  border: 1px solid var(--border-card);
   border-top: none;
   border-radius: 0 0 4px 4px;
   cursor: ns-resize;
@@ -5980,23 +6456,23 @@ html[data-theme="dark"] .pyside-excel-table tbody tr.subtotal-divider-row td:not
 }
 
 .pyside-table-drag-handle:hover {
-  background-color: #d0d7de;
+  background-color: var(--bg-hover);
 }
 
 .pyside-table-drag-handle .drag-handle-grip {
   width: 30px;
   height: 2px;
-  background-color: #999999;
+  background-color: var(--text-tertiary);
   border-radius: 1px;
 }
 
 html[data-theme="dark"] .pyside-table-drag-handle {
-  background-color: #262932;
-  border-color: #4A5060;
+  background-color: var(--bg-surface-secondary);
+  border-color: var(--border-card);
 }
 
 html[data-theme="dark"] .pyside-table-drag-handle .drag-handle-grip {
-  background-color: #8E918F;
+  background-color: var(--text-tertiary);
 }
 
 /* 5. 表格下方工具列 (1050px) */
@@ -6033,11 +6509,11 @@ html[data-theme="dark"] .pyside-table-drag-handle .drag-handle-grip {
   gap: 4px;
   font-size: 14px;
   font-weight: 700;
-  color: #1F1F1F;
+  color: var(--text-primary);
 }
 
 html[data-theme="dark"] .pyside-totals-box {
-  color: #F8F9FA;
+  color: var(--text-primary);
 }
 
 .pyside-totals-box .total-row {
@@ -6048,22 +6524,22 @@ html[data-theme="dark"] .pyside-totals-box {
 
 .pyside-totals-box .total-divider-line {
   height: 1px;
-  background-color: #C4C7C5;
+  background-color: var(--border-card);
   margin: 2px 0;
 }
 
 html[data-theme="dark"] .pyside-totals-box .total-divider-line {
-  background-color: #4A5060;
+  background-color: var(--border-card);
 }
 
 .pyside-totals-box .total-grand-red {
   font-size: 16px;
   font-weight: 800;
-  color: #c0392b;
+  color: var(--grid-num-red);
 }
 
 html[data-theme="dark"] .pyside-totals-box .total-grand-red {
-  color: #f87171;
+  color: var(--grid-num-red);
 }
 
 /* 7. 附加產品外觀圖 (80x80 縮圖網格) */
@@ -6076,7 +6552,7 @@ html[data-theme="dark"] .pyside-totals-box .total-grand-red {
 
 .attachment-hint-text {
   font-size: 13px;
-  color: #7f8c8d;
+  color: var(--text-secondary);
 }
 
 /* 窄螢幕 _QuotationApp\pwa 頂部藍色標題列與離開按鈕 */
@@ -6245,23 +6721,28 @@ html[data-theme="dark"] .btn-mobile-exit-bottom {
   box-shadow: 0 0 4px rgba(231, 76, 60, 0.7);
 }
 
-/* 新建報價單表格內「型號」下拉選單圓角白底方框（100% 對標附圖 1） */
+/* 新建報價單表格內「型號」下拉選單圓角方框（綁定外部業務系統輸入框色系，深淺模式皆清晰易讀） */
 .pyside-model-combo-wrap {
   position: relative;
   display: flex;
   align-items: center;
   width: 100%;
   height: 30px;
-  background-color: #ffffff;
-  border: 1.5px solid #555555;
+  background-color: var(--bg-input);
+  border: 1.5px solid var(--border-card);
   border-radius: 5px;
   box-sizing: border-box;
   padding: 0 22px 0 6px;
 }
 
+.pyside-model-combo-wrap:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 1px var(--border-focus);
+}
+
 html[data-theme="dark"] .pyside-model-combo-wrap {
-  background-color: #262932;
-  border-color: #8E918F;
+  background-color: var(--bg-input);
+  border-color: var(--border-card);
 }
 
 .pyside-model-combo-wrap input.cell-model-input {
@@ -6271,7 +6752,7 @@ html[data-theme="dark"] .pyside-model-combo-wrap {
   height: 100%;
   padding: 0;
   font-size: 14px;
-  color: inherit;
+  color: var(--text-primary) !important;
   outline: none;
 }
 
@@ -6281,27 +6762,27 @@ html[data-theme="dark"] .pyside-model-combo-wrap {
   top: 50%;
   transform: translateY(-50%);
   font-size: 11px;
-  color: #333333;
+  color: var(--text-secondary);
   pointer-events: none;
 }
 
 html[data-theme="dark"] .pyside-model-combo-arrow {
-  color: #C4C7C5;
+  color: var(--text-secondary);
 }
 
-/* 第 2~9 頁共通外框與自適應容器 */
+/* 第 2~9 頁共通外框與自適應容器 (綁定外部業務系統配色) */
 .pyside-page-wrapper {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 6px 10px 36px 10px;
-  color: #1F1F1F;
+  color: var(--text-primary);
   min-height: calc(100vh - 110px);
   box-sizing: border-box;
 }
 
 html[data-theme="dark"] .pyside-page-wrapper {
-  color: #F8F9FA;
+  color: var(--text-primary);
 }
 
 .pyside-full-groupbox {
@@ -6315,22 +6796,22 @@ html[data-theme="dark"] .pyside-page-wrapper {
   width: 100%;
   overflow-x: auto;
   overflow-y: auto;
-  border: 1px solid #E1E5EA;
+  border: 1px solid var(--border-card);
   border-radius: 6px;
-  background-color: #FFFFFF;
+  background-color: var(--bg-card);
   box-sizing: border-box;
 }
 
 html[data-theme="dark"] .pyside-full-table-wrap {
-  background-color: #2F333E;
-  border-color: #4A5060;
+  background-color: var(--bg-card);
+  border-color: var(--border-card);
 }
 
 /* 通用按鈕色系擴充 */
 .btn-pyside-outline {
-  background-color: #FFFFFF;
-  color: #1F1F1F;
-  border: 1px solid #C4C7C5;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-card);
   border-radius: 6px;
   padding: 5px 14px;
   font-size: 13px;
@@ -6343,15 +6824,15 @@ html[data-theme="dark"] .pyside-full-table-wrap {
 }
 
 .btn-pyside-outline:hover {
-  background-color: #E8F0FE;
-  border-color: #0B57D0;
-  color: #0B57D0;
+  background-color: var(--color-accent-light);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 html[data-theme="dark"] .btn-pyside-outline {
-  background-color: #2F333E;
-  color: #F8F9FA;
-  border-color: #4A5060;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  border-color: var(--border-card);
 }
 
 .btn-pyside-darkred {
@@ -6392,9 +6873,9 @@ html[data-theme="dark"] .btn-pyside-outline {
 }
 
 .btn-pyside-page {
-  background-color: #FFFFFF;
-  color: #1F1F1F;
-  border: 1px solid #C4C7C5;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-card);
   border-radius: 6px;
   height: 32px;
   padding: 0 14px;
@@ -6404,25 +6885,25 @@ html[data-theme="dark"] .btn-pyside-outline {
 }
 
 .btn-pyside-page:disabled {
-  color: #999999;
-  background-color: #F5F5F5;
+  color: var(--text-disabled);
+  background-color: var(--bg-surface-secondary);
   cursor: not-allowed;
 }
 
 html[data-theme="dark"] .btn-pyside-page {
-  background-color: #2F333E;
-  color: #F8F9FA;
-  border-color: #4A5060;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  border-color: var(--border-card);
 }
 
 .pyside-page-label {
   font-size: 13px;
   font-weight: 700;
-  color: #1F1F1F;
+  color: var(--text-primary);
 }
 
 html[data-theme="dark"] .pyside-page-label {
-  color: #F8F9FA;
+  color: var(--text-primary);
 }
 
 /* 第 2 頁：手機草稿覆核區 (附圖 2) */
@@ -6439,11 +6920,11 @@ html[data-theme="dark"] .pyside-page-label {
   gap: 8px;
   font-size: 18px;
   font-weight: 800;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 html[data-theme="dark"] .pyside-p2-title {
-  color: #F8F9FA;
+  color: var(--text-primary);
 }
 
 .pyside-p2-sync-group {
@@ -6454,7 +6935,7 @@ html[data-theme="dark"] .pyside-p2-title {
 
 .pyside-sync-time {
   font-size: 12px;
-  color: #7f8c8d;
+  color: var(--text-secondary);
 }
 
 .pyside-p2-splitter {
@@ -6480,12 +6961,12 @@ html[data-theme="dark"] .pyside-p2-title {
 .pyside-p2-preview-title {
   font-size: 15px;
   font-weight: 800;
-  color: #2c3e50;
+  color: var(--text-primary);
   margin-bottom: 8px;
 }
 
 html[data-theme="dark"] .pyside-p2-preview-title {
-  color: #F8F9FA;
+  color: var(--text-primary);
 }
 
 .pyside-p2-preview-content {
@@ -6493,18 +6974,18 @@ html[data-theme="dark"] .pyside-p2-preview-title {
   white-space: pre-wrap;
   font-size: 14px;
   line-height: 1.65;
-  color: #1F1F1F;
+  color: var(--text-primary);
   padding: 4px 0;
   overflow-y: auto;
 }
 
 html[data-theme="dark"] .pyside-p2-preview-content {
-  color: #E2E8F0;
+  color: var(--text-primary);
 }
 
 .pyside-p2-divider {
   height: 1px;
-  background-color: #BDC3C7;
+  background-color: var(--border-card);
   margin: 10px 0 14px 0;
 }
 
@@ -6532,7 +7013,7 @@ html[data-theme="dark"] .pyside-p2-preview-content {
 }
 
 .btn-pyside-convert-pill:disabled {
-  background-color: #95a5a6;
+  background-color: var(--text-disabled);
   cursor: not-allowed;
   box-shadow: none;
 }
@@ -6541,9 +7022,9 @@ html[data-theme="dark"] .pyside-p2-preview-content {
   width: 28px;
   height: 28px;
   border-radius: 4px;
-  border: 1px solid #dcdde1;
-  background-color: #ffffff;
-  color: #e74c3c;
+  border: 1px solid var(--border-card);
+  background-color: var(--bg-card);
+  color: var(--grid-num-red);
   font-weight: 900;
   font-size: 14px;
   cursor: pointer;
@@ -6554,8 +7035,8 @@ html[data-theme="dark"] .pyside-p2-preview-content {
 }
 
 .btn-p2-del-square:hover {
-  background-color: #fdecea;
-  border-color: #e74c3c;
+  background-color: var(--grid-bg-red);
+  border-color: var(--grid-num-red);
 }
 
 /* 第 3 頁：報價單管理 (附圖 3) */
@@ -6569,20 +7050,20 @@ html[data-theme="dark"] .pyside-p2-preview-content {
 .pyside-p3-label {
   font-size: 14px;
   font-weight: 600;
-  color: #1F1F1F;
+  color: var(--text-primary);
   white-space: nowrap;
 }
 
 html[data-theme="dark"] .pyside-p3-label {
-  color: #F8F9FA;
+  color: var(--text-primary);
 }
 
 .pyside-date-range-box {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background-color: #FFFFFF;
-  border: 1px solid #C4C7C5;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-card);
   border-radius: 6px;
   padding: 2px 8px;
   height: 36px;
@@ -6590,15 +7071,15 @@ html[data-theme="dark"] .pyside-p3-label {
 }
 
 html[data-theme="dark"] .pyside-date-range-box {
-  background-color: #262932;
-  border-color: #4A5060;
+  background-color: var(--bg-input);
+  border-color: var(--border-card);
 }
 
 .pyside-date-inline {
   border: none;
   background: transparent;
   font-size: 13px;
-  color: inherit;
+  color: var(--text-primary);
   outline: none;
 }
 
@@ -6608,13 +7089,14 @@ html[data-theme="dark"] .pyside-date-range-box {
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
+  color: var(--text-primary);
   cursor: pointer;
 }
 
 .pyside-checkbox-label input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: #0B57D0;
+  accent-color: var(--color-accent);
 }
 
 .pyside-p3-banner-bar {
@@ -6673,22 +7155,22 @@ html[data-theme="dark"] .pyside-date-range-box {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  background-color: #FFFFFF;
-  border: 1px solid #E1E5EA;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
   border-radius: 8px;
   padding: 8px 12px;
 }
 
 html[data-theme="dark"] .pyside-dash-ctrl-bar {
-  background-color: #2F333E;
-  border-color: #4A5060;
+  background-color: var(--bg-card);
+  border-color: var(--border-card);
 }
 
 .pyside-dash-drag-handle {
   width: 100%;
   height: 12px;
-  background-color: #e0e0e0;
-  border: 1px solid #c0c0c0;
+  background-color: var(--bg-surface-secondary);
+  border: 1px solid var(--border-card);
   border-top: none;
   border-radius: 0 0 6px 6px;
   cursor: ns-resize;
@@ -6701,7 +7183,7 @@ html[data-theme="dark"] .pyside-dash-ctrl-bar {
 .pyside-dash-drag-handle .drag-handle-grip {
   width: 36px;
   height: 2px;
-  background-color: #888888;
+  background-color: var(--text-tertiary);
 }
 
 .pyside-dash-kpi-row {
@@ -6717,27 +7199,27 @@ html[data-theme="dark"] .pyside-dash-ctrl-bar {
 }
 
 .pyside-dash-kpi-card {
-  background-color: #FFFFFF;
-  border: 1px solid #E1E5EA;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
   border-radius: 8px;
   padding: 10px 12px;
   text-align: center;
 }
 
 html[data-theme="dark"] .pyside-dash-kpi-card {
-  background-color: #2F333E;
-  border-color: #4A5060;
+  background-color: var(--bg-card);
+  border-color: var(--border-card);
 }
 
 .kpi-card-title {
   font-size: 13px;
   font-weight: 700;
-  color: #555555;
+  color: var(--text-secondary);
   margin-bottom: 4px;
 }
 
 html[data-theme="dark"] .kpi-card-title {
-  color: #C4C7C5;
+  color: var(--text-secondary);
 }
 
 .kpi-card-main {
@@ -6748,7 +7230,7 @@ html[data-theme="dark"] .kpi-card-title {
 
 .kpi-card-sub {
   font-size: 12px;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-weight: 600;
 }
 
@@ -6796,24 +7278,24 @@ html[data-theme="dark"] .kpi-card-title {
   width: 420px;
   max-width: 45%;
   height: 36px;
-  background-color: #F0F4F9;
-  border: 1px solid #D3E3FD;
+  background-color: var(--bg-surface-secondary);
+  border: 1px solid var(--border-card);
   border-radius: 6px;
   padding: 0 12px;
   display: flex;
   align-items: center;
   font-size: 13px;
   font-weight: 700;
-  color: #555555;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 html[data-theme="dark"] .pyside-p5-focus-badge {
-  background-color: #262932;
-  border-color: #4A5060;
-  color: #C4C7C5;
+  background-color: var(--bg-surface-secondary);
+  border-color: var(--border-card);
+  color: var(--text-primary);
 }
 
 .pyside-p5-stat-cards-row {
@@ -6830,21 +7312,21 @@ html[data-theme="dark"] .pyside-p5-focus-badge {
 }
 
 .pyside-p5-stat-card {
-  background-color: #FFFFFF;
-  border: 1px solid #dcdde1;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
   border-radius: 6px;
   padding: 8px 10px;
   text-align: center;
 }
 
 html[data-theme="dark"] .pyside-p5-stat-card {
-  background-color: #262932;
-  border-color: #4A5060;
+  background-color: var(--bg-card);
+  border-color: var(--border-card);
 }
 
 .stat-card-title {
   font-size: 12px;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-weight: 700;
   margin-bottom: 4px;
 }
@@ -6857,8 +7339,8 @@ html[data-theme="dark"] .pyside-p5-stat-card {
 .pyside-p5-chart-box {
   flex: 1;
   min-height: 220px;
-  background-color: #FFFFFF;
-  border: 1px solid #E1E5EA;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -6868,8 +7350,8 @@ html[data-theme="dark"] .pyside-p5-stat-card {
 }
 
 html[data-theme="dark"] .pyside-p5-chart-box {
-  background-color: #262932;
-  border-color: #4A5060;
+  background-color: var(--bg-card);
+  border-color: var(--border-card);
 }
 
 /* 第 6 頁 & 第 7 頁：客戶管理 / 產品管理 左右雙欄與小算盤 (附圖 6, 11) */
@@ -6888,6 +7370,7 @@ html[data-theme="dark"] .pyside-p5-chart-box {
 }
 
 @media (max-width: 1080px) {
+
   .pyside-p6-splitter,
   .pyside-p7-splitter {
     grid-template-columns: 1fr;
@@ -6905,11 +7388,11 @@ html[data-theme="dark"] .pyside-p5-chart-box {
 .pyside-pane-section-title {
   font-size: 15px;
   font-weight: 800;
-  color: #1F1F1F;
+  color: var(--text-primary);
 }
 
 html[data-theme="dark"] .pyside-pane-section-title {
-  color: #F8F9FA;
+  color: var(--text-primary);
 }
 
 .pyside-p7-search-row {
@@ -6940,12 +7423,12 @@ html[data-theme="dark"] .pyside-pane-section-title {
 }
 
 .pyside-form-row label {
-  color: #333333;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
 html[data-theme="dark"] .pyside-form-row label {
-  color: #C4C7C5;
+  color: var(--text-primary);
 }
 
 .pyside-form-btn-pair {
@@ -6959,26 +7442,27 @@ html[data-theme="dark"] .pyside-form-row label {
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background-color: var(--bg-surface-secondary);
+  border: 1px solid var(--border-card);
   border-radius: 4px;
   padding: 5px 10px;
   cursor: pointer;
   font-weight: 700;
+  color: var(--text-primary);
 }
 
 .pyside-fav-check-box span {
-  color: #d35400;
+  color: var(--grid-num-orange);
 }
 
 /* 產品管理小算盤 (CalculatorWidget) */
 .pyside-calc-display {
   width: 100%;
   height: 46px;
-  border: 1px solid #bdc3c7;
+  border: 1px solid var(--border-card);
   border-radius: 4px;
-  background-color: #ecf0f1;
-  color: #2c3e50;
+  background-color: var(--bg-surface-secondary);
+  color: var(--text-primary);
   font-size: 20px;
   font-weight: 800;
   text-align: right;
@@ -6995,17 +7479,17 @@ html[data-theme="dark"] .pyside-form-row label {
 }
 
 .calc-btn {
-  border: 1px solid #dcdde1;
+  border: 1px solid var(--border-card);
   border-radius: 5px;
-  background-color: #ffffff;
-  color: #2c3e50;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
   font-size: 15px;
   font-weight: 800;
   cursor: pointer;
 }
 
 .calc-btn:hover {
-  background-color: #f1f2f6;
+  background-color: var(--bg-hover);
 }
 
 .calc-btn.calc-red {
@@ -7039,13 +7523,13 @@ html[data-theme="dark"] .pyside-form-row label {
   display: flex;
   gap: 4px;
   padding-left: 6px;
-  border-bottom: 1px solid #E1E5EA;
+  border-bottom: 1px solid var(--border-card);
 }
 
 .pyside-tab-btn {
-  background-color: #F0F4F9;
-  color: #444746;
-  border: 1px solid #E1E5EA;
+  background-color: var(--bg-surface-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-card);
   border-bottom: none;
   padding: 9px 20px;
   border-top-left-radius: 8px;
@@ -7056,35 +7540,35 @@ html[data-theme="dark"] .pyside-form-row label {
 }
 
 .pyside-tab-btn.active {
-  background-color: #FFFFFF;
-  color: #0B57D0;
+  background-color: var(--bg-card);
+  color: var(--color-accent);
   font-weight: 800;
-  border-bottom: 2px solid #FFFFFF;
+  border-bottom: 2px solid var(--bg-card);
   margin-bottom: -1px;
 }
 
 html[data-theme="dark"] .pyside-tab-btn {
-  background-color: #262932;
-  color: #C4C7C5;
-  border-color: #4A5060;
+  background-color: var(--bg-surface-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-card);
 }
 
 html[data-theme="dark"] .pyside-tab-btn.active {
-  background-color: #2F333E;
-  color: #A8C7FA;
+  background-color: var(--bg-card);
+  color: var(--color-accent);
 }
 
 .pyside-tab-pane {
-  background-color: #FFFFFF;
-  border: 1px solid #E1E5EA;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-card);
   border-top: none;
   border-radius: 0 6px 6px 6px;
   padding: 14px;
 }
 
 html[data-theme="dark"] .pyside-tab-pane {
-  background-color: #2F333E;
-  border-color: #4A5060;
+  background-color: var(--bg-card);
+  border-color: var(--border-card);
 }
 
 .pyside-settings-form-rows {
@@ -7162,9 +7646,9 @@ html[data-theme="dark"] .pyside-tab-pane {
 
 .btn-pyside-outline-blue {
   height: 38px;
-  background-color: #FFFFFF;
-  color: #0B57D0;
-  border: 1px solid #C4C7C5;
+  background-color: var(--bg-card);
+  color: var(--color-accent);
+  border: 1px solid var(--border-card);
   border-radius: 6px;
   font-size: 14px;
   font-weight: 700;
@@ -7172,8 +7656,8 @@ html[data-theme="dark"] .pyside-tab-pane {
 }
 
 .btn-pyside-outline-blue:hover {
-  background-color: #E8F0FE;
-  border-color: #0B57D0;
+  background-color: var(--color-accent-light);
+  border-color: var(--color-accent);
 }
 
 .pyside-terms-textarea {
@@ -7182,7 +7666,9 @@ html[data-theme="dark"] .pyside-tab-pane {
   padding: 12px;
   font-size: 14px;
   line-height: 1.65;
-  border: 1px solid #C4C7C5;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-card);
   border-radius: 6px;
   box-sizing: border-box;
   font-family: inherit;
@@ -7192,41 +7678,41 @@ html[data-theme="dark"] .pyside-tab-pane {
 .pyside-help-topic-list {
   width: 300px;
   flex-shrink: 0;
-  border: 1px solid #E1E5EA;
+  border: 1px solid var(--border-card);
   border-radius: 6px;
-  background-color: #FFFFFF;
+  background-color: var(--bg-card);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
 
 html[data-theme="dark"] .pyside-help-topic-list {
-  background-color: #262932;
-  border-color: #4A5060;
+  background-color: var(--bg-card);
+  border-color: var(--border-card);
 }
 
 .pyside-help-topic-item {
   text-align: left;
   padding: 14px 14px;
   border: none;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-light);
   background: transparent;
   cursor: pointer;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 html[data-theme="dark"] .pyside-help-topic-item {
-  color: #F8F9FA;
-  border-bottom-color: #3B404D;
+  color: var(--text-primary);
+  border-bottom-color: var(--border-light);
 }
 
 .pyside-help-topic-item:hover {
-  background-color: #f8f9fa;
+  background-color: var(--bg-hover);
 }
 
 .pyside-help-topic-item.active {
-  background-color: #d6eaf8;
-  color: #2980b9;
+  background-color: var(--color-accent-light);
+  color: var(--color-accent);
   font-weight: 800;
 }
 
@@ -7243,20 +7729,20 @@ html[data-theme="dark"] .pyside-help-topic-item {
 
 .pyside-help-content-box {
   flex: 1;
-  border: 1px solid #dcdde1;
+  border: 1px solid var(--border-card);
   border-radius: 6px;
-  background-color: #FFFFFF;
+  background-color: var(--bg-card);
   padding: 18px 22px;
   overflow-y: auto;
   line-height: 1.7;
   font-size: 14px;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 html[data-theme="dark"] .pyside-help-content-box {
-  background-color: #262932;
-  border-color: #4A5060;
-  color: #E2E8F0;
+  background-color: var(--bg-card);
+  border-color: var(--border-card);
+  color: var(--text-primary);
 }
 
 /* 報價系統底部常駐系統提示列 (Status Bar) */
@@ -7266,19 +7752,18 @@ html[data-theme="dark"] .pyside-help-content-box {
   left: 0;
   right: 0;
   height: 26px;
-  background-color: #F0F4F9;
-  border-top: 1px solid #D3E3FD;
+  background-color: var(--bg-surface-secondary);
+  border-top: 1px solid var(--border-card);
   display: flex;
   align-items: center;
   padding: 0 12px;
   font-size: 12px;
-  color: #333333;
+  color: var(--text-secondary);
   z-index: 15;
 }
 
 html[data-theme="dark"] .pyside-system-statusbar {
-  background-color: #1E2028;
-  border-top-color: #3B404D;
-  color: #C4C7C5;
+  background-color: var(--bg-surface-secondary);
+  border-top-color: var(--border-card);
+  color: var(--text-secondary);
 }
-

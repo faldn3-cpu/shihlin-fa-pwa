@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261102_v1_0_41" />
+  <link rel="stylesheet" href="css/style.css?v=20261106_v1_0_42" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -154,67 +154,43 @@
           </div>
         </div>
 
-        <!-- 報價管理系統專屬側邊欄選單 (100% 對標電腦版 _QuotationApp 9 大功能頁 + 底部離開按鈕) -->
+        <!-- 報價管理系統專屬側邊欄選單 (100% 對標電腦版 _QuotationApp 9 大功能頁 + 時鐘 + 底部離開按鈕) -->
         <div id="quoteSidebarNavList" class="drawer-nav-list quote-sidebar-mode hidden">
+          <div class="quote-sidebar-brand-title" id="quoteSidebarBrandTitle">報價管理系統</div>
+
           <button id="btnQuoteNavCreate" class="drawer-nav-item quote-nav-btn active" data-quote-page="create" type="button">
-            <svg class="icon-svg" viewBox="0 0 24 24">
-              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-            </svg>
             <span>新建報價單</span>
           </button>
           <button id="btnQuoteNavDrafts" class="drawer-nav-item quote-nav-btn" data-quote-page="drafts" type="button">
-            <svg class="icon-svg" viewBox="0 0 24 24">
-              <path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" />
-            </svg>
             <span>手機報價</span>
             <span id="quoteDraftsCountBadge" class="quote-nav-badge hidden">0</span>
           </button>
           <button id="btnQuoteNavHistory" class="drawer-nav-item quote-nav-btn" data-quote-page="history" type="button">
-            <svg class="icon-svg" viewBox="0 0 24 24">
-              <path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z" />
-            </svg>
             <span>報價單管理</span>
           </button>
           <button id="btnQuoteNavDashboard" class="drawer-nav-item quote-nav-btn" data-quote-page="dashboard" type="button">
-            <svg class="icon-svg" viewBox="0 0 24 24">
-              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
-            </svg>
             <span>大數據分析</span>
           </button>
           <button id="btnQuoteNavAnalysis" class="drawer-nav-item quote-nav-btn" data-quote-page="analysis" type="button">
-            <svg class="icon-svg" viewBox="0 0 24 24">
-              <path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z" />
-            </svg>
             <span>歷史單價分析</span>
           </button>
           <button id="btnQuoteNavCustomers" class="drawer-nav-item quote-nav-btn" data-quote-page="customers" type="button">
-            <svg class="icon-svg" viewBox="0 0 24 24">
-              <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
-            </svg>
             <span>客戶管理</span>
           </button>
           <button id="btnQuoteNavProducts" class="drawer-nav-item quote-nav-btn" data-quote-page="products" type="button">
-            <svg class="icon-svg" viewBox="0 0 24 24">
-              <path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z" />
-            </svg>
             <span>產品管理</span>
           </button>
           <button id="btnQuoteNavSettings" class="drawer-nav-item quote-nav-btn" data-quote-page="settings" type="button">
-            <svg class="icon-svg" viewBox="0 0 24 24">
-              <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
-            </svg>
             <span>系統設定</span>
           </button>
           <button id="btnQuoteNavHelp" class="drawer-nav-item quote-nav-btn" data-quote-page="help" type="button">
-            <svg class="icon-svg" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" />
-            </svg>
             <span>使用說明</span>
           </button>
 
           <div class="quote-sidebar-footer">
-            <div class="quote-sidebar-meta" id="quoteSidebarMetaInfo">捨入：百位數 / 無條件捨去</div>
-            <div class="quote-sidebar-meta" id="quoteSidebarStockTime">L廠庫存更新：10/15 10:12</div>
+            <div class="quote-sidebar-clock" id="quoteSidebarClock">2026-11-06 13:00</div>
+            <div class="quote-sidebar-meta hidden" id="quoteSidebarMetaInfo">捨入：百位數 / 無條件捨去</div>
+            <div class="quote-sidebar-meta hidden" id="quoteSidebarStockTime">L廠庫存更新：10/15 10:12</div>
             <button id="btnExitQuotationSystem" class="btn-exit-quotation-system" type="button" title="返回 FA 業務戰情主系統">
               <svg class="icon-svg" viewBox="0 0 24 24">
                 <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
@@ -737,46 +713,47 @@
         </div>
 
         <!-- ====================================================================
-           子分頁 A：新建 / 編輯報價單主工作區
+           子分頁 A：新建 / 編輯報價單主工作區 (100% 還原 _QuotationApp gui_page1.py 與 pwa)
            ==================================================================== -->
         <div id="quoteDraftSection" class="quote-draft-container">
           <form id="draftForm" onsubmit="return false;">
 
-            <!-- 電腦端 _QuotationApp 頂部工具列：收合選單 / 收合抬頭 -->
+            <!-- 電腦端 _QuotationApp 頂部 45px 工具列 (對齊 1050px：左側收合選單 / 右側收合抬頭) -->
             <div class="pyside-top-toggle-bar quote-desktop-only">
-              <button type="button" id="btnToggleSidebar" class="btn-pyside-subtle" title="展開或收合左側功能選單">
-                <svg class="icon-svg-xs" viewBox="0 0 24 24">
-                  <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
-                </svg>
-                <span>收合選單</span>
-              </button>
-              <button type="button" id="btnToggleHeaderCompact" class="btn-pyside-subtle" title="展開或收合報價單基本資料">
-                <span id="headerToggleIcon">▲</span>
-                <span id="headerToggleLabel">收合抬頭</span>
-              </button>
+              <div class="pyside-top-toggle-inner">
+                <button type="button" id="btnToggleSidebar" class="btn-pyside-subtle" title="展開或收合左側功能選單">
+                  <span>收合選單</span>
+                </button>
+                <button type="button" id="btnToggleHeaderCompact" class="btn-pyside-subtle" title="展開或收合報價單基本資料">
+                  <span id="headerToggleIcon"></span>
+                  <span id="headerToggleLabel">收合抬頭</span>
+                </button>
+              </div>
             </div>
 
-            <!-- 報價單基本資料 (雙欄結構化表頭) -->
-            <div id="quoteHeaderContainer" class="pyside-header-container quote-desktop-only">
-              <div class="pyside-section-title">報價單基本資料</div>
+            <!-- 1. 報價單基本資料 (1050px GroupBox，100% 對標 gui_page1.py 6 列結構) -->
+            <fieldset id="quoteHeaderContainer" class="pyside-groupbox pyside-header-container quote-desktop-only">
+              <legend class="pyside-groupbox-legend">報價單基本資料</legend>
 
               <div id="quoteHeaderGrid" class="pyside-header-grid">
                 <!-- 第 1 列：單號與報價日期 -->
                 <div class="grid-row">
                   <div class="grid-cell-label">單號:</div>
                   <div class="grid-cell-content">
-                    <select id="quoteNoMode" class="pyside-select" style="width:100px;">
+                    <select id="quoteNoMode" class="pyside-select" style="width:115px;">
                       <option value="auto" selected>自動擷取</option>
-                      <option value="manual">手動輸入</option>
+                      <option value="manual">自行輸入</option>
                     </select>
-                    <input type="text" id="quotePrefixInput" class="pyside-input" style="width:120px;"
-                      value="-- 請選擇客戶 --">
-                    <input type="text" id="quoteSeqInput" class="pyside-input" style="width:60px;" value="001">
-                    <input type="text" id="quoteRevInput" class="pyside-input" style="width:50px;" value="00">
+                    <input type="text" id="quotePrefixInput" class="pyside-input" style="width:125px;"
+                      value="-- 請選擇客戶 --" readonly>
+                    <span class="quote-id-sep">-</span>
+                    <input type="text" id="quoteSeqInput" class="pyside-input text-center" style="width:68px;" value="001" readonly>
+                    <span class="quote-id-sep">-</span>
+                    <input type="text" id="quoteRevInput" class="pyside-input text-center" style="width:54px;" value="00" readonly>
                   </div>
                   <div class="grid-cell-label">報價日期:</div>
                   <div class="grid-cell-content">
-                    <input type="date" id="quoteDate" class="pyside-input pyside-date-blue">
+                    <input type="date" id="quoteDate" class="pyside-input" style="flex:1;">
                   </div>
                 </div>
 
@@ -788,17 +765,13 @@
                       <option value="">-- 請選擇客戶 --</option>
                     </select>
                     <button type="button" id="btnLinkCrmCase" class="btn-pyside-crm" title="關聯 CRM 商機">
-                      <svg class="icon-svg-xs" viewBox="0 0 24 24">
-                        <path
-                          d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s2.24-5-5-5z" />
-                      </svg>
                       <span>關聯 CRM</span>
                     </button>
                     <span id="linkedDealBadge" class="pyside-badge-crm hidden">已關聯</span>
                   </div>
                   <div class="grid-cell-label">統編:</div>
                   <div class="grid-cell-content">
-                    <input type="text" id="quoteTaxId" class="pyside-input" placeholder="統一編號">
+                    <input type="text" id="quoteTaxId" class="pyside-input" placeholder="" style="flex:1;">
                   </div>
                 </div>
 
@@ -812,7 +785,7 @@
                   </div>
                   <div class="grid-cell-label">電話:</div>
                   <div class="grid-cell-content">
-                    <input type="text" id="quotePhone" class="pyside-input" placeholder="電話">
+                    <input type="text" id="quotePhone" class="pyside-input" placeholder="" style="flex:1;">
                   </div>
                 </div>
 
@@ -820,12 +793,12 @@
                 <div class="grid-row">
                   <div class="grid-cell-label">交貨地點:</div>
                   <div class="grid-cell-content">
-                    <input type="text" id="quoteDeliveryLocation" class="pyside-input" placeholder="交貨地點"
+                    <input type="text" id="quoteDeliveryLocation" class="pyside-input" placeholder=""
                       style="flex:1;">
                   </div>
                   <div class="grid-cell-label">傳真:</div>
                   <div class="grid-cell-content">
-                    <input type="text" id="quoteFax" class="pyside-input" placeholder="傳真">
+                    <input type="text" id="quoteFax" class="pyside-input" placeholder="" style="flex:1;">
                   </div>
                 </div>
 
@@ -833,11 +806,11 @@
                 <div class="grid-row">
                   <div class="grid-cell-label">有效日期:</div>
                   <div class="grid-cell-content">
-                    <input type="date" id="quoteValidDate" class="pyside-input">
+                    <input type="date" id="quoteValidDate" class="pyside-input" style="flex:1;">
                   </div>
                   <div class="grid-cell-label">付款方式:</div>
                   <div class="grid-cell-content">
-                    <input type="text" id="quotePaymentTerms" class="pyside-input" value="月結 30 天電匯">
+                    <input type="text" id="quotePaymentTerms" class="pyside-input pyside-readonly" value="月結 30 天電匯" readonly style="flex:1;">
                   </div>
                 </div>
 
@@ -850,50 +823,55 @@
                   </div>
                   <div class="grid-cell-label">專案屬性:</div>
                   <div class="grid-cell-content">
-                    <select id="quoteProjectAttribute" class="pyside-select">
+                    <select id="quoteProjectAttribute" class="pyside-select" style="flex:1;">
                       <option value="一次性專案" selected>一次性專案</option>
-                      <option value="年度合約">年度合約</option>
-                      <option value="專案特價 (促銷)">專案特價 (促銷)</option>
-                      <option value="經銷例行採購">經銷例行採購</option>
+                      <option value="年度授權專案">年度授權專案</option>
+                      <option value="不適用折讓">不適用折讓</option>
                     </select>
                   </div>
                 </div>
               </div>
-            </div>
+            </fieldset>
 
-            <!-- 表格上方功能按鈕列 (左側選取狀態標籤 + 右側 5 顆經典操作按鈕) -->
-            <div class="pyside-action-bar-top quote-desktop-only">
-              <div class="active-row-badge-container">
-                <span id="activeRowBadge" class="active-row-pill">第 1 列 | (尚未選擇產品)</span>
-                <button type="button" id="btnClearActiveRow" class="btn-clear-active-row" title="取消選擇">✕</button>
+            <!-- 2. 表格上方雙排工具列 (1050px：第1排右側5顆系統按鈕 / 第2排左側明細狀態與操作按鈕) -->
+            <div class="pyside-top-bar-container quote-desktop-only">
+              <!-- 第 1 排：系統級操作按鈕 (靠右對齊) -->
+              <div class="pyside-sys-btn-row">
+                <div class="pyside-action-btn-group">
+                  <button type="button" id="btnNewQuoteTop" class="btn-pyside-gray" title="清空目前畫面，開始建立一張全新的報價單">新建報價單</button>
+                  <button type="button" id="btnSaveQuoteTop" class="btn-pyside-green" title="儲存報價單至資料庫">儲存報價</button>
+                  <button type="button" id="btnLineQuoteTop" class="btn-pyside-line" title="將目前報價明細轉換為精簡文字格式，方便直接貼上至 LINE">複製 LINE 報價</button>
+                  <button type="button" id="btnExportExcelTop" class="btn-pyside-blue" title="匯出 Excel 試算表">匯出至Excel</button>
+                  <button type="button" id="btnPrintPdfTop" class="btn-pyside-red" title="預覽與列印 PDF 報價單">列印 PDF</button>
+                </div>
               </div>
-              <div class="pyside-action-btn-group">
-                <button type="button" id="btnNewQuoteTop" class="btn-pyside-gray" title="開立新的空白報價單">新建報價單</button>
-                <button type="button" id="btnSaveQuoteTop" class="btn-pyside-green" title="儲存報價單至資料庫">儲存報價</button>
-                <button type="button" id="btnLineQuoteTop" class="btn-pyside-line" title="複製完整格式至 LINE 聊天室">
-                  <svg class="icon-svg-xs" viewBox="0 0 24 24" style="margin-right:4px;">
-                    <path
-                      d="M12 2C6.48 2 2 6.03 2 11c0 2.87 1.5 5.4 3.82 7.04-.15.82-.6 2.37-.68 2.73-.11.45.17.44.36.31.25-.17 2.47-1.68 3.51-2.39.95.27 1.95.41 2.99.41 5.52 0 10-4.03 10-9s-4.48-9-10-9z" />
-                  </svg>
-                  複製 LINE 報價
-                </button>
-                <button type="button" id="btnExportExcelTop" class="btn-pyside-blue"
-                  title="匯出 Excel 試算表">匯出至Excel</button>
-                <button type="button" id="btnPrintPdfTop" class="btn-pyside-red" title="預覽與列印 PDF 報價單">列印 PDF</button>
+              <!-- 第 2 排：當前選取明細橫幅與動態操作按鈕 (靠左對齊) -->
+              <div class="pyside-edit-banner-row">
+                <span id="activeRowBadge" class="pyside-edit-banner-label">目前尚未選擇明細</span>
+                <div id="itemActionsContainer" class="pyside-item-actions-container"></div>
+                <button type="button" id="btnClearActiveRow" class="btn-clear-active-row hidden" title="取消選擇">✕</button>
               </div>
             </div>
 
-            <!-- 手機端專用：圖三卡片式報價擬稿介面 (螢幕寬度 < 768px 自動切換顯示) -->
+            <!-- 窄螢幕 / 手機端專用：_QuotationApp\pwa 網頁報價單模式 (螢幕寬度 < 1280px 自動切換顯示) -->
             <div class="quote-mobile-only">
+              <!-- 網頁報價單頂部藍色標題列 (100% 還原 _QuotationApp\pwa Header + 離開報價單按鈕) -->
+              <div class="mobile-pwa-app-header">
+                <div class="mobile-pwa-header-top">
+                  <h1>快速報價單擬稿</h1>
+                  <div class="mobile-pwa-header-btns">
+                    <button type="button" id="btnMobileResetQuote" class="btn-mobile-header-reset">重設</button>
+                    <button type="button" id="btnMobileExitQuoteTop" class="btn-mobile-header-exit">離開報價單功能</button>
+                  </div>
+                </div>
+                <p class="mobile-pwa-subtitle">外出填寫草稿，回辦公室無縫匯入系統</p>
+              </div>
+
               <!-- 客戶選擇與報價品項主卡片 -->
               <div class="mobile-customer-card">
                 <div class="mobile-customer-header-row">
-                  <label for="customerName" class="mobile-section-label">客戶名稱</label>
+                  <label for="customerName" class="mobile-section-label">客戶名稱 <span style="color:#ef4444;">*</span></label>
                   <button type="button" id="btnMobileLinkCrmCase" class="btn-mobile-crm-link">
-                    <svg class="icon-svg-xs" viewBox="0 0 24 24">
-                      <path
-                        d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" />
-                    </svg>
                     <span>選擇 CRM 關聯案件</span>
                   </button>
                 </div>
@@ -936,7 +914,7 @@
                 <!-- 報價品項區塊標題與明細卡片容器 -->
                 <div class="mobile-items-section-title">報價品項</div>
                 <div id="itemsContainer" class="items-list">
-                  <!-- 由 JavaScript 動態產生圖三規格品項卡片 -->
+                  <!-- 由 JavaScript 動態產生 _QuotationApp\pwa 規格品項卡片 -->
                 </div>
 
                 <button type="button" id="btnAddItem" class="btn-mobile-add-item">
@@ -953,39 +931,36 @@
                 <div class="mobile-summary-amount">$<span id="totalAmount">0</span></div>
               </div>
 
-              <!-- 底部雙按鈕：複製 LINE 報價 / 送出草稿 (直接寫入資料庫手機草稿匣) -->
+              <!-- 底部雙按鈕：複製 LINE 報價 / 送出草稿 + 離開按鈕 -->
               <div class="mobile-bottom-actions">
                 <button type="button" id="btnLineQuote" class="btn-mobile-line-quote">
-                  <svg class="icon-svg-xs" viewBox="0 0 24 24">
-                    <path
-                      d="M12 2C6.48 2 2 6.03 2 11c0 2.87 1.5 5.4 3.82 7.04-.15.82-.6 2.37-.68 2.73-.11.45.17.44.36.31.25-.17 2.47-1.68 3.51-2.39.95.27 1.95.41 2.99.41 5.52 0 10-4.03 10-9s-4.48-9-10-9z" />
-                  </svg>
                   <span>複製 LINE 報價</span>
                 </button>
                 <button type="button" id="btnSubmitDraft" class="btn-mobile-submit-draft">
-                  <svg class="icon-svg-xs" viewBox="0 0 24 24">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                  </svg>
                   <span>送出草稿</span>
                 </button>
               </div>
+              <button type="button" id="btnMobileExitQuoteBottom" class="btn-mobile-exit-bottom">
+                離開報價單功能 (返回戰情主系統)
+              </button>
             </div>
 
-            <!-- 電腦端 Excel 試算表格 (_QuotationApp 桌面版原生欄位排序) -->
-            <div class="pyside-table-container quote-desktop-only">
+            <!-- 3. 電腦端 QuoteTableWidget 10 欄試算表格 (100% 對標 gui_page1.py QuoteCol 欄位與可拖曳欄寬) -->
+            <div class="pyside-table-container quote-desktop-only" id="quoteDesktopTableContainer">
               <table class="pyside-excel-table" id="quoteDesktopTable">
                 <thead>
                   <tr>
-                    <th style="width:48px; text-align:center;">序號</th>
-                    <th style="width:90px; text-align:center;">可用數量</th>
-                    <th style="width:240px;">型號</th>
-                    <th style="width:75px; text-align:right;">數量</th>
-                    <th style="min-width:180px;">規格</th>
-                    <th style="width:110px; text-align:right;">經銷價</th>
-                    <th style="width:90px; text-align:right;">報價折數%</th>
-                    <th style="width:125px; text-align:right;">小計(未稅)</th>
-                    <th style="min-width:160px;">備註/交期</th>
-                    <th style="width:60px; text-align:center;">操作</th>
+                    <th class="col-corner-header" data-col="index" style="width:48px; text-align:center;">項次</th>
+                    <th class="resizable-th" data-col="0" style="width:180px;">型號<span class="col-resizer"></span></th>
+                    <th class="resizable-th" data-col="1" style="width:280px;">規格<span class="col-resizer"></span></th>
+                    <th class="resizable-th" data-col="2" style="width:90px;">經銷價<span class="col-resizer"></span></th>
+                    <th class="resizable-th" data-col="3" style="width:80px;">報價折數%<span class="col-resizer"></span></th>
+                    <th class="resizable-th" data-col="4" style="width:95px;">預計報價金額<span class="col-resizer"></span></th>
+                    <th class="resizable-th" data-col="5" style="width:95px;">最終報價金額<span class="col-resizer"></span></th>
+                    <th class="resizable-th" data-col="6" style="width:70px;">數量<span class="col-resizer"></span></th>
+                    <th class="resizable-th" data-col="7" style="width:100px;">小計<span class="col-resizer"></span></th>
+                    <th class="resizable-th" data-col="8" style="width:150px;">備註/交期<span class="col-resizer"></span></th>
+                    <th class="resizable-th" data-col="9" style="width:70px;">可用數量<span class="col-resizer"></span></th>
                   </tr>
                 </thead>
                 <tbody id="quoteDesktopTableBody">
@@ -994,35 +969,49 @@
               </table>
             </div>
 
-            <!-- 表格下方工具列 (新增品項、插入小計、舊單匯入、智慧BOM、重整經銷價) -->
+            <!-- 4. 表格底部高度拖曳控制條 (100% 還原 TableHeightDragHandle：1050px 寬 x 12px 高) -->
+            <div id="quoteTableDragHandle" class="pyside-table-drag-handle quote-desktop-only" title="上下拖曳調整表格顯示高度">
+              <div class="drag-handle-grip"></div>
+            </div>
+
+            <!-- 5. 表格下方工具列 (新增品項、插入小計、舊單匯入、智慧BOM、重整經銷價) -->
             <div class="pyside-toolbar-bottom quote-desktop-only">
               <div class="pyside-toolbar-left">
                 <button type="button" id="btnAddNewItem" class="btn-pyside-blue" title="新增一筆產品明細">
                   + 新增產品明細
                 </button>
-                <button type="button" id="btnInsertSubtotal" class="btn-pyside-orange" title="插入方案小計">
+                <button type="button" id="btnInsertSubtotal" class="btn-pyside-orange" title="在目前選取列下方（或表格最末端）插入一列自動加總的方案小計">
                   + 插入方案小計
                 </button>
               </div>
               <div class="pyside-toolbar-right">
-                <button type="button" id="btnImportOldQuote" class="btn-pyside-teal" title="從舊報價單匯入 (PDF/Excel)">
+                <button type="button" id="btnImportOldQuote" class="btn-pyside-teal" title="直接解析舊有的報價單 PDF 或 Excel 檔案，將客戶與產品明細完整還原至當前畫面">
                   從舊報價單匯入 (PDF/Excel)
                 </button>
-                <button type="button" id="btnImportBom" class="btn-pyside-teal" title="智慧解析文字 BOM 清單">
+                <button type="button" id="btnImportBom" class="btn-pyside-teal-dark" title="智慧解析文字 BOM 清單">
                   智慧 BOM 匯入
                 </button>
-                <button type="button" id="btnRefreshPrices" class="btn-pyside-purple" title="重新自產品資料庫同步經銷牌價">
+                <button type="button" id="btnRefreshPrices" class="btn-pyside-purple" title="重新比對產品資料庫，將目前明細中所有標準品的經銷價更新為最新價格，並重新計算小計">
                   重整經銷價
                 </button>
               </div>
             </div>
 
-            <!-- 左下角結算總額 (合計未稅、營業稅5%、總金額含稅紅字) -->
+            <!-- 6. 左下角會計結算總額區塊 (300px 寬：合計未稅、營業稅5%、分隔線、總金額含稅紅字) -->
             <div class="pyside-summary-container quote-desktop-only">
               <div class="pyside-totals-box">
-                <div class="total-row">合計(未稅) : <span id="summarySubtotal" class="font-mono">0</span></div>
-                <div class="total-row">營業稅(5%) : <span id="summaryTax" class="font-mono">0</span></div>
-                <div class="total-row total-grand-red">總金額(含稅) : <span id="summaryGrandTotal" class="font-mono">0</span>
+                <div class="total-row">
+                  <span class="total-label">合計(未稅) :</span>
+                  <span id="summarySubtotal" class="total-val font-mono">0</span>
+                </div>
+                <div class="total-row">
+                  <span class="total-label">營業稅(5%) :</span>
+                  <span id="summaryTax" class="total-val font-mono">0</span>
+                </div>
+                <div class="total-divider-line"></div>
+                <div class="total-row total-grand-red">
+                  <span class="total-label">總金額(含稅) :</span>
+                  <span id="summaryGrandTotal" class="total-val font-mono">0</span>
                 </div>
               </div>
               <!-- 相容原有 summary IDs -->
@@ -1045,12 +1034,12 @@
               </div>
             </div>
 
-            <!-- 附加產品外觀圖 (僅於報價單匯出時顯示) -->
-            <div class="pyside-attachment-box quote-desktop-only">
-              <div class="pyside-attachment-title">附加產品外觀圖 (僅於報價單匯出時顯示)</div>
+            <!-- 7. 附加產品外觀圖 (1050px GroupBox，僅於報價單匯出時顯示) -->
+            <fieldset class="pyside-groupbox pyside-attachment-box quote-desktop-only">
+              <legend class="pyside-groupbox-legend">附加產品外觀圖 (僅於報價單匯出時顯示)</legend>
               <div class="pyside-attachment-body">
                 <label for="quoteImageUploader" class="btn-pyside-dark"
-                  style="cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                  style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center; width:180px;">
                   <span>附加圖片 (JPG/PNG)</span>
                   <input type="file" id="quoteImageUploader" accept="image/png,image/jpeg,image/webp" multiple
                     style="display:none;">
@@ -1060,7 +1049,7 @@
               <div id="quoteAttachmentsPreview" class="quote-attachments-grid">
                 <span class="text-muted" style="font-size:0.82rem;" id="noAttachmentsHint">尚未附加圖片</span>
               </div>
-            </div>
+            </fieldset>
 
           </form>
         </div>
@@ -2851,13 +2840,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261102_v1_0_41"></script>
+  <script src="js/app.js?v=20261106_v1_0_42"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261102_v1_0_41')
+        navigator.serviceWorker.register('./sw.js?v=20261106_v1_0_42')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

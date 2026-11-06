@@ -200,11 +200,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const drawerTitle = document.getElementById("drawerMainTitle");
     const appDrawer = document.getElementById("appDrawer");
     if (isQuotationMode) {
+      document.body.classList.add("quotation-system-active");
       if (mainList) mainList.classList.add("hidden");
       if (quoteList) quoteList.classList.remove("hidden");
       if (drawerTitle) drawerTitle.textContent = "報價管理系統";
       if (appDrawer) appDrawer.classList.remove("collapsed");
+      const btnToggleSidebar = document.getElementById("btnToggleSidebar");
+      if (btnToggleSidebar) btnToggleSidebar.innerHTML = "<span>收合選單</span>";
     } else {
+      document.body.classList.remove("quotation-system-active");
       if (mainList) mainList.classList.remove("hidden");
       if (quoteList) quoteList.classList.add("hidden");
       if (drawerTitle) drawerTitle.textContent = "功能選單";
@@ -4326,6 +4330,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!isQuotationModuleInitialized) {
       setupQuotationEvents();
       setupQuotationModals();
+      initQuoteSidebarClock();
+      initQuoteColumnResizer();
+      initQuoteTableHeightDragHandle();
       isQuotationModuleInitialized = true;
     }
     const qDate = document.getElementById("quoteDate");
@@ -4345,6 +4352,115 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     updateQuoteNoPreview();
     enforceDesktopQuotationView();
+  }
+
+  // 100% 還原 _QuotationApp main.py 左下角即時時鐘 (yyyy-MM-dd HH:mm)
+  let quoteSidebarClockTimer = null;
+  function initQuoteSidebarClock() {
+    const updateClock = () => {
+      const el = document.getElementById("quoteSidebarClock");
+      if (!el) return;
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
+      const hh = String(now.getHours()).padStart(2, "0");
+      const min = String(now.getMinutes()).padStart(2, "0");
+      el.textContent = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+    };
+    updateClock();
+    if (quoteSidebarClockTimer) clearInterval(quoteSidebarClockTimer);
+    quoteSidebarClockTimer = setInterval(updateClock, 1000);
+  }
+
+  // 100% 還原 _QuotationApp ColumnWidthManager 表頭欄位拖曳調整寬度與記憶機制
+  function initQuoteColumnResizer() {
+    const table = document.getElementById("quoteDesktopTable");
+    if (!table) return;
+    const savedWidthsRaw = localStorage.getItem("shihlin_quote_table_col_widths_v1");
+    let savedWidths = {};
+    try {
+      if (savedWidthsRaw) savedWidths = JSON.parse(savedWidthsRaw) || {};
+    } catch (e) {}
+
+    const thList = table.querySelectorAll("th.resizable-th");
+    thList.forEach(th => {
+      const colKey = th.getAttribute("data-col");
+      if (colKey && savedWidths[colKey]) {
+        th.style.width = `${savedWidths[colKey]}px`;
+      }
+      const resizer = th.querySelector(".col-resizer");
+      if (!resizer) return;
+
+      let startX = 0;
+      let startWidth = 0;
+
+      const onMouseMove = (e) => {
+        const dx = e.clientX - startX;
+        const newWidth = Math.max(45, startWidth + dx);
+        th.style.width = `${newWidth}px`;
+      };
+
+      const onMouseUp = () => {
+        resizer.classList.remove("resizing");
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+        const currentWidths = {};
+        table.querySelectorAll("th.resizable-th").forEach(header => {
+          const k = header.getAttribute("data-col");
+          if (k) currentWidths[k] = parseInt(header.style.width, 10) || header.offsetWidth;
+        });
+        localStorage.setItem("shihlin_quote_table_col_widths_v1", JSON.stringify(currentWidths));
+      };
+
+      resizer.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        startX = e.clientX;
+        startWidth = th.offsetWidth;
+        resizer.classList.add("resizing");
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
+      });
+    });
+  }
+
+  // 100% 還原 _QuotationApp TableHeightDragHandle 表格高度上下拖曳條與記憶機制
+  function initQuoteTableHeightDragHandle() {
+    const handle = document.getElementById("quoteTableDragHandle");
+    const container = document.getElementById("quoteDesktopTableContainer");
+    if (!handle || !container) return;
+
+    const savedHeight = parseInt(localStorage.getItem("shihlin_quote_table_height_v1") || "250", 10);
+    if (!isNaN(savedHeight) && savedHeight >= 150) {
+      container.style.height = `${savedHeight}px`;
+    }
+
+    let startY = 0;
+    let startHeight = 250;
+
+    const onMouseMove = (e) => {
+      const dy = e.clientY - startY;
+      const newHeight = Math.max(150, startHeight + dy);
+      container.style.height = `${newHeight}px`;
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      const finalH = container.offsetHeight;
+      if (finalH >= 150) {
+        localStorage.setItem("shihlin_quote_table_height_v1", String(finalH));
+      }
+    };
+
+    handle.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      startY = e.clientY;
+      startHeight = container.offsetHeight;
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    });
   }
 
   // 初始化並填充業務專屬客戶下拉清單
@@ -4584,7 +4700,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnToggleSidebar) {
       btnToggleSidebar.addEventListener("click", () => {
         const drawer = document.getElementById("appDrawer");
-        if (drawer) drawer.classList.toggle("collapsed");
+        if (drawer) {
+          drawer.classList.toggle("collapsed");
+          const isCol = drawer.classList.contains("collapsed");
+          btnToggleSidebar.innerHTML = `<span>${isCol ? "展開選單" : "收合選單"}</span>`;
+        }
       });
     }
 
@@ -4597,9 +4717,51 @@ document.addEventListener("DOMContentLoaded", () => {
       btnToggleHeaderCompact.addEventListener("click", () => {
         quoteHeaderContainer.classList.toggle("collapsed");
         const isCollapsed = quoteHeaderContainer.classList.contains("collapsed");
-        if (headerToggleIcon) headerToggleIcon.textContent = isCollapsed ? "▼" : "▲";
+        if (headerToggleIcon) headerToggleIcon.textContent = "";
         if (headerToggleLabel) headerToggleLabel.textContent = isCollapsed ? "展開抬頭" : "收合抬頭";
       });
+    }
+
+    // 單號模式切換 (自動擷取 vs 自行輸入，對標 gui_page1.py toggle_id_mode)
+    const quoteNoMode = document.getElementById("quoteNoMode");
+    if (quoteNoMode) {
+      quoteNoMode.addEventListener("change", (e) => {
+        const isAuto = e.target.value === "auto";
+        const prefixInput = document.getElementById("quotePrefixInput");
+        const seqInput = document.getElementById("quoteSeqInput");
+        const revInput = document.getElementById("quoteRevInput");
+        if (isAuto) {
+          if (prefixInput) prefixInput.setAttribute("readonly", "readonly");
+          if (seqInput) seqInput.setAttribute("readonly", "readonly");
+          if (revInput) revInput.setAttribute("readonly", "readonly");
+          if (currentSelectedCustomer) applySelectedCustomerToQuoteUI(currentSelectedCustomer);
+        } else {
+          if (prefixInput) {
+            prefixInput.removeAttribute("readonly");
+            if (prefixInput.value === "-- 請選擇客戶 --") prefixInput.value = "";
+          }
+          if (seqInput) seqInput.removeAttribute("readonly");
+          if (revInput) revInput.removeAttribute("readonly");
+        }
+      });
+    }
+
+    // 手機端網頁報價模式頂部重設與離開按鈕
+    const btnMobileReset = document.getElementById("btnMobileResetQuote");
+    if (btnMobileReset) {
+      btnMobileReset.addEventListener("click", () => {
+        if (confirm("確定要重設並清空目前報價單嗎？")) {
+          resetQuotationEditor();
+        }
+      });
+    }
+    const btnMobileExitTop = document.getElementById("btnMobileExitQuoteTop");
+    if (btnMobileExitTop) {
+      btnMobileExitTop.addEventListener("click", () => switchPage(navItemHome, panelHome));
+    }
+    const btnMobileExitBottom = document.getElementById("btnMobileExitQuoteBottom");
+    if (btnMobileExitBottom) {
+      btnMobileExitBottom.addEventListener("click", () => switchPage(navItemHome, panelHome));
     }
 
     // 3. 電腦端公司名稱下拉選單更動 -> 同步手機與電腦端客戶資訊
@@ -4696,12 +4858,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnClearActive = document.getElementById("btnClearActiveRow");
     if (btnClearActive) {
       btnClearActive.addEventListener("click", () => {
-        const badge = document.getElementById("activeRowBadge");
-        if (badge) badge.textContent = "第 1 列 | (尚未選擇產品)";
-        const desktopTableBody = document.getElementById("quoteDesktopTableBody");
-        if (desktopTableBody) {
-          desktopTableBody.querySelectorAll("tr").forEach(tr => tr.classList.remove("active-row"));
-        }
+        updateDesktopBannerForRow(null);
       });
     }
 
@@ -4904,6 +5061,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const detailCard = document.getElementById("customerDetailCard");
     if (detailCard) detailCard.classList.add("hidden");
 
+    updateDesktopBannerForRow(null);
     addBlankItem();
     calculateTotal();
   }
@@ -4918,7 +5076,114 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   window.addEventListener("resize", enforceDesktopQuotationView);
 
-  // 新增品項 (100% 同步手機端圖三卡片與電腦端圖二 10 欄試算表)
+  // 更新電腦版第 2 排選取明細橫幅與動作按鈕 (100% 還原 _QuotationApp gui_page1.py update_banner_for_row)
+  function updateDesktopBannerForRow(rowEl) {
+    const badge = document.getElementById("activeRowBadge");
+    const actionsBox = document.getElementById("itemActionsContainer");
+    const clearBtn = document.getElementById("btnClearActiveRow");
+    const tableBody = document.getElementById("quoteDesktopTableBody");
+
+    if (tableBody) {
+      tableBody.querySelectorAll("tr").forEach(tr => tr.classList.remove("active-row"));
+    }
+
+    if (!rowEl) {
+      if (badge) {
+        badge.textContent = "目前尚未選擇明細";
+        badge.className = "pyside-edit-banner-label";
+      }
+      if (actionsBox) actionsBox.innerHTML = "";
+      if (clearBtn) clearBtn.classList.add("hidden");
+      return;
+    }
+
+    rowEl.classList.add("active-row");
+    if (clearBtn) clearBtn.classList.remove("hidden");
+
+    const rowIdxText = rowEl.querySelector('[id$="-index"]')?.textContent?.trim() || "1";
+
+    if (rowEl.classList.contains("subtotal-divider-row")) {
+      const subTitle = rowEl.querySelector(".subtotal-title-input")?.value || "--- 方案小計 ---";
+      if (badge) {
+        badge.textContent = `第 ${rowIdxText} 列  |  方案小計 (${subTitle})`;
+        badge.className = "pyside-edit-banner-label active-subtotal";
+      }
+      if (actionsBox) {
+        actionsBox.innerHTML = `
+          <button type="button" class="banner-icon-action-btn danger" id="btnBannerDeleteSubtotal" title="刪除此方案小計列">刪除此明細</button>
+        `;
+        const delSubBtn = document.getElementById("btnBannerDeleteSubtotal");
+        if (delSubBtn) {
+          delSubBtn.addEventListener("click", () => {
+            rowEl.remove();
+            updateDesktopBannerForRow(null);
+            refreshItemIndices();
+            calculateTotal();
+          });
+        }
+      }
+      return;
+    }
+
+    const itemId = rowEl.getAttribute("data-itemid");
+    const model = document.getElementById(`d-${itemId}-model-input`)?.value.trim() || document.getElementById(`${itemId}-code`)?.value.trim() || "";
+    const spec = document.getElementById(`d-${itemId}-spec`)?.textContent?.trim() || "";
+    const sku = document.getElementById(`${itemId}-sku`)?.value.trim() || "";
+    const isOrder = !document.getElementById(`${itemId}-order-badge`)?.classList.contains("hidden");
+
+    const displayModel = model || "(未填寫型號)";
+    const displaySpec = spec && spec !== "-" ? (spec.length > 22 ? spec.slice(0, 22) + "..." : spec) : "(無規格)";
+
+    if (badge) {
+      badge.textContent = `第 ${rowIdxText} 列  |  型號：${displayModel}  |  規格：${displaySpec}`;
+      badge.className = "pyside-edit-banner-label active-product";
+    }
+
+    if (actionsBox) {
+      let html = "";
+      if (isOrder) {
+        html += `<span class="banner-order-badge">訂購品</span>`;
+      }
+      if (sku) {
+        html += `<button type="button" class="banner-sku-copy-btn" id="btnBannerCopySku" title="點擊複製料號: ${escapeHtml(sku)}">料號: ${escapeHtml(sku)}</button>`;
+      }
+      if (model) {
+        html += `<button type="button" class="banner-icon-action-btn" id="btnBannerHistoryPrice" title="查詢此型號的歷史報價紀錄">查詢歷史價格</button>`;
+      }
+      html += `<button type="button" class="banner-icon-action-btn danger" id="btnBannerDeleteRow" title="刪除此筆產品明細">刪除此明細</button>`;
+      actionsBox.innerHTML = html;
+
+      const copySkuBtn = document.getElementById("btnBannerCopySku");
+      if (copySkuBtn && sku) {
+        copySkuBtn.addEventListener("click", () => {
+          navigator.clipboard.writeText(sku).then(() => {
+            copySkuBtn.textContent = "已複製!";
+            setTimeout(() => { copySkuBtn.textContent = `料號: ${sku}`; }, 1000);
+          });
+        });
+      }
+
+      const histBtn = document.getElementById("btnBannerHistoryPrice");
+      if (histBtn && model) {
+        histBtn.addEventListener("click", () => {
+          const inpModel = document.getElementById("inputAnalysisModel");
+          if (inpModel) inpModel.value = model;
+          switchQuoteSubTab("analysis");
+          if (typeof runPriceAnalysis === "function") runPriceAnalysis();
+        });
+      }
+
+      const delBtn = document.getElementById("btnBannerDeleteRow");
+      if (delBtn) {
+        delBtn.addEventListener("click", () => {
+          const rmBtn = document.getElementById(`${itemId}-remove`);
+          if (rmBtn) rmBtn.click();
+        });
+      }
+    }
+  }
+
+  // 新增品項 (100% 同步手機端 _QuotationApp\pwa 卡片與電腦端 _QuotationApp 10 欄試算表)
   function addBlankItem(initialData = null) {
     quoteItemCount++;
     const itemId = `item-${quoteItemCount}`;
@@ -4927,8 +5192,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!itemsContainer) return;
 
     const currentCount = itemsContainer.querySelectorAll('.item-row').length + 1;
-    const modelText = initialData?.model_no || "點擊選擇產品...";
-    const hasModel = Boolean(initialData?.model_no);
+    const modelVal = initialData?.model_no || "";
+    const modelText = modelVal || "點擊選擇產品...";
+    const hasModel = Boolean(modelVal);
     const specVal = initialData?.spec || "";
     const skuVal = initialData?.sku || "";
     const isOrderItem = Boolean(initialData?.is_order_item);
@@ -4938,22 +5204,32 @@ document.addEventListener("DOMContentLoaded", () => {
       ? initialData.stock_qty
       : (hasModel ? 0 : null);
     const stockDisplay = stockQtyVal !== null ? `${Number(stockQtyVal).toLocaleString()} 台` : "-";
-    const desktopStockDisplay = stockQtyVal !== null ? `${Number(stockQtyVal).toLocaleString()}` : "-";
+    const desktopStockDisplay = stockQtyVal !== null ? `${Number(stockQtyVal).toLocaleString()}` : "";
 
     const dealerPriceVal = parseFloat(initialData?.dealer_price) || 0;
     const dealerPriceDisplay = dealerPriceVal > 0 ? `$${dealerPriceVal.toLocaleString()}` : "-";
+    const desktopDealerDisplay = dealerPriceVal > 0 ? dealerPriceVal.toLocaleString() : "";
 
     const hasDiscount = initialData && initialData.discount_pct !== undefined && initialData.discount_pct !== null && initialData.discount_pct !== "";
     const discountVal = hasDiscount ? initialData.discount_pct : (hasModel ? 100 : "");
 
+    let rawEstPriceVal = 0;
+    if (dealerPriceVal > 0 && discountVal !== "") {
+      rawEstPriceVal = Math.round(dealerPriceVal * (parseFloat(discountVal) / 100));
+    }
+
     let finalUnitPriceVal = 0;
     if (initialData && initialData.final_unit_price !== undefined && initialData.final_unit_price !== null && initialData.final_unit_price !== "") {
       finalUnitPriceVal = parseFloat(initialData.final_unit_price) || 0;
-    } else if (dealerPriceVal > 0 && discountVal !== "") {
-      finalUnitPriceVal = applyQuoteRounding(dealerPriceVal * (parseFloat(discountVal) / 100));
+    } else if (rawEstPriceVal > 0) {
+      finalUnitPriceVal = applyQuoteRounding(rawEstPriceVal);
     }
 
-    const sugPriceVal = finalUnitPriceVal > 0 ? finalUnitPriceVal : "";
+    if (!rawEstPriceVal && finalUnitPriceVal > 0) {
+      rawEstPriceVal = finalUnitPriceVal;
+    }
+
+    const sugPriceVal = rawEstPriceVal > 0 ? rawEstPriceVal : "";
     const finalPriceDisplay = finalUnitPriceVal > 0 ? `$${finalUnitPriceVal.toLocaleString()}` : "-";
     const qtyVal = parseInt(initialData?.quantity, 10) || 1;
     const rowSubtotalVal = initialData?.row_subtotal !== undefined
@@ -4964,7 +5240,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const stockUpdatedAtText = quoteFinanceSettings.stock_updated_at || "10/15 10:12";
     const roundingRuleText = quoteFinanceSettings.round_summary_text || "捨入：百位數 / 無條件捨去";
 
-    // 1. 手機端卡片 HTML (100% 還原圖三配置：庫存數量、經銷價、黃色庫存提示框、建議折數、建議報價+捨入提示、需求數量、最終售價+未稅金額提示、交期/備註)
+    // 1. 窄螢幕 / 手機端卡片 HTML (100% 還原 _QuotationApp\pwa 規格)
     const mobileItemHTML = `
       <div class="item-row" id="${itemId}" data-spec="${escapeHtml(specVal)}" data-stock="${stockQtyVal !== null ? stockQtyVal : ''}">
         <div class="item-header">
@@ -4972,7 +5248,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <button type="button" class="product-picker-input ${hasModel ? 'selected' : ''}" id="${itemId}-title">
             ${escapeHtml(modelText)}
           </button>
-          <span class="order-item-badge ${isOrderItem ? '' : 'hidden'}" id="${itemId}-order-badge">受訂生產</span>
+          <span class="order-item-badge ${isOrderItem ? '' : 'hidden'}" id="${itemId}-order-badge">訂購品</span>
           <span class="special-product-tag ${isSpecialProduct ? '' : 'hidden'}" id="${itemId}-special-badge">個人特殊品</span>
           <button type="button" class="item-copy-btn ${hasModel ? '' : 'hidden'}" id="${itemId}-copy-btn" title="複製型號">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -4994,7 +5270,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
           <div class="stock-disclaimer-box">
             <div class="stock-disclaimer-time">
-              <svg class="icon-svg-xs" style="width:13px; height:13px; margin-right:3px; vertical-align:middle;" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
               <span>庫存更新時間：<span class="stock-update-time-text">${escapeHtml(stockUpdatedAtText)}</span></span>
               <span id="${itemId}-sku-wrap" class="${skuVal ? '' : 'hidden'}">
                 ｜ 料號：<span id="${itemId}-sku-text" style="font-family:monospace;">${escapeHtml(skuVal)}</span>
@@ -5029,53 +5304,53 @@ document.addEventListener("DOMContentLoaded", () => {
           <input type="text" id="${itemId}-delivery" placeholder="點擊選擇交期 / 備註..." readonly style="cursor:pointer;" value="${escapeHtml(leadTimeVal)}">
         </div>
 
-        <input type="hidden" id="${itemId}-code" value="${escapeHtml(initialData?.model_no || '')}">
+        <input type="hidden" id="${itemId}-code" value="${escapeHtml(modelVal)}">
         <input type="hidden" id="${itemId}-sku" value="${escapeHtml(skuVal)}">
         <input type="hidden" id="${itemId}-unit-price-num" value="${finalUnitPriceVal}">
       </div>
     `;
     itemsContainer.insertAdjacentHTML('beforeend', mobileItemHTML);
 
-    // 2. 電腦端 Excel 試算表表格列 HTML (_QuotationApp 圖二 1:1 版面)
+    // 2. 電腦端 QuoteTableWidget 10 欄試算表表格列 HTML (100% 還原 _QuotationApp gui_page1.py QuoteCol 0~9)
+    // 欄位順序：項次 | 0:型號 | 1:規格 | 2:經銷價 | 3:報價折數% | 4:預計報價金額 | 5:最終報價金額 | 6:數量 | 7:小計 | 8:備註/交期 | 9:可用數量
     if (desktopTableBody) {
       const desktopRowHTML = `
         <tr id="d-${itemId}" class="desktop-item-row" data-itemid="${itemId}">
-          <td style="text-align:center; font-weight:700; color:var(--text-muted);" id="d-${itemId}-index">
-            ${currentCount}
-          </td>
-          <td class="cell-stock-gray" id="d-${itemId}-stock">
-            ${escapeHtml(desktopStockDisplay)}
+          <td class="cell-vertical-index" id="d-${itemId}-index">${currentCount}</td>
+          <td>
+            <div style="display:flex; align-items:center; gap:2px;">
+              <input type="text" id="d-${itemId}-model-input" class="pyside-cell-input" placeholder="輸入或點擊選取型號..." value="${escapeHtml(modelVal)}">
+              <button type="button" id="d-${itemId}-model" class="btn-pyside-subtle" style="padding:2px 5px; font-size:11px; height:24px;" title="從產品庫挑選">▼</button>
+            </div>
+            <input type="hidden" id="d-${itemId}-code" value="${escapeHtml(modelVal)}">
           </td>
           <td>
-            <button type="button" class="cell-model-combobox ${hasModel ? 'selected' : ''}" id="d-${itemId}-model">
-              <span id="d-${itemId}-model-text">${escapeHtml(modelText)}</span>
-              <span class="dropdown-arrow">▼</span>
-            </button>
-            <input type="hidden" id="d-${itemId}-code" value="${escapeHtml(initialData?.model_no || '')}">
+            <span id="d-${itemId}-spec" class="pyside-cell-readonly" title="${escapeHtml(specVal)}">${escapeHtml(specVal)}</span>
           </td>
           <td>
-            <input type="number" id="d-${itemId}-qty" class="table-cell-input number" min="1" value="${qtyVal}" style="width:100%;">
+            <span id="d-${itemId}-dealer-price" class="pyside-cell-readonly align-right">${escapeHtml(desktopDealerDisplay)}</span>
           </td>
           <td>
-            <span id="d-${itemId}-spec" style="font-size:0.82rem; color:var(--text-secondary);">${escapeHtml(specVal || '-')}</span>
+            <input type="number" id="d-${itemId}-discount" class="pyside-cell-input align-right" step="any" value="${escapeHtml(String(discountVal))}">
           </td>
-          <td style="text-align:right;">
-            <span id="d-${itemId}-dealer-price" class="table-cell-readonly money">${escapeHtml(dealerPriceVal > 0 ? '$ ' + dealerPriceVal.toLocaleString() : '-')}</span>
+          <td>
+            <input type="number" id="d-${itemId}-est-price" class="pyside-cell-input align-right" step="any" value="${rawEstPriceVal > 0 ? rawEstPriceVal : ''}">
+          </td>
+          <td>
+            <span id="d-${itemId}-final-price-cell" class="pyside-cell-readonly align-right" style="font-weight:700;">${finalUnitPriceVal > 0 ? finalUnitPriceVal.toLocaleString() : ''}</span>
             <input type="hidden" id="d-${itemId}-price" value="${finalUnitPriceVal}">
           </td>
           <td>
-            <input type="number" id="d-${itemId}-discount" class="table-cell-input number" step="any" value="${discountVal !== '' ? discountVal : 100}" style="width:100%;">
-          </td>
-          <td style="text-align:right;">
-            <span id="d-${itemId}-subtotal" class="table-cell-readonly money" style="font-weight:700; color:#1e293b;">
-              ${rowSubtotalVal > 0 ? '$ ' + rowSubtotalVal.toLocaleString() : '$ 0'}
-            </span>
+            <input type="number" id="d-${itemId}-qty" class="pyside-cell-input align-center" min="1" value="${qtyVal}">
           </td>
           <td>
-            <input type="text" id="d-${itemId}-delivery" class="table-cell-input" placeholder="點擊選取交期..." readonly style="cursor:pointer;" value="${escapeHtml(leadTimeVal)}">
+            <span id="d-${itemId}-subtotal" class="pyside-cell-readonly align-right" style="font-weight:700;">${rowSubtotalVal > 0 ? rowSubtotalVal.toLocaleString() : '0'}</span>
           </td>
-          <td style="text-align:center;">
-            <button type="button" class="table-btn-remove" id="d-${itemId}-remove" title="刪除品項">&times;</button>
+          <td>
+            <input type="text" id="d-${itemId}-delivery" class="pyside-cell-input" placeholder="輸入或雙擊選交期..." value="${escapeHtml(leadTimeVal)}">
+          </td>
+          <td>
+            <span id="d-${itemId}-stock" class="pyside-cell-readonly align-center">${escapeHtml(desktopStockDisplay)}</span>
           </td>
         </tr>
       `;
@@ -5083,14 +5358,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const dRow = document.getElementById(`d-${itemId}`);
       if (dRow) {
-        dRow.addEventListener("click", (e) => {
-          if (e.target.closest("button") || e.target.closest("input")) return;
-          desktopTableBody.querySelectorAll("tr").forEach(tr => tr.classList.remove("active-row"));
-          dRow.classList.add("active-row");
-          const idx = dRow.querySelector('[id$="-index"]')?.textContent?.trim() || "1";
-          const model = document.getElementById(`${itemId}-code`)?.value || "";
-          const badge = document.getElementById("activeRowBadge");
-          if (badge) badge.textContent = `第 ${idx} 列 | ${model || '(尚未選擇產品)'}`;
+        dRow.addEventListener("click", () => {
+          updateDesktopBannerForRow(dRow);
         });
       }
     }
@@ -5100,46 +5369,54 @@ document.addEventListener("DOMContentLoaded", () => {
     calculateTotal();
   }
 
-  // 插入方案小計列 (橘色醒目分隔列，適配 10 欄桌面版面)
+  // 插入方案小計列 (100% 還原 _QuotationApp gui_page1.py insert_subtotal_row：[小計] + --- 方案小計 --- #c0392b 粗體紅字)
   function insertSubtotalRow(defaultTitle = "") {
     const desktopTableBody = document.getElementById("quoteDesktopTableBody");
     if (!desktopTableBody) return;
 
     const rowId = `subtotal-row-${Date.now()}`;
-    const title = defaultTitle || `方案小計 (區段加總)`;
+    const title = defaultTitle || `--- 方案小計 ---`;
 
     const subtotalHTML = `
       <tr id="${rowId}" class="subtotal-divider-row">
-        <td style="text-align:center;">
-          <span class="subtotal-badge">小計</span>
-        </td>
-        <td colspan="6">
-          <input type="text" class="subtotal-title-input" value="${escapeHtml(title)}" placeholder="輸入方案名稱 (如：方案 A：主驅動系統小計)">
-        </td>
-        <td style="text-align:right;">
-          <span class="segment-subtotal-val" style="font-family:Consolas, monospace; font-size:1rem; font-weight:700; color:#c2410c;">$ 0</span>
+        <td class="cell-vertical-index" id="${rowId}-index">-</td>
+        <td>
+          <span class="pyside-cell-readonly" style="color:#c0392b; font-weight:700;">[小計]</span>
         </td>
         <td>
-          <span style="font-size:0.75rem; color:#9a3412;">[區段未稅金額]</span>
+          <input type="text" class="pyside-cell-input subtotal-title-input" value="${escapeHtml(title)}" style="color:#c0392b; font-weight:700; text-align:center;">
         </td>
-        <td style="text-align:center;">
-          <button type="button" class="table-btn-remove btn-remove-subtotal" title="刪除此小計列">&times;</button>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td style="text-align:right;">
+          <span class="segment-subtotal-val pyside-cell-readonly align-right" style="color:#c0392b; font-weight:700;">0</span>
         </td>
+        <td>
+          <input type="text" class="pyside-cell-input" placeholder="備註...">
+        </td>
+        <td></td>
       </tr>
     `;
     desktopTableBody.insertAdjacentHTML('beforeend', subtotalHTML);
     const rowEl = document.getElementById(rowId);
-    const rmBtn = rowEl?.querySelector(".btn-remove-subtotal");
-    if (rmBtn && rowEl) {
-      rmBtn.addEventListener("click", () => {
-        rowEl.remove();
-        calculateTotal();
+    if (rowEl) {
+      rowEl.addEventListener("click", () => {
+        updateDesktopBannerForRow(rowEl);
       });
+      const titleInp = rowEl.querySelector(".subtotal-title-input");
+      if (titleInp) {
+        titleInp.addEventListener("input", () => updateDesktopBannerForRow(rowEl));
+      }
     }
+    refreshItemIndices();
     calculateTotal();
+    if (rowEl) updateDesktopBannerForRow(rowEl);
   }
 
-  // 更新各方案小計區段數值
+  // 更新各方案小計區段數值 (加總上一個小計列之後到本小計列之間的所有明細)
   function updateSubtotalDividers() {
     const desktopTableBody = document.getElementById("quoteDesktopTableBody");
     if (!desktopTableBody) return;
@@ -5151,7 +5428,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (row.classList.contains('subtotal-divider-row')) {
         const segValSpan = row.querySelector('.segment-subtotal-val');
         if (segValSpan) {
-          segValSpan.textContent = `$ ${currentSegmentSum.toLocaleString()}`;
+          segValSpan.textContent = `${currentSegmentSum.toLocaleString()}`;
         }
         currentSegmentSum = 0;
       } else if (row.classList.contains('desktop-item-row')) {
@@ -5176,11 +5453,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const mFinalPriceInput = document.getElementById(`${itemId}-final-price`);
     const mUnitPriceNum = document.getElementById(`${itemId}-unit-price-num`);
 
-    // 2. 電腦端表格元件
+    // 2. 電腦端 10 欄表格元件
     const dModelBtn = document.getElementById(`d-${itemId}-model`);
-    const dRemoveBtn = document.getElementById(`d-${itemId}-remove`);
+    const dModelInput = document.getElementById(`d-${itemId}-model-input`);
     const dDeliveryInput = document.getElementById(`d-${itemId}-delivery`);
     const dPriceInput = document.getElementById(`d-${itemId}-price`);
+    const dEstPriceInput = document.getElementById(`d-${itemId}-est-price`);
+    const dFinalPriceCell = document.getElementById(`d-${itemId}-final-price-cell`);
     const dDiscountInput = document.getElementById(`d-${itemId}-discount`);
     const dQtyInput = document.getElementById(`d-${itemId}-qty`);
     const dSubtotalSpan = document.getElementById(`d-${itemId}-subtotal`);
@@ -5191,6 +5470,33 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (mTitleBtn) mTitleBtn.addEventListener("click", triggerProductPicker);
     if (dModelBtn) dModelBtn.addEventListener("click", triggerProductPicker);
+
+    // 電腦端型號輸入框直接輸入或貼上後自動查價匹配 (_QuotationApp lookup_product)
+    if (dModelInput) {
+      dModelInput.addEventListener("change", async () => {
+        const kw = dModelInput.value.trim();
+        const mCode = document.getElementById(`${itemId}-code`);
+        const dCode = document.getElementById(`d-${itemId}-code`);
+        if (mCode) mCode.value = kw;
+        if (dCode) dCode.value = kw;
+        if (mTitleBtn) {
+          mTitleBtn.textContent = kw || "點擊選擇產品...";
+          mTitleBtn.classList.toggle("selected", Boolean(kw));
+        }
+        if (!kw) return;
+        const activeSales = getActiveSalesName();
+        try {
+          const resp = await fetch(`/api/products?q=${encodeURIComponent(kw)}&sales_name=${encodeURIComponent(activeSales)}`);
+          if (resp.ok) {
+            const list = await resp.json();
+            const exact = (list || []).find(p => p.model_no && p.model_no.toUpperCase() === kw.toUpperCase());
+            if (exact) {
+              applyProductToItemRow(itemId, exact);
+            }
+          }
+        } catch (e) {}
+      });
+    }
 
     function triggerCopyModel(btnEl) {
       const model = document.getElementById(`${itemId}-code`)?.value;
@@ -5214,40 +5520,51 @@ document.addEventListener("DOMContentLoaded", () => {
       const dRow = document.getElementById(`d-${itemId}`);
       if (mRow) mRow.remove();
       if (dRow) dRow.remove();
+      updateDesktopBannerForRow(null);
       calculateTotal();
       refreshItemIndices();
     }
     if (mRemoveBtn) mRemoveBtn.addEventListener("click", triggerRemoveItem);
-    if (dRemoveBtn) dRemoveBtn.addEventListener("click", triggerRemoveItem);
 
     function triggerDeliveryPicker() {
       currentEditingItemId = itemId;
       openDeliveryModal();
     }
     if (mDeliveryInput) mDeliveryInput.addEventListener("click", triggerDeliveryPicker);
-    if (dDeliveryInput) dDeliveryInput.addEventListener("click", triggerDeliveryPicker);
+    if (dDeliveryInput) {
+      dDeliveryInput.addEventListener("dblclick", triggerDeliveryPicker);
+      dDeliveryInput.addEventListener("input", () => {
+        if (mDeliveryInput) mDeliveryInput.value = dDeliveryInput.value;
+      });
+    }
 
     function getDealerPrice() {
       const dpStr = (document.getElementById(`d-${itemId}-dealer-price`)?.textContent || mDealerPriceInput?.value || "").replace(/[^0-9.]/g, '');
       return parseFloat(dpStr) || 0;
     }
 
-    function syncUnitAndRowSubtotal(finalUnitPrice) {
+    function syncUnitAndRowSubtotal(finalUnitPrice, rawEstPrice) {
       const unitP = Math.max(0, Math.round(finalUnitPrice || 0));
       if (mUnitPriceNum) mUnitPriceNum.value = unitP;
       if (dPriceInput) dPriceInput.value = unitP;
+      if (dFinalPriceCell) {
+        dFinalPriceCell.textContent = unitP > 0 ? unitP.toLocaleString() : "";
+      }
+      if (rawEstPrice !== undefined && dEstPriceInput && document.activeElement !== dEstPriceInput) {
+        dEstPriceInput.value = rawEstPrice > 0 ? Math.round(rawEstPrice) : "";
+      }
       if (mFinalPriceInput) {
         mFinalPriceInput.value = unitP > 0 ? `$${unitP.toLocaleString()}` : "-";
       }
       const q = parseInt(dQtyInput?.value || mQtyInput?.value || "1", 10) || 1;
       const sub = Math.round(unitP * q);
       if (dSubtotalSpan) {
-        dSubtotalSpan.textContent = sub > 0 ? `$ ${sub.toLocaleString()}` : "$ 0";
+        dSubtotalSpan.textContent = sub > 0 ? `${sub.toLocaleString()}` : "0";
       }
       calculateTotal();
     }
 
-    // 折數變更 -> 計算建議報價與捨入後最終售價
+    // 折數變更 -> 計算預計報價金額與捨入後最終報價金額
     function onDiscountChanged(val, fromSource) {
       const disc = parseFloat(val);
       const dp = getDealerPrice();
@@ -5259,16 +5576,19 @@ document.addEventListener("DOMContentLoaded", () => {
         const rawPrice = dp * (disc / 100);
         const roundedPrice = applyQuoteRounding(rawPrice);
         if (mSugPriceInput) mSugPriceInput.value = Math.round(rawPrice);
-        syncUnitAndRowSubtotal(roundedPrice);
+        syncUnitAndRowSubtotal(roundedPrice, rawPrice);
       } else {
-        syncUnitAndRowSubtotal(0);
+        syncUnitAndRowSubtotal(0, 0);
       }
     }
 
-    // 建議報價變更 -> 反推折數並計算捨入後最終售價
-    function onSugPriceChanged(val) {
+    // 預計報價金額 / 建議報價變更 -> 反推折數並計算捨入後最終報價金額
+    function onSugPriceChanged(val, fromSource) {
       const rawInput = parseFloat(val);
       const dp = getDealerPrice();
+      if (fromSource === 'desktop' && mSugPriceInput) mSugPriceInput.value = val;
+      if (fromSource === 'mobile' && dEstPriceInput) dEstPriceInput.value = val;
+
       if (!isNaN(rawInput) && rawInput > 0) {
         const roundedPrice = dp > 0 ? applyQuoteRounding(rawInput) : Math.round(rawInput);
         if (dp > 0) {
@@ -5276,9 +5596,9 @@ document.addEventListener("DOMContentLoaded", () => {
           if (mSugDiscountInput) mSugDiscountInput.value = discStr;
           if (dDiscountInput) dDiscountInput.value = discStr;
         }
-        syncUnitAndRowSubtotal(roundedPrice);
+        syncUnitAndRowSubtotal(roundedPrice, rawInput);
       } else {
-        syncUnitAndRowSubtotal(0);
+        syncUnitAndRowSubtotal(0, 0);
       }
     }
 
@@ -5291,7 +5611,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (mSugDiscountInput) mSugDiscountInput.addEventListener("input", (e) => onDiscountChanged(e.target.value, 'mobile'));
     if (dDiscountInput) dDiscountInput.addEventListener("input", (e) => onDiscountChanged(e.target.value, 'desktop'));
-    if (mSugPriceInput) mSugPriceInput.addEventListener("input", (e) => onSugPriceChanged(e.target.value));
+    if (mSugPriceInput) mSugPriceInput.addEventListener("input", (e) => onSugPriceChanged(e.target.value, 'mobile'));
+    if (dEstPriceInput) dEstPriceInput.addEventListener("input", (e) => onSugPriceChanged(e.target.value, 'desktop'));
     if (mQtyInput) mQtyInput.addEventListener("input", (e) => onQtyChanged(e.target.value, 'mobile'));
     if (dQtyInput) dQtyInput.addEventListener("input", (e) => onQtyChanged(e.target.value, 'desktop'));
   }
@@ -5316,7 +5637,9 @@ document.addEventListener("DOMContentLoaded", () => {
       subtotal += rowSub;
 
       const subSpan = document.getElementById(`d-${itemId}-subtotal`);
-      if (subSpan) subSpan.textContent = rowSub > 0 ? `$ ${rowSub.toLocaleString()}` : "$ 0";
+      if (subSpan) subSpan.textContent = rowSub > 0 ? `${rowSub.toLocaleString()}` : "0";
+      const dFinalCell = document.getElementById(`d-${itemId}-final-price-cell`);
+      if (dFinalCell) dFinalCell.textContent = unitPrice > 0 ? `${unitPrice.toLocaleString()}` : "";
       const mFinal = document.getElementById(`${itemId}-final-price`);
       if (mFinal) mFinal.value = unitPrice > 0 ? `$${unitPrice.toLocaleString()}` : "-";
     });
@@ -5365,7 +5688,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const desktopTableBody = document.getElementById("quoteDesktopTableBody");
     if (desktopTableBody) {
-      const dRows = desktopTableBody.querySelectorAll('.desktop-item-row');
+      const dRows = desktopTableBody.querySelectorAll('tr');
       dRows.forEach((r, idx) => {
         const cell = r.querySelector('[id$="-index"]');
         if (cell) cell.textContent = `${idx + 1}`;
@@ -5395,7 +5718,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (prod && prod.dealer_price) {
           const newDP = prod.dealer_price;
           const dDP = document.getElementById(`d-${itemId}-dealer-price`);
-          if (dDP) dDP.textContent = `$ ${newDP.toLocaleString()}`;
+          if (dDP) dDP.textContent = `${newDP.toLocaleString()}`;
           const mDP = document.getElementById(`${itemId}-dealer-price`);
           if (mDP) mDP.value = `$${newDP.toLocaleString()}`;
 
@@ -5404,6 +5727,10 @@ document.addEventListener("DOMContentLoaded", () => {
           const newPrice = applyQuoteRounding(rawPrice);
           const dPrice = document.getElementById(`d-${itemId}-price`);
           if (dPrice) dPrice.value = newPrice;
+          const dEstPrice = document.getElementById(`d-${itemId}-est-price`);
+          if (dEstPrice) dEstPrice.value = Math.round(rawPrice);
+          const dFinalCell = document.getElementById(`d-${itemId}-final-price-cell`);
+          if (dFinalCell) dFinalCell.textContent = newPrice > 0 ? newPrice.toLocaleString() : "";
           const mPrice = document.getElementById(`${itemId}-sug-price`);
           if (mPrice) mPrice.value = Math.round(rawPrice);
           const mUnitNum = document.getElementById(`${itemId}-unit-price-num`);
@@ -5990,12 +6317,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const finalPriceInput = document.getElementById(`${itemId}-final-price`);
     const unitPriceNum = document.getElementById(`${itemId}-unit-price-num`);
 
-    // 2. 電腦端表格元件更新
-    const dModelBtn = document.getElementById(`d-${itemId}-model`);
+    // 2. 電腦端 10 欄表格元件更新
+    const dModelInput = document.getElementById(`d-${itemId}-model-input`);
     const dStock = document.getElementById(`d-${itemId}-stock`);
     const dSpec = document.getElementById(`d-${itemId}-spec`);
     const dDP = document.getElementById(`d-${itemId}-dealer-price`);
     const dPrice = document.getElementById(`d-${itemId}-price`);
+    const dEstPrice = document.getElementById(`d-${itemId}-est-price`);
+    const dFinalCell = document.getElementById(`d-${itemId}-final-price-cell`);
     const dDiscount = document.getElementById(`d-${itemId}-discount`);
     const dSub = document.getElementById(`d-${itemId}-subtotal`);
 
@@ -6019,26 +6348,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (orderBadge) orderBadge.classList.toggle("hidden", !isOrder);
     if (specialBadge) specialBadge.classList.toggle("hidden", !isSpecial);
 
-    if (dModelBtn) {
-      dModelBtn.innerHTML = `<span id="d-${itemId}-model-text">${escapeHtml(model)}</span> <span class="dropdown-arrow">▼</span>`;
-      dModelBtn.classList.add("selected");
+    if (dModelInput) {
+      dModelInput.value = model;
     }
     const dCodeInput = document.getElementById(`d-${itemId}-code`);
     if (dCodeInput) dCodeInput.value = model;
     if (dStock) dStock.textContent = `${stockQty.toLocaleString()}`;
-    if (dSpec) dSpec.textContent = spec || "-";
-    if (dDP) dDP.textContent = price > 0 ? `$ ${price.toLocaleString()}` : "-";
-
-    // 同步上方作用列標籤
-    const activeBadge = document.getElementById("activeRowBadge");
-    const dRowEl = document.getElementById(`d-${itemId}`);
-    const rowIdx = dRowEl?.querySelector('[id$="-index"]')?.textContent?.trim() || "1";
-    if (activeBadge) activeBadge.textContent = `第 ${rowIdx} 列 | ${model}`;
-    if (dRowEl) {
-      const tableBody = document.getElementById("quoteDesktopTableBody");
-      if (tableBody) tableBody.querySelectorAll("tr").forEach(tr => tr.classList.remove("active-row"));
-      dRowEl.classList.add("active-row");
-    }
+    if (dSpec) dSpec.textContent = spec || "";
+    if (dDP) dDP.textContent = price > 0 ? `${price.toLocaleString()}` : "";
 
     const discVal = sugDiscountInput && sugDiscountInput.value !== "" ? parseFloat(sugDiscountInput.value) : 100;
     const disc = isNaN(discVal) ? 100 : discVal;
@@ -6048,18 +6365,26 @@ document.addEventListener("DOMContentLoaded", () => {
     const rawPrice = price * (disc / 100);
     const roundedPrice = disc === 100 ? Math.round(price) : applyQuoteRounding(rawPrice);
     if (sugPriceInput) sugPriceInput.value = Math.round(rawPrice);
+    if (dEstPrice) dEstPrice.value = rawPrice > 0 ? Math.round(rawPrice) : "";
     if (unitPriceNum) unitPriceNum.value = roundedPrice;
     if (dPrice) dPrice.value = roundedPrice;
+    if (dFinalCell) dFinalCell.textContent = roundedPrice > 0 ? roundedPrice.toLocaleString() : "";
     if (finalPriceInput) finalPriceInput.value = roundedPrice > 0 ? `$${roundedPrice.toLocaleString()}` : "-";
 
     const q = parseInt(qtyInput?.value || "1", 10) || 1;
     const sub = Math.round(roundedPrice * q);
-    if (dSub) dSub.textContent = sub > 0 ? `$ ${sub.toLocaleString()}` : "$ 0";
+    if (dSub) dSub.textContent = sub > 0 ? `${sub.toLocaleString()}` : "0";
 
     const mRow = document.getElementById(itemId);
     if (mRow) {
       mRow.dataset.spec = spec;
       mRow.dataset.stock = String(stockQty);
+    }
+
+    // 同步上方第 2 排作用列標籤與動作按鈕 (訂購品、料號複製、歷史價格查詢、刪除明細)
+    const dRowEl = document.getElementById(`d-${itemId}`);
+    if (dRowEl) {
+      updateDesktopBannerForRow(dRowEl);
     }
 
     calculateTotal();

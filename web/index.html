@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261106_v1_0_44" />
+  <link rel="stylesheet" href="css/style.css?v=20261106_v1_0_45" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -2170,9 +2170,9 @@
               <fieldset class="pyside-groupbox pyside-full-groupbox">
                 <legend class="pyside-groupbox-legend">當前版本資訊</legend>
                 <div style="line-height:1.9; font-size:14px;">
-                  <div style="color:#00a8ff; font-weight:700; font-size:15px;">目前版本 : v5.5.1.6</div>
-                  <div>更新內容 : 系統升級與優化</div>
-                  <div>發布時間 : 2026-11-05 11:20:55</div>
+                  <div style="color:#00a8ff; font-weight:700; font-size:15px;">目前版本 : v1.0.45 (對齊桌面版 v5.5.1.6)</div>
+                  <div>更新內容 : 系統升級與優化（全頁面表格欄寬自由拖曳調整）</div>
+                  <div>發布時間 : 2026-11-06 14:30:00</div>
                 </div>
               </fieldset>
 
@@ -2527,7 +2527,7 @@
           </div>
 
           <div class="settings-version-tag">
-            <span class="version-text">系統版本：v1.0.40</span>
+            <span class="version-text">系統版本：v1.0.45 (對齊桌面版 v5.5.1.6)</span>
             <button id="btnClearCacheSettings" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
               <svg class="icon-svg-xs" viewBox="0 0 24 24">
                 <path
@@ -3513,13 +3513,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261106_v1_0_44"></script>
+  <script src="js/app.js?v=20261106_v1_0_45"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261106_v1_0_44')
+        navigator.serviceWorker.register('./sw.js?v=20261106_v1_0_45')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

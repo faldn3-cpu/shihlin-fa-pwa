@@ -4404,7 +4404,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function initQuoteColumnResizer() {
-    const tables = document.querySelectorAll("#panelQuotation .pyside-excel-table");
+    const tables = document.querySelectorAll("#panelQuotes .pyside-excel-table");
     tables.forEach((table, tIdx) => {
       const tableKey = table.id || `quote_table_${tIdx}`;
       const storageKey = `${QUOTE_TABLE_STORAGE_PREFIX}${tableKey}`;
@@ -8887,13 +8887,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function setupQuotationSettingsTabsAndEvents() {
     const tabBar = document.getElementById("quoteSettingsTabBar");
+    const qSetPaneMap = {
+      general: "qSetPaneGeneral",
+      batch: "qSetPaneBatch",
+      archive: "qSetPaneArchive",
+      terms: "qSetPaneTerms",
+      update: "qSetPaneUpdate"
+    };
     if (tabBar) {
       tabBar.querySelectorAll(".pyside-tab-btn").forEach(btn => {
         btn.addEventListener("click", () => {
-          const targetId = btn.getAttribute("data-qset-tab");
+          const rawKey = btn.getAttribute("data-qset-tab") || "general";
+          const targetId = qSetPaneMap[rawKey] || rawKey;
           tabBar.querySelectorAll(".pyside-tab-btn").forEach(b => b.classList.toggle("active", b === btn));
           document.querySelectorAll("#quoteSettingsSection .pyside-tab-pane").forEach(pane => {
-            pane.classList.toggle("active", pane.id === targetId);
+            const isMatch = pane.id === targetId;
+            pane.classList.toggle("active", isMatch);
+            pane.classList.toggle("hidden", !isMatch);
           });
         });
       });
@@ -9136,13 +9146,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function setupQuotationHelpTabsAndEvents() {
     const tabBar = document.getElementById("quoteHelpTabBar");
+    const qHelpPaneMap = {
+      manual: "qHelpPaneManual",
+      changelog: "qHelpPaneChangelog"
+    };
     if (tabBar) {
       tabBar.querySelectorAll(".pyside-tab-btn").forEach(btn => {
         btn.addEventListener("click", () => {
-          const targetId = btn.getAttribute("data-qhelp-tab");
+          const rawKey = btn.getAttribute("data-qhelp-tab") || "manual";
+          const targetId = qHelpPaneMap[rawKey] || rawKey;
           tabBar.querySelectorAll(".pyside-tab-btn").forEach(b => b.classList.toggle("active", b === btn));
           document.querySelectorAll("#quoteHelpSection .pyside-tab-pane").forEach(pane => {
-            pane.classList.toggle("active", pane.id === targetId);
+            const isMatch = pane.id === targetId;
+            pane.classList.toggle("active", isMatch);
+            pane.classList.toggle("hidden", !isMatch);
           });
         });
       });
@@ -9152,7 +9169,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (topicList) {
       topicList.querySelectorAll(".pyside-help-topic-item").forEach(item => {
         item.addEventListener("click", () => {
-          const idx = parseInt(item.getAttribute("data-help-topic") || "0", 10);
+          const idx = parseInt(item.getAttribute("data-topic-idx") || item.getAttribute("data-help-topic") || "0", 10);
           topicList.querySelectorAll(".pyside-help-topic-item").forEach(li => li.classList.toggle("active", li === item));
           const manualBox = document.getElementById("quoteHelpManualContent");
           if (manualBox) {

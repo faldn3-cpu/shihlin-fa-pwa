@@ -9605,7 +9605,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const HELP_CHANGELOG_HTML = `
     <h2 class="help-h2">[履歷] 系統升級與修復履歷 (Changelog)</h2>
-    <div style="color:#27ae60; font-weight:700; font-size:1.02rem; margin:10px 0 8px 0;">v5.5.1.6 / PWA v1.0.51 雙端 100% 對齊版 (2026/11)</div>
+    <div style="color:#27ae60; font-weight:700; font-size:1.02rem; margin:10px 0 8px 0;">v5.5.1.6 / PWA v1.0.52 雙端 100% 對齊版 (2026/11)</div>
     <ul style="line-height:1.85; padding-left:20px; margin-bottom:18px;">
       <li><strong>全系統 9 大功能頁 1:1 完整還原</strong>：新建報價單、手機報價草稿覆核區、報價單管理、大數據分析戰略駕駛艙、歷史單價分析、客戶管理、產品管理(含 4x5 小算盤)、系統設定(5 大子分頁)、使用說明(10 大操作手冊主題 + 版次履歷) 100% 對齊電腦版桌面軟體。</li>
       <li><strong>新建報價單 10 欄順序與圓角白底型號選單</strong>：嚴格對齊「可用數量、型號、數量、規格、經銷價、報價折數%、預計報價金額、最終報價金額、小計、備註/交期」欄位順序與預設 5 列空白明細。</li>
@@ -9737,25 +9737,35 @@ document.addEventListener("DOMContentLoaded", () => {
     box.classList.remove("hidden");
   }
 
-  // 渲染頂部「管理員身分模擬」下拉選單
+  // 渲染頂部與報價系統側邊欄「管理員身分模擬」下拉選單
   function renderAdminImpersonateOptions() {
     const adminSelect = document.getElementById("adminImpersonateSelect");
-    if (!adminSelect) return;
+    const sidebarAdminSelect = document.getElementById("quoteSidebarImpersonateSelect");
     const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
     const list = getOrderedSalespersons();
-    adminSelect.innerHTML = list.map(s => {
+    const optionsHtml = list.map(s => {
       const selected = s.name === activeSales ? "selected" : "";
       return `<option value="${escapeHtml(s.name)}" ${selected}>${escapeHtml(s.name)}</option>`;
     }).join("");
-    if (list.some(s => s.name === activeSales)) {
-      adminSelect.value = activeSales;
+
+    if (adminSelect) {
+      adminSelect.innerHTML = optionsHtml;
+      if (list.some(s => s.name === activeSales)) {
+        adminSelect.value = activeSales;
+      }
+    }
+    if (sidebarAdminSelect) {
+      sidebarAdminSelect.innerHTML = optionsHtml;
+      if (list.some(s => s.name === activeSales)) {
+        sidebarAdminSelect.value = activeSales;
+      }
     }
   }
 
-  // 評估是否顯示頂部「管理員身分模擬」工具列
+  // 評估是否顯示頂部與報價系統側邊欄「管理員身分模擬」工具列
   function setupAdminImpersonator() {
     const adminBar = document.getElementById("adminImpersonateBar");
-    if (!adminBar) return;
+    const sidebarAdminBox = document.getElementById("quoteSidebarAdminBox");
 
     let profEmail = "";
     try {
@@ -9769,10 +9779,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (isAdmin) {
       localStorage.setItem("is_admin_user", "true");
-      adminBar.classList.remove("hidden");
+      if (adminBar) adminBar.classList.remove("hidden");
+      if (sidebarAdminBox) sidebarAdminBox.classList.remove("hidden");
       renderAdminImpersonateOptions();
     } else {
-      adminBar.classList.add("hidden");
+      if (adminBar) adminBar.classList.add("hidden");
+      if (sidebarAdminBox) sidebarAdminBox.classList.add("hidden");
     }
   }
 
@@ -9790,6 +9802,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const adminSelect = document.getElementById("adminImpersonateSelect");
     if (adminSelect && adminSelect.value !== targetSales) {
       adminSelect.value = targetSales;
+    }
+    const sidebarAdminSelect = document.getElementById("quoteSidebarImpersonateSelect");
+    if (sidebarAdminSelect && sidebarAdminSelect.value !== targetSales) {
+      sidebarAdminSelect.value = targetSales;
     }
 
     // 1. 更新頂部頭像、首頁戰情計分板、業績預測與個人特殊品徽章
@@ -10012,22 +10028,48 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
+    const sidebarAdminSelect = document.getElementById("quoteSidebarImpersonateSelect");
+    if (sidebarAdminSelect) {
+      sidebarAdminSelect.addEventListener("change", () => {
+        switchSimulatedSalesperson(sidebarAdminSelect.value, true);
+      });
+    }
+
+    const openPermSettingsAction = () => {
+      document.body.classList.remove("quotation-system-active");
+      const mainNav = document.getElementById("mainSidebarNavList");
+      const quoteNav = document.getElementById("quoteSidebarNavList");
+      if (mainNav) mainNav.classList.remove("hidden");
+      if (quoteNav) quoteNav.classList.add("hidden");
+      switchPage(navItemSettings, panelSettings);
+      setTimeout(() => {
+        const salesOrderTable = document.getElementById("tableSalesOrder") || document.getElementById("containerSalesOrderMobile");
+        if (salesOrderTable) {
+          salesOrderTable.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 120);
+    };
+
     const btnOpenPermModal = document.getElementById("btnOpenPermModal");
     if (btnOpenPermModal) {
-      btnOpenPermModal.addEventListener("click", () => {
-        switchPage(navItemSettings, panelSettings);
-        setTimeout(() => {
-          const salesOrderTable = document.getElementById("tableSalesOrder") || document.getElementById("containerSalesOrderMobile");
-          if (salesOrderTable) {
-            salesOrderTable.scrollIntoView({ behavior: "smooth", block: "center" });
-          }
-        }, 120);
-      });
+      btnOpenPermModal.addEventListener("click", openPermSettingsAction);
+    }
+
+    const btnQuoteSidebarPermModal = document.getElementById("btnQuoteSidebarPermModal");
+    if (btnQuoteSidebarPermModal) {
+      btnQuoteSidebarPermModal.addEventListener("click", openPermSettingsAction);
     }
 
     const btnSwitchGoogleAccount = document.getElementById("btnSwitchGoogleAccount");
     if (btnSwitchGoogleAccount) {
       btnSwitchGoogleAccount.addEventListener("click", () => {
+        openLoginOverlay();
+      });
+    }
+
+    const btnQuoteSidebarSwitchAccount = document.getElementById("btnQuoteSidebarSwitchAccount");
+    if (btnQuoteSidebarSwitchAccount) {
+      btnQuoteSidebarSwitchAccount.addEventListener("click", () => {
         openLoginOverlay();
       });
     }

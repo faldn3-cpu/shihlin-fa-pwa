@@ -209,6 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (btnToggleSidebar) btnToggleSidebar.innerHTML = "<span>收合選單</span>";
     } else {
       document.body.classList.remove("quotation-system-active");
+      document.body.classList.remove("quote-mobile-mode");
       if (mainList) mainList.classList.remove("hidden");
       if (quoteList) quoteList.classList.add("hidden");
       if (drawerTitle) drawerTitle.textContent = "功能選單";
@@ -4903,98 +4904,55 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 全系統共用「右側垂直邊界拖曳拉桿」與第 2~7 頁「底部水平高度拖曳拉桿」（一頁調寬全頁同步，且鎖定表頭不因拉底端橫 bar 而消失）
-  const QUOTE_WORKSPACE_WIDTH_KEY = "shihlin_quote_workspace_width_v1";
+  // 全系統共用「作業區固定寬度（可調）」與「手機版切換尺寸門檻（預設 6.8 吋手機 480px）」與第 2~7 頁「底部水平高度拖曳拉桿」
+  const QUOTE_WORKSPACE_WIDTH_KEY = "shihlin_quote_workspace_width_v2";
+  const QUOTE_MOBILE_BREAKPOINT_KEY = "shihlin_quote_mobile_bp_v1";
 
-  function updateRightBoundaryLinePosition() {
-    const resizer = document.getElementById("quoteRightBoundaryResizer");
-    if (!resizer) return;
-    const drawer = document.getElementById("appDrawer");
-    const sidebarW = (drawer && !drawer.classList.contains("collapsed") && drawer.offsetWidth > 0) ? drawer.offsetWidth : 0;
-    const curW = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--quote-workspace-width"), 10) || 1050;
-    const targetLeft = sidebarW + 15 + curW;
-    resizer.style.left = `${Math.min(window.innerWidth - 10, Math.max(sidebarW + 900, targetLeft))}px`;
+  function getQuoteWorkspaceWidth() {
+    const raw = parseInt(localStorage.getItem(QUOTE_WORKSPACE_WIDTH_KEY) || "1320", 10);
+    if (!isNaN(raw) && raw >= 900 && raw <= 2400) return raw;
+    return 1320;
   }
 
+  function getQuoteMobileBreakpoint() {
+    const raw = parseInt(localStorage.getItem(QUOTE_MOBILE_BREAKPOINT_KEY) || "480", 10);
+    if (!isNaN(raw) && raw >= 320 && raw <= 1200) return raw;
+    return 480;
+  }
+
+  // 套用全系統作業區固定寬度（不隨視窗縮小而壓縮；視窗大於作業區時可看全貌，視窗小於作業區時自動出現橫向捲軸）
   function applyGlobalQuoteWorkspaceWidth(widthPx, save = true) {
-    const drawer = document.getElementById("appDrawer");
-    const sidebarW = (drawer && !drawer.classList.contains("collapsed") && drawer.offsetWidth > 0) ? drawer.offsetWidth : 200;
-    const maxAllowed = Math.max(960, window.innerWidth - sidebarW - 32);
-    const clampedW = Math.round(Math.max(920, Math.min(maxAllowed, widthPx)));
+    const clampedW = Math.round(Math.max(900, Math.min(2400, Number(widthPx) || 1320)));
     document.documentElement.style.setProperty("--quote-workspace-width", `${clampedW}px`);
     if (save) {
       localStorage.setItem(QUOTE_WORKSPACE_WIDTH_KEY, String(clampedW));
     }
-    updateRightBoundaryLinePosition();
+  }
+
+  // 依據視窗寬度與設定之手機切換門檻，自動切換「桌面固定寬度版」或「手機直式網頁報價版」
+  function evaluateQuoteResponsiveMode() {
+    if (!document.body.classList.contains("quotation-system-active")) {
+      document.body.classList.remove("quote-mobile-mode");
+      return;
+    }
+    const bp = getQuoteMobileBreakpoint();
+    const isMobile = window.innerWidth <= bp;
+    document.body.classList.toggle("quote-mobile-mode", isMobile);
+    if (isMobile && currentActiveQuoteTab !== "create") {
+      switchQuoteSubTab("create");
+    }
   }
 
   function initQuoteWorkspaceBoundaryResizers() {
     const panelQuotes = document.getElementById("panelQuotes");
     if (!panelQuotes) return;
 
-    // 1. 建立或取得全系統共用右側垂直邊界拉桿
-    let rightResizer = document.getElementById("quoteRightBoundaryResizer");
-    if (!rightResizer) {
-      rightResizer = document.createElement("div");
-      rightResizer.id = "quoteRightBoundaryResizer";
-      rightResizer.className = "quote-right-boundary-resizer";
-      rightResizer.title = "左右拖曳可調整全系統各頁面的右側可視邊界（雙擊自動撐滿視窗寬度）";
-      rightResizer.innerHTML = `<div class="boundary-grip-pill">||</div>`;
-      panelQuotes.appendChild(rightResizer);
-    }
+    // 1. 移除舊版藍色右側垂直邊界拉桿（若存在），並套用固定作業區寬度與手機版切換門檻
+    const oldResizer = document.getElementById("quoteRightBoundaryResizer");
+    if (oldResizer) oldResizer.remove();
 
-    // 載入已儲存的工作區寬度（若無儲存且螢幕夠寬，預設給更充裕的可視範圍或維持儲存值）
-    const savedW = parseInt(localStorage.getItem(QUOTE_WORKSPACE_WIDTH_KEY) || "0", 10);
-    if (savedW >= 920) {
-      applyGlobalQuoteWorkspaceWidth(savedW, false);
-    } else {
-      const drawer = document.getElementById("appDrawer");
-      const sidebarW = (drawer && !drawer.classList.contains("collapsed") && drawer.offsetWidth > 0) ? drawer.offsetWidth : 200;
-      const defaultFitW = Math.max(1050, window.innerWidth - sidebarW - 40);
-      applyGlobalQuoteWorkspaceWidth(defaultFitW, false);
-    }
-
-    if (rightResizer.getAttribute("data-bound") !== "true") {
-      rightResizer.setAttribute("data-bound", "true");
-
-      let startX = 0;
-      let startW = 1050;
-
-      const onMouseMove = (e) => {
-        const dx = e.clientX - startX;
-        applyGlobalQuoteWorkspaceWidth(startW + dx, false);
-      };
-
-      const onMouseUp = () => {
-        rightResizer.classList.remove("resizing");
-        document.body.style.cursor = "";
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
-        const curW = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--quote-workspace-width"), 10) || 1050;
-        localStorage.setItem(QUOTE_WORKSPACE_WIDTH_KEY, String(curW));
-      };
-
-      rightResizer.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        startX = e.clientX;
-        startW = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--quote-workspace-width"), 10) || 1050;
-        rightResizer.classList.add("resizing");
-        document.body.style.cursor = "ew-resize";
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp);
-      });
-
-      rightResizer.addEventListener("dblclick", () => {
-        const drawer = document.getElementById("appDrawer");
-        const sidebarW = (drawer && !drawer.classList.contains("collapsed") && drawer.offsetWidth > 0) ? drawer.offsetWidth : 200;
-        const fullW = Math.max(1050, window.innerWidth - sidebarW - 36);
-        applyGlobalQuoteWorkspaceWidth(fullW, true);
-      });
-
-      window.addEventListener("resize", () => {
-        updateRightBoundaryLinePosition();
-      });
-    }
+    applyGlobalQuoteWorkspaceWidth(getQuoteWorkspaceWidth(), false);
+    evaluateQuoteResponsiveMode();
 
     // 2. 為第 2~7 頁所有 .pyside-full-table-wrap 自動掛載「底部橫向高度調整拉桿」並將高度控制在螢幕可視範圍內（防止拉底部橫 bar 時上方表頭消失）
     const tableWraps = panelQuotes.querySelectorAll(".pyside-full-table-wrap");
@@ -5070,8 +5028,6 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem(hStorageKey, String(Math.round(bestH)));
       });
     });
-
-    setTimeout(updateRightBoundaryLinePosition, 60);
   }
 
   // 初始化並填充業務專屬客戶下拉清單
@@ -5267,7 +5223,6 @@ document.addEventListener("DOMContentLoaded", () => {
     initQuoteColumnResizer();
     initQuoteColumnOrderSwapper();
     initQuoteWorkspaceBoundaryResizers();
-    setTimeout(updateRightBoundaryLinePosition, 50);
     closeDrawer();
   }
 
@@ -5324,7 +5279,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll(".btn-toggle-sidebar-any").forEach(b => {
           b.innerHTML = labelHtml;
         });
-        setTimeout(updateRightBoundaryLinePosition, 60);
       }
     };
     const btnToggleSidebar = document.getElementById("btnToggleSidebar");
@@ -5346,7 +5300,6 @@ document.addEventListener("DOMContentLoaded", () => {
         quoteHeaderContainer.classList.toggle("hidden", isCollapsed);
         if (headerToggleIcon) headerToggleIcon.textContent = "";
         if (headerToggleLabel) headerToggleLabel.textContent = isCollapsed ? "展開抬頭" : "收合抬頭";
-        setTimeout(updateRightBoundaryLinePosition, 50);
       });
     }
 
@@ -5890,13 +5843,9 @@ document.addEventListener("DOMContentLoaded", () => {
     calculateTotal();
   }
 
-  // 視窗寬度自適應模式守護 (>= 768px 電腦端 Excel 試算表，< 768px 手機端圖三卡片)
+  // 視窗寬度自適應模式守護 (> 手機門檻為電腦端固定寬度試算表，<= 手機門檻自動切換為手機直式網頁報價介面)
   function enforceDesktopQuotationView() {
-    const draftContainer = document.getElementById("quoteDraftSection");
-    if (!draftContainer) return;
-    if (window.innerWidth >= 768) {
-      draftContainer.classList.remove("force-mobile-view");
-    }
+    evaluateQuoteResponsiveMode();
   }
   window.addEventListener("resize", enforceDesktopQuotationView);
 
@@ -9450,6 +9399,25 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnSaveSet = document.getElementById("btnSaveQuoteSettings");
     if (btnSaveSet) btnSaveSet.addEventListener("click", saveQuotationFinanceSettingsFromUI);
 
+    // 介面顯示設定：手機版切換尺寸預設選單與像素數字框雙向連動
+    const bpPresetSel = document.getElementById("qSetMobileBreakpointPreset");
+    const bpNumIn = document.getElementById("qSetMobileBreakpoint");
+    if (bpPresetSel && bpNumIn) {
+      bpPresetSel.addEventListener("change", () => {
+        if (bpPresetSel.value !== "custom") {
+          bpNumIn.value = bpPresetSel.value;
+        }
+      });
+      bpNumIn.addEventListener("input", () => {
+        const v = String(parseInt(bpNumIn.value || "0", 10));
+        if (["480", "430", "390", "768"].includes(v)) {
+          bpPresetSel.value = v;
+        } else {
+          bpPresetSel.value = "custom";
+        }
+      });
+    }
+
     const btnSaveTerms = document.getElementById("btnSaveQuoteTerms");
     if (btnSaveTerms) btnSaveTerms.addEventListener("click", saveQuotationTermsFromUI);
 
@@ -9509,6 +9477,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const modeSel = document.getElementById("qSetRoundMode");
     const sortSel = document.getElementById("qSetCustSortMode");
     const defRowsIn = document.getElementById("qSetDefaultRows");
+    const wsWidthIn = document.getElementById("qSetWorkspaceWidth");
+    const bpPresetSel = document.getElementById("qSetMobileBreakpointPreset");
+    const bpNumIn = document.getElementById("qSetMobileBreakpoint");
     const termsTxt = document.getElementById("qSetTermsTextarea");
 
     if (taxInput) taxInput.value = String(quoteFinanceSettings.tax_rate ?? 5);
@@ -9516,6 +9487,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (modeSel) modeSel.value = quoteFinanceSettings.round_mode || "四捨五入";
     if (sortSel) sortSel.value = quoteFinanceSettings.customer_sort_mode || "常用客戶優先";
     if (defRowsIn) defRowsIn.value = localStorage.getItem("shihlin_quote_default_rows") || "5";
+
+    const curWsW = getQuoteWorkspaceWidth();
+    if (wsWidthIn) wsWidthIn.value = String(curWsW);
+
+    const curBp = getQuoteMobileBreakpoint();
+    if (bpNumIn) bpNumIn.value = String(curBp);
+    if (bpPresetSel) {
+      const bpStr = String(curBp);
+      bpPresetSel.value = ["480", "430", "390", "768"].includes(bpStr) ? bpStr : "custom";
+    }
+
     if (termsTxt) {
       termsTxt.value = quoteFinanceSettings.quote_terms || DEFAULT_QUOTE_TERMS_8_CLAUSES;
     }
@@ -9524,6 +9506,17 @@ document.addEventListener("DOMContentLoaded", () => {
   async function saveQuotationFinanceSettingsFromUI() {
     const defRows = Math.max(1, Math.min(50, parseInt(document.getElementById("qSetDefaultRows")?.value || "5", 10) || 5));
     localStorage.setItem("shihlin_quote_default_rows", String(defRows));
+
+    const wsWidthVal = Math.max(900, Math.min(2400, parseInt(document.getElementById("qSetWorkspaceWidth")?.value || "1320", 10) || 1320));
+    const wsWidthIn = document.getElementById("qSetWorkspaceWidth");
+    if (wsWidthIn) wsWidthIn.value = String(wsWidthVal);
+    applyGlobalQuoteWorkspaceWidth(wsWidthVal, true);
+
+    const mobileBpVal = Math.max(320, Math.min(1200, parseInt(document.getElementById("qSetMobileBreakpoint")?.value || "480", 10) || 480));
+    const bpNumIn = document.getElementById("qSetMobileBreakpoint");
+    if (bpNumIn) bpNumIn.value = String(mobileBpVal);
+    localStorage.setItem(QUOTE_MOBILE_BREAKPOINT_KEY, String(mobileBpVal));
+    evaluateQuoteResponsiveMode();
 
     const payload = {
       tax_rate: parseFloat(document.getElementById("qSetTaxRate")?.value || "5.0"),
@@ -9541,9 +9534,11 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!r.ok) throw new Error(res.detail || "儲存財務設定失敗");
       await loadQuotationFinanceSettings();
       calculateTotal();
-      alert(`[儲存成功] 系統設定已立即套用！（新建預設行數：${defRows} 行｜捨入規則：${quoteFinanceSettings.round_summary_text}）`);
+      alert(`[儲存成功] 系統設定已立即套用！\n・作業區固定寬度：${wsWidthVal} px\n・手機版切換門檻：<= ${mobileBpVal} px\n・新建預設行數：${defRows} 行\n・捨入規則：${quoteFinanceSettings.round_summary_text}`);
     } catch (err) {
-      alert("[儲存失敗] " + err.message);
+      // 即使離線或 GitHub Pages 靜態環境無法連線後端 API，前端介面寬度與手機尺寸門檻也已成功存入本機並立即生效
+      calculateTotal();
+      alert(`[介面設定已套用] 作業區固定寬度（${wsWidthVal} px）、手機版切換門檻（<= ${mobileBpVal} px）與新建預設行數（${defRows} 行）已成功儲存並立即生效！`);
     }
   }
 

@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261109_v1_0_49" />
+  <link rel="stylesheet" href="css/style.css?v=20261109_v1_0_50" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -3514,13 +3514,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261109_v1_0_49"></script>
+  <script src="js/app.js?v=20261109_v1_0_50"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261109_v1_0_49')
+        navigator.serviceWorker.register('./sw.js?v=20261109_v1_0_50')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

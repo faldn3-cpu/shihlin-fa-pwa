@@ -5399,8 +5399,8 @@ input[type="checkbox"] {
   display: none !important;
 }
 
-/* 當處於報價管理系統且螢幕寬度 >= 1280px 時，隱藏戰情室頂部標題列，讓側邊欄與主工作區 100% 滿版對齊電腦版 _QuotationApp，並 100% 沿用外部業務系統配色 */
-@media (min-width: 1280px) {
+/* 當處於報價管理系統且螢幕寬度 >= 1100px 時，隱藏戰情室頂部標題列，讓側邊欄與主工作區 100% 滿版對齊電腦版 _QuotationApp，並 100% 沿用外部業務系統配色 */
+@media (min-width: 1100px) {
   body.quotation-system-active .office-title-bar {
     display: none !important;
   }
@@ -5452,6 +5452,7 @@ input[type="checkbox"] {
     padding: 0 !important;
     max-width: none !important;
     flex: 1 !important;
+    min-width: 0 !important;
     min-height: 100vh !important;
     overflow-x: auto !important;
   }
@@ -5463,6 +5464,7 @@ input[type="checkbox"] {
   body.quotation-system-active #panelQuotes {
     padding: 0 !important;
     margin: 0 !important;
+    width: 100% !important;
   }
 }
 
@@ -5605,13 +5607,13 @@ html[data-theme="dark"] .btn-exit-quotation-system {
 }
 
 /* ==============================================================================
-   寬螢幕 (>= 1280px) vs 窄螢幕 (< 1280px) 響應式智慧切換規則
+   寬螢幕 (>= 1100px) vs 窄螢幕 (< 1100px) 響應式智慧切換規則
    ============================================================================== */
 :root {
-  --quote-workspace-width: 1050px;
+  --quote-workspace-width: 100%;
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 1100px) {
   #quoteDraftSection .quote-desktop-only {
     display: block !important;
   }
@@ -5638,7 +5640,7 @@ html[data-theme="dark"] .btn-exit-quotation-system {
   }
 }
 
-@media (max-width: 1279px) {
+@media (max-width: 1099px) {
 
   /* 窄螢幕下自動切換為 _QuotationApp\pwa 網頁報價單模式，隱藏電腦版寬表格與側邊欄其他 8 頁，僅留離開按鈕 */
   #quoteDraftSection .quote-desktop-only {
@@ -5660,69 +5662,15 @@ html[data-theme="dark"] .btn-exit-quotation-system {
 }
 
 /* ==============================================================================
-   電腦版 _QuotationApp 可調式共用右邊界畫布 (--quote-workspace-width) 與元件樣式
+   電腦版 _QuotationApp 第一頁自動鋪滿視窗與左右等比例伸縮樣式
    ============================================================================== */
 #panelQuotes {
   position: relative;
 }
 
-/* 全系統共用「右側垂直邊界拖曳拉桿」（對應使用者紅線位置，一頁調整、全頁同步） */
+/* 已移除右側藍色垂直邊界拉桿，讓工作區自動鋪滿視窗 */
 .quote-right-boundary-resizer {
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  width: 10px;
-  cursor: ew-resize;
-  z-index: 95;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  user-select: none;
-  touch-action: none;
-  background: transparent;
-  transition: background-color 0.15s ease;
-}
-
-@media (min-width: 1280px) {
-  body.quotation-system-active .quote-right-boundary-resizer {
-    display: flex;
-  }
-}
-
-.quote-right-boundary-resizer::before {
-  content: "";
-  width: 2px;
-  height: 100%;
-  background-color: var(--border-card);
-  transition: background-color 0.15s ease, width 0.15s ease;
-}
-
-.quote-right-boundary-resizer .boundary-grip-pill {
-  position: absolute;
-  width: 8px;
-  height: 56px;
-  border-radius: 4px;
-  background-color: var(--bg-surface-secondary);
-  border: 1px solid var(--border-card);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 9px;
-  color: var(--text-secondary);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
-}
-
-.quote-right-boundary-resizer:hover::before,
-.quote-right-boundary-resizer.resizing::before {
-  width: 4px;
-  background-color: var(--color-accent);
-}
-
-.quote-right-boundary-resizer:hover .boundary-grip-pill,
-.quote-right-boundary-resizer.resizing .boundary-grip-pill {
-  background-color: var(--color-accent);
-  border-color: var(--color-accent);
-  color: #ffffff;
+  display: none !important;
 }
 
 .pyside-top-toggle-bar {
@@ -5731,10 +5679,11 @@ html[data-theme="dark"] .btn-exit-quotation-system {
   display: flex;
   align-items: center;
   box-sizing: border-box;
+  width: 100%;
 }
 
 .pyside-top-toggle-inner {
-  width: var(--quote-workspace-width, 1050px);
+  width: 100%;
   max-width: 100%;
   display: flex;
   justify-content: space-between;
@@ -5775,16 +5724,18 @@ html[data-theme="dark"] .btn-pyside-subtle:hover {
 }
 
 /* 新建報價單工作區內距 (對標 gui_page1.py setContentsMargins(15, 5, 15, 15)) */
-@media (min-width: 1280px) {
+@media (min-width: 1100px) {
   #quoteDraftSection #draftForm {
     padding: 5px 15px 20px 15px;
+    width: 100%;
+    box-sizing: border-box;
   }
 }
 
-/* QGroupBox 標準框線容器 (綁定全系統共用工作區寬度 --quote-workspace-width) */
+/* QGroupBox 標準框線容器 (第一頁與全系統自動鋪滿視窗寬度) */
 .pyside-groupbox {
-  width: var(--quote-workspace-width, 1050px);
-  min-width: 900px;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--border-card);
@@ -5814,19 +5765,51 @@ html[data-theme="dark"] .pyside-groupbox-legend {
   color: var(--color-accent);
 }
 
-/* 報價單基本資料 6 列 Grid (隨右邊界拉寬自動等比例延展) */
+/* 報價單基本資料 6 列 Grid (左右兩邊 1:1 嚴格等比例伸縮) */
 .pyside-header-grid {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
 }
 
 .pyside-header-grid .grid-row {
   display: grid;
-  grid-template-columns: 75px minmax(420px, 1.15fr) 75px 1fr;
+  grid-template-columns: 75px minmax(0, 1fr) 75px minmax(0, 1fr);
   align-items: center;
-  column-gap: 10px;
+  column-gap: 14px;
   font-size: 14px;
+  width: 100%;
+}
+
+/* 第 1 列單號區內部元件等比例伸縮，使單號總寬度自動填滿左欄，與右欄報價日期 1:1 對齊 */
+#quoteHeaderGrid #quoteNoMode {
+  flex: 1.15 1 95px;
+  width: auto !important;
+  min-width: 82px;
+}
+
+#quoteHeaderGrid #quotePrefixInput {
+  flex: 1.5 1 105px;
+  width: auto !important;
+  min-width: 85px;
+}
+
+#quoteHeaderGrid #quoteSeqInput {
+  flex: 0.65 1 50px;
+  width: auto !important;
+  min-width: 44px;
+}
+
+#quoteHeaderGrid #quoteRevInput {
+  flex: 0.55 1 42px;
+  width: auto !important;
+  min-width: 38px;
+}
+
+#quoteHeaderGrid .grid-cell-content > .pyside-input,
+#quoteHeaderGrid .grid-cell-content > .pyside-select {
+  min-width: 0;
 }
 
 .grid-cell-label {
@@ -5843,8 +5826,9 @@ html[data-theme="dark"] .grid-cell-label {
 .grid-cell-content {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   min-width: 0;
+  width: 100%;
 }
 
 .quote-id-sep {
@@ -5909,10 +5893,10 @@ html[data-theme="dark"] .pyside-readonly {
   border-color: var(--border-light) !important;
 }
 
-/* 表格上方雙排工具列容器 (綁定全系統共用工作區寬度 --quote-workspace-width) */
+/* 表格上方雙排工具列容器 (自動鋪滿視窗寬度) */
 .pyside-top-bar-container {
-  width: var(--quote-workspace-width, 1050px);
-  min-width: 900px;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
   display: flex;
   flex-direction: column;
@@ -6227,10 +6211,10 @@ html[data-theme="dark"] .banner-icon-action-btn {
   background-color: #2c3e50;
 }
 
-/* 3. QuoteTableWidget 10 欄試算表格容器 (綁定共用工作區寬度，支援垂直高度拖曳與水平欄寬拖曳、欄位順序互換，100% 沿用外部業務系統配色) */
+/* 3. QuoteTableWidget 10 欄試算表格容器 (自動鋪滿視窗寬度，支援垂直高度拖曳與水平欄寬拖曳、欄位順序互換，100% 沿用外部業務系統配色) */
 .pyside-table-container {
-  width: var(--quote-workspace-width, 1050px);
-  min-width: 900px;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
   height: 250px;
   min-height: 150px;
@@ -6248,7 +6232,7 @@ html[data-theme="dark"] .pyside-table-container {
 }
 
 .pyside-excel-table {
-  width: max-content;
+  width: 100%;
   min-width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
@@ -6511,10 +6495,10 @@ html[data-theme="dark"] .pyside-excel-table tbody tr.subtotal-divider-row td:not
   color: var(--grid-num-red) !important;
 }
 
-/* 4. TableHeightDragHandle 表格高度拖曳條与全系統通用底部橫向高度調整拉桿 */
+/* 4. TableHeightDragHandle 表格高度拖曳條與全系統通用底部橫向高度調整拉桿 */
 .pyside-table-drag-handle {
-  width: var(--quote-workspace-width, 1050px);
-  min-width: 900px;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
   height: 12px;
   background-color: var(--bg-surface-secondary);
@@ -6579,10 +6563,10 @@ html[data-theme="dark"] .pyside-universal-height-handle .drag-handle-grip {
   background-color: var(--text-tertiary);
 }
 
-/* 5. 表格下方工具列 (綁定全系統共用工作區寬度 --quote-workspace-width) */
+/* 5. 表格下方工具列 (自動鋪滿視窗寬度) */
 .pyside-toolbar-bottom {
-  width: var(--quote-workspace-width, 1050px);
-  min-width: 900px;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
   display: flex;
   justify-content: space-between;
@@ -6598,10 +6582,10 @@ html[data-theme="dark"] .pyside-universal-height-handle .drag-handle-grip {
   align-items: center;
 }
 
-/* 6. 左下角會計結算總額 (綁定全系統共用工作區寬度) */
+/* 6. 左下角會計結算總額 (自動鋪滿視窗寬度) */
 .pyside-summary-container {
-  width: var(--quote-workspace-width, 1050px);
-  min-width: 900px;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
   margin-bottom: 12px;
 }

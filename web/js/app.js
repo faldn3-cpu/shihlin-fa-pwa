@@ -4386,6 +4386,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function syncExcelTableTotalWidth(table) {
     if (!table) return;
+    // 第一頁「新建報價單」表格採用「做法一：橡皮筋等比例彈性伸縮」，鋪滿 100% 視窗寬度，不鎖死像素總寬
+    if (table.id === "quoteDesktopTable") {
+      table.style.width = "100%";
+      table.style.minWidth = "100%";
+      return;
+    }
     const allTh = Array.from(table.querySelectorAll("thead th"));
     if (allTh.length === 0) return;
     let sumW = 0;
@@ -4402,6 +4408,14 @@ document.addEventListener("DOMContentLoaded", () => {
   function applySingleColumnWidth(th, widthPx) {
     if (!th || !(widthPx > 0)) return;
     const wStr = `${Math.round(widthPx)}px`;
+    const parentTable = th.closest("table");
+    // 第一頁「新建報價單」表格：僅設定基準比例寬度 width，不鎖死 minWidth 與 maxWidth，讓各欄隨視窗大小等比例伸縮
+    if (parentTable && parentTable.id === "quoteDesktopTable") {
+      th.style.width = wStr;
+      th.style.minWidth = "";
+      th.style.maxWidth = "";
+      return;
+    }
     th.style.width = wStr;
     th.style.minWidth = wStr;
     th.style.maxWidth = wStr;
@@ -4903,100 +4917,27 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 全系統共用「右側垂直邊界拖曳拉桿」與第 2~7 頁「底部水平高度拖曳拉桿」（一頁調寬全頁同步，且鎖定表頭不因拉底端橫 bar 而消失）
+  // 已移除「右側垂直邊界拖曳拉桿」，讓第一頁工作區自動鋪滿視窗；保留第 2~7 頁「底部水平高度拖曳拉桿」
   const QUOTE_WORKSPACE_WIDTH_KEY = "shihlin_quote_workspace_width_v1";
 
   function updateRightBoundaryLinePosition() {
     const resizer = document.getElementById("quoteRightBoundaryResizer");
-    if (!resizer) return;
-    const drawer = document.getElementById("appDrawer");
-    const sidebarW = (drawer && !drawer.classList.contains("collapsed") && drawer.offsetWidth > 0) ? drawer.offsetWidth : 0;
-    const curW = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--quote-workspace-width"), 10) || 1050;
-    const targetLeft = sidebarW + 15 + curW;
-    resizer.style.left = `${Math.min(window.innerWidth - 10, Math.max(sidebarW + 900, targetLeft))}px`;
+    if (resizer) resizer.remove();
   }
 
-  function applyGlobalQuoteWorkspaceWidth(widthPx, save = true) {
-    const drawer = document.getElementById("appDrawer");
-    const sidebarW = (drawer && !drawer.classList.contains("collapsed") && drawer.offsetWidth > 0) ? drawer.offsetWidth : 200;
-    const maxAllowed = Math.max(960, window.innerWidth - sidebarW - 32);
-    const clampedW = Math.round(Math.max(920, Math.min(maxAllowed, widthPx)));
-    document.documentElement.style.setProperty("--quote-workspace-width", `${clampedW}px`);
-    if (save) {
-      localStorage.setItem(QUOTE_WORKSPACE_WIDTH_KEY, String(clampedW));
-    }
-    updateRightBoundaryLinePosition();
+  function applyGlobalQuoteWorkspaceWidth() {
+    document.documentElement.style.setProperty("--quote-workspace-width", "100%");
   }
 
   function initQuoteWorkspaceBoundaryResizers() {
     const panelQuotes = document.getElementById("panelQuotes");
     if (!panelQuotes) return;
 
-    // 1. 建立或取得全系統共用右側垂直邊界拉桿
-    let rightResizer = document.getElementById("quoteRightBoundaryResizer");
-    if (!rightResizer) {
-      rightResizer = document.createElement("div");
-      rightResizer.id = "quoteRightBoundaryResizer";
-      rightResizer.className = "quote-right-boundary-resizer";
-      rightResizer.title = "左右拖曳可調整全系統各頁面的右側可視邊界（雙擊自動撐滿視窗寬度）";
-      rightResizer.innerHTML = `<div class="boundary-grip-pill">||</div>`;
-      panelQuotes.appendChild(rightResizer);
-    }
+    const oldResizer = document.getElementById("quoteRightBoundaryResizer");
+    if (oldResizer) oldResizer.remove();
+    document.documentElement.style.setProperty("--quote-workspace-width", "100%");
 
-    // 載入已儲存的工作區寬度（若無儲存且螢幕夠寬，預設給更充裕的可視範圍或維持儲存值）
-    const savedW = parseInt(localStorage.getItem(QUOTE_WORKSPACE_WIDTH_KEY) || "0", 10);
-    if (savedW >= 920) {
-      applyGlobalQuoteWorkspaceWidth(savedW, false);
-    } else {
-      const drawer = document.getElementById("appDrawer");
-      const sidebarW = (drawer && !drawer.classList.contains("collapsed") && drawer.offsetWidth > 0) ? drawer.offsetWidth : 200;
-      const defaultFitW = Math.max(1050, window.innerWidth - sidebarW - 40);
-      applyGlobalQuoteWorkspaceWidth(defaultFitW, false);
-    }
-
-    if (rightResizer.getAttribute("data-bound") !== "true") {
-      rightResizer.setAttribute("data-bound", "true");
-
-      let startX = 0;
-      let startW = 1050;
-
-      const onMouseMove = (e) => {
-        const dx = e.clientX - startX;
-        applyGlobalQuoteWorkspaceWidth(startW + dx, false);
-      };
-
-      const onMouseUp = () => {
-        rightResizer.classList.remove("resizing");
-        document.body.style.cursor = "";
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
-        const curW = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--quote-workspace-width"), 10) || 1050;
-        localStorage.setItem(QUOTE_WORKSPACE_WIDTH_KEY, String(curW));
-      };
-
-      rightResizer.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        startX = e.clientX;
-        startW = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--quote-workspace-width"), 10) || 1050;
-        rightResizer.classList.add("resizing");
-        document.body.style.cursor = "ew-resize";
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp);
-      });
-
-      rightResizer.addEventListener("dblclick", () => {
-        const drawer = document.getElementById("appDrawer");
-        const sidebarW = (drawer && !drawer.classList.contains("collapsed") && drawer.offsetWidth > 0) ? drawer.offsetWidth : 200;
-        const fullW = Math.max(1050, window.innerWidth - sidebarW - 36);
-        applyGlobalQuoteWorkspaceWidth(fullW, true);
-      });
-
-      window.addEventListener("resize", () => {
-        updateRightBoundaryLinePosition();
-      });
-    }
-
-    // 2. 為第 2~7 頁所有 .pyside-full-table-wrap 自動掛載「底部橫向高度調整拉桿」並將高度控制在螢幕可視範圍內（防止拉底部橫 bar 時上方表頭消失）
+    // 為第 2~7 頁所有 .pyside-full-table-wrap 自動掛載「底部橫向高度調整拉桿」並將高度控制在螢幕可視範圍內（防止拉底部橫 bar 時上方表頭消失）
     const tableWraps = panelQuotes.querySelectorAll(".pyside-full-table-wrap");
     tableWraps.forEach((wrap, idx) => {
       if (wrap.id === "dashFollowupTableWrap") return; // 第 4 頁待跟進區已有專屬拉桿

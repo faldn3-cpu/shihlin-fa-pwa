@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261109_v1_0_48" />
+  <link rel="stylesheet" href="css/style.css?v=20261109_v1_0_49" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -2041,28 +2041,6 @@
                       <option value="company_desc">4. 全部客戶依照公司名稱倒序排列 (Z → A / 筆畫多到少)</option>
                     </select>
                   </div>
-                  <div class="pyside-settings-row">
-                    <label for="qSetWorkspaceWidth">作業區固定寬度:</label>
-                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                      <input type="number" id="qSetWorkspaceWidth" class="pyside-input" value="1320" min="900"
-                        max="2400" step="10" style="width:120px;">
-                      <span style="font-size:13px; color:var(--text-secondary);">px（大螢幕固定作業區尺寸；視窗較小時直接以橫軸/垂直軸捲動查看）</span>
-                    </div>
-                  </div>
-                  <div class="pyside-settings-row">
-                    <label for="qSetMobileBreakpoint">手機版切換尺寸:</label>
-                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                      <select id="qSetMobileBreakpointPreset" class="pyside-select" style="width:230px;">
-                        <option value="480" selected>6.8 吋手機尺寸 (480px - 預設)</option>
-                        <option value="412">6.1 吋手機尺寸 (412px)</option>
-                        <option value="768">小平板直向尺寸 (768px)</option>
-                        <option value="custom">自訂寬度門檻 (px)</option>
-                      </select>
-                      <input type="number" id="qSetMobileBreakpoint" class="pyside-input" value="480" min="320"
-                        max="1200" step="10" style="width:105px;">
-                      <span style="font-size:13px; color:var(--text-secondary);">px（視窗小於此寬度時，報價單自動變為手機網頁版，其他功能僅大螢幕顯示）</span>
-                    </div>
-                  </div>
                 </div>
               </fieldset>
 
@@ -2192,9 +2170,9 @@
               <fieldset class="pyside-groupbox pyside-full-groupbox">
                 <legend class="pyside-groupbox-legend">當前版本資訊</legend>
                 <div style="line-height:1.9; font-size:14px;">
-                  <div style="color:var(--color-accent); font-weight:700; font-size:15px;">目前版本 : v1.0.48 (對齊桌面版
+                  <div style="color:var(--color-accent); font-weight:700; font-size:15px;">目前版本 : v1.0.47 (對齊桌面版
                     v5.5.1.6)</div>
-                  <div>更新內容 : 移除右側藍色移動線，改為固定尺寸作業區（視窗較小時以橫軸/垂直軸捲動），並於系統設定新增作業區固定寬度與 6.8 吋手機版自動切換尺寸設定</div>
+                  <div>更新內容 : 新增全系統共用的右側邊界調整桿、全表格底部橫向高度調整桿與表頭固定顯示，並修復收合抬頭按鈕</div>
                   <div>發布時間 : 2026-11-06 16:50:00</div>
                 </div>
               </fieldset>
@@ -3536,13 +3514,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261109_v1_0_48"></script>
+  <script src="js/app.js?v=20261109_v1_0_49"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261109_v1_0_48')
+        navigator.serviceWorker.register('./sw.js?v=20261109_v1_0_49')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

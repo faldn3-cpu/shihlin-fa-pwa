@@ -5399,101 +5399,71 @@ input[type="checkbox"] {
   display: none !important;
 }
 
-/* 當處於報價管理系統桌面模式（非手機版模式）時，隱藏戰情室頂部標題列，讓側邊欄與主工作區對齊電腦版 _QuotationApp，並支援橫向與垂直捲動 */
-body.quotation-system-active:not(.quote-mobile-mode) .office-title-bar {
-  display: none !important;
-}
+/* 當處於報價管理系統且螢幕寬度 >= 1280px 時，隱藏戰情室頂部標題列，讓側邊欄與主工作區 100% 滿版對齊電腦版 _QuotationApp，並 100% 沿用外部業務系統配色 */
+@media (min-width: 1280px) {
+  body.quotation-system-active .office-title-bar {
+    display: none !important;
+  }
 
-body.quotation-system-active:not(.quote-mobile-mode) .admin-impersonate-bar {
-  top: 0 !important;
-}
+  body.quotation-system-active .admin-impersonate-bar {
+    top: 0 !important;
+  }
 
-body.quotation-system-active:not(.quote-mobile-mode) .app-body-wrapper {
-  display: flex !important;
-  min-height: 100vh !important;
-  width: 100% !important;
-  padding-top: 0 !important;
-  align-items: stretch !important;
-}
+  body.quotation-system-active .app-body-wrapper {
+    min-height: 100vh !important;
+    padding-top: 0 !important;
+  }
 
-body.quotation-system-active:not(.quote-mobile-mode) #drawerOverlay,
-body.quotation-system-active:not(.quote-mobile-mode) #drawerOverlay.hidden {
-  position: sticky !important;
-  top: 0 !important;
-  width: auto !important;
-  height: 100vh !important;
-  background: transparent !important;
-  backdrop-filter: none !important;
-  display: block !important;
-  opacity: 1 !important;
-  z-index: 10 !important;
-  flex-shrink: 0 !important;
-}
+  body.quotation-system-active #drawerOverlay {
+    position: sticky !important;
+    top: 0 !important;
+    height: 100vh !important;
+    flex-shrink: 0 !important;
+  }
 
-body.quotation-system-active:not(.quote-mobile-mode) #appDrawer {
-  position: sticky !important;
-  top: 0 !important;
-  width: 200px !important;
-  min-width: 200px !important;
-  max-width: 200px !important;
-  height: 100vh !important;
-  background-color: var(--bg-surface-secondary) !important;
-  border-right: 1px solid var(--border-card) !important;
-  padding: 0 !important;
-  box-shadow: none !important;
-  animation: none !important;
-  display: flex !important;
-  flex-direction: column !important;
-  flex-shrink: 0 !important;
-  z-index: 10 !important;
-}
+  body.quotation-system-active #appDrawer {
+    width: 200px !important;
+    min-width: 200px !important;
+    max-width: 200px !important;
+    height: 100vh !important;
+    background-color: var(--bg-surface-secondary) !important;
+    border-right: 1px solid var(--border-card) !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
 
-html[data-theme="dark"] body.quotation-system-active:not(.quote-mobile-mode) #appDrawer {
-  background-color: var(--bg-surface-secondary) !important;
-  border-right: 1px solid var(--border-card) !important;
-}
+  html[data-theme="dark"] body.quotation-system-active #appDrawer {
+    background-color: var(--bg-surface-secondary) !important;
+    border-right: 1px solid var(--border-card) !important;
+  }
 
-body.quotation-system-active:not(.quote-mobile-mode) #appDrawer.collapsed {
-  display: none !important;
-}
+  body.quotation-system-active #appDrawer.collapsed {
+    display: none !important;
+  }
 
-body.quotation-system-active:not(.quote-mobile-mode) #appDrawer .drawer-header {
-  display: none !important;
-}
+  body.quotation-system-active #appDrawer .drawer-header {
+    display: none !important;
+  }
 
-body.quotation-system-active:not(.quote-mobile-mode) .main-container {
-  background-color: var(--bg-app) !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  max-width: none !important;
-  width: auto !important;
-  min-width: 0 !important;
-  flex: 1 1 0% !important;
-  min-height: 100vh !important;
-  overflow-x: auto !important;
-  overflow-y: auto !important;
-}
+  body.quotation-system-active .main-container {
+    background-color: var(--bg-app) !important;
+    padding: 0 !important;
+    max-width: none !important;
+    flex: 1 !important;
+    min-height: 100vh !important;
+    overflow-x: auto !important;
+  }
 
-html[data-theme="dark"] body.quotation-system-active:not(.quote-mobile-mode) .main-container {
-  background-color: var(--bg-app) !important;
-}
+  html[data-theme="dark"] body.quotation-system-active .main-container {
+    background-color: var(--bg-app) !important;
+  }
 
-body.quotation-system-active:not(.quote-mobile-mode) #panelQuotes {
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-/* 當處於報價管理系統「手機版模式」(視窗寬度 <= 設定之手機尺寸門檻) 時，隱藏桌面側邊欄，讓手機報價介面全寬呈現 */
-body.quotation-system-active.quote-mobile-mode #drawerOverlay {
-  display: none !important;
-}
-
-body.quotation-system-active.quote-mobile-mode .main-container {
-  width: 100% !important;
-  max-width: 100% !important;
-  margin: 0 auto !important;
-  padding: 8px 10px 36px 10px !important;
-  overflow-x: hidden !important;
+  body.quotation-system-active #panelQuotes {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
 }
 
 /* 側邊欄：100% 還原 _QuotationApp main.py 200px 膠囊按鈕與時鐘，綁定外部業務系統主題色 */
@@ -5635,63 +5605,124 @@ html[data-theme="dark"] .btn-exit-quotation-system {
 }
 
 /* ==============================================================================
-   桌面固定寬度畫布 vs 手機尺寸門檻 (<= 設定之手機像素寬度) 響應式智慧切換規則
+   寬螢幕 (>= 1280px) vs 窄螢幕 (< 1280px) 響應式智慧切換規則
    ============================================================================== */
 :root {
-  --quote-workspace-width: 1320px;
+  --quote-workspace-width: 1050px;
 }
 
-/* 非手機版模式：完整呈現電腦版報價系統所有元件，且維持固定作業區寬度，超出視窗時由捲軸平移 */
-body:not(.quote-mobile-mode) #quoteDraftSection .quote-desktop-only {
-  display: block !important;
+@media (min-width: 1280px) {
+  #quoteDraftSection .quote-desktop-only {
+    display: block !important;
+  }
+
+  /* 修正「收合抬頭」被 .quote-desktop-only display:block !important 覆蓋的問題 */
+  #quoteDraftSection .quote-desktop-only.collapsed,
+  #quoteDraftSection .quote-desktop-only.hidden,
+  #quoteDraftSection #quoteHeaderContainer.collapsed,
+  #quoteDraftSection #quoteHeaderContainer.hidden {
+    display: none !important;
+  }
+
+  #quoteDraftSection .pyside-top-toggle-bar.quote-desktop-only,
+  #quoteDraftSection .pyside-toolbar-bottom.quote-desktop-only {
+    display: flex !important;
+  }
+
+  #quoteDraftSection .pyside-table-drag-handle.quote-desktop-only {
+    display: flex !important;
+  }
+
+  #quoteDraftSection .quote-mobile-only {
+    display: none !important;
+  }
 }
 
-/* 修正「收合抬頭」被 .quote-desktop-only display:block !important 覆蓋的問題 */
-body:not(.quote-mobile-mode) #quoteDraftSection .quote-desktop-only.collapsed,
-body:not(.quote-mobile-mode) #quoteDraftSection .quote-desktop-only.hidden,
-body:not(.quote-mobile-mode) #quoteDraftSection #quoteHeaderContainer.collapsed,
-body:not(.quote-mobile-mode) #quoteDraftSection #quoteHeaderContainer.hidden {
-  display: none !important;
-}
+@media (max-width: 1279px) {
 
-body:not(.quote-mobile-mode) #quoteDraftSection .pyside-top-toggle-bar.quote-desktop-only,
-body:not(.quote-mobile-mode) #quoteDraftSection .pyside-toolbar-bottom.quote-desktop-only {
-  display: flex !important;
-}
+  /* 窄螢幕下自動切換為 _QuotationApp\pwa 網頁報價單模式，隱藏電腦版寬表格與側邊欄其他 8 頁，僅留離開按鈕 */
+  #quoteDraftSection .quote-desktop-only {
+    display: none !important;
+  }
 
-body:not(.quote-mobile-mode) #quoteDraftSection .pyside-table-drag-handle.quote-desktop-only {
-  display: flex !important;
-}
+  #quoteDraftSection .quote-mobile-only {
+    display: block !important;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 8px 10px 32px 10px;
+  }
 
-body:not(.quote-mobile-mode) #quoteDraftSection .quote-mobile-only {
-  display: none !important;
-}
-
-/* 手機版模式（視窗寬度 <= 設定之手機切換門檻，預設 480px 約 6.8 吋手機）：
-   自動切換為手機直式網頁報價介面，隱藏電腦版寬表格與側邊欄其他 8 頁功能 */
-body.quote-mobile-mode #quoteDraftSection .quote-desktop-only {
-  display: none !important;
-}
-
-body.quote-mobile-mode #quoteDraftSection .quote-mobile-only {
-  display: block !important;
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 8px 10px 32px 10px;
-}
-
-body.quote-mobile-mode #quoteSidebarNavList .quote-nav-btn,
-body.quote-mobile-mode #quoteSidebarNavList .quote-sidebar-brand-title,
-body.quote-mobile-mode #quoteSidebarNavList .quote-sidebar-clock,
-body.quote-mobile-mode #quoteSystemStatusBar {
-  display: none !important;
+  #quoteSidebarNavList .quote-nav-btn,
+  #quoteSidebarNavList .quote-sidebar-brand-title,
+  #quoteSidebarNavList .quote-sidebar-clock {
+    display: none !important;
+  }
 }
 
 /* ==============================================================================
-   電腦版 _QuotationApp 固定作業區畫布 (--quote-workspace-width) 與元件樣式
+   電腦版 _QuotationApp 可調式共用右邊界畫布 (--quote-workspace-width) 與元件樣式
    ============================================================================== */
 #panelQuotes {
   position: relative;
+}
+
+/* 全系統共用「右側垂直邊界拖曳拉桿」（對應使用者紅線位置，一頁調整、全頁同步） */
+.quote-right-boundary-resizer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize;
+  z-index: 95;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  touch-action: none;
+  background: transparent;
+  transition: background-color 0.15s ease;
+}
+
+@media (min-width: 1280px) {
+  body.quotation-system-active .quote-right-boundary-resizer {
+    display: flex;
+  }
+}
+
+.quote-right-boundary-resizer::before {
+  content: "";
+  width: 2px;
+  height: 100%;
+  background-color: var(--border-card);
+  transition: background-color 0.15s ease, width 0.15s ease;
+}
+
+.quote-right-boundary-resizer .boundary-grip-pill {
+  position: absolute;
+  width: 8px;
+  height: 56px;
+  border-radius: 4px;
+  background-color: var(--bg-surface-secondary);
+  border: 1px solid var(--border-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: var(--text-secondary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.quote-right-boundary-resizer:hover::before,
+.quote-right-boundary-resizer.resizing::before {
+  width: 4px;
+  background-color: var(--color-accent);
+}
+
+.quote-right-boundary-resizer:hover .boundary-grip-pill,
+.quote-right-boundary-resizer.resizing .boundary-grip-pill {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #ffffff;
 }
 
 .pyside-top-toggle-bar {
@@ -5703,9 +5734,8 @@ body.quote-mobile-mode #quoteSystemStatusBar {
 }
 
 .pyside-top-toggle-inner {
-  width: var(--quote-workspace-width, 1320px);
-  min-width: var(--quote-workspace-width, 1320px);
-  max-width: none;
+  width: var(--quote-workspace-width, 1050px);
+  max-width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -5745,18 +5775,17 @@ html[data-theme="dark"] .btn-pyside-subtle:hover {
 }
 
 /* 新建報價單工作區內距 (對標 gui_page1.py setContentsMargins(15, 5, 15, 15)) */
-body:not(.quote-mobile-mode) #quoteDraftSection #draftForm {
-  padding: 5px 15px 20px 15px;
-  width: max-content;
-  min-width: 100%;
-  box-sizing: border-box;
+@media (min-width: 1280px) {
+  #quoteDraftSection #draftForm {
+    padding: 5px 15px 20px 15px;
+  }
 }
 
-/* QGroupBox 標準框線容器 (綁定全系統共用工作區固定寬度 --quote-workspace-width) */
+/* QGroupBox 標準框線容器 (綁定全系統共用工作區寬度 --quote-workspace-width) */
 .pyside-groupbox {
-  width: var(--quote-workspace-width, 1320px);
-  min-width: var(--quote-workspace-width, 1320px);
-  max-width: none;
+  width: var(--quote-workspace-width, 1050px);
+  min-width: 900px;
+  max-width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--border-card);
   border-radius: 8px;
@@ -5880,11 +5909,11 @@ html[data-theme="dark"] .pyside-readonly {
   border-color: var(--border-light) !important;
 }
 
-/* 表格上方雙排工具列容器 (綁定全系統共用工作區固定寬度 --quote-workspace-width) */
+/* 表格上方雙排工具列容器 (綁定全系統共用工作區寬度 --quote-workspace-width) */
 .pyside-top-bar-container {
-  width: var(--quote-workspace-width, 1320px);
-  min-width: var(--quote-workspace-width, 1320px);
-  max-width: none;
+  width: var(--quote-workspace-width, 1050px);
+  min-width: 900px;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -6198,11 +6227,11 @@ html[data-theme="dark"] .banner-icon-action-btn {
   background-color: #2c3e50;
 }
 
-/* 3. QuoteTableWidget 10 欄試算表格容器 (綁定共用工作區固定寬度，支援垂直高度拖曳與水平欄寬拖曳、欄位順序互換，100% 沿用外部業務系統配色) */
+/* 3. QuoteTableWidget 10 欄試算表格容器 (綁定共用工作區寬度，支援垂直高度拖曳與水平欄寬拖曳、欄位順序互換，100% 沿用外部業務系統配色) */
 .pyside-table-container {
-  width: var(--quote-workspace-width, 1320px);
-  min-width: var(--quote-workspace-width, 1320px);
-  max-width: none;
+  width: var(--quote-workspace-width, 1050px);
+  min-width: 900px;
+  max-width: 100%;
   height: 250px;
   min-height: 150px;
   overflow-x: auto;
@@ -6484,9 +6513,9 @@ html[data-theme="dark"] .pyside-excel-table tbody tr.subtotal-divider-row td:not
 
 /* 4. TableHeightDragHandle 表格高度拖曳條与全系統通用底部橫向高度調整拉桿 */
 .pyside-table-drag-handle {
-  width: var(--quote-workspace-width, 1320px);
-  min-width: var(--quote-workspace-width, 1320px);
-  max-width: none;
+  width: var(--quote-workspace-width, 1050px);
+  min-width: 900px;
+  max-width: 100%;
   height: 12px;
   background-color: var(--bg-surface-secondary);
   border: 1px solid var(--border-card);
@@ -6550,11 +6579,11 @@ html[data-theme="dark"] .pyside-universal-height-handle .drag-handle-grip {
   background-color: var(--text-tertiary);
 }
 
-/* 5. 表格下方工具列 (綁定全系統共用工作區固定寬度 --quote-workspace-width) */
+/* 5. 表格下方工具列 (綁定全系統共用工作區寬度 --quote-workspace-width) */
 .pyside-toolbar-bottom {
-  width: var(--quote-workspace-width, 1320px);
-  min-width: var(--quote-workspace-width, 1320px);
-  max-width: none;
+  width: var(--quote-workspace-width, 1050px);
+  min-width: 900px;
+  max-width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -6569,11 +6598,11 @@ html[data-theme="dark"] .pyside-universal-height-handle .drag-handle-grip {
   align-items: center;
 }
 
-/* 6. 左下角會計結算總額 (綁定全系統共用工作區固定寬度) */
+/* 6. 左下角會計結算總額 (綁定全系統共用工作區寬度) */
 .pyside-summary-container {
-  width: var(--quote-workspace-width, 1320px);
-  min-width: var(--quote-workspace-width, 1320px);
-  max-width: none;
+  width: var(--quote-workspace-width, 1050px);
+  min-width: 900px;
+  max-width: 100%;
   margin-bottom: 12px;
 }
 
@@ -6845,11 +6874,11 @@ html[data-theme="dark"] .pyside-model-combo-arrow {
   color: var(--text-secondary);
 }
 
-/* 第 2~9 頁共通外框與固定寬度容器 (綁定全系統共用工作區寬度 --quote-workspace-width 與外部業務系統配色) */
+/* 第 2~9 頁共通外框與自適應容器 (綁定全系統共用工作區寬度 --quote-workspace-width 與外部業務系統配色) */
 .pyside-page-wrapper {
-  width: var(--quote-workspace-width, 1320px);
-  min-width: var(--quote-workspace-width, 1320px);
-  max-width: none;
+  width: var(--quote-workspace-width, 1050px);
+  min-width: 900px;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -7021,6 +7050,12 @@ html[data-theme="dark"] .pyside-p2-title {
   gap: 14px;
   flex: 1;
   min-height: 480px;
+}
+
+@media (max-width: 1100px) {
+  .pyside-p2-splitter {
+    grid-template-columns: 1fr;
+  }
 }
 
 .pyside-p2-right-pane {
@@ -7263,6 +7298,12 @@ html[data-theme="dark"] .pyside-dash-ctrl-bar {
   gap: 10px;
 }
 
+@media (max-width: 1100px) {
+  .pyside-dash-kpi-row {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  }
+}
+
 .pyside-dash-kpi-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-card);
@@ -7305,10 +7346,22 @@ html[data-theme="dark"] .kpi-card-title {
   gap: 10px;
 }
 
+@media (max-width: 1050px) {
+  .pyside-dash-2x2-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .pyside-dash-charts-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+
+@media (max-width: 1050px) {
+  .pyside-dash-charts-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .pyside-dash-chart-box {
@@ -7356,6 +7409,12 @@ html[data-theme="dark"] .pyside-p5-focus-badge {
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   margin-bottom: 10px;
+}
+
+@media (max-width: 960px) {
+  .pyside-p5-stat-cards-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .pyside-p5-stat-card {
@@ -7414,6 +7473,14 @@ html[data-theme="dark"] .pyside-p5-chart-box {
   grid-template-columns: 1.85fr 1fr;
   gap: 14px;
   flex: 1;
+}
+
+@media (max-width: 1080px) {
+
+  .pyside-p6-splitter,
+  .pyside-p7-splitter {
+    grid-template-columns: 1fr;
+  }
 }
 
 .pyside-p6-left-pane,
@@ -7618,7 +7685,7 @@ html[data-theme="dark"] .pyside-tab-pane {
 
 .pyside-settings-row {
   display: grid;
-  grid-template-columns: 135px 1fr;
+  grid-template-columns: 110px 1fr;
   align-items: center;
   gap: 10px;
   font-size: 14px;
@@ -7628,6 +7695,12 @@ html[data-theme="dark"] .pyside-tab-pane {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 8px;
+}
+
+@media (max-width: 980px) {
+  .pyside-col-reset-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 .btn-pyside-green-pill {

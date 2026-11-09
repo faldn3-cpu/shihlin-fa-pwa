@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261109_v1_0_50" />
+  <link rel="stylesheet" href="css/style.css?v=20261109_v1_0_51" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -144,7 +144,7 @@
           <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
           <div class="drawer-divider"></div>
           <div class="drawer-version-tag">
-            <span class="version-text">士林電機 FA 業務系統 v1.0.41</span>
+            <span class="version-text">士林電機 FA 業務系統 v1.0.51</span>
             <button id="btnClearCacheDrawer" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
               <svg class="icon-svg-xs" viewBox="0 0 24 24">
                 <path
@@ -2170,10 +2170,10 @@
               <fieldset class="pyside-groupbox pyside-full-groupbox">
                 <legend class="pyside-groupbox-legend">當前版本資訊</legend>
                 <div style="line-height:1.9; font-size:14px;">
-                  <div style="color:var(--color-accent); font-weight:700; font-size:15px;">目前版本 : v1.0.47 (對齊桌面版
+                  <div style="color:var(--color-accent); font-weight:700; font-size:15px;">目前版本 : v1.0.51 (對齊桌面版
                     v5.5.1.6)</div>
-                  <div>更新內容 : 新增全系統共用的右側邊界調整桿、全表格底部橫向高度調整桿與表頭固定顯示，並修復收合抬頭按鈕</div>
-                  <div>發布時間 : 2026-11-06 16:50:00</div>
+                  <div>更新內容 : 新建報價單自動鋪滿視窗且左右元件1:1等比例伸縮，並支援報價系統內任意分頁縮小後自動切換為快速報價單擬稿模式</div>
+                  <div>發布時間 : 2026-11-09 16:30:00</div>
                 </div>
               </fieldset>
 
@@ -2528,7 +2528,7 @@
           </div>
 
           <div class="settings-version-tag">
-            <span class="version-text">系統版本：v1.0.45 (對齊桌面版 v5.5.1.6)</span>
+            <span class="version-text">系統版本：v1.0.51 (對齊桌面版 v5.5.1.6)</span>
             <button id="btnClearCacheSettings" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
               <svg class="icon-svg-xs" viewBox="0 0 24 24">
                 <path
@@ -3514,13 +3514,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261109_v1_0_50"></script>
+  <script src="js/app.js?v=20261109_v1_0_51"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261109_v1_0_50')
+        navigator.serviceWorker.register('./sw.js?v=20261109_v1_0_51')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

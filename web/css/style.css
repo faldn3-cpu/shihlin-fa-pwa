@@ -5642,6 +5642,29 @@ html[data-theme="dark"] .btn-exit-quotation-system {
 
 @media (max-width: 1099px) {
 
+  /* 當處於報價管理系統內，無論目前停留在哪一個分頁，縮小視窗時一律切換為附圖的「快速報價單擬稿」介面 */
+  body.quotation-system-active .office-title-bar,
+  body.quotation-system-active #drawerOverlay,
+  body.quotation-system-active #appDrawer,
+  body.quotation-system-active #panelQuotes .pyside-page-wrapper,
+  body.quotation-system-active #panelQuotes .pyside-system-statusbar {
+    display: none !important;
+  }
+
+  body.quotation-system-active .app-body-wrapper {
+    padding-top: 0 !important;
+  }
+
+  body.quotation-system-active .main-container {
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  body.quotation-system-active #panelQuotes #quoteDraftSection {
+    display: block !important;
+  }
+
   /* 窄螢幕下自動切換為 _QuotationApp\pwa 網頁報價單模式，隱藏電腦版寬表格與側邊欄其他 8 頁，僅留離開按鈕 */
   #quoteDraftSection .quote-desktop-only {
     display: none !important;

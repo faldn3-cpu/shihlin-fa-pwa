@@ -9605,7 +9605,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const HELP_CHANGELOG_HTML = `
     <h2 class="help-h2">[履歷] 系統升級與修復履歷 (Changelog)</h2>
-    <div style="color:#27ae60; font-weight:700; font-size:1.02rem; margin:10px 0 8px 0;">v5.5.1.6 / PWA v1.0.43 雙端 100% 對齊版 (2026/11)</div>
+    <div style="color:#27ae60; font-weight:700; font-size:1.02rem; margin:10px 0 8px 0;">v5.5.1.6 / PWA v1.0.51 雙端 100% 對齊版 (2026/11)</div>
     <ul style="line-height:1.85; padding-left:20px; margin-bottom:18px;">
       <li><strong>全系統 9 大功能頁 1:1 完整還原</strong>：新建報價單、手機報價草稿覆核區、報價單管理、大數據分析戰略駕駛艙、歷史單價分析、客戶管理、產品管理(含 4x5 小算盤)、系統設定(5 大子分頁)、使用說明(10 大操作手冊主題 + 版次履歷) 100% 對齊電腦版桌面軟體。</li>
       <li><strong>新建報價單 10 欄順序與圓角白底型號選單</strong>：嚴格對齊「可用數量、型號、數量、規格、經銷價、報價折數%、預計報價金額、最終報價金額、小計、備註/交期」欄位順序與預設 5 列空白明細。</li>

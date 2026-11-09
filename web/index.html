@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261109_v1_0_52" />
+  <link rel="stylesheet" href="css/style.css?v=20261109_v1_0_53" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -144,7 +144,7 @@
           <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
           <div class="drawer-divider"></div>
           <div class="drawer-version-tag">
-            <span class="version-text">士林電機 FA 業務系統 v1.0.52</span>
+            <span class="version-text">士林電機 FA 業務系統 v1.0.53</span>
             <button id="btnClearCacheDrawer" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
               <svg class="icon-svg-xs" viewBox="0 0 24 24">
                 <path
@@ -152,6 +152,31 @@
               </svg>
               <span>清除快取</span>
             </button>
+          </div>
+
+          <!-- 主業務系統側邊欄下方「管理員身分模擬」專區 -->
+          <div id="mainSidebarAdminBox" class="quote-sidebar-admin-box hidden" style="margin: 8px 12px 14px 12px;">
+            <div class="quote-sidebar-admin-header">
+              <svg class="icon-svg admin-shield-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+              </svg>
+              <span>管理員身分模擬</span>
+            </div>
+            <select id="mainSidebarImpersonateSelect" class="quote-sidebar-admin-select" aria-label="主系統側邊欄切換模擬業務身分">
+              <!-- 由 JavaScript 根據 getOrderedSalespersons() 動態填入業務與主管名單 -->
+            </select>
+            <div class="quote-sidebar-admin-actions">
+              <button type="button" id="btnMainSidebarPermModal" class="quote-sidebar-admin-btn perm"
+                title="前往人員與權限設定總表">
+                權限設定
+              </button>
+              <button type="button" id="btnMainSidebarSwitchAccount" class="quote-sidebar-admin-btn account"
+                title="切換 Google 帳號或重新驗證">
+                切換帳號
+              </button>
+            </div>
+            <div class="quote-sidebar-admin-tag">測試權限已啟用</div>
           </div>
         </div>
 
@@ -261,10 +286,12 @@
                 <!-- 由 JavaScript 根據 getOrderedSalespersons() 動態填入業務與主管名單 -->
               </select>
               <div class="quote-sidebar-admin-actions">
-                <button type="button" id="btnQuoteSidebarPermModal" class="quote-sidebar-admin-btn perm" title="前往人員與權限設定總表">
+                <button type="button" id="btnQuoteSidebarPermModal" class="quote-sidebar-admin-btn perm"
+                  title="前往人員與權限設定總表">
                   權限設定
                 </button>
-                <button type="button" id="btnQuoteSidebarSwitchAccount" class="quote-sidebar-admin-btn account" title="切換 Google 帳號或重新驗證">
+                <button type="button" id="btnQuoteSidebarSwitchAccount" class="quote-sidebar-admin-btn account"
+                  title="切換 Google 帳號或重新驗證">
                   切換帳號
                 </button>
               </div>
@@ -2194,10 +2221,10 @@
               <fieldset class="pyside-groupbox pyside-full-groupbox">
                 <legend class="pyside-groupbox-legend">當前版本資訊</legend>
                 <div style="line-height:1.9; font-size:14px;">
-                  <div style="color:var(--color-accent); font-weight:700; font-size:15px;">目前版本 : v1.0.52 (對齊桌面版
+                  <div style="color:var(--color-accent); font-weight:700; font-size:15px;">目前版本 : v1.0.53 (對齊桌面版
                     v5.5.1.6)</div>
-                  <div>更新內容 : 報價系統左側「離開報價單功能」緊排在「使用說明」下方，並將「管理員身分模擬」整合於「離開報價單功能」下方</div>
-                  <div>發布時間 : 2026-11-09 16:40:00</div>
+                  <div>更新內容 : 全系統（含 FA 業務系統、報價系統及所有頁面）統一將「管理員身分模擬」放置於左側邊欄下方，移除頂部橫條</div>
+                  <div>發布時間 : 2026-11-09 16:48:00</div>
                 </div>
               </fieldset>
 
@@ -2552,7 +2579,7 @@
           </div>
 
           <div class="settings-version-tag">
-            <span class="version-text">系統版本：v1.0.52 (對齊桌面版 v5.5.1.6)</span>
+            <span class="version-text">系統版本：v1.0.53 (對齊桌面版 v5.5.1.6)</span>
             <button id="btnClearCacheSettings" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
               <svg class="icon-svg-xs" viewBox="0 0 24 24">
                 <path
@@ -3538,13 +3565,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261109_v1_0_52"></script>
+  <script src="js/app.js?v=20261109_v1_0_53"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261109_v1_0_52')
+        navigator.serviceWorker.register('./sw.js?v=20261109_v1_0_53')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);
@@ -3553,8 +3580,7 @@
             console.warn('[PWA] Service Worker 註冊失敗：', err);
           });
       });
-    }
-  </script>
+      </script>
 </body>
 
 </html>

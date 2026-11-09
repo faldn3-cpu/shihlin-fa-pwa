@@ -5673,8 +5673,8 @@ html[data-theme="dark"] .quote-sidebar-admin-btn.account {
   border-radius: 5px;
 }
 
-/* 進入報價管理系統時，隱藏最上方橫條，改由左側邊欄「離開報價單功能」下方顯示 */
-body.quotation-system-active #adminImpersonateBar {
+/* 全系統（包含 FA 業務系統、報價管理系統及後續所有頁面）一律隱藏最上方橫條，統一改由左側邊欄下方顯示 */
+#adminImpersonateBar {
   display: none !important;
 }
 

@@ -3112,6 +3112,640 @@ def get_centralized_storage_summary(db_path: Optional[Path] = None) -> Dict[str,
         conn.close()
 
 
+# ==============================================================================
+# 批次資料管理：客戶 / 產品 / 舊版歷史報價單三階段匯入引擎 (v1.0.55)
+# ==============================================================================
+
+def _clean_cell_str(val: Any) -> str:
+    """將 Excel 或 CSV 儲存格值轉為乾淨純文字，去除 None 與 'nan'"""
+    if val is None:
+        return ""
+    s = str(val).strip()
+    if s.lower() in ("nan", "none", "null"):
+        return ""
+    return s
+
+
+def _parse_excel_number(val: Any) -> float:
+    """清理千分位逗號與貨幣符號並轉為浮點數"""
+    if val is None:
+        return 0.0
+    if isinstance(val, (int, float)):
+        return float(val)
+    s = _clean_cell_str(val)
+    if not s:
+        return 0.0
+    s_clean = re.sub(r"[^\d.\-]", "", s)
+    if not s_clean or s_clean in ("-", ".", "-."):
+        return 0.0
+    try:
+        return float(s_clean)
+    except ValueError:
+        return 0.0
+
+
+def _parse_excel_date_strict(val: Any) -> Tuple[Optional[str], Optional[str]]:
+    """
+    解析 Excel 報價日期 (支援 YYYY-MM-DD、YYYY/MM/DD、含時間字串與 Excel 序號數字)。
+    回傳 (標準 YYYY-MM-DD 字串, 錯誤原因或 None)。
+    """
+    if val is None:
+        return None, "日期空白"
+    if isinstance(val, (int, float)) and not isinstance(val, bool):
+        num_val = float(val)
+        if 20000 <= num_val <= 80000:
+            parsed_d = datetime(1899, 12, 30) + timedelta(days=int(num_val))
+            return parsed_d.strftime("%Y-%m-%d"), None
+
+    raw_str = _clean_cell_str(val)
+    if not raw_str:
+        return None, "日期空白"
+
+    if re.fullmatch(r"\d+(\.\d+)?", raw_str):
+        num_val = float(raw_str)
+        if 20000 <= num_val <= 80000:
+            parsed_d = datetime(1899, 12, 30) + timedelta(days=int(num_val))
+            return parsed_d.strftime("%Y-%m-%d"), None
+
+    if re.search(r"[^\d/\- :T.]", raw_str):
+        return None, f"日期包含非法字元 '{raw_str}'"
+
+    date_part = raw_str.replace("/", "-").split(" ")[0].split("T")[0].strip()
+    for fmt in ("%Y-%m-%d", "%Y-%m-%d.%f"):
+        try:
+            dt = datetime.strptime(date_part, fmt)
+            return dt.strftime("%Y-%m-%d"), None
+        except ValueError:
+            pass
+    parts = date_part.split("-")
+    if len(parts) == 3 and all(p.isdigit() for p in parts):
+        try:
+            y, m, d_num = int(parts[0]), int(parts[1]), int(parts[2])
+            if y < 1911:
+                y += 1911
+            dt = datetime(y, m, d_num)
+            return dt.strftime("%Y-%m-%d"), None
+        except ValueError:
+            pass
+    return None, f"日期格式無法辨識 '{raw_str}'"
+
+
+def _upsert_scoped_customer_in_conn(cursor: sqlite3.Cursor, data: Dict[str, Any]) -> int:
+    """在既有交易連線中，將單筆客戶與聯絡人寫入指定業務名下 (同業務同名合併、跨業務獨立)"""
+    owner_sales = _clean_cell_str(data.get("owner_sales")) or "曾維崧"
+    comp_name = _clean_cell_str(data.get("name"))
+    if not comp_name:
+        return 0
+
+    contact_name = _clean_cell_str(data.get("contact_name") or data.get("default_contact"))
+    contact_mobile = _clean_cell_str(data.get("contact_mobile"))
+    contact_email = _clean_cell_str(data.get("contact_email"))
+    tax_id = _clean_cell_str(data.get("tax_id"))
+    phone = _clean_cell_str(data.get("phone"))
+    fax = _clean_cell_str(data.get("fax"))
+    address = _clean_cell_str(data.get("address"))
+    payment_terms = _clean_cell_str(data.get("payment_terms")) or "月結 30 天電匯"
+
+    cursor.execute("""
+    INSERT INTO customer_master (
+        name, owner_sales, tax_id, default_contact, phone, fax,
+        address, payment_terms, status, is_favorite
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', 0)
+    ON CONFLICT(owner_sales, name) DO UPDATE SET
+        tax_id = CASE WHEN excluded.tax_id != '' THEN excluded.tax_id ELSE customer_master.tax_id END,
+        default_contact = CASE WHEN excluded.default_contact != '' THEN excluded.default_contact ELSE customer_master.default_contact END,
+        phone = CASE WHEN excluded.phone != '' THEN excluded.phone ELSE customer_master.phone END,
+        fax = CASE WHEN excluded.fax != '' THEN excluded.fax ELSE customer_master.fax END,
+        address = CASE WHEN excluded.address != '' THEN excluded.address ELSE customer_master.address END,
+        payment_terms = CASE WHEN excluded.payment_terms != '' THEN excluded.payment_terms ELSE customer_master.payment_terms END
+    """, (comp_name, owner_sales, tax_id, contact_name, phone, fax, address, payment_terms))
+
+    row = cursor.execute(
+        "SELECT id FROM customer_master WHERE owner_sales = ? AND name = ?",
+        (owner_sales, comp_name)
+    ).fetchone()
+    cid = int(row["id"]) if row else 0
+
+    if cid and contact_name:
+        existing_ct = cursor.execute(
+            "SELECT id FROM contact_master WHERE customer_id = ? AND name = ?",
+            (cid, contact_name)
+        ).fetchone()
+        if existing_ct:
+            cursor.execute("""
+            UPDATE contact_master
+            SET email = CASE WHEN ? != '' THEN ? ELSE email END,
+                mobile = CASE WHEN ? != '' THEN ? ELSE mobile END,
+                owner_sales = ?
+            WHERE id = ?
+            """, (contact_email, contact_email, contact_mobile, contact_mobile, owner_sales, existing_ct["id"]))
+        else:
+            cursor.execute("""
+            INSERT INTO contact_master (customer_id, owner_sales, name, email, mobile)
+            VALUES (?, ?, ?, ?, ?)
+            """, (cid, owner_sales, contact_name, contact_email, contact_mobile))
+    return cid
+
+
+def _normalize_customer_import_rows(rows: List[Any]) -> List[Dict[str, str]]:
+    """將 list of lists 或 list of dicts 正規化為客戶匯入列清單 (對標桌面版 9 欄格式)"""
+    normalized: List[Dict[str, str]] = []
+    if not rows:
+        return normalized
+
+    header_map: Optional[Dict[str, int]] = None
+    for idx, row in enumerate(rows):
+        if isinstance(row, dict):
+            comp = _clean_cell_str(row.get("公司") or row.get("客戶名稱") or row.get("name") or row.get("company"))
+            if not comp:
+                continue
+            normalized.append({
+                "contact_name": _clean_cell_str(row.get("姓名") or row.get("聯絡人") or row.get("contact_name")),
+                "tax_id": _clean_cell_str(row.get("統編") or row.get("統一編號") or row.get("tax_id")),
+                "name": comp,
+                "phone": _clean_cell_str(row.get("電話") or row.get("phone")),
+                "fax": _clean_cell_str(row.get("傳真") or row.get("fax")),
+                "contact_mobile": _clean_cell_str(row.get("手機") or row.get("contact_mobile") or row.get("mobile")),
+                "contact_email": _clean_cell_str(row.get("E-MAIL") or row.get("EMAIL") or row.get("Email") or row.get("contact_email") or row.get("email")),
+                "address": _clean_cell_str(row.get("地址") or row.get("address")),
+                "payment_terms": _clean_cell_str(row.get("付款方式") or row.get("payment_terms")) or "月結 30 天電匯",
+            })
+        elif isinstance(row, (list, tuple)):
+            cells = [_clean_cell_str(c) for c in row]
+            if idx == 0 and any(h in cells for h in ("公司", "客戶名稱", "姓名", "聯絡人", "統編")):
+                header_map = {col_name.upper(): c_idx for c_idx, col_name in enumerate(cells) if col_name}
+                continue
+            if header_map:
+                def _pick(*names: str) -> str:
+                    for n in names:
+                        pos = header_map.get(n.upper())
+                        if pos is not None and pos < len(cells):
+                            return cells[pos]
+                    return ""
+                comp = _pick("公司", "客戶名稱", "name")
+                if not comp:
+                    continue
+                normalized.append({
+                    "contact_name": _pick("姓名", "聯絡人", "contact_name"),
+                    "tax_id": _pick("統編", "統一編號", "tax_id"),
+                    "name": comp,
+                    "phone": _pick("電話", "phone"),
+                    "fax": _pick("傳真", "fax"),
+                    "contact_mobile": _pick("手機", "mobile"),
+                    "contact_email": _pick("E-MAIL", "EMAIL", "email"),
+                    "address": _pick("地址", "address"),
+                    "payment_terms": _pick("付款方式", "payment_terms") or "月結 30 天電匯",
+                })
+            else:
+                if len(cells) < 3 or not cells[2]:
+                    continue
+                normalized.append({
+                    "contact_name": cells[0],
+                    "tax_id": cells[1],
+                    "name": cells[2],
+                    "phone": cells[3] if len(cells) > 3 else "",
+                    "fax": cells[4] if len(cells) > 4 else "",
+                    "contact_mobile": cells[5] if len(cells) > 5 else "",
+                    "contact_email": cells[6] if len(cells) > 6 else "",
+                    "address": cells[7] if len(cells) > 7 else "",
+                    "payment_terms": (cells[8] if len(cells) > 8 and cells[8] else "月結 30 天電匯"),
+                })
+    return normalized
+
+
+def batch_import_customers_data(sales_name: str, rows: List[Any], db_path: Optional[Path] = None) -> Dict[str, Any]:
+    """
+    批次匯入客戶資料至指定業務員名下。
+    嚴格遵守：同一業務名下同名公司自動更新並保留多位聯絡人，不同業務之間完全獨立互不覆蓋。
+    """
+    target_sales = _clean_cell_str(sales_name) or "曾維崧"
+    parsed_rows = _normalize_customer_import_rows(rows)
+    conn = get_connection(db_path)
+    imported_count = 0
+    try:
+        cursor = conn.cursor()
+        for item in parsed_rows:
+            payload = dict(item)
+            payload["owner_sales"] = target_sales
+            cid = _upsert_scoped_customer_in_conn(cursor, payload)
+            if cid:
+                imported_count += 1
+        conn.commit()
+    finally:
+        conn.close()
+
+    return {
+        "status": "success",
+        "sales_name": target_sales,
+        "imported_count": imported_count,
+        "message": f"已成功匯入/更新 {imported_count} 筆客戶資料至【{target_sales}】客戶庫！"
+    }
+
+
+def _normalize_product_import_rows(rows: List[Any]) -> List[Dict[str, Any]]:
+    """將 list of lists 或 list of dicts 正規化為產品匯入列清單 (對標桌面版 6 欄與經銷牌價表參考格式)"""
+    normalized: List[Dict[str, Any]] = []
+    if not rows:
+        return normalized
+
+    header_map: Optional[Dict[str, int]] = None
+    for idx, row in enumerate(rows):
+        if isinstance(row, dict):
+            clean_dict = {str(k).replace(" ", "").replace("\u3000", ""): v for k, v in row.items()}
+            model_no = _clean_cell_str(
+                clean_dict.get("規格(型號)") or clean_dict.get("型號") or clean_dict.get("規格") or clean_dict.get("model_no")
+            )
+            if not model_no:
+                continue
+            desc = _clean_cell_str(clean_dict.get("說明") or clean_dict.get("spec") or clean_dict.get("摘要"))
+            lp = _parse_excel_number(clean_dict.get("牌價") or clean_dict.get("list_price"))
+            dp = _parse_excel_number(clean_dict.get("經銷價") or clean_dict.get("dealer_price"))
+            ord_str = _clean_cell_str(clean_dict.get("訂購品(V)") or clean_dict.get("訂購品") or clean_dict.get("is_order_item"))
+            normalized.append({
+                "row_no": idx + 2,
+                "model_no": model_no,
+                "list_price": lp,
+                "dealer_price": dp,
+                "desc": desc,
+                "is_order_item": 1 if "V" in ord_str.upper() or ord_str in ("1", "true", "True") else 0,
+            })
+        elif isinstance(row, (list, tuple)):
+            cells = [_clean_cell_str(c) for c in row]
+            cells_compact = [c.replace(" ", "").replace("\u3000", "") for c in cells]
+            if idx == 0 and any(h in cells_compact for h in ("規格(型號)", "規格", "型號", "牌價", "經銷價", "NO.")):
+                header_map = {col_name.upper(): c_idx for c_idx, col_name in enumerate(cells_compact) if col_name}
+                continue
+            if header_map:
+                def _pick(*names: str) -> str:
+                    for n in names:
+                        pos = header_map.get(n.upper())
+                        if pos is not None and pos < len(cells):
+                            return cells[pos]
+                    return ""
+                model_no = _pick("規格(型號)", "型號", "規格", "model_no")
+                if not model_no:
+                    continue
+                desc = _pick("說明", "spec", "摘要")
+                lp = _parse_excel_number(_pick("牌價", "list_price"))
+                dp = _parse_excel_number(_pick("經銷價", "dealer_price"))
+                ord_str = _pick("訂購品(V)", "訂購品", "is_order_item")
+                normalized.append({
+                    "row_no": idx + 1,
+                    "model_no": model_no,
+                    "list_price": lp,
+                    "dealer_price": dp,
+                    "desc": desc,
+                    "is_order_item": 1 if "V" in ord_str.upper() or ord_str in ("1", "true", "True") else 0,
+                })
+            else:
+                if len(cells) < 2 or not cells[1]:
+                    continue
+                lp = _parse_excel_number(cells[2] if len(cells) > 2 else 0)
+                dp = _parse_excel_number(cells[3] if len(cells) > 3 else 0)
+                desc = cells[4] if len(cells) > 4 else ""
+                ord_str = cells[5] if len(cells) > 5 else ""
+                normalized.append({
+                    "row_no": idx + 1,
+                    "model_no": cells[1],
+                    "list_price": lp,
+                    "dealer_price": dp,
+                    "desc": desc,
+                    "is_order_item": 1 if "V" in ord_str.upper() else 0,
+                })
+    return normalized
+
+
+def batch_import_products_data(rows: List[Any], db_path: Optional[Path] = None) -> Dict[str, Any]:
+    """批次新增或更新公司共通標準產品牌價庫，並觸發方案 A 自動封存檢查"""
+    parsed_rows = _normalize_product_import_rows(rows)
+    seen_models = set()
+    error_logs: List[str] = []
+    new_count = 0
+    update_count = 0
+    duplicate_count = 0
+
+    conn = get_connection(db_path)
+    try:
+        cursor = conn.cursor()
+        for item in parsed_rows:
+            model_no = item["model_no"]
+            is_dup_in_file = model_no in seen_models
+            if is_dup_in_file:
+                duplicate_count += 1
+                error_logs.append(f"[第 {item['row_no']} 列] 重複型號: {model_no} (將以前列覆寫更新)")
+            else:
+                seen_models.add(model_no)
+
+            desc = item["desc"]
+            spec_str = desc if desc else model_no
+            if desc and not desc.startswith(model_no):
+                spec_str = f"{model_no} ({desc})"
+
+            existing = cursor.execute(
+                "SELECT id FROM product_master WHERE UPPER(model_no) = UPPER(?)",
+                (model_no,)
+            ).fetchone()
+            if existing:
+                cursor.execute("""
+                UPDATE product_master
+                SET spec = ?, list_price = ?, dealer_price = ?, is_order_item = ?
+                WHERE id = ?
+                """, (spec_str, item["list_price"], item["dealer_price"], item["is_order_item"], existing["id"]))
+                if not is_dup_in_file:
+                    update_count += 1
+            else:
+                cursor.execute("""
+                INSERT INTO product_master (model_no, spec, list_price, dealer_price, is_order_item)
+                VALUES (?, ?, ?, ?, ?)
+                """, (model_no, spec_str, item["list_price"], item["dealer_price"], item["is_order_item"]))
+                new_count += 1
+
+        sync_special_to_standard_archive(conn)
+        conn.commit()
+    finally:
+        conn.close()
+
+    return {
+        "status": "success",
+        "new_count": new_count,
+        "update_count": update_count,
+        "duplicate_count": duplicate_count,
+        "error_logs": error_logs,
+        "message": f"產品匯入完成！新增 {new_count} 筆、更新 {update_count} 筆、Excel 內重複合併 {duplicate_count} 筆。"
+    }
+
+
+def _normalize_legacy_quote_rows(rows: List[Any]) -> List[Dict[str, Any]]:
+    """將歷史報價單工作表列統一正規化為字典清單 (相容 list of lists 與 list of dicts)"""
+    normalized: List[Dict[str, Any]] = []
+    if not rows:
+        return normalized
+
+    header_map: Optional[Dict[str, int]] = None
+    for idx, row in enumerate(rows):
+        if isinstance(row, dict):
+            normalized.append({"_row_no": idx + 2, **row})
+        elif isinstance(row, (list, tuple)):
+            cells = [_clean_cell_str(c) for c in row]
+            if header_map is None and any(h in cells for h in ("報價單編號", "報價日期", "客戶名稱", "規格")):
+                header_map = {col_name: c_idx for c_idx, col_name in enumerate(cells) if col_name}
+                continue
+            if header_map:
+                rec: Dict[str, Any] = {"_row_no": idx + 1}
+                for col_name, c_idx in header_map.items():
+                    rec[col_name] = cells[c_idx] if c_idx < len(cells) else ""
+                normalized.append(rec)
+    return normalized
+
+
+def batch_import_legacy_three_stage(
+    sales_name: str,
+    payload: Dict[str, Any],
+    db_path: Optional[Path] = None
+) -> Dict[str, Any]:
+    """
+    對標桌面版 LegacyImporterDialog 的三階段智慧匯入：
+    階段一：匯入客戶主檔至當前業務名下 ([客戶資料庫])
+    階段二：匯入產品主檔與牌價 ([經銷牌價表參考])
+    階段三：匯入歷史報價單明細至當前業務名下 ([報價單資料庫])，具備日期驗證、客戶衝突攔截與已存在單號防重略過。
+    """
+    target_sales = _clean_cell_str(sales_name) or "曾維崧"
+    logs: List[str] = []
+    cust_imported = 0
+    prod_new = 0
+    prod_upd = 0
+
+    # 階段一：客戶主檔
+    customers_rows = payload.get("customers_rows") or []
+    if customers_rows:
+        logs.append("--- 階段一：開始匯入客戶主檔 ---")
+        cust_res = batch_import_customers_data(target_sales, customers_rows, db_path=db_path)
+        cust_imported = int(cust_res.get("imported_count", 0))
+        logs.append(f"[成功] 客戶主檔同步完成，共處理 {cust_imported} 筆（歸屬業務：{target_sales}）。")
+    else:
+        logs.append("--- 階段一：未偵測到 [客戶資料庫] 工作表資料，略過此階段 ---")
+
+    # 階段二：產品主檔
+    products_rows = payload.get("products_rows") or []
+    if products_rows:
+        logs.append("--- 階段二：開始匯入產品主檔 ---")
+        prod_res = batch_import_products_data(products_rows, db_path=db_path)
+        prod_new = int(prod_res.get("new_count", 0))
+        prod_upd = int(prod_res.get("update_count", 0))
+        logs.append(f"[成功] 產品主檔同步完成，新增 {prod_new} 筆、更新 {prod_upd} 筆。")
+    else:
+        logs.append("--- 階段二：未偵測到 [經銷牌價表參考] 工作表資料，略過此階段 ---")
+
+    # 階段三：歷史報價單明細
+    logs.append("--- 階段三：開始匯入報價單明細 ---")
+    raw_quotes = _normalize_legacy_quote_rows(payload.get("quotations_rows") or [])
+    if not raw_quotes:
+        logs.append("[提示] 未偵測到 [報價單資料庫] 明細列，僅完成前階段同步。")
+        return {
+            "status": "success",
+            "sales_name": target_sales,
+            "customer_count": cust_imported,
+            "product_new_count": prod_new,
+            "product_update_count": prod_upd,
+            "quote_imported_count": 0,
+            "skipped_count": 0,
+            "errors": [],
+            "logs": logs,
+            "message": f"處理完畢！已同步客戶 {cust_imported} 筆、產品新增 {prod_new} / 更新 {prod_upd} 筆（無報價單明細）。"
+        }
+
+    conn = get_connection(db_path)
+    errors_list: List[str] = []
+    skipped_quotes = set()
+    blacklisted_ids = set()
+    success_count = 0
+
+    try:
+        cursor = conn.cursor()
+        existing_rows = cursor.execute("SELECT quote_no FROM quotation_header").fetchall()
+        db_existing_ids = {str(r["quote_no"]) for r in existing_rows}
+
+        logs.append("[掃描] 正在進行日期格式與同單號客戶一致性預先掃描...")
+        id_customer_map: Dict[str, str] = {}
+        for rec in raw_quotes:
+            row_idx = rec.get("_row_no", "?")
+            original_id = _clean_cell_str(rec.get("報價單編號") or rec.get("quote_no"))
+            if not original_id:
+                continue
+
+            _, date_err = _parse_excel_date_strict(rec.get("報價日期") or rec.get("quote_date"))
+            if date_err:
+                if original_id not in blacklisted_ids:
+                    blacklisted_ids.add(original_id)
+                    err_msg = f"第 {row_idx} 列 [單號 {original_id}]: {date_err}"
+                    errors_list.append(err_msg)
+                    logs.append(f"[攔截異常] {err_msg}")
+
+            cust_name = _clean_cell_str(rec.get("客戶名稱") or rec.get("customer_name"))
+            if original_id in id_customer_map:
+                if id_customer_map[original_id] != cust_name:
+                    if original_id not in blacklisted_ids:
+                        blacklisted_ids.add(original_id)
+                        err_msg = f"第 {row_idx} 列 [單號 {original_id}]: 客戶名稱衝突 ({id_customer_map[original_id]} vs {cust_name})"
+                        errors_list.append(err_msg)
+                        logs.append(f"[攔截異常] {err_msg}")
+            else:
+                id_customer_map[original_id] = cust_name
+
+        header_id_map: Dict[str, int] = {}
+        item_index_counter: Dict[str, int] = {}
+        cust_info_cache: Dict[str, Dict[str, str]] = {}
+
+        for rec in raw_quotes:
+            original_id = _clean_cell_str(rec.get("報價單編號") or rec.get("quote_no"))
+            if not original_id:
+                continue
+            if original_id in db_existing_ids:
+                if original_id not in skipped_quotes:
+                    skipped_quotes.add(original_id)
+                    logs.append(f"[略過] 單號 {original_id} 已存在於系統，自動略過。")
+                continue
+            if original_id in blacklisted_ids:
+                continue
+
+            quote_date_str, _ = _parse_excel_date_strict(rec.get("報價日期") or rec.get("quote_date"))
+            if not quote_date_str:
+                continue
+
+            customer_name = _clean_cell_str(rec.get("客戶名稱") or rec.get("customer_name")) or "未命名客戶"
+            contact_name = _clean_cell_str(rec.get("聯絡人") or rec.get("contact_name"))
+            spec = _clean_cell_str(rec.get("規格") or rec.get("型號") or rec.get("model_no")) or "(無規格名稱)"
+            project_name = _clean_cell_str(rec.get("專案名稱") or rec.get("project_name"))
+
+            if customer_name not in cust_info_cache:
+                cid = _upsert_scoped_customer_in_conn(cursor, {
+                    "name": customer_name,
+                    "owner_sales": target_sales,
+                    "contact_name": contact_name,
+                })
+                c_row = cursor.execute(
+                    "SELECT tax_id, phone, fax, address, payment_terms FROM customer_master WHERE id = ?",
+                    (cid,)
+                ).fetchone()
+                cust_info_cache[customer_name] = dict(c_row) if c_row else {}
+
+            prod_row = cursor.execute(
+                "SELECT id, dealer_price FROM product_master WHERE UPPER(model_no) = UPPER(?)",
+                (spec,)
+            ).fetchone()
+            if not prod_row:
+                cursor.execute(
+                    "INSERT INTO product_master (model_no, spec, list_price, dealer_price, is_order_item) VALUES (?, ?, 0, 0, 0)",
+                    (spec, spec)
+                )
+                std_dealer_price = 0.0
+            else:
+                std_dealer_price = float(prod_row["dealer_price"] or 0.0)
+
+            if original_id not in header_id_map:
+                parts = original_id.rsplit("-", 2)
+                if len(parts) == 3 and parts[1].isdigit() and parts[2].isdigit():
+                    prefix, seq_num, rev_num = parts[0], int(parts[1]), int(parts[2])
+                else:
+                    prefix, seq_num, rev_num = original_id, 1, 0
+
+                c_meta = cust_info_cache.get(customer_name, {})
+                valid_date_str = f"{quote_date_str[:4]}-12-31"
+                cursor.execute("""
+                INSERT INTO quotation_header (
+                    quote_no, prefix, sequence, revision, sales_name, quote_date, valid_date,
+                    customer_name, tax_id, contact_name, phone, fax, delivery_address,
+                    payment_terms, project_name, project_type, subtotal, tax_rate,
+                    tax_amount, grand_total, status, is_latest, is_deleted, source_type
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '不適用折讓', 0, 5.0, 0, 0, '追蹤中', 1, 0, 'LEGACY_IMPORT');
+                """, (
+                    original_id, prefix, seq_num, rev_num, target_sales, quote_date_str, valid_date_str,
+                    customer_name, c_meta.get("tax_id", ""), contact_name, c_meta.get("phone", ""),
+                    c_meta.get("fax", ""), c_meta.get("address", ""), c_meta.get("payment_terms", ""),
+                    project_name
+                ))
+                header_id_map[original_id] = int(cursor.lastrowid)
+                item_index_counter[original_id] = 0
+                success_count += 1
+                logs.append(f"[匯入] 報價單：{original_id}（{customer_name}）")
+
+            hdr_id = header_id_map[original_id]
+            item_index_counter[original_id] += 1
+            item_idx = item_index_counter[original_id]
+
+            qty = _parse_excel_number(rec.get("數量/EA") if "數量/EA" in rec else rec.get("數量"))
+            qty = qty if qty >= 0 else 0.0
+            unit_price = _parse_excel_number(rec.get("單價") or rec.get("final_unit_price"))
+            row_sub = _parse_excel_number(rec.get("小計") or rec.get("row_subtotal"))
+            if row_sub == 0 and unit_price > 0 and qty > 0:
+                row_sub = unit_price * qty
+
+            disc_val: Optional[float] = None
+            raw_disc = _clean_cell_str(rec.get("實際折數") or rec.get("discount_pct"))
+            if raw_disc and raw_disc != "-":
+                try:
+                    d_float = float(raw_disc.replace("%", "").replace(",", "").strip())
+                    if 0 < d_float < 1.0:
+                        d_float *= 100.0
+                    disc_val = round(d_float, 2)
+                except ValueError:
+                    disc_val = None
+
+            p_delivery = _clean_cell_str(rec.get("交期") or rec.get("note_lead_time"))
+            p_notes = _clean_cell_str(rec.get("說明事項"))
+            if p_notes in ("1", "1.0"):
+                p_notes = ""
+            elif p_notes:
+                p_notes = re.sub(r"[。，;；,\s]*\d+[\.、)](?!\d)\s*", " / ", p_notes).strip(" /")
+            remark_parts = [p for p in (p_delivery, p_notes) if p]
+            combined_remark = " / ".join(remark_parts)
+
+            cursor.execute("""
+            INSERT INTO quotation_item (
+                header_id, quote_no, item_index, model_no, spec, dealer_price,
+                discount_pct, expected_price, final_unit_price, quantity,
+                row_subtotal, note_lead_time
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            """, (
+                hdr_id, original_id, item_idx, spec, spec, std_dealer_price,
+                disc_val, unit_price, unit_price, qty, row_sub, combined_remark
+            ))
+
+        # 重新統計每張新建報價單之未稅小計、稅額與含稅總計
+        for h_id in header_id_map.values():
+            sub_row = cursor.execute(
+                "SELECT COALESCE(SUM(row_subtotal), 0) AS total_sub FROM quotation_item WHERE header_id = ?",
+                (h_id,)
+            ).fetchone()
+            sub_amt = float(sub_row["total_sub"] or 0.0)
+            tax_amt = float(round(sub_amt * 0.05))
+            grand_amt = sub_amt + tax_amt
+            cursor.execute(
+                "UPDATE quotation_header SET subtotal = ?, tax_amount = ?, grand_total = ? WHERE id = ?",
+                (sub_amt, tax_amt, grand_amt, h_id)
+            )
+
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+    return {
+        "status": "success",
+        "sales_name": target_sales,
+        "customer_count": cust_imported,
+        "product_new_count": prod_new,
+        "product_update_count": prod_upd,
+        "quote_imported_count": success_count,
+        "skipped_count": len(skipped_quotes),
+        "errors": errors_list,
+        "logs": logs,
+        "message": f"處理完畢！本次成功為【{target_sales}】寫入 {success_count} 張新報價單（略過既有單號 {len(skipped_quotes)} 張）。"
+    }
+
+
 if __name__ == "__main__":
     print("[data_access.py] 正在初始化士林電機 FA 資料庫...")
     init_database()

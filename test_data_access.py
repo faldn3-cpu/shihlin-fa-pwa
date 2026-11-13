@@ -429,8 +429,64 @@ def run_all_tests():
             if test_store_dir.exists():
                 shutil.rmtree(test_store_dir, ignore_errors=True)
 
+        # 12. 驗證批次資料管理 (客戶 / 產品 / 舊版歷史報價單三階段匯入精靈)
+        print("\n[測試 12] 驗證批次匯入客戶、產品與三階段歷史報價單匯入精靈...")
+        cust_batch_res = data_access.batch_import_customers_data(
+            "楊家豪",
+            [
+                ["姓名", "統編", "公司", "電話", "傳真", "手機", "E-MAIL", "地址", "付款方式"],
+                ["陳工程師", "88112233", "宏達電機測試廠", "03-5551111", "03-5551112", "0912345678", "chen@example.com", "新竹縣", "月結 30 天電匯"],
+                ["林採購", "88112233", "宏達電機測試廠", "03-5551111", "03-5551112", "0922334455", "lin@example.com", "新竹縣", "月結 30 天電匯"],
+            ],
+            db_path=test_db
+        )
+        assert cust_batch_res["imported_count"] == 2
+        yang_custs = data_access.get_customers(sales_name="楊家豪")
+        yang_target = next(c for c in yang_custs if c["name"] == "宏達電機測試廠")
+        assert len(yang_target["contacts"]) == 2
+        assert not any(c["name"] == "宏達電機測試廠" for c in data_access.get_customers(sales_name="張書偉"))
+
+        prod_batch_res = data_access.batch_import_products_data(
+            [
+                ["NO.", "規格(型號)", "牌價", "經銷價", "說明", "訂購品(V)"],
+                [1, "BATCH-SA3-001", "20,000", "10,000", "批次測試變頻器", "V"],
+                [2, "BATCH-SA3-001", "22,000", "11,000", "批次測試變頻器(修正)", "V"],
+            ],
+            db_path=test_db
+        )
+        assert prod_batch_res["new_count"] == 1
+        assert prod_batch_res["duplicate_count"] == 1
+        found_batch_prod = data_access.search_products(query="BATCH-SA3-001", sales_name="楊家豪")
+        assert any(p["model_no"] == "BATCH-SA3-001" and p["dealer_price"] == 11000.0 and p["is_order_item"] == 1 for p in found_batch_prod)
+
+        legacy_res = data_access.batch_import_legacy_three_stage(
+            "楊家豪",
+            {
+                "customers_rows": [
+                    ["姓名", "統編", "公司", "電話", "傳真", "手機", "E-MAIL", "地址", "付款方式"],
+                    ["周課長", "77112233", "三階段測試企業", "02-88887777", "", "", "", "台北市", "現金"]
+                ],
+                "products_rows": [
+                    ["NO.", "規格(型號)", "牌價", "經銷價", "說明", "訂購品(V)"],
+                    [1, "LEGACY-PLC-01", "15000", "7500", "歷史精靈測試PLC", ""]
+                ],
+                "quotations_rows": [
+                    ["報價單編號", "報價日期", "客戶名稱", "聯絡人", "專案名稱", "規格", "數量/EA", "單價", "小計", "實際折數", "交期", "說明事項"],
+                    ["LEGACY2611-001-00", "2026-10-01", "三階段測試企業", "周課長", "產線擴建", "LEGACY-PLC-01", "2", "8000", "16000", "106.7%", "現貨", "1. 標準保固一年"],
+                    ["BADDATE2611-002-00", "日期錯誤!!", "三階段測試企業", "周課長", "異常測試", "LEGACY-PLC-01", "1", "8000", "8000", "100%", "", ""]
+                ]
+            },
+            db_path=test_db
+        )
+        assert legacy_res["quote_imported_count"] == 1
+        assert len(legacy_res["errors"]) == 1 and "BADDATE2611-002-00" in legacy_res["errors"][0]
+        yang_quotes = data_access.list_quotations(sales_name="楊家豪")
+        assert any(q["quote_no"] == "LEGACY2611-001-00" and q["subtotal"] == 16000.0 for q in yang_quotes)
+        assert not any(q["quote_no"] == "LEGACY2611-001-00" for q in data_access.list_quotations(sales_name="張書偉"))
+        print("  [OK] 批次匯入客戶、產品與歷史報價單三階段智慧匯入精靈（含業務隔離與異常攔截）驗證通過！")
+
         print("\n" + "=" * 65)
-        print("[SUCCESS] 恭喜！data_access.py 全數 11 大單元測試 100% 通過！")
+        print("[SUCCESS] 恭喜！data_access.py 全數 12 大單元測試 100% 通過！")
         print("=" * 65)
 
     finally:

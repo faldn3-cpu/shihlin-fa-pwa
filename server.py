@@ -674,6 +674,49 @@ def api_sync_centralized_store():
         raise HTTPException(status_code=500, detail=f"同步集中管理資料夾失敗: {e}")
 
 
+class BatchCustomersImportRequest(BaseModel):
+    sales_name: str = "曾維崧"
+    rows: List[Any] = []
+
+
+class BatchProductsImportRequest(BaseModel):
+    rows: List[Any] = []
+
+
+class BatchLegacyImportRequest(BaseModel):
+    sales_name: str = "曾維崧"
+    customers_rows: List[Any] = []
+    products_rows: List[Any] = []
+    quotations_rows: List[Any] = []
+
+
+@app.post("/api/batch/import-customers")
+def api_batch_import_customers(req: BatchCustomersImportRequest):
+    """批次資料管理：匯入客戶 Excel 至指定業務員名下"""
+    try:
+        return data_access.batch_import_customers_data(req.sales_name, req.rows)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"匯入客戶失敗: {e}")
+
+
+@app.post("/api/batch/import-products")
+def api_batch_import_products(req: BatchProductsImportRequest):
+    """批次資料管理：匯入標準產品牌價 Excel"""
+    try:
+        return data_access.batch_import_products_data(req.rows)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"匯入產品失敗: {e}")
+
+
+@app.post("/api/batch/import-legacy")
+def api_batch_import_legacy(req: BatchLegacyImportRequest):
+    """批次資料管理：三階段歷史報價單匯入精靈"""
+    try:
+        return data_access.batch_import_legacy_three_stage(req.sales_name, req.model_dump())
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"歷史報價單匯入失敗: {e}")
+
+
 # ==============================================================================
 # 前端靜態網頁託管
 # ==============================================================================

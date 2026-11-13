@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function createEmptyStore() {
       return {
-        version: "v1.0.54",
+        version: "v1.0.55",
         generated_at: new Date().toISOString(),
         salespersons: ["曾維崧", "何宛茹", "張何達", "張書偉", "曾仁君", "楊家豪", "溫達仁", "莊富丞", "葉仁豪", "邱文輝", "黃柏翰"],
         products: [],
@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         // 避免將數千筆標準品重複塞入 localStorage 配額，僅保存增量與個人業務異動層
         const deltaPayload = {
-          version: "v1.0.54",
+          version: "v1.0.55",
           saved_at: new Date().toISOString(),
           extra_products: Array.isArray(store._extra_products) ? store._extra_products : [],
           settings: store.settings || {},
@@ -90,7 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
       storeLoadPromise = (async () => {
         const baseStore = createEmptyStore();
         try {
-          const seedResp = await origFetch("./data/builtin_seed_db.json?v=20261113_v1_0_54");
+          const seedResp = await origFetch("./data/builtin_seed_db.json?v=20261113_v1_0_55");
           if (seedResp && seedResp.ok) {
             const seedJson = await seedResp.json();
             if (seedJson && typeof seedJson === "object") {
@@ -849,6 +849,439 @@ document.addEventListener("DOMContentLoaded", () => {
       if (pathname === "/api/centralized-store/sync" && upperMethod === "POST") {
         persistLocalDelta(store);
         return jsonResponse({ status: "success", message: "已完成本機與內建基準資料整理存檔" });
+      }
+
+      // 10. 批次資料管理匯入引擎 (客戶 / 產品 / 歷史報價單三階段)
+      function cleanBatchCell(v) {
+        if (v === null || v === undefined) return "";
+        const s = String(v).trim();
+        return (s.toLowerCase() === "nan" || s.toLowerCase() === "none") ? "" : s;
+      }
+
+      function parseBatchNum(v) {
+        if (typeof v === "number") return isNaN(v) ? 0 : v;
+        const s = cleanBatchCell(v).replace(/[^\d.\-]/g, "");
+        const f = parseFloat(s);
+        return isNaN(f) ? 0 : f;
+      }
+
+      function parseBatchDateStrict(v) {
+        if (v === null || v === undefined) return { dateStr: null, err: "日期空白" };
+        if (typeof v === "number" && v >= 20000 && v <= 80000) {
+          const base = new Date(Date.UTC(1899, 11, 30));
+          base.setUTCDate(base.getUTCDate() + Math.floor(v));
+          return { dateStr: base.toISOString().slice(0, 10), err: null };
+        }
+        const raw = cleanBatchCell(v);
+        if (!raw) return { dateStr: null, err: "日期空白" };
+        if (/^\d+(\.\d+)?$/.test(raw)) {
+          const num = parseFloat(raw);
+          if (num >= 20000 && num <= 80000) {
+            const base = new Date(Date.UTC(1899, 11, 30));
+            base.setUTCDate(base.getUTCDate() + Math.floor(num));
+            return { dateStr: base.toISOString().slice(0, 10), err: null };
+          }
+        }
+        if (/[^\d/\- :T.]/.test(raw)) return { dateStr: null, err: `日期包含非法字元 '${raw}'` };
+        const part = raw.replace(/\//g, "-").split(/[ T]/)[0];
+        const m = part.match(/^(\d{3,4})-(\d{1,2})-(\d{1,2})$/);
+        if (!m) return { dateStr: null, err: `日期格式無法辨識 '${raw}'` };
+        let yr = parseInt(m[1], 10);
+        if (yr < 1911) yr += 1911;
+        const mo = parseInt(m[2], 10);
+        const da = parseInt(m[3], 10);
+        const dt = new Date(Date.UTC(yr, mo - 1, da));
+        if (dt.getUTCFullYear() !== yr || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== da) {
+          return { dateStr: null, err: `日期無效 '${raw}'` };
+        }
+        return { dateStr: `${yr}-${String(mo).padStart(2, "0")}-${String(da).padStart(2, "0")}`, err: null };
+      }
+
+      function importCustomersBatchScoped(salesName, rows) {
+        const targetSales = normalizeSales(salesName);
+        let importedCount = 0;
+        let headerIdxMap = null;
+        (Array.isArray(rows) ? rows : []).forEach((row, idx) => {
+          let payload = null;
+          if (Array.isArray(row)) {
+            const cells = row.map(cleanBatchCell);
+            if (idx === 0 && cells.some(c => ["公司", "客戶名稱", "姓名", "聯絡人", "統編"].includes(c))) {
+              headerIdxMap = {};
+              cells.forEach((c, ci) => { if (c) headerIdxMap[c.toUpperCase()] = ci; });
+              return;
+            }
+            const pick = (...names) => {
+              if (!headerIdxMap) return "";
+              for (const n of names) {
+                const pos = headerIdxMap[n.toUpperCase()];
+                if (pos !== undefined && pos < cells.length) return cells[pos];
+              }
+              return "";
+            };
+            const compName = headerIdxMap ? pick("公司", "客戶名稱", "NAME") : (cells[2] || "");
+            if (!compName) return;
+            payload = {
+              owner_sales: targetSales,
+              contact_name: headerIdxMap ? pick("姓名", "聯絡人") : (cells[0] || ""),
+              tax_id: headerIdxMap ? pick("統編", "統一編號") : (cells[1] || ""),
+              name: compName,
+              phone: headerIdxMap ? pick("電話") : (cells[3] || ""),
+              fax: headerIdxMap ? pick("傳真") : (cells[4] || ""),
+              contact_mobile: headerIdxMap ? pick("手機") : (cells[5] || ""),
+              contact_email: headerIdxMap ? pick("E-MAIL", "EMAIL") : (cells[6] || ""),
+              address: headerIdxMap ? pick("地址") : (cells[7] || ""),
+              payment_terms: (headerIdxMap ? pick("付款方式") : (cells[8] || "")) || "月結 30 天電匯",
+              copy_as_new_contact: true
+            };
+          } else if (row && typeof row === "object") {
+            const compName = cleanBatchCell(row["公司"] || row["客戶名稱"] || row.name || row.company);
+            if (!compName) return;
+            payload = {
+              owner_sales: targetSales,
+              contact_name: cleanBatchCell(row["姓名"] || row["聯絡人"] || row.contact_name),
+              tax_id: cleanBatchCell(row["統編"] || row["統一編號"] || row.tax_id),
+              name: compName,
+              phone: cleanBatchCell(row["電話"] || row.phone),
+              fax: cleanBatchCell(row["傳真"] || row.fax),
+              contact_mobile: cleanBatchCell(row["手機"] || row.contact_mobile || row.mobile),
+              contact_email: cleanBatchCell(row["E-MAIL"] || row["EMAIL"] || row.contact_email || row.email),
+              address: cleanBatchCell(row["地址"] || row.address),
+              payment_terms: cleanBatchCell(row["付款方式"] || row.payment_terms) || "月結 30 天電匯",
+              copy_as_new_contact: true
+            };
+          }
+          if (payload) {
+            const r = saveCustomerScoped(store, payload);
+            if (r.ok) importedCount += 1;
+          }
+        });
+        return {
+          status: "success",
+          sales_name: targetSales,
+          imported_count: importedCount,
+          message: `已成功匯入/更新 ${importedCount} 筆客戶資料至【${targetSales}】客戶庫！`
+        };
+      }
+
+      function importProductsBatchScoped(rows) {
+        const seen = new Set();
+        const errorLogs = [];
+        let newCount = 0;
+        let updateCount = 0;
+        let duplicateCount = 0;
+        const prodMap = new Map(store.products.map(p => [String(p.model_no || "").toUpperCase(), p]));
+        if (!Array.isArray(store._extra_products)) store._extra_products = [];
+        const extraMap = new Map(store._extra_products.map(p => [String(p.model_no || "").toUpperCase(), p]));
+
+        let headerIdxMap = null;
+        (Array.isArray(rows) ? rows : []).forEach((row, idx) => {
+          let modelNo = "", lp = 0, dp = 0, desc = "", isOrder = 0;
+          if (Array.isArray(row)) {
+            const cells = row.map(cleanBatchCell);
+            const compact = cells.map(c => c.replace(/\s+/g, ""));
+            if (idx === 0 && compact.some(c => ["規格(型號)", "規格", "型號", "牌價", "經銷價", "NO."].includes(c))) {
+              headerIdxMap = {};
+              compact.forEach((c, ci) => { if (c) headerIdxMap[c.toUpperCase()] = ci; });
+              return;
+            }
+            const pick = (...names) => {
+              if (!headerIdxMap) return "";
+              for (const n of names) {
+                const pos = headerIdxMap[n.toUpperCase()];
+                if (pos !== undefined && pos < cells.length) return cells[pos];
+              }
+              return "";
+            };
+            modelNo = headerIdxMap ? pick("規格(型號)", "型號", "規格", "MODEL_NO") : (cells[1] || "");
+            lp = parseBatchNum(headerIdxMap ? pick("牌價", "LIST_PRICE") : (cells[2] || 0));
+            dp = parseBatchNum(headerIdxMap ? pick("經銷價", "DEALER_PRICE") : (cells[3] || 0));
+            desc = headerIdxMap ? pick("說明", "SPEC", "摘要") : (cells[4] || "");
+            const ord = headerIdxMap ? pick("訂購品(V)", "訂購品") : (cells[5] || "");
+            isOrder = ord.toUpperCase().includes("V") || ord === "1" ? 1 : 0;
+          } else if (row && typeof row === "object") {
+            const cleanObj = {};
+            Object.keys(row).forEach(k => { cleanObj[String(k).replace(/\s+/g, "")] = row[k]; });
+            modelNo = cleanBatchCell(cleanObj["規格(型號)"] || cleanObj["型號"] || cleanObj["規格"] || cleanObj.model_no);
+            lp = parseBatchNum(cleanObj["牌價"] || cleanObj.list_price);
+            dp = parseBatchNum(cleanObj["經銷價"] || cleanObj.dealer_price);
+            desc = cleanBatchCell(cleanObj["說明"] || cleanObj.spec || cleanObj["摘要"]);
+            const ord = cleanBatchCell(cleanObj["訂購品(V)"] || cleanObj["訂購品"] || cleanObj.is_order_item);
+            isOrder = ord.toUpperCase().includes("V") || ord === "1" ? 1 : 0;
+          }
+          if (!modelNo) return;
+          const isDup = seen.has(modelNo);
+          if (isDup) {
+            duplicateCount += 1;
+            errorLogs.push(`[第 ${idx + 2} 列] 重複型號: ${modelNo} (將以前列覆寫更新)`);
+          } else {
+            seen.add(modelNo);
+          }
+          const specStr = desc ? (desc.startsWith(modelNo) ? desc : `${modelNo} (${desc})`) : modelNo;
+          const key = modelNo.toUpperCase();
+          const prev = prodMap.get(key);
+          const prodObj = {
+            model_no: modelNo,
+            spec: specStr,
+            list_price: lp,
+            dealer_price: dp,
+            stock_qty: prev ? (prev.stock_qty || 0) : 0,
+            sku: prev ? (prev.sku || "") : "",
+            category: prev ? (prev.category || "") : "",
+            is_order_item: isOrder,
+            stock_status: "IN_STOCK"
+          };
+          if (prev) {
+            Object.assign(prev, prodObj);
+            if (!isDup) updateCount += 1;
+          } else {
+            prodMap.set(key, prodObj);
+            store.products.push(prodObj);
+            newCount += 1;
+          }
+          extraMap.set(key, prodObj);
+        });
+
+        store._extra_products = Array.from(extraMap.values());
+        persistLocalDelta(store);
+        return {
+          status: "success",
+          new_count: newCount,
+          update_count: updateCount,
+          duplicate_count: duplicateCount,
+          error_logs: errorLogs,
+          message: `產品匯入完成！新增 ${newCount} 筆、更新 ${updateCount} 筆、Excel 內重複合併 ${duplicateCount} 筆。`
+        };
+      }
+
+      if (pathname === "/api/batch/import-customers" && upperMethod === "POST") {
+        const res = importCustomersBatchScoped(bodyObj?.sales_name, bodyObj?.rows);
+        return jsonResponse(res);
+      }
+
+      if (pathname === "/api/batch/import-products" && upperMethod === "POST") {
+        const res = importProductsBatchScoped(bodyObj?.rows);
+        return jsonResponse(res);
+      }
+
+      if (pathname === "/api/batch/import-legacy" && upperMethod === "POST") {
+        const targetSales = normalizeSales(bodyObj?.sales_name);
+        const logs = [];
+        let custCnt = 0, prodNew = 0, prodUpd = 0;
+
+        if (Array.isArray(bodyObj?.customers_rows) && bodyObj.customers_rows.length > 0) {
+          logs.push("--- 階段一：開始匯入客戶主檔 ---");
+          const cr = importCustomersBatchScoped(targetSales, bodyObj.customers_rows);
+          custCnt = cr.imported_count || 0;
+          logs.push(`[成功] 客戶主檔同步完成，共處理 ${custCnt} 筆（歸屬業務：${targetSales}）。`);
+        } else {
+          logs.push("--- 階段一：未偵測到 [客戶資料庫] 工作表，略過此階段 ---");
+        }
+
+        if (Array.isArray(bodyObj?.products_rows) && bodyObj.products_rows.length > 0) {
+          logs.push("--- 階段二：開始匯入產品主檔 ---");
+          const pr = importProductsBatchScoped(bodyObj.products_rows);
+          prodNew = pr.new_count || 0;
+          prodUpd = pr.update_count || 0;
+          logs.push(`[成功] 產品主檔同步完成，新增 ${prodNew} 筆、更新 ${prodUpd} 筆。`);
+        } else {
+          logs.push("--- 階段二：未偵測到 [經銷牌價表參考] 工作表，略過此階段 ---");
+        }
+
+        logs.push("--- 階段三：開始匯入報價單明細 ---");
+        const qRawRows = Array.isArray(bodyObj?.quotations_rows) ? bodyObj.quotations_rows : [];
+        let qHeaderMap = null;
+        const normalizedQuotes = [];
+        qRawRows.forEach((r, idx) => {
+          if (Array.isArray(r)) {
+            const cells = r.map(cleanBatchCell);
+            if (!qHeaderMap && cells.some(c => ["報價單編號", "報價日期", "客戶名稱", "規格"].includes(c))) {
+              qHeaderMap = {};
+              cells.forEach((c, ci) => { if (c) qHeaderMap[c] = ci; });
+              return;
+            }
+            if (qHeaderMap) {
+              const obj = { _row_no: idx + 1 };
+              Object.keys(qHeaderMap).forEach(k => { obj[k] = cells[qHeaderMap[k]] || ""; });
+              normalizedQuotes.push(obj);
+            }
+          } else if (r && typeof r === "object") {
+            normalizedQuotes.push({ _row_no: idx + 2, ...r });
+          }
+        });
+
+        const allExistingQuotes = Object.values(store.quotations_by_sales).flat();
+        const existingQuoteNos = new Set(allExistingQuotes.map(q => String(q.quote_no || "")));
+        const blacklisted = new Set();
+        const skippedQuotes = new Set();
+        const errorsList = [];
+        const idCustMap = new Map();
+
+        logs.push("[掃描] 正在進行日期格式與同單號客戶一致性預先掃描...");
+        normalizedQuotes.forEach(rec => {
+          const oid = cleanBatchCell(rec["報價單編號"] || rec.quote_no);
+          if (!oid) return;
+          const { err } = parseBatchDateStrict(rec["報價日期"] || rec.quote_date);
+          if (err && !blacklisted.has(oid)) {
+            blacklisted.add(oid);
+            const msg = `第 ${rec._row_no} 列 [單號 ${oid}]: ${err}`;
+            errorsList.push(msg);
+            logs.push(`[攔截異常] ${msg}`);
+          }
+          const cName = cleanBatchCell(rec["客戶名稱"] || rec.customer_name);
+          if (idCustMap.has(oid)) {
+            if (idCustMap.get(oid) !== cName && !blacklisted.has(oid)) {
+              blacklisted.add(oid);
+              const msg = `第 ${rec._row_no} 列 [單號 ${oid}]: 客戶名稱衝突`;
+              errorsList.push(msg);
+              logs.push(`[攔截異常] ${msg}`);
+            }
+          } else {
+            idCustMap.set(oid, cName);
+          }
+        });
+
+        const qBucket = ensureQuoteBucket(store, targetSales);
+        const createdMap = new Map();
+        const prodLookup = new Map(store.products.map(p => [String(p.model_no || "").toUpperCase(), p]));
+        let successCount = 0;
+
+        normalizedQuotes.forEach(rec => {
+          const oid = cleanBatchCell(rec["報價單編號"] || rec.quote_no);
+          if (!oid) return;
+          if (existingQuoteNos.has(oid)) {
+            if (!skippedQuotes.has(oid)) {
+              skippedQuotes.add(oid);
+              logs.push(`[略過] 單號 ${oid} 已存在於系統，自動略過。`);
+            }
+            return;
+          }
+          if (blacklisted.has(oid)) return;
+          const { dateStr } = parseBatchDateStrict(rec["報價日期"] || rec.quote_date);
+          if (!dateStr) return;
+
+          const custName = cleanBatchCell(rec["客戶名稱"] || rec.customer_name) || "未命名客戶";
+          const contactName = cleanBatchCell(rec["聯絡人"] || rec.contact_name);
+          const spec = cleanBatchCell(rec["規格"] || rec["型號"] || rec.model_no) || "(無規格名稱)";
+          const projectName = cleanBatchCell(rec["專案名稱"] || rec.project_name);
+
+          saveCustomerScoped(store, { name: custName, owner_sales: targetSales, contact_name: contactName, copy_as_new_contact: true });
+          const custMeta = (ensureCustomerBucket(store, targetSales).find(c => c.name === custName)) || {};
+
+          if (!createdMap.has(oid)) {
+            const parts = oid.rsplit ? oid.rsplit("-", 2) : oid.split("-");
+            let prefix = oid, seqNum = 1, revNum = 0;
+            if (parts.length >= 3) {
+              const last = parts[parts.length - 1], mid = parts[parts.length - 2];
+              if (/^\d+$/.test(last) && /^\d+$/.test(mid)) {
+                revNum = parseInt(last, 10);
+                seqNum = parseInt(mid, 10);
+                prefix = parts.slice(0, -2).join("-");
+              }
+            }
+            const newQ = {
+              id: computeNextId(Object.values(store.quotations_by_sales).flat()),
+              quote_no: oid,
+              prefix,
+              sequence: seqNum,
+              revision: revNum,
+              deal_id: null,
+              sales_name: targetSales,
+              quote_date: dateStr,
+              valid_date: `${dateStr.slice(0, 4)}-12-31`,
+              customer_name: custName,
+              tax_id: custMeta.tax_id || "",
+              contact_name: contactName,
+              phone: custMeta.phone || "",
+              fax: custMeta.fax || "",
+              delivery_address: custMeta.address || "",
+              payment_terms: custMeta.payment_terms || "",
+              project_name: projectName,
+              project_type: "不適用折讓",
+              subtotal: 0,
+              tax_rate: 5.0,
+              tax_amount: 0,
+              grand_total: 0,
+              status: "追蹤中",
+              is_latest: 1,
+              is_won: 0,
+              won_amount: 0,
+              won_date: null,
+              is_lost: 0,
+              is_ignored: 0,
+              lost_reason: null,
+              lost_memo: null,
+              source_type: "LEGACY_IMPORT",
+              is_deleted: 0,
+              deleted_at: null,
+              created_at: new Date().toISOString().slice(0, 19).replace("T", " "),
+              updated_at: new Date().toISOString().slice(0, 19).replace("T", " "),
+              items: []
+            };
+            qBucket.push(newQ);
+            createdMap.set(oid, newQ);
+            successCount += 1;
+            logs.push(`[匯入] 報價單：${oid}（${custName}）`);
+          }
+
+          const targetQ = createdMap.get(oid);
+          const qty = Math.max(0, parseBatchNum(rec["數量/EA"] !== undefined ? rec["數量/EA"] : rec["數量"]));
+          const unitPrice = parseBatchNum(rec["單價"] || rec.final_unit_price);
+          let rowSub = parseBatchNum(rec["小計"] || rec.row_subtotal);
+          if (rowSub === 0 && unitPrice > 0 && qty > 0) rowSub = unitPrice * qty;
+
+          let discVal = null;
+          const rawDisc = cleanBatchCell(rec["實際折數"] || rec.discount_pct);
+          if (rawDisc && rawDisc !== "-") {
+            const df = parseFloat(rawDisc.replace(/[%,]/g, ""));
+            if (!isNaN(df)) discVal = Number((df > 0 && df < 1 ? df * 100 : df).toFixed(2));
+          }
+
+          const pDelivery = cleanBatchCell(rec["交期"] || rec.note_lead_time);
+          let pNotes = cleanBatchCell(rec["說明事項"]);
+          if (pNotes === "1" || pNotes === "1.0") pNotes = "";
+          else if (pNotes) pNotes = pNotes.replace(/[。，;；,\s]*\d+[.、)](?!\d)\s*/g, " / ").replace(/^[ /\s]+|[ /\s]+$/g, "");
+          const combinedRemark = [pDelivery, pNotes].filter(Boolean).join(" / ");
+
+          const matchedProd = prodLookup.get(spec.toUpperCase());
+          targetQ.items.push({
+            quote_no: oid,
+            item_index: targetQ.items.length + 1,
+            model_no: spec,
+            spec,
+            dealer_price: matchedProd ? (Number(matchedProd.dealer_price) || 0) : 0,
+            discount_pct: discVal,
+            expected_price: unitPrice,
+            final_unit_price: unitPrice,
+            quantity: qty,
+            row_subtotal: rowSub,
+            note_lead_time: combinedRemark,
+            is_won: 0,
+            is_lost: 0,
+            item_status: "pending",
+            lost_reason: null
+          });
+        });
+
+        createdMap.forEach(q => {
+          const sub = q.items.reduce((acc, it) => acc + (Number(it.row_subtotal) || 0), 0);
+          q.subtotal = sub;
+          q.tax_amount = Math.round(sub * 0.05);
+          q.grand_total = sub + q.tax_amount;
+        });
+
+        persistLocalDelta(store);
+        return jsonResponse({
+          status: "success",
+          sales_name: targetSales,
+          customer_count: custCnt,
+          product_new_count: prodNew,
+          product_update_count: prodUpd,
+          quote_imported_count: successCount,
+          skipped_count: skippedQuotes.size,
+          errors: errorsList,
+          logs,
+          message: `處理完畢！本次成功為【${targetSales}】寫入 ${successCount} 張新報價單（略過既有單號 ${skippedQuotes.size} 張）。`
+        });
       }
 
       return jsonResponse({ detail: `離線內建引擎尚未涵蓋的端點: ${pathname}` }, 404);
@@ -10291,21 +10724,657 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-    // 批次資料管理與封存按鈕綁定
-    const btnExpCust = document.getElementById("btnBatchExportCustExcel");
-    if (btnExpCust) btnExpCust.addEventListener("click", exportCrmMonthlyReportCsv);
+    // ========================================================================
+    // 批次資料管理：瀏覽器原生 Excel (.xlsx/.xlsm/.csv) 解析與匯出引擎 (v1.0.55)
+    // ========================================================================
+    function colLettersToIndex(letters) {
+      let idx = 0;
+      for (let i = 0; i < letters.length; i++) {
+        idx = idx * 26 + (letters.charCodeAt(i) - 64);
+      }
+      return Math.max(0, idx - 1);
+    }
 
-    const btnImpCust = document.getElementById("btnBatchImportCustExcel");
-    const btnImpProd = document.getElementById("btnBatchImportProdExcel");
-    const btnExpProd = document.getElementById("btnBatchExportProdExcel");
-    const btnLegacy = document.getElementById("btnLaunchLegacyImporter");
-    [btnImpCust, btnImpProd, btnExpProd, btnLegacy].forEach(b => {
-      if (b) {
-        b.addEventListener("click", () => {
-          alert(`[批次資料管理] 網頁版目前已直接連結 SQLite 資料庫 (${b.textContent.trim()})。`);
+    function indexToColLetters(idx) {
+      let s = "";
+      let n = idx + 1;
+      while (n > 0) {
+        const rem = (n - 1) % 26;
+        s = String.fromCharCode(65 + rem) + s;
+        n = Math.floor((n - 1) / 26);
+      }
+      return s;
+    }
+
+    function parseCsvToRows2D(csvText) {
+      const cleaned = csvText.replace(/^\uFEFF/, "");
+      const rows = [];
+      let row = [];
+      let field = "";
+      let inQuotes = false;
+      for (let i = 0; i < cleaned.length; i++) {
+        const ch = cleaned[i];
+        if (inQuotes) {
+          if (ch === '"' && cleaned[i + 1] === '"') {
+            field += '"';
+            i++;
+          } else if (ch === '"') {
+            inQuotes = false;
+          } else {
+            field += ch;
+          }
+        } else {
+          if (ch === '"') {
+            inQuotes = true;
+          } else if (ch === ",") {
+            row.push(field.trim());
+            field = "";
+          } else if (ch === "\r" && cleaned[i + 1] === "\n") {
+            row.push(field.trim());
+            rows.push(row);
+            row = [];
+            field = "";
+            i++;
+          } else if (ch === "\n" || ch === "\r") {
+            row.push(field.trim());
+            rows.push(row);
+            row = [];
+            field = "";
+          } else {
+            field += ch;
+          }
+        }
+      }
+      if (field.length > 0 || row.length > 0) {
+        row.push(field.trim());
+        rows.push(row);
+      }
+      return rows;
+    }
+
+    async function readZipEntriesMap(arrayBuffer) {
+      const bytes = new Uint8Array(arrayBuffer);
+      const view = new DataView(arrayBuffer);
+      let eocdOffset = -1;
+      const minStart = Math.max(0, bytes.length - 65557);
+      for (let i = bytes.length - 22; i >= minStart; i--) {
+        if (view.getUint32(i, true) === 0x06054b50) {
+          eocdOffset = i;
+          break;
+        }
+      }
+      if (eocdOffset < 0) throw new Error("無法識別的 Excel (.xlsx) ZIP 檔案格式");
+
+      const totalEntries = view.getUint16(eocdOffset + 10, true);
+      const cdOffset = view.getUint32(eocdOffset + 16, true);
+      const entries = new Map();
+      const decoder = new TextDecoder("utf-8");
+      let pos = cdOffset;
+
+      for (let i = 0; i < totalEntries && pos + 46 <= bytes.length; i++) {
+        if (view.getUint32(pos, true) !== 0x02014b50) break;
+        const method = view.getUint16(pos + 10, true);
+        const compSize = view.getUint32(pos + 20, true);
+        const nameLen = view.getUint16(pos + 28, true);
+        const extraLen = view.getUint16(pos + 30, true);
+        const commentLen = view.getUint16(pos + 32, true);
+        const localOffset = view.getUint32(pos + 42, true);
+        const entryName = decoder.decode(bytes.subarray(pos + 46, pos + 46 + nameLen));
+        entries.set(entryName, { method, compSize, localOffset });
+        pos += 46 + nameLen + extraLen + commentLen;
+      }
+
+      async function getEntryText(name) {
+        const meta = entries.get(name);
+        if (!meta) return null;
+        const lo = meta.localOffset;
+        if (view.getUint32(lo, true) !== 0x04034b50) return null;
+        const fnLen = view.getUint16(lo + 26, true);
+        const exLen = view.getUint16(lo + 28, true);
+        const dataStart = lo + 30 + fnLen + exLen;
+        const compressedSlice = bytes.subarray(dataStart, dataStart + meta.compSize);
+        if (meta.method === 0) {
+          return decoder.decode(compressedSlice);
+        }
+        if (meta.method === 8) {
+          if (typeof DecompressionStream === "undefined") {
+            throw new Error("目前瀏覽器不支援 DecompressionStream，請更新瀏覽器或改用 CSV 匯入");
+          }
+          const ds = new DecompressionStream("deflate-raw");
+          const outBuf = await new Response(new Blob([compressedSlice]).stream().pipeThrough(ds)).arrayBuffer();
+          return decoder.decode(new Uint8Array(outBuf));
+        }
+        throw new Error(`不支援的 ZIP 壓縮方式 (${meta.method})`);
+      }
+
+      return { entries, getEntryText };
+    }
+
+    function parseSheetXmlToRows2D(xmlStr, sharedStrings) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlStr, "application/xml");
+      const rowNodes = Array.from(doc.getElementsByTagName("row"));
+      const rows = [];
+
+      rowNodes.forEach(rNode => {
+        const rowArr = [];
+        const cNodes = Array.from(rNode.getElementsByTagName("c"));
+        cNodes.forEach(cNode => {
+          const ref = cNode.getAttribute("r") || "";
+          const m = ref.match(/^([A-Z]+)\d+$/i);
+          const colIdx = m ? colLettersToIndex(m[1].toUpperCase()) : rowArr.length;
+          while (rowArr.length <= colIdx) rowArr.push("");
+
+          const t = cNode.getAttribute("t") || "";
+          let val = "";
+          if (t === "inlineStr") {
+            const tNodes = Array.from(cNode.getElementsByTagName("t"));
+            val = tNodes.map(n => n.textContent || "").join("");
+          } else {
+            const vNode = cNode.getElementsByTagName("v")[0];
+            const rawV = vNode ? (vNode.textContent || "") : "";
+            if (t === "s") {
+              const sIdx = parseInt(rawV, 10);
+              val = (!isNaN(sIdx) && sharedStrings[sIdx] !== undefined) ? sharedStrings[sIdx] : "";
+            } else {
+              val = rawV;
+            }
+          }
+          rowArr[colIdx] = String(val).trim();
+        });
+        if (rowArr.some(c => c !== "")) {
+          rows.push(rowArr);
+        }
+      });
+      return rows;
+    }
+
+    async function parseExcelOrCsvFileInBrowser(file) {
+      const lowerName = (file.name || "").toLowerCase();
+      if (lowerName.endsWith(".csv")) {
+        const text = await file.text();
+        const rows = parseCsvToRows2D(text);
+        return { sheets: { Sheet1: rows }, sheetNames: ["Sheet1"], firstSheetRows: rows };
+      }
+
+      const buf = await file.arrayBuffer();
+      const zip = await readZipEntriesMap(buf);
+
+      const sharedStrings = [];
+      const sstXml = await zip.getEntryText("xl/sharedStrings.xml");
+      if (sstXml) {
+        const sstDoc = new DOMParser().parseFromString(sstXml, "application/xml");
+        Array.from(sstDoc.getElementsByTagName("si")).forEach(si => {
+          const txt = Array.from(si.getElementsByTagName("t")).map(t => t.textContent || "").join("");
+          sharedStrings.push(txt.trim());
         });
       }
-    });
+
+      const relMap = new Map();
+      const relsXml = await zip.getEntryText("xl/_rels/workbook.xml.rels");
+      if (relsXml) {
+        const relsDoc = new DOMParser().parseFromString(relsXml, "application/xml");
+        Array.from(relsDoc.getElementsByTagName("Relationship")).forEach(rel => {
+          const rid = rel.getAttribute("Id") || "";
+          let target = rel.getAttribute("Target") || "";
+          target = target.replace(/^\/+/, "");
+          if (!target.startsWith("xl/")) target = `xl/${target}`;
+          relMap.set(rid, target);
+        });
+      }
+
+      const wbXml = await zip.getEntryText("xl/workbook.xml");
+      const sheetDefs = [];
+      if (wbXml) {
+        const wbDoc = new DOMParser().parseFromString(wbXml, "application/xml");
+        Array.from(wbDoc.getElementsByTagName("sheet")).forEach((sh, idx) => {
+          const name = sh.getAttribute("name") || `Sheet${idx + 1}`;
+          const rid = sh.getAttribute("r:id") || sh.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id") || "";
+          const path = relMap.get(rid) || `xl/worksheets/sheet${idx + 1}.xml`;
+          sheetDefs.push({ name, path });
+        });
+      }
+
+      const sheets = {};
+      const sheetNames = [];
+      for (const sd of sheetDefs) {
+        const sXml = await zip.getEntryText(sd.path);
+        if (sXml) {
+          sheets[sd.name] = parseSheetXmlToRows2D(sXml, sharedStrings);
+          sheetNames.push(sd.name);
+        }
+      }
+      if (sheetNames.length === 0) {
+        const s1Xml = await zip.getEntryText("xl/worksheets/sheet1.xml");
+        if (s1Xml) {
+          sheets.Sheet1 = parseSheetXmlToRows2D(s1Xml, sharedStrings);
+          sheetNames.push("Sheet1");
+        }
+      }
+      const firstSheetRows = sheetNames.length > 0 ? sheets[sheetNames[0]] : [];
+      return { sheets, sheetNames, firstSheetRows };
+    }
+
+    function escapeXmlText(val) {
+      return String(val ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function crc32Bytes(u8) {
+      let crc = 0xFFFFFFFF;
+      for (let i = 0; i < u8.length; i++) {
+        crc ^= u8[i];
+        for (let j = 0; j < 8; j++) {
+          crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
+        }
+      }
+      return (crc ^ 0xFFFFFFFF) >>> 0;
+    }
+
+    function downloadRowsAsXlsx(filename, sheetName, rows2D) {
+      const encoder = new TextEncoder();
+      const rowsXml = rows2D.map((row, rIdx) => {
+        const rNum = rIdx + 1;
+        const cellsXml = row.map((cell, cIdx) => {
+          const ref = `${indexToColLetters(cIdx)}${rNum}`;
+          if (typeof cell === "number" && !isNaN(cell) && isFinite(cell)) {
+            return `<c r="${ref}"><v>${cell}</v></c>`;
+          }
+          return `<c r="${ref}" t="inlineStr"><is><t>${escapeXmlText(cell)}</t></is></c>`;
+        }).join("");
+        return `<row r="${rNum}">${cellsXml}</row>`;
+      }).join("");
+
+      const safeSheet = escapeXmlText(sheetName || "Sheet1").slice(0, 31);
+      const files = [
+        {
+          name: "[Content_Types].xml",
+          data: encoder.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>')
+        },
+        {
+          name: "_rels/.rels",
+          data: encoder.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')
+        },
+        {
+          name: "xl/workbook.xml",
+          data: encoder.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${safeSheet}" sheetId="1" r:id="rId1"/></sheets></workbook>`)
+        },
+        {
+          name: "xl/_rels/workbook.xml.rels",
+          data: encoder.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>')
+        },
+        {
+          name: "xl/worksheets/sheet1.xml",
+          data: encoder.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rowsXml}</sheetData></worksheet>`)
+        }
+      ];
+
+      const localChunks = [];
+      const cdChunks = [];
+      let offset = 0;
+
+      files.forEach(f => {
+        const nameBytes = encoder.encode(f.name);
+        const crc = crc32Bytes(f.data);
+        const lf = new ArrayBuffer(30 + nameBytes.length);
+        const lv = new DataView(lf);
+        lv.setUint32(0, 0x04034b50, true);
+        lv.setUint16(4, 20, true);
+        lv.setUint16(6, 0x0800, true);
+        lv.setUint16(8, 0, true);
+        lv.setUint32(14, crc, true);
+        lv.setUint32(18, f.data.length, true);
+        lv.setUint32(22, f.data.length, true);
+        lv.setUint16(26, nameBytes.length, true);
+        new Uint8Array(lf, 30).set(nameBytes);
+
+        localChunks.push(new Uint8Array(lf), f.data);
+
+        const cd = new ArrayBuffer(46 + nameBytes.length);
+        const cv = new DataView(cd);
+        cv.setUint32(0, 0x02014b50, true);
+        cv.setUint16(4, 20, true);
+        cv.setUint16(6, 20, true);
+        cv.setUint16(8, 0x0800, true);
+        cv.setUint16(10, 0, true);
+        cv.setUint32(16, crc, true);
+        cv.setUint32(20, f.data.length, true);
+        cv.setUint32(24, f.data.length, true);
+        cv.setUint16(28, nameBytes.length, true);
+        cv.setUint32(42, offset, true);
+        new Uint8Array(cd, 46).set(nameBytes);
+
+        cdChunks.push(new Uint8Array(cd));
+        offset += 30 + nameBytes.length + f.data.length;
+      });
+
+      const cdSize = cdChunks.reduce((s, c) => s + c.length, 0);
+      const eocd = new ArrayBuffer(22);
+      const ev = new DataView(eocd);
+      ev.setUint32(0, 0x06054b50, true);
+      ev.setUint16(8, files.length, true);
+      ev.setUint16(10, files.length, true);
+      ev.setUint32(12, cdSize, true);
+      ev.setUint32(16, offset, true);
+
+      const blob = new Blob([...localChunks, ...cdChunks, new Uint8Array(eocd)], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function refreshAllAfterBatchImport() {
+      quoteProductsCache = [];
+      try { await populateCustomerSelectDropdown(true); } catch (e) {}
+      try { renderQuotationCustomersTable(); } catch (e) {}
+      try { await searchStandardProductsInMgmt(); } catch (e) {}
+      try { await loadQuotationHistory(); } catch (e) {}
+      try { await loadQuotationDashboard(); } catch (e) {}
+      try { await runPriceAnalysis(); } catch (e) {}
+    }
+
+    // 1. 匯出客戶 Excel (桌面版 9 欄格式)
+    const btnExpCust = document.getElementById("btnBatchExportCustomers");
+    if (btnExpCust) {
+      btnExpCust.addEventListener("click", async () => {
+        try {
+          const activeSales = getActiveSalesName();
+          const r = await fetch(`/api/customers?sales_name=${encodeURIComponent(activeSales)}`);
+          const list = r.ok ? await r.json() : [];
+          const rows = [["姓名", "統編", "公司", "電話", "傳真", "手機", "E-MAIL", "地址", "付款方式"]];
+          (list || []).forEach(c => {
+            const ct = (Array.isArray(c.contacts) && c.contacts[0]) ? c.contacts[0] : {};
+            rows.push([
+              ct.name || c.default_contact || "",
+              c.tax_id || "",
+              c.name || "",
+              c.phone || "",
+              c.fax || "",
+              ct.mobile || "",
+              ct.email || "",
+              c.address || "",
+              c.payment_terms || ""
+            ]);
+          });
+          downloadRowsAsXlsx(`customers_backup_${activeSales}.xlsx`, "客戶資料", rows);
+        } catch (err) {
+          alert("[匯出客戶失敗] " + err.message);
+        }
+      });
+    }
+
+    // 2. 匯入客戶 Excel
+    const btnImpCust = document.getElementById("btnBatchImportCustomers");
+    const inImpCust = document.getElementById("inputBatchCustExcelFile");
+    if (btnImpCust && inImpCust) {
+      btnImpCust.addEventListener("click", () => {
+        inImpCust.value = "";
+        inImpCust.click();
+      });
+      inImpCust.addEventListener("change", async () => {
+        const file = inImpCust.files && inImpCust.files[0];
+        if (!file) return;
+        const activeSales = getActiveSalesName();
+        try {
+          const parsed = await parseExcelOrCsvFileInBrowser(file);
+          const rows = parsed.sheets["客戶資料庫"] || parsed.sheets["客戶資料"] || parsed.firstSheetRows || [];
+          const dataRowsEst = Math.max(0, rows.length - 1);
+          if (rows.length === 0) {
+            alert("[匯入提醒] 選擇的檔案內沒有讀取到任何客戶資料列。");
+            return;
+          }
+          if (!confirm(`【二次確認】即將從檔案「${file.name}」（約 ${dataRowsEst} 筆明細）匯入客戶資料。\n\n目標歸屬業務員：【${activeSales}】\n同業務同名公司將更新整合，不會影響其他業務的客戶庫。\n確定要開始匯入嗎？`)) {
+            return;
+          }
+          const resp = await fetch("/api/batch/import-customers", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sales_name: activeSales, rows })
+          });
+          const res = await resp.json();
+          if (!resp.ok) throw new Error(res.detail || "匯入客戶失敗");
+          await refreshAllAfterBatchImport();
+          alert(`[匯入完成] ${res.message}`);
+        } catch (err) {
+          alert("[匯入客戶失敗] " + err.message);
+        }
+      });
+    }
+
+    // 3. 批次匯出產品備份 (Excel 6 欄格式)
+    const btnExpProd = document.getElementById("btnBatchExportProducts");
+    if (btnExpProd) {
+      btnExpProd.addEventListener("click", async () => {
+        try {
+          const activeSales = getActiveSalesName();
+          const r = await fetch(`/api/products?limit=20000&sales_name=${encodeURIComponent(activeSales)}`);
+          const list = r.ok ? await r.json() : [];
+          const rows = [["NO.", "規格(型號)", "牌價", "經銷價", "說明", "訂購品(V)"]];
+          (list || []).forEach((p, idx) => {
+            rows.push([
+              idx + 1,
+              p.model_no || "",
+              Number(p.list_price || 0),
+              Number(p.dealer_price || 0),
+              p.spec || "",
+              p.is_order_item ? "V" : ""
+            ]);
+          });
+          downloadRowsAsXlsx("products_backup.xlsx", "產品資料", rows);
+        } catch (err) {
+          alert("[匯出產品失敗] " + err.message);
+        }
+      });
+    }
+
+    // 4. 批次匯入產品建檔 (Excel)
+    const btnImpProd = document.getElementById("btnBatchImportProducts");
+    const inImpProd = document.getElementById("inputBatchProdExcelFile");
+    if (btnImpProd && inImpProd) {
+      btnImpProd.addEventListener("click", () => {
+        inImpProd.value = "";
+        inImpProd.click();
+      });
+      inImpProd.addEventListener("change", async () => {
+        const file = inImpProd.files && inImpProd.files[0];
+        if (!file) return;
+        try {
+          const parsed = await parseExcelOrCsvFileInBrowser(file);
+          const rows = parsed.sheets["經銷牌價表參考"] || parsed.sheets["產品資料"] || parsed.firstSheetRows || [];
+          const dataRowsEst = Math.max(0, rows.length - 1);
+          if (rows.length === 0) {
+            alert("[匯入提醒] 選擇的檔案內沒有讀取到任何產品資料列。");
+            return;
+          }
+          if (!confirm(`【二次確認】即將從檔案「${file.name}」（約 ${dataRowsEst} 筆明細）整批新增或更新共通標準產品牌價表。\n\n確定要開始匯入嗎？`)) {
+            return;
+          }
+          const resp = await fetch("/api/batch/import-products", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ rows })
+          });
+          const res = await resp.json();
+          if (!resp.ok) throw new Error(res.detail || "匯入產品失敗");
+          await refreshAllAfterBatchImport();
+          let msg = `[匯入完成] ${res.message}`;
+          if (Array.isArray(res.error_logs) && res.error_logs.length > 0) {
+            msg += `\n\n檔案內重複型號前 5 筆提示：\n${res.error_logs.slice(0, 5).join("\n")}`;
+          }
+          alert(msg);
+        } catch (err) {
+          alert("[匯入產品失敗] " + err.message);
+        }
+      });
+    }
+
+    // 5. 歷史報價單三階段智慧匯入精靈 Modal 控制
+    const modalLegacy = document.getElementById("modalLegacyImporter");
+    const btnLaunchLegacy = document.getElementById("btnLaunchLegacyImporter");
+    const btnCloseLegacy = document.getElementById("btnCloseLegacyImporterModal");
+    const btnBrowseLegacy = document.getElementById("btnBrowseLegacyExcelFile");
+    const inLegacyFile = document.getElementById("inputLegacyExcelFile");
+    const lblLegacyFile = document.getElementById("lblLegacyExcelFileName");
+    const lblLegacySales = document.getElementById("lblLegacyTargetSales");
+    const btnStartLegacy = document.getElementById("btnStartLegacyThreeStageImport");
+    const barLegacy = document.getElementById("legacyImportProgressBar");
+    const pctLegacy = document.getElementById("lblLegacyProgressPct");
+    const logLegacy = document.getElementById("txtLegacyImportLog");
+    const resBoxLegacy = document.getElementById("legacyImportResultBox");
+    let pendingLegacyParsedData = null;
+    let pendingLegacyFileName = "";
+
+    function setLegacyProgress(pct) {
+      const safe = Math.max(0, Math.min(100, Math.round(pct)));
+      if (barLegacy) barLegacy.style.width = `${safe}%`;
+      if (pctLegacy) pctLegacy.textContent = `${safe}%`;
+    }
+
+    if (btnLaunchLegacy && modalLegacy) {
+      btnLaunchLegacy.addEventListener("click", () => {
+        if (lblLegacySales) lblLegacySales.textContent = getActiveSalesName();
+        pendingLegacyParsedData = null;
+        pendingLegacyFileName = "";
+        if (lblLegacyFile) lblLegacyFile.textContent = "尚未選擇檔案";
+        if (inLegacyFile) inLegacyFile.value = "";
+        if (btnStartLegacy) {
+          btnStartLegacy.disabled = true;
+          btnStartLegacy.style.opacity = "0.55";
+          btnStartLegacy.style.cursor = "not-allowed";
+        }
+        setLegacyProgress(0);
+        if (logLegacy) logLegacy.value = "";
+        if (resBoxLegacy) {
+          resBoxLegacy.classList.add("hidden");
+          resBoxLegacy.innerHTML = "";
+        }
+        modalLegacy.classList.remove("hidden");
+      });
+    }
+
+    if (btnCloseLegacy && modalLegacy) {
+      btnCloseLegacy.addEventListener("click", () => modalLegacy.classList.add("hidden"));
+    }
+
+    if (btnBrowseLegacy && inLegacyFile) {
+      btnBrowseLegacy.addEventListener("click", () => {
+        inLegacyFile.value = "";
+        inLegacyFile.click();
+      });
+      inLegacyFile.addEventListener("change", async () => {
+        const file = inLegacyFile.files && inLegacyFile.files[0];
+        if (!file) return;
+        try {
+          if (lblLegacyFile) lblLegacyFile.textContent = `正在解析「${file.name}」...`;
+          if (logLegacy) logLegacy.value = `[準備中] 正在讀取工作表結構：${file.name}\n`;
+          setLegacyProgress(15);
+          const parsed = await parseExcelOrCsvFileInBrowser(file);
+          pendingLegacyParsedData = parsed;
+          pendingLegacyFileName = file.name;
+
+          const custRows = parsed.sheets["客戶資料庫"] || parsed.sheets["客戶資料"] || [];
+          const prodRows = parsed.sheets["經銷牌價表參考"] || parsed.sheets["產品資料"] || [];
+          let quoteRows = parsed.sheets["報價單資料庫"] || [];
+          if (quoteRows.length === 0 && parsed.firstSheetRows && parsed.firstSheetRows.length > 0) {
+            const firstHeader = parsed.firstSheetRows[0] || [];
+            if (firstHeader.includes("報價單編號") || firstHeader.includes("報價日期")) {
+              quoteRows = parsed.firstSheetRows;
+            }
+          }
+
+          if (logLegacy) {
+            logLegacy.value += `[偵測工作表] 全部工作表：${parsed.sheetNames.join("、")}\n`;
+            logLegacy.value += `  - [客戶資料庫] 列數：${custRows.length}\n`;
+            logLegacy.value += `  - [經銷牌價表參考] 列數：${prodRows.length}\n`;
+            logLegacy.value += `  - [報價單資料庫] 列數：${quoteRows.length}\n`;
+          }
+          if (lblLegacyFile) lblLegacyFile.textContent = file.name;
+          if (btnStartLegacy) {
+            btnStartLegacy.disabled = false;
+            btnStartLegacy.style.opacity = "1";
+            btnStartLegacy.style.cursor = "pointer";
+          }
+          setLegacyProgress(0);
+        } catch (err) {
+          if (lblLegacyFile) lblLegacyFile.textContent = "解析失敗，請重新選擇檔案";
+          alert("[讀取 Excel 失敗] " + err.message);
+        }
+      });
+    }
+
+    if (btnStartLegacy) {
+      btnStartLegacy.addEventListener("click", async () => {
+        if (!pendingLegacyParsedData) return;
+        const activeSales = getActiveSalesName();
+        const customersRows = pendingLegacyParsedData.sheets["客戶資料庫"] || pendingLegacyParsedData.sheets["客戶資料"] || [];
+        const productsRows = pendingLegacyParsedData.sheets["經銷牌價表參考"] || pendingLegacyParsedData.sheets["產品資料"] || [];
+        let quotationsRows = pendingLegacyParsedData.sheets["報價單資料庫"] || [];
+        if (quotationsRows.length === 0 && pendingLegacyParsedData.firstSheetRows && pendingLegacyParsedData.firstSheetRows.length > 0) {
+          const firstHeader = pendingLegacyParsedData.firstSheetRows[0] || [];
+          if (firstHeader.includes("報價單編號") || firstHeader.includes("報價日期")) {
+            quotationsRows = pendingLegacyParsedData.firstSheetRows;
+          }
+        }
+
+        if (!confirm(`【二次確認】即將把「${pendingLegacyFileName}」匯入為【${activeSales}】名下歷史資料。\n\n・客戶資料庫列數：${customersRows.length}\n・產品牌價列數：${productsRows.length}\n・報價單明細列數：${quotationsRows.length}\n\n確定開始三階段匯入嗎？`)) {
+          return;
+        }
+
+        btnStartLegacy.disabled = true;
+        btnStartLegacy.style.opacity = "0.55";
+        setLegacyProgress(40);
+        if (logLegacy) logLegacy.value += `\n[開始執行] 正在為【${activeSales}】寫入資料，請稍候...\n`;
+
+        try {
+          const resp = await fetch("/api/batch/import-legacy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sales_name: activeSales,
+              customers_rows: customersRows,
+              products_rows: productsRows,
+              quotations_rows: quotationsRows
+            })
+          });
+          const res = await resp.json();
+          if (!resp.ok) throw new Error(res.detail || "三階段匯入失敗");
+
+          setLegacyProgress(100);
+          if (logLegacy && Array.isArray(res.logs)) {
+            logLegacy.value += res.logs.join("\n") + "\n";
+            logLegacy.scrollTop = logLegacy.scrollHeight;
+          }
+          if (resBoxLegacy) {
+            const errHtml = (Array.isArray(res.errors) && res.errors.length > 0)
+              ? `<div style="margin-top:8px; color:#b91c1c; font-weight:700;">[異常攔截 ${res.errors.length} 筆，已拒絕寫入]</div><div style="max-height:110px; overflow:auto; background:#fee2e2; padding:6px; border-radius:4px; margin-top:4px; font-size:12px;">${res.errors.map(escapeHtml).join("<br>")}</div>`
+              : `<div style="margin-top:6px; color:#059669; font-weight:700;">[驗證通過] 客戶、產品與歷史報價單皆無格式衝突！</div>`;
+            resBoxLegacy.innerHTML = `
+              <div style="font-weight:700;">${escapeHtml(res.message || "匯入完成")}</div>
+              <div style="font-size:12px; color:#475569; margin-top:4px;">客戶處理：${res.customer_count || 0} 筆 ｜ 產品新增/更新：${res.product_new_count || 0}/${res.product_update_count || 0} 筆 ｜ 新增報價單：${res.quote_imported_count || 0} 張 ｜ 略過既有單號：${res.skipped_count || 0} 張</div>
+              ${errHtml}
+            `;
+            resBoxLegacy.classList.remove("hidden");
+          }
+          await refreshAllAfterBatchImport();
+        } catch (err) {
+          setLegacyProgress(0);
+          alert("[三階段匯入失敗] " + err.message);
+        } finally {
+          btnStartLegacy.disabled = false;
+          btnStartLegacy.style.opacity = "1";
+        }
+      });
+    }
 
     const btnCheckUpd = document.getElementById("btnCheckSystemUpdate");
     if (btnCheckUpd) {
@@ -10484,12 +11553,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const HELP_CHANGELOG_HTML = `
     <h2 class="help-h2">[履歷] 系統升級與修復履歷 (Changelog)</h2>
-    <div style="color:#27ae60; font-weight:700; font-size:1.02rem; margin:10px 0 8px 0;">v5.5.1.6 / PWA v1.0.54 雲端分流與內建資料架構版 (2026/11)</div>
+    <div style="color:#27ae60; font-weight:700; font-size:1.02rem; margin:10px 0 8px 0;">v5.5.1.6 / PWA v1.0.55 批次 Excel 匯入與三階段匯入精靈版 (2026/11)</div>
     <ul style="line-height:1.85; padding-left:20px; margin-bottom:18px;">
-      <li><strong>PWA 業務系統全新雲端分流資料庫</strong>：建立「00_全體共用區」(共通標準品與系統設定) 與「01_業務個人資料區/&lt;業務姓名&gt;」(個人客戶、報價單、草稿、個人特殊品) 集中同步架構。</li>
-      <li><strong>內建基準資料引擎 (GitHub Pages 離線零伺服器可用)</strong>：前端直接載入壓縮基準種子檔與瀏覽器本機增量層，無須本機伺服器即可立即瀏覽 9,976 筆標準品、各業務客戶與歷史報價分析。</li>
-      <li><strong>同公司跨業務獨立建檔</strong>：將客戶主檔唯一鍵升級為「業務姓名 + 公司名稱」，同一業務名下公司不可重複，但不同業務可各自建立同名公司資料且互不覆蓋。</li>
-      <li><strong>全系統 9 大功能頁 1:1 完整還原</strong>：新建報價單、手機報價草稿覆核區、報價單管理、大數據分析戰略駕駛艙、歷史單價分析、客戶管理、產品管理(含 4x5 小算盤)、系統設定(5 大子分頁)、使用說明(10 大操作手冊主題 + 版次履歷) 100% 對齊電腦版桌面軟體。</li>
+      <li><strong>批次資料管理 Excel 匯入/匯出全面開通</strong>：支援桌面版 9 欄客戶 Excel、6 欄產品 Excel 的整批匯入與匯出備份（含 <code>.xlsx</code>、<code>.xlsm</code>、<code>.csv</code>），並在靜態 GitHub Pages 與本機伺服器皆可直接使用。</li>
+      <li><strong>歷史報價單三階段智慧匯入精靈</strong>：1:1 還原桌面版三階段精靈（<code>[客戶資料庫]</code> ➔ <code>[經銷牌價表參考]</code> ➔ <code>[報價單資料庫]</code>），自動依當前業務員獨立寫入，具備日期格式檢查、客戶衝突攔截與已存在單號防重略過保護。</li>
+      <li><strong>PWA 業務系統全新雲端分流資料庫與內建資料架構 (v1.0.54)</strong>：建立「00_全體共用區」與「01_業務個人資料區/&lt;業務姓名&gt;」集中同步架構，同業務名下公司不可重複、不同業務可各自建檔互不覆蓋。</li>
     </ul>
     <div style="color:#27ae60; font-weight:700; font-size:1.02rem; margin:10px 0 8px 0;">v5.5.0.8 版本更新 (2026/09)</div>
     <ul style="line-height:1.85; padding-left:20px;">

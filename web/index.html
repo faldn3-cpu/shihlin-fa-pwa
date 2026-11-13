@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261113_v1_0_54" />
+  <link rel="stylesheet" href="css/style.css?v=20261113_v1_0_55" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -144,7 +144,7 @@
           <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
           <div class="drawer-divider"></div>
           <div class="drawer-version-tag">
-            <span class="version-text">士林電機 FA 業務系統 v1.0.54</span>
+            <span class="version-text">士林電機 FA 業務系統 v1.0.55</span>
             <button id="btnClearCacheDrawer" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
               <svg class="icon-svg-xs" viewBox="0 0 24 24">
                 <path
@@ -2149,8 +2149,10 @@
               </fieldset>
 
               <div style="font-size:13px; color:#7f8c8d; line-height:1.6; margin-top:8px;">
-                提示：匯入時將自動略過標題列(第1列)。<br>資料量大時請稍候，系統將顯示進度條。
+                提示：匯入時將自動略過標題列(第1列)。支援桌面版匯出之 Excel (.xlsx / .xlsm) 與 CSV 檔。<br>資料量大時請稍候，系統將顯示進度條。
               </div>
+              <input type="file" id="inputBatchCustExcelFile" accept=".xlsx,.xlsm,.csv" class="hidden" />
+              <input type="file" id="inputBatchProdExcelFile" accept=".xlsx,.xlsm,.csv" class="hidden" />
             </div>
 
             <!-- 子分頁 3：資料庫與封存設定 (附圖 9) -->
@@ -2221,10 +2223,10 @@
               <fieldset class="pyside-groupbox pyside-full-groupbox">
                 <legend class="pyside-groupbox-legend">當前版本資訊</legend>
                 <div style="line-height:1.9; font-size:14px;">
-                  <div style="color:var(--color-accent); font-weight:700; font-size:15px;">目前版本 : v1.0.54 (對齊桌面版
+                  <div style="color:var(--color-accent); font-weight:700; font-size:15px;">目前版本 : v1.0.55 (對齊桌面版
                     v5.5.1.6)</div>
-                  <div>更新內容 : 新增 PWA業務系統 雲端分流資料庫、內建基準資料引擎與同公司跨業務獨立建檔架構</div>
-                  <div>發布時間 : 2026-11-13 16:30:00</div>
+                  <div>更新內容 : 全面開通「批次資料管理」Excel 匯入/匯出與歷史報價單三階段智慧匯入精靈</div>
+                  <div>發布時間 : 2026-11-13 17:00:00</div>
                 </div>
               </fieldset>
 
@@ -2579,7 +2581,7 @@
           </div>
 
           <div class="settings-version-tag">
-            <span class="version-text">系統版本：v1.0.54 (對齊桌面版 v5.5.1.6)</span>
+            <span class="version-text">系統版本：v1.0.55 (對齊桌面版 v5.5.1.6)</span>
             <button id="btnClearCacheSettings" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
               <svg class="icon-svg-xs" viewBox="0 0 24 24">
                 <path
@@ -3561,17 +3563,59 @@
     </div>
   </div>
 
+  <!-- 歷史報價單三階段匯入精靈彈跳視窗 (v1.0.55 新增) -->
+  <div id="modalLegacyImporter" class="legacy-importer-modal hidden" role="dialog" aria-modal="true"
+    aria-labelledby="lblLegacyImporterTitle">
+    <div class="legacy-importer-card">
+      <div class="legacy-importer-header">
+        <div style="font-size:1.05rem; font-weight:700;" id="lblLegacyImporterTitle">系統管理 - 歷史資料三階段匯入精靈</div>
+        <button type="button" id="btnCloseLegacyImporterModal" class="fluent-btn secondary"
+          style="padding:4px 12px;">關閉</button>
+      </div>
+
+      <div class="legacy-importer-info">
+        <div><strong>[智慧匯入說明]</strong> 目前資料將歸入業務員：<strong id="lblLegacyTargetSales"
+            style="color:#0284c7;">曾維崧</strong> 名下</div>
+        <div>1. 匯入客戶主檔 (工作表：<code>[客戶資料庫]</code>)</div>
+        <div>2. 匯入產品庫與牌價 (工作表：<code>[經銷牌價表參考]</code>)</div>
+        <div>3. 匯入歷史報價單明細 (工作表：<code>[報價單資料庫]</code> 或單一報價明細工作表)</div>
+        <div style="color:#b45309; margin-top:4px;">注意：已存在於系統之單號會自動略過，不同業務員之間資料完全獨立。</div>
+      </div>
+
+      <div class="legacy-importer-file-row">
+        <button type="button" id="btnBrowseLegacyExcelFile" class="fluent-btn secondary">選擇 Excel 檔案 (.xlsx / .xlsm / .csv)</button>
+        <span id="lblLegacyExcelFileName" style="font-size:13px; color:#64748b;">尚未選擇檔案</span>
+        <input type="file" id="inputLegacyExcelFile" accept=".xlsx,.xlsm,.csv" class="hidden" />
+      </div>
+
+      <button type="button" id="btnStartLegacyThreeStageImport" class="btn-pyside-purple-pill" disabled
+        style="opacity:0.55; cursor:not-allowed;">開始三階段自動匯入</button>
+
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div class="legacy-importer-progress-wrap" style="flex:1;">
+          <div id="legacyImportProgressBar" class="legacy-importer-progress-fill"></div>
+        </div>
+        <span id="lblLegacyProgressPct" style="font-size:12px; font-weight:700; min-width:38px;">0%</span>
+      </div>
+
+      <textarea id="txtLegacyImportLog" class="legacy-importer-log" readonly
+        placeholder="執行日誌將顯示於此..."></textarea>
+
+      <div id="legacyImportResultBox" class="legacy-importer-result hidden"></div>
+    </div>
+  </div>
+
   <!-- 身分切換輕量通知浮動橫幅 -->
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261113_v1_0_54"></script>
+  <script src="js/app.js?v=20261113_v1_0_55"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261113_v1_0_54')
+        navigator.serviceWorker.register('./sw.js?v=20261113_v1_0_55')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

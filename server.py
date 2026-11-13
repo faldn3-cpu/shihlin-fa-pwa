@@ -656,6 +656,25 @@ def api_update_driver_settings(req_data: DriverUpdateSettingsRequest):
 
 
 # ==============================================================================
+# 集中管理模式 (一人一資料夾) 與雲端硬碟「PWA業務系統」同步 API
+# ==============================================================================
+
+@app.get("/api/centralized-store/status")
+def api_get_centralized_store_status():
+    """取得目前集中管理模式資料夾統計資訊"""
+    return data_access.get_centralized_storage_summary()
+
+
+@app.post("/api/centralized-store/sync")
+def api_sync_centralized_store():
+    """執行本機一人一資料夾匯出、更新內建基準資料並同步上傳至 Google 雲端硬碟"""
+    try:
+        return data_access.sync_to_gdrive_pwa_folder("PWA業務系統")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"同步集中管理資料夾失敗: {e}")
+
+
+# ==============================================================================
 # 前端靜態網頁託管
 # ==============================================================================
 
@@ -677,6 +696,8 @@ if WEB_DIR.exists():
         app.mount("/css", StaticFiles(directory=str(WEB_DIR / "css")), name="css")
     if (WEB_DIR / "js").exists():
         app.mount("/js", StaticFiles(directory=str(WEB_DIR / "js")), name="js")
+    if (WEB_DIR / "data").exists():
+        app.mount("/data", StaticFiles(directory=str(WEB_DIR / "data")), name="data")
 
 @app.get("/manifest.json")
 def serve_manifest():

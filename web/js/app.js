@@ -18,6 +18,883 @@ document.addEventListener("DOMContentLoaded", () => {
   let dealsCache = [];
 
   // ============================================================================
+  // 0. 內建基準資料庫與集中分流本地引擎 (v1.0.54 新增)
+  //    使 GitHub Pages 靜態正式站無須本機後端，也能載入完整標準品、客戶、報價單與大數據統計，
+  //    並嚴格落實「同一業務名下公司不可重複，不同業務可各自獨立建同名公司」。
+  // ============================================================================
+  const CENTRALIZED_LOCAL_STORAGE_KEY = "shihlin_pwa_centralized_store_v2";
+  const DEFAULT_QUOTATION_TERMS_TEXT = [
+    "1. 交貨期限：收到正式訂單後 7~14 個工作天內交貨（特殊訂製品依雙方確認交期為準）。",
+    "2. 交貨地點：貴公司指定之台灣本島廠區（一樓平面卸貨）。",
+    "3. 付款條件：依報價單表頭所載之付款方式辦理。",
+    "4. 保固期限：自交貨日起正常使用下保固壹年（消耗性零件及天災、人為操作不當除外）。",
+    "5. 驗收標準：依原廠出廠標準規格書驗收，貨到 7 日內若無書面異議視為驗收合格。",
+    "6. 本報價單不含現場安裝配線、試車及教育訓練費用（除明細另有註明外）。",
+    "7. 本報價單有效期限如表頭所示，逾期或原物料劇烈波動時本公司保留重新報價之權利。",
+    "8. 訂單確認後請簽名蓋章回傳，即視同正式買賣契約成立。"
+  ].join("\n");
+
+  function initBuiltinDatabaseEngine() {
+    if (window.__shihlinBuiltinDbInstalled) return;
+    window.__shihlinBuiltinDbInstalled = true;
+
+    const origFetch = window.fetch.bind(window);
+    const isStaticEnvironment =
+      window.location.hostname.includes("github.io") ||
+      window.location.protocol === "file:";
+
+    let storeMem = null;
+    let storeLoadPromise = null;
+
+    function createEmptyStore() {
+      return {
+        version: "v1.0.54",
+        generated_at: new Date().toISOString(),
+        salespersons: ["曾維崧", "何宛茹", "張何達", "張書偉", "曾仁君", "楊家豪", "溫達仁", "莊富丞", "葉仁豪", "邱文輝", "黃柏翰"],
+        products: [],
+        settings: {},
+        customers_by_sales: {},
+        quotations_by_sales: {},
+        drafts_by_sales: {},
+        special_products_by_sales: {},
+        daily_reports_by_sales: {},
+        deals_by_sales: {}
+      };
+    }
+
+    function persistLocalDelta(store) {
+      try {
+        // 避免將數千筆標準品重複塞入 localStorage 配額，僅保存增量與個人業務異動層
+        const deltaPayload = {
+          version: "v1.0.54",
+          saved_at: new Date().toISOString(),
+          extra_products: Array.isArray(store._extra_products) ? store._extra_products : [],
+          settings: store.settings || {},
+          customers_by_sales: store.customers_by_sales || {},
+          quotations_by_sales: store.quotations_by_sales || {},
+          drafts_by_sales: store.drafts_by_sales || {},
+          special_products_by_sales: store.special_products_by_sales || {},
+          daily_reports_by_sales: store.daily_reports_by_sales || {},
+          deals_by_sales: store.deals_by_sales || {}
+        };
+        localStorage.setItem(CENTRALIZED_LOCAL_STORAGE_KEY, JSON.stringify(deltaPayload));
+      } catch (err) {
+        console.warn("[內建資料庫] 寫入瀏覽器本機儲存空間失敗:", err);
+      }
+    }
+
+    async function ensureSeedLoaded() {
+      if (storeMem) return storeMem;
+      if (storeLoadPromise) return storeLoadPromise;
+
+      storeLoadPromise = (async () => {
+        const baseStore = createEmptyStore();
+        try {
+          const seedResp = await origFetch("./data/builtin_seed_db.json?v=20261113_v1_0_54");
+          if (seedResp && seedResp.ok) {
+            const seedJson = await seedResp.json();
+            if (seedJson && typeof seedJson === "object") {
+              baseStore.generated_at = seedJson.generated_at || baseStore.generated_at;
+              baseStore.salespersons = Array.isArray(seedJson.salespersons) ? seedJson.salespersons : baseStore.salespersons;
+              baseStore.products = Array.isArray(seedJson.products) ? seedJson.products : [];
+              baseStore.settings = seedJson.settings && typeof seedJson.settings === "object" ? { ...seedJson.settings } : {};
+              baseStore.customers_by_sales = seedJson.customers_by_sales && typeof seedJson.customers_by_sales === "object" ? seedJson.customers_by_sales : {};
+              baseStore.quotations_by_sales = seedJson.quotations_by_sales && typeof seedJson.quotations_by_sales === "object" ? seedJson.quotations_by_sales : {};
+              baseStore.drafts_by_sales = seedJson.drafts_by_sales && typeof seedJson.drafts_by_sales === "object" ? seedJson.drafts_by_sales : {};
+              baseStore.special_products_by_sales = seedJson.special_products_by_sales && typeof seedJson.special_products_by_sales === "object" ? seedJson.special_products_by_sales : {};
+            }
+          }
+        } catch (err) {
+          console.warn("[內建資料庫] 載入 builtin_seed_db.json 失敗，改以空白基準與本地異動層啟動:", err);
+        }
+
+        // 疊加瀏覽器本機異動層 (確保業務在網頁新建/修改的資料於重整後保留)
+        try {
+          const rawDelta = localStorage.getItem(CENTRALIZED_LOCAL_STORAGE_KEY);
+          if (rawDelta) {
+            const delta = JSON.parse(rawDelta);
+            if (delta && typeof delta === "object") {
+              if (Array.isArray(delta.extra_products) && delta.extra_products.length > 0) {
+                baseStore._extra_products = delta.extra_products;
+                const prodMap = new Map(baseStore.products.map(p => [String(p.model_no || "").toUpperCase(), p]));
+                delta.extra_products.forEach(ep => {
+                  const key = String(ep.model_no || "").toUpperCase();
+                  if (key) prodMap.set(key, ep);
+                });
+                baseStore.products = Array.from(prodMap.values());
+              }
+              if (delta.settings && typeof delta.settings === "object") {
+                baseStore.settings = { ...baseStore.settings, ...delta.settings };
+              }
+              ["customers_by_sales", "quotations_by_sales", "drafts_by_sales", "special_products_by_sales", "daily_reports_by_sales", "deals_by_sales"].forEach(bucket => {
+                if (delta[bucket] && typeof delta[bucket] === "object") {
+                  baseStore[bucket] = { ...baseStore[bucket], ...delta[bucket] };
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.warn("[內建資料庫] 解析本地增量層失敗:", e);
+        }
+
+        storeMem = baseStore;
+        return storeMem;
+      })();
+
+      return storeLoadPromise;
+    }
+
+    function jsonResponse(data, status = 200) {
+      return new Response(JSON.stringify(data), {
+        status,
+        headers: { "Content-Type": "application/json; charset=utf-8" }
+      });
+    }
+
+    function getFinanceSettingsPayload(store) {
+      const kv = store.settings || {};
+      const rawDigit = parseInt(kv.round_digits ?? "2", 10);
+      const factorMap = { 0: 1, 1: 10, 2: 100, 3: 1000 };
+      const roundFactor = factorMap[rawDigit] || ([1, 10, 100, 1000].includes(rawDigit) ? rawDigit : 100);
+      const labelMap = { 1: "個位數", 10: "十位數", 100: "百位數", 1000: "千位數" };
+      let roundMode = String(kv.round_mode || "無條件捨去");
+      if (roundMode.toUpperCase() === "FLOOR") roundMode = "無條件捨去";
+      else if (roundMode.toUpperCase() === "CEIL" || roundMode.toUpperCase() === "CEILING") roundMode = "無條件進位";
+      else if (roundMode.toUpperCase() === "ROUND") roundMode = "四捨五入";
+      const terms = String(kv.quote_terms || "").trim() || DEFAULT_QUOTATION_TERMS_TEXT;
+
+      return {
+        tax_rate: parseFloat(kv.tax_rate ?? "5.0"),
+        round_digits: isNaN(rawDigit) ? 2 : rawDigit,
+        round_factor: roundFactor,
+        round_digit_label: labelMap[roundFactor] || "百位數",
+        round_mode: roundMode,
+        customer_sort_mode: kv.customer_sort_mode || "常用客戶優先",
+        round_summary_text: `捨入：${labelMap[roundFactor] || "百位數"} / ${roundMode}`,
+        stock_updated_at: kv.stock_updated_at || "10/15 10:12",
+        quote_terms: terms
+      };
+    }
+
+    function computeNextId(list) {
+      return list.reduce((mx, item) => Math.max(mx, Number(item.id) || 0), 0) + 1;
+    }
+
+    function normalizeSales(raw) {
+      const s = String(raw || "").trim();
+      return s || "曾維崧";
+    }
+
+    function ensureCustomerBucket(store, salesName) {
+      const s = normalizeSales(salesName);
+      if (!Array.isArray(store.customers_by_sales[s])) store.customers_by_sales[s] = [];
+      return store.customers_by_sales[s];
+    }
+
+    function ensureQuoteBucket(store, salesName) {
+      const s = normalizeSales(salesName);
+      if (!Array.isArray(store.quotations_by_sales[s])) store.quotations_by_sales[s] = [];
+      return store.quotations_by_sales[s];
+    }
+
+    function ensureDraftBucket(store, salesName) {
+      const s = normalizeSales(salesName);
+      if (!Array.isArray(store.drafts_by_sales[s])) store.drafts_by_sales[s] = [];
+      return store.drafts_by_sales[s];
+    }
+
+    function ensureSpecialBucket(store, salesName) {
+      const s = normalizeSales(salesName);
+      if (!Array.isArray(store.special_products_by_sales[s])) store.special_products_by_sales[s] = [];
+      return store.special_products_by_sales[s];
+    }
+
+    function saveCustomerScoped(store, payload) {
+      const ownerSales = normalizeSales(payload.owner_sales || payload.sales_name);
+      const compName = String(payload.name || "").trim();
+      if (!compName) return { ok: false, message: "請輸入客戶公司名稱", id: null };
+
+      const bucket = ensureCustomerBucket(store, ownerSales);
+      const existing = bucket.find(c => String(c.name || "").trim() === compName);
+      const contactName = String(payload.contact_name || payload.default_contact || "").trim();
+      const contactMobile = String(payload.contact_mobile || "").trim();
+      const contactEmail = String(payload.contact_email || "").trim();
+
+      if (existing) {
+        existing.owner_sales = ownerSales;
+        if (payload.tax_id !== undefined) existing.tax_id = String(payload.tax_id || "").trim();
+        if (payload.phone !== undefined) existing.phone = String(payload.phone || "").trim();
+        if (payload.fax !== undefined) existing.fax = String(payload.fax || "").trim();
+        if (payload.address !== undefined) existing.address = String(payload.address || "").trim();
+        if (payload.payment_terms !== undefined) existing.payment_terms = String(payload.payment_terms || "月結 30 天電匯").trim();
+        if (payload.is_favorite !== undefined) existing.is_favorite = payload.is_favorite ? 1 : 0;
+        if (contactName) {
+          existing.default_contact = contactName;
+          if (!Array.isArray(existing.contacts)) existing.contacts = [];
+          const ctMatch = !payload.copy_as_new_contact
+            ? existing.contacts.find(ct => String(ct.name || "").trim() === contactName)
+            : null;
+          if (ctMatch) {
+            ctMatch.mobile = contactMobile || ctMatch.mobile || "";
+            ctMatch.email = contactEmail || ctMatch.email || "";
+          } else {
+            existing.contacts.push({ name: contactName, mobile: contactMobile, email: contactEmail });
+          }
+        }
+        persistLocalDelta(store);
+        return { ok: true, id: existing.id, message: `客戶「${compName}」已更新於【${ownerSales}】個人客戶庫！` };
+      }
+
+      const allCustIds = Object.values(store.customers_by_sales).flat();
+      const newCust = {
+        id: computeNextId(allCustIds),
+        name: compName,
+        owner_sales: ownerSales,
+        tax_id: String(payload.tax_id || "").trim(),
+        default_contact: contactName,
+        phone: String(payload.phone || "").trim(),
+        fax: String(payload.fax || "").trim(),
+        address: String(payload.address || "").trim(),
+        payment_terms: String(payload.payment_terms || "月結 30 天電匯").trim(),
+        status: payload.status || "active",
+        default_discount: 1.0,
+        is_favorite: payload.is_favorite ? 1 : 0,
+        contacts: contactName ? [{ name: contactName, email: contactEmail, mobile: contactMobile }] : []
+      };
+      bucket.push(newCust);
+      persistLocalDelta(store);
+      return { ok: true, id: newCust.id, message: `已於【${ownerSales}】名下建立客戶「${compName}」！` };
+    }
+
+    async function handleBuiltinApiRequest(urlObj, method, bodyObj) {
+      const store = await ensureSeedLoaded();
+      const pathname = urlObj.pathname;
+      const params = urlObj.searchParams;
+      const upperMethod = (method || "GET").toUpperCase();
+
+      // 1. 產品搜尋
+      if (pathname === "/api/products" && upperMethod === "GET") {
+        const qClean = (params.get("q") || "").trim().toLowerCase();
+        const limit = parseInt(params.get("limit") || "80", 10) || 80;
+        const targetSales = normalizeSales(params.get("sales_name"));
+        const stdModelSet = new Set(store.products.map(p => String(p.model_no || "").toUpperCase()));
+
+        const spList = ensureSpecialBucket(store, targetSales)
+          .filter(sp => !sp.is_archived && !stdModelSet.has(String(sp.model_no || "").toUpperCase()))
+          .filter(sp => !qClean || [sp.model_no, sp.spec, sp.note].some(v => String(v || "").toLowerCase().includes(qClean)))
+          .slice(0, qClean ? limit : Math.min(limit, 30))
+          .map(sp => ({ ...sp, is_special: 1, source_label: "個人特殊品", is_order_item: 0 }));
+
+        let stdMatches = store.products;
+        if (qClean) {
+          stdMatches = store.products.filter(p =>
+            [p.model_no, p.spec, p.sku].some(v => String(v || "").toLowerCase().includes(qClean))
+          ).sort((a, b) => {
+            const am = String(a.model_no || "").toLowerCase();
+            const bm = String(b.model_no || "").toLowerCase();
+            const aRank = am === qClean ? 0 : (am.startsWith(qClean) ? 1 : 2);
+            const bRank = bm === qClean ? 0 : (bm.startsWith(qClean) ? 1 : 2);
+            if (aRank !== bRank) return aRank - bRank;
+            return am.localeCompare(bm);
+          });
+        } else {
+          stdMatches = [...store.products].sort((a, b) => (Number(b.stock_qty) || 0) - (Number(a.stock_qty) || 0));
+        }
+        const remLimit = Math.max(10, limit - spList.length);
+        const stdRes = stdMatches.slice(0, remLimit).map(p => ({ ...p, is_special: 0, source_label: "共通標準品" }));
+        return jsonResponse([...spList, ...stdRes]);
+      }
+
+      // 2. 客戶清單 (依業務員隔離)
+      if (pathname === "/api/customers" && upperMethod === "GET") {
+        const kw = (params.get("keyword") || "").trim().toLowerCase();
+        const rawSales = (params.get("sales_name") || "").trim();
+        let list = [];
+        if (!rawSales || rawSales === "ALL") {
+          list = Object.values(store.customers_by_sales).flat();
+        } else {
+          list = ensureCustomerBucket(store, rawSales);
+        }
+        if (kw) {
+          list = list.filter(c => [c.name, c.tax_id, c.default_contact, c.phone].some(v => String(v || "").toLowerCase().includes(kw)));
+        }
+        const sorted = [...list].sort((a, b) => (Number(b.is_favorite) - Number(a.is_favorite)) || String(a.name || "").localeCompare(String(b.name || ""), "zh-Hant"));
+        return jsonResponse(sorted);
+      }
+
+      if ((pathname === "/api/customers" || pathname === "/api/quotation-customers") && upperMethod === "POST") {
+        const res = saveCustomerScoped(store, bodyObj || {});
+        if (!res.ok) return jsonResponse({ detail: res.message }, 400);
+        return jsonResponse({ status: "success", id: res.id, message: res.message });
+      }
+
+      if (pathname.startsWith("/api/quotation-customers/") && upperMethod === "DELETE") {
+        const cid = parseInt(pathname.split("/").pop(), 10);
+        const rawSales = (params.get("sales_name") || "").trim();
+        let removed = false;
+        const targetBuckets = rawSales ? [ensureCustomerBucket(store, rawSales)] : Object.values(store.customers_by_sales);
+        targetBuckets.forEach(bucket => {
+          const idx = bucket.findIndex(c => Number(c.id) === cid);
+          if (idx >= 0) {
+            bucket.splice(idx, 1);
+            removed = true;
+          }
+        });
+        if (!removed) return jsonResponse({ detail: "找不到指定的客戶或無權限刪除" }, 404);
+        persistLocalDelta(store);
+        return jsonResponse({ status: "success", message: "客戶資料已成功刪除" });
+      }
+
+      // 3. 供應商與系統財務/條款設定
+      if (pathname === "/api/quotation-supplier" && upperMethod === "GET") {
+        const sName = normalizeSales(params.get("sales_name"));
+        const key = `supplier_info_${sName}`;
+        let saved = {};
+        if (store.settings[key]) {
+          try { saved = JSON.parse(store.settings[key]); } catch (e) {}
+        }
+        return jsonResponse({
+          company: "士林電機廠股份有限公司",
+          tax: "11039306",
+          sales: sName,
+          phone: "03-590-5200",
+          fax: "03-590-2167",
+          mobile: "0955-016-706",
+          line: "0955016706",
+          email: "welsong@seec.com.tw",
+          address: "新竹縣新豐鄉中崙村七鄰234號",
+          custom1: "",
+          custom2: "",
+          ...saved
+        });
+      }
+
+      if (pathname === "/api/quotation-supplier" && upperMethod === "POST") {
+        const sName = normalizeSales(bodyObj?.sales_name || bodyObj?.sales);
+        const key = `supplier_info_${sName}`;
+        let prev = {};
+        if (store.settings[key]) {
+          try { prev = JSON.parse(store.settings[key]); } catch (e) {}
+        }
+        const merged = { ...prev, ...bodyObj };
+        store.settings[key] = JSON.stringify(merged);
+        persistLocalDelta(store);
+        return jsonResponse({ status: "success", supplier: merged, message: "供應商與業務簽名檔資訊已儲存" });
+      }
+
+      if (pathname === "/api/quotation-settings" && upperMethod === "GET") {
+        return jsonResponse(getFinanceSettingsPayload(store));
+      }
+
+      if (pathname === "/api/quotation-settings" && upperMethod === "POST") {
+        if (bodyObj && typeof bodyObj === "object") {
+          ["tax_rate", "round_digits", "round_mode", "customer_sort_mode", "quote_terms"].forEach(k => {
+            if (bodyObj[k] !== undefined && bodyObj[k] !== null) {
+              store.settings[k] = String(bodyObj[k]);
+            }
+          });
+          persistLocalDelta(store);
+        }
+        return jsonResponse({ status: "success", settings: getFinanceSettingsPayload(store), message: "報價系統設定已成功儲存" });
+      }
+
+      if (pathname === "/api/quotation-terms" && upperMethod === "GET") {
+        return jsonResponse({ status: "success", quote_terms: getFinanceSettingsPayload(store).quote_terms });
+      }
+
+      if (pathname === "/api/quotation-terms" && upperMethod === "POST") {
+        store.settings.quote_terms = String(bodyObj?.quote_terms || "");
+        persistLocalDelta(store);
+        return jsonResponse({ status: "success", quote_terms: store.settings.quote_terms, message: "交貨與驗收條款已成功儲存" });
+      }
+
+      // 4. 報價單查詢 / 新建 / 狀態 / 軟刪除 / 復原
+      if (pathname === "/api/quotations" && upperMethod === "GET") {
+        const rawSales = (params.get("sales_name") || "").trim();
+        const kw = (params.get("keyword") || "").trim().toLowerCase();
+        const statusFilter = (params.get("status") || "ALL").trim();
+        const includeDel = params.get("include_deleted") === "true";
+        const limit = parseInt(params.get("limit") || "200", 10) || 200;
+        let list = (!rawSales || rawSales === "ALL") ? Object.values(store.quotations_by_sales).flat() : ensureQuoteBucket(store, rawSales);
+        list = list.filter(q => {
+          if (!includeDel && Number(q.is_deleted) === 1) return false;
+          if (statusFilter && statusFilter !== "ALL" && String(q.status || "追蹤中") !== statusFilter) return false;
+          if (kw) {
+            return [q.quote_no, q.customer_name, q.contact_name, q.project_name].some(v => String(v || "").toLowerCase().includes(kw));
+          }
+          return true;
+        });
+        list = [...list].sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0)).slice(0, limit);
+        return jsonResponse(list);
+      }
+
+      if (pathname === "/api/quotations" && upperMethod === "POST") {
+        const header = bodyObj || {};
+        const sName = normalizeSales(header.sales_name);
+        const bucket = ensureQuoteBucket(store, sName);
+        const prefix = String(header.prefix || "QUOTE").trim();
+        const allQuotes = Object.values(store.quotations_by_sales).flat();
+        let seq = header.sequence != null ? parseInt(header.sequence, 10) : null;
+        let rev = 0;
+
+        if (seq === null || isNaN(seq)) {
+          const maxSeq = allQuotes.filter(q => q.prefix === prefix).reduce((m, q) => Math.max(m, Number(q.sequence) || 0), 0);
+          seq = maxSeq + 1;
+          rev = 0;
+        } else {
+          const maxRev = allQuotes.filter(q => q.prefix === prefix && Number(q.sequence) === seq).reduce((m, q) => Math.max(m, Number(q.revision) || 0), -1);
+          rev = maxRev + 1;
+        }
+
+        bucket.forEach(q => {
+          if (q.prefix === prefix && Number(q.sequence) === seq) q.is_latest = 0;
+        });
+
+        const quoteNo = `${prefix}-${String(seq).padStart(3, "0")}-${String(rev).padStart(2, "0")}`;
+        const items = (Array.isArray(header.items) ? header.items : []).map((it, idx) => ({
+          quote_no: quoteNo,
+          item_index: idx + 1,
+          model_no: it.model_no || "",
+          spec: it.spec || "",
+          dealer_price: Number(it.dealer_price) || 0,
+          discount_pct: it.discount_pct != null ? Number(it.discount_pct) : null,
+          expected_price: it.expected_price != null ? Number(it.expected_price) : null,
+          final_unit_price: Number(it.final_unit_price) || 0,
+          quantity: Number(it.quantity) || 1,
+          row_subtotal: Number(it.row_subtotal) || 0,
+          note_lead_time: it.note_lead_time || "",
+          is_won: 0,
+          is_lost: 0,
+          item_status: "pending",
+          lost_reason: null
+        }));
+
+        const nowStr = new Date().toISOString().slice(0, 19).replace("T", " ");
+        const newQuote = {
+          id: computeNextId(allQuotes),
+          quote_no: quoteNo,
+          prefix,
+          sequence: seq,
+          revision: rev,
+          deal_id: header.deal_id || null,
+          sales_name: sName,
+          quote_date: header.quote_date || nowStr.slice(0, 10),
+          valid_date: header.valid_date || nowStr.slice(0, 10),
+          customer_name: header.customer_name || "",
+          tax_id: header.tax_id || "",
+          contact_name: header.contact_name || "",
+          phone: header.phone || "",
+          fax: header.fax || "",
+          delivery_address: header.delivery_address || "",
+          payment_terms: header.payment_terms || "",
+          project_name: header.project_name || "",
+          project_type: header.project_type || "一次性專案",
+          subtotal: Number(header.subtotal) || 0,
+          tax_rate: Number(header.tax_rate) || 5.0,
+          tax_amount: Number(header.tax_amount) || 0,
+          grand_total: Number(header.grand_total) || 0,
+          status: header.status || "追蹤中",
+          is_latest: 1,
+          is_won: 0,
+          won_amount: 0,
+          won_date: null,
+          is_lost: 0,
+          is_ignored: 0,
+          lost_reason: null,
+          lost_memo: null,
+          source_type: "PWA_BUILTIN",
+          is_deleted: 0,
+          deleted_at: null,
+          created_at: nowStr,
+          updated_at: nowStr,
+          items
+        };
+        bucket.push(newQuote);
+
+        // 自動同步該業務客戶主檔 (同業務不重複、不同業務各自建)
+        if (newQuote.customer_name) {
+          saveCustomerScoped(store, {
+            name: newQuote.customer_name,
+            owner_sales: sName,
+            tax_id: newQuote.tax_id,
+            contact_name: newQuote.contact_name,
+            phone: newQuote.phone,
+            fax: newQuote.fax,
+            address: newQuote.delivery_address,
+            payment_terms: newQuote.payment_terms
+          });
+        } else {
+          persistLocalDelta(store);
+        }
+
+        return jsonResponse({ status: "success", quote_no: quoteNo, message: `報價單儲存成功：單號【${quoteNo}】` });
+      }
+
+      if (pathname.startsWith("/api/quotations/")) {
+        const subParts = pathname.replace("/api/quotations/", "").split("/");
+        const quoteNo = decodeURIComponent(subParts[0] || "");
+        const action = subParts[1] || "";
+        const allQuotes = Object.values(store.quotations_by_sales).flat();
+        const target = allQuotes.find(q => q.quote_no === quoteNo);
+        if (!target) return jsonResponse({ detail: "找不到指定的報價單" }, 404);
+
+        if (!action && upperMethod === "GET") {
+          return jsonResponse(target);
+        }
+        if (!action && upperMethod === "DELETE") {
+          target.is_deleted = 1;
+          target.deleted_at = new Date().toISOString().slice(0, 19).replace("T", " ");
+          persistLocalDelta(store);
+          return jsonResponse({ status: "success", message: `報價單【${quoteNo}】已成功移至垃圾桶` });
+        }
+        if (action === "restore" && upperMethod === "POST") {
+          target.is_deleted = 0;
+          target.deleted_at = null;
+          persistLocalDelta(store);
+          return jsonResponse({ status: "success", message: `報價單【${quoteNo}】已成功自垃圾桶復原` });
+        }
+        if (action === "status" && upperMethod === "POST") {
+          const st = String(bodyObj?.status || "追蹤中");
+          target.status = st;
+          target.is_won = st === "已成交" ? 1 : 0;
+          target.is_lost = (st === "已失注" || st === "未成交") ? 1 : 0;
+          target.is_ignored = (st === "不跟進" || st === "不計入") ? 1 : 0;
+          target.won_amount = st === "已成交" ? (Number(bodyObj?.won_amount) || Number(target.subtotal) || 0) : 0;
+          target.won_date = bodyObj?.won_date || (st === "已成交" ? new Date().toISOString().slice(0, 10) : null);
+          target.lost_reason = bodyObj?.lost_reason || null;
+          target.lost_memo = bodyObj?.lost_memo || null;
+          target.updated_at = new Date().toISOString().slice(0, 19).replace("T", " ");
+          persistLocalDelta(store);
+          return jsonResponse({ status: "success", message: `報價單【${quoteNo}】狀態已更新為「${st}」` });
+        }
+      }
+
+      // 5. 大數據戰略駕駛艙統計
+      if (pathname === "/api/quotation-dashboard" && upperMethod === "GET") {
+        const rawSales = (params.get("sales_name") || "").trim();
+        const latestOnly = params.get("latest_only") !== "false";
+        let list = (!rawSales || rawSales === "ALL") ? Object.values(store.quotations_by_sales).flat() : ensureQuoteBucket(store, rawSales);
+        list = list.filter(q => Number(q.is_deleted) === 0 && (!latestOnly || Number(q.is_latest) === 1));
+
+        let totalCount = 0, ignoredCount = 0, wonCount = 0, lostCount = 0, pendingCount = 0;
+        let totalQuoted = 0, wonSum = 0, lostSum = 0, pendingSum = 0;
+        const custStats = new Map();
+        const projStats = new Map();
+
+        list.forEach(r => {
+          const st = String(r.status || "追蹤中");
+          const isIgn = Number(r.is_ignored) === 1 || st === "不跟進" || st === "不計入";
+          if (isIgn) { ignoredCount += 1; return; }
+          const sub = Number(r.subtotal) || 0;
+          const wAmt = Number(r.won_amount) || 0;
+          const isW = Number(r.is_won) === 1 || st === "已成交";
+          const isL = Number(r.is_lost) === 1 || st === "已失注" || st === "未成交";
+          totalCount += 1;
+          totalQuoted += sub;
+
+          const cName = String(r.customer_name || "未命名客戶").trim();
+          const cs = custStats.get(cName) || { customer_name: cName, quote_count: 0, won_count: 0, total_quoted: 0, won_amount: 0, pending_amount: 0 };
+          cs.quote_count += 1;
+          cs.total_quoted += sub;
+
+          const pType = String(r.project_type || "一次性專案").trim();
+          const ps = projStats.get(pType) || { project_type: pType, quote_count: 0, total_quoted: 0, won_amount: 0 };
+          ps.quote_count += 1;
+          ps.total_quoted += sub;
+
+          if (isW) {
+            const actualW = wAmt > 0 ? wAmt : sub;
+            wonCount += 1; wonSum += actualW; cs.won_count += 1; cs.won_amount += actualW; ps.won_amount += actualW;
+          } else if (isL) {
+            lostCount += 1; lostSum += sub;
+          } else {
+            pendingCount += 1; pendingSum += sub; cs.pending_amount += sub;
+          }
+          custStats.set(cName, cs);
+          projStats.set(pType, ps);
+        });
+
+        const topCusts = Array.from(custStats.values())
+          .sort((a, b) => (b.won_amount - a.won_amount) || (b.total_quoted - a.total_quoted))
+          .slice(0, 15)
+          .map(tc => ({ ...tc, win_rate_pct: tc.quote_count > 0 ? Number(((tc.won_count / tc.quote_count) * 100).toFixed(1)) : 0 }));
+
+        return jsonResponse({
+          sales_name: rawSales || "全體",
+          total_count: totalCount,
+          ignored_count: ignoredCount,
+          won_count: wonCount,
+          lost_count: lostCount,
+          pending_count: pendingCount,
+          total_quoted_amount: Math.round(totalQuoted),
+          won_amount: Math.round(wonSum),
+          lost_amount: Math.round(lostSum),
+          pending_amount: Math.round(pendingSum),
+          win_rate_count_pct: totalCount > 0 ? Number(((wonCount / totalCount) * 100).toFixed(1)) : 0,
+          win_rate_amount_pct: totalQuoted > 0 ? Number(((wonSum / totalQuoted) * 100).toFixed(1)) : 0,
+          top_customers: topCusts,
+          project_types: Array.from(projStats.values()).sort((a, b) => b.total_quoted - a.total_quoted)
+        });
+      }
+
+      // 6. 歷史單價分析
+      if (pathname === "/api/price-analysis" && upperMethod === "GET") {
+        const rawSales = (params.get("sales_name") || "").trim();
+        const mk = (params.get("model_keyword") || "").trim().toLowerCase();
+        const ck = (params.get("customer_keyword") || "").trim().toLowerCase();
+        const limit = parseInt(params.get("limit") || "100", 10) || 100;
+        const list = (!rawSales || rawSales === "ALL") ? Object.values(store.quotations_by_sales).flat() : ensureQuoteBucket(store, rawSales);
+        const rows = [];
+        list.filter(q => Number(q.is_deleted) === 0).forEach(q => {
+          if (ck && !String(q.customer_name || "").toLowerCase().includes(ck)) return;
+          (q.items || []).forEach(it => {
+            if (it.model_no === "[小計]") return;
+            if (mk && ![it.model_no, it.spec].some(v => String(v || "").toLowerCase().includes(mk))) return;
+            rows.push({
+              model_no: it.model_no,
+              spec: it.spec,
+              dealer_price: it.dealer_price,
+              discount_pct: it.discount_pct,
+              final_unit_price: it.final_unit_price,
+              quantity: it.quantity,
+              row_subtotal: it.row_subtotal,
+              note_lead_time: it.note_lead_time,
+              quote_no: q.quote_no,
+              quote_date: q.quote_date,
+              customer_name: q.customer_name,
+              project_name: q.project_name,
+              status: q.status,
+              sales_name: q.sales_name
+            });
+          });
+        });
+        rows.sort((a, b) => String(b.quote_date || "").localeCompare(String(a.quote_date || "")));
+        return jsonResponse(rows.slice(0, limit));
+      }
+
+      // 7. 手機報價草稿匣
+      if (pathname === "/api/quotation-drafts" && upperMethod === "GET") {
+        const sName = normalizeSales(params.get("sales_name"));
+        const list = [...ensureDraftBucket(store, sName)].sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+        return jsonResponse(list);
+      }
+
+      if (pathname === "/api/quotation-drafts" && upperMethod === "POST") {
+        const sName = normalizeSales(bodyObj?.sales_name);
+        const bucket = ensureDraftBucket(store, sName);
+        const allDrafts = Object.values(store.drafts_by_sales).flat();
+        const itemsList = Array.isArray(bodyObj?.items) ? bodyObj.items : [];
+        const newDraft = {
+          id: computeNextId(allDrafts),
+          sales_name: sName,
+          customer_id: bodyObj?.customer_id || null,
+          customer_name: bodyObj?.customer_name || "未命名客戶",
+          tax_id: bodyObj?.tax_id || "",
+          contact_name: bodyObj?.contact_name || "",
+          phone: bodyObj?.phone || "",
+          fax: bodyObj?.fax || "",
+          delivery_address: bodyObj?.delivery_address || "",
+          payment_terms: bodyObj?.payment_terms || "",
+          project_name: bodyObj?.project_name || "",
+          project_type: bodyObj?.project_type || "一次性專案",
+          items: itemsList,
+          subtotal: Number(bodyObj?.subtotal) || 0,
+          item_count: itemsList.length,
+          status: "pending",
+          created_at: new Date().toISOString().slice(0, 19).replace("T", " ")
+        };
+        bucket.push(newDraft);
+        persistLocalDelta(store);
+        return jsonResponse({ status: "success", draft_id: newDraft.id, message: "手機報價草稿已存入本機資料庫！" });
+      }
+
+      if (pathname === "/api/quotation-drafts" && upperMethod === "DELETE") {
+        const sName = normalizeSales(params.get("sales_name"));
+        const bucket = ensureDraftBucket(store, sName);
+        const cnt = bucket.length;
+        store.drafts_by_sales[sName] = [];
+        persistLocalDelta(store);
+        return jsonResponse({ status: "success", deleted_count: cnt, message: "已清空您的手機報價草稿匣" });
+      }
+
+      if (pathname.startsWith("/api/quotation-drafts/") && upperMethod === "DELETE") {
+        const draftId = parseInt(pathname.split("/").pop(), 10);
+        const sName = normalizeSales(params.get("sales_name"));
+        const bucket = ensureDraftBucket(store, sName);
+        const idx = bucket.findIndex(d => Number(d.id) === draftId);
+        if (idx >= 0) {
+          bucket.splice(idx, 1);
+          persistLocalDelta(store);
+        }
+        return jsonResponse({ status: "success", message: "手機草稿已刪除" });
+      }
+
+      // 8. 個人特殊品與方案 A 轉標準品
+      if (pathname === "/api/special-products" && upperMethod === "GET") {
+        const sName = normalizeSales(params.get("sales_name"));
+        const includeArch = params.get("include_archived") !== "false";
+        const bucket = ensureSpecialBucket(store, sName);
+        return jsonResponse(includeArch ? bucket : bucket.filter(sp => !sp.is_archived));
+      }
+
+      if (pathname === "/api/special-products" && upperMethod === "POST") {
+        const sName = normalizeSales(bodyObj?.owner_sales || bodyObj?.sales_name);
+        const modelNo = String(bodyObj?.model_no || "").trim();
+        if (!modelNo) return jsonResponse({ detail: "請輸入特殊品型號" }, 400);
+        const bucket = ensureSpecialBucket(store, sName);
+        const allSp = Object.values(store.special_products_by_sales).flat();
+        const existing = bucket.find(sp => String(sp.model_no || "").toUpperCase() === modelNo.toUpperCase() && !sp.is_archived);
+        if (existing) {
+          existing.spec = bodyObj?.spec || existing.spec || "";
+          existing.dealer_price = Number(bodyObj?.dealer_price) || existing.dealer_price || 0;
+          existing.stock_qty = Number(bodyObj?.stock_qty) || 0;
+          existing.note = bodyObj?.note || "";
+          persistLocalDelta(store);
+          return jsonResponse({ status: "success", id: existing.id, message: `已更新個人特殊品「${modelNo}」` });
+        }
+        const newSp = {
+          id: computeNextId(allSp),
+          owner_sales: sName,
+          model_no: modelNo,
+          spec: bodyObj?.spec || "",
+          dealer_price: Number(bodyObj?.dealer_price) || 0,
+          stock_qty: Number(bodyObj?.stock_qty) || 0,
+          note: bodyObj?.note || "",
+          is_archived: 0
+        };
+        bucket.push(newSp);
+        persistLocalDelta(store);
+        return jsonResponse({ status: "success", id: newSp.id, message: `已建立【${sName}】個人特殊品「${modelNo}」` });
+      }
+
+      if (pathname.startsWith("/api/special-products/") && pathname.endsWith("/promote") && upperMethod === "POST") {
+        const parts = pathname.split("/");
+        const spId = parseInt(parts[3], 10);
+        const allSp = Object.values(store.special_products_by_sales).flat();
+        const sp = allSp.find(x => Number(x.id) === spId);
+        if (!sp) return jsonResponse({ detail: "找不到指定的個人特殊品" }, 404);
+        const stdPrice = Number(bodyObj?.standard_dealer_price || sp.dealer_price || 0);
+        const newStd = {
+          model_no: sp.model_no,
+          spec: sp.spec || sp.model_no,
+          list_price: stdPrice * 2,
+          dealer_price: stdPrice,
+          stock_qty: sp.stock_qty || 0,
+          sku: "",
+          category: "",
+          is_order_item: 0,
+          stock_status: "IN_STOCK"
+        };
+        store.products = store.products.filter(p => String(p.model_no || "").toUpperCase() !== String(sp.model_no || "").toUpperCase());
+        store.products.unshift(newStd);
+        if (!Array.isArray(store._extra_products)) store._extra_products = [];
+        store._extra_products.push(newStd);
+        allSp.forEach(item => {
+          if (String(item.model_no || "").toUpperCase() === String(sp.model_no || "").toUpperCase()) {
+            item.is_archived = 1;
+            item.archived_standard_price = stdPrice;
+            item.archived_at = new Date().toISOString().slice(0, 19).replace("T", " ");
+            item.archived_note = "已發行成為公司共通標準品 (方案A)";
+          }
+        });
+        persistLocalDelta(store);
+        return jsonResponse({ status: "success", message: `【${sp.model_no}】已正式發行至共通標準牌價表並自動封存個人特殊品！` });
+      }
+
+      if (pathname.startsWith("/api/special-products/") && upperMethod === "DELETE") {
+        const spId = parseInt(pathname.split("/").pop(), 10);
+        const sName = normalizeSales(params.get("sales_name"));
+        const bucket = ensureSpecialBucket(store, sName);
+        const idx = bucket.findIndex(sp => Number(sp.id) === spId);
+        if (idx >= 0) {
+          bucket.splice(idx, 1);
+          persistLocalDelta(store);
+        }
+        return jsonResponse({ status: "success", message: "個人特殊品已刪除" });
+      }
+
+      // 9. 日報 / 案件 / 驅動指標 / 集中雲端狀態
+      if (pathname === "/api/daily-reports" && upperMethod === "GET") {
+        const list = Object.values(store.daily_reports_by_sales).flat();
+        return jsonResponse(list);
+      }
+      if (pathname === "/api/daily-reports" && upperMethod === "POST") {
+        const sName = normalizeSales(bodyObj?.sales_name);
+        if (!Array.isArray(store.daily_reports_by_sales[sName])) store.daily_reports_by_sales[sName] = [];
+        const allRep = Object.values(store.daily_reports_by_sales).flat();
+        const rep = { id: computeNextId(allRep), ...(bodyObj || {}) };
+        store.daily_reports_by_sales[sName].unshift(rep);
+        persistLocalDelta(store);
+        return jsonResponse({ status: "success", daily_report_id: rep.id, message: "日報已儲存至瀏覽器本機資料庫" });
+      }
+      if (pathname === "/api/deals" && upperMethod === "GET") {
+        return jsonResponse(Object.values(store.deals_by_sales).flat());
+      }
+      if (pathname === "/api/scoreboard/drivers" && upperMethod === "GET") {
+        const sName = normalizeSales(params.get("sales_name"));
+        return jsonResponse({ status: "success", sales_name: sName, drivers: [] });
+      }
+      if (pathname === "/api/scoreboard/drivers/requests" && upperMethod === "GET") {
+        return jsonResponse([]);
+      }
+      if (pathname === "/api/centralized-store/status" && upperMethod === "GET") {
+        return jsonResponse({
+          status: "success",
+          mode: "builtin_seed_and_local_store",
+          root_folder: "PWA業務系統",
+          product_count: store.products.length,
+          salespersons: store.salespersons
+        });
+      }
+      if (pathname === "/api/centralized-store/sync" && upperMethod === "POST") {
+        persistLocalDelta(store);
+        return jsonResponse({ status: "success", message: "已完成本機與內建基準資料整理存檔" });
+      }
+
+      return jsonResponse({ detail: `離線內建引擎尚未涵蓋的端點: ${pathname}` }, 404);
+    }
+
+    window.fetch = async function patchedFetch(input, init) {
+      const reqUrl = typeof input === "string" ? input : (input && input.url ? input.url : "");
+      if (!reqUrl) return origFetch(input, init);
+
+      let parsedUrl = null;
+      try {
+        parsedUrl = new URL(reqUrl, window.location.href);
+      } catch (e) {
+        return origFetch(input, init);
+      }
+
+      const isApiCall = parsedUrl.origin === window.location.origin && parsedUrl.pathname.startsWith("/api/");
+      if (!isApiCall) {
+        return origFetch(input, init);
+      }
+
+      const method = (init && init.method) ? init.method.toUpperCase() : (typeof input === "object" && input.method ? input.method.toUpperCase() : "GET");
+      let bodyObj = null;
+      if (init && typeof init.body === "string") {
+        try { bodyObj = JSON.parse(init.body); } catch (e) {}
+      }
+
+      if (isStaticEnvironment) {
+        return handleBuiltinApiRequest(parsedUrl, method, bodyObj);
+      }
+
+      try {
+        const realResp = await origFetch(input, init);
+        if (realResp && (realResp.ok || realResp.status < 500 && realResp.status !== 404)) {
+          return realResp;
+        }
+        return handleBuiltinApiRequest(parsedUrl, method, bodyObj);
+      } catch (netErr) {
+        return handleBuiltinApiRequest(parsedUrl, method, bodyObj);
+      }
+    };
+  }
+
+  initBuiltinDatabaseEngine();
+
+  // ============================================================================
   // 1. 頂部即時時鐘 (格式：2026/10/21 下午 04:32) - 支援繁體中文 12 小時制
   // ============================================================================
   const headerClock = document.getElementById("headerClock");
@@ -9084,7 +9961,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await r.json();
       if (!r.ok) throw new Error(res.detail || "儲存客戶失敗");
       await populateCustomerSelectDropdown(true);
-      const savedCust = (customersCache || []).find(c => Number(c.id) === Number(res.id) || c.name === name);
+      const savedCust = (customersCache || []).find(
+        c => Number(c.id) === Number(res.id) || ((c.owner_sales || activeSales) === activeSales && c.name === name)
+      );
       if (savedCust) selectCustomerInMgmtForm(savedCust);
       else renderQuotationCustomersTable();
       alert(`[儲存成功] ${res.message}`);
@@ -9605,11 +10484,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const HELP_CHANGELOG_HTML = `
     <h2 class="help-h2">[履歷] 系統升級與修復履歷 (Changelog)</h2>
-    <div style="color:#27ae60; font-weight:700; font-size:1.02rem; margin:10px 0 8px 0;">v5.5.1.6 / PWA v1.0.53 雙端 100% 對齊版 (2026/11)</div>
+    <div style="color:#27ae60; font-weight:700; font-size:1.02rem; margin:10px 0 8px 0;">v5.5.1.6 / PWA v1.0.54 雲端分流與內建資料架構版 (2026/11)</div>
     <ul style="line-height:1.85; padding-left:20px; margin-bottom:18px;">
+      <li><strong>PWA 業務系統全新雲端分流資料庫</strong>：建立「00_全體共用區」(共通標準品與系統設定) 與「01_業務個人資料區/&lt;業務姓名&gt;」(個人客戶、報價單、草稿、個人特殊品) 集中同步架構。</li>
+      <li><strong>內建基準資料引擎 (GitHub Pages 離線零伺服器可用)</strong>：前端直接載入壓縮基準種子檔與瀏覽器本機增量層，無須本機伺服器即可立即瀏覽 9,976 筆標準品、各業務客戶與歷史報價分析。</li>
+      <li><strong>同公司跨業務獨立建檔</strong>：將客戶主檔唯一鍵升級為「業務姓名 + 公司名稱」，同一業務名下公司不可重複，但不同業務可各自建立同名公司資料且互不覆蓋。</li>
       <li><strong>全系統 9 大功能頁 1:1 完整還原</strong>：新建報價單、手機報價草稿覆核區、報價單管理、大數據分析戰略駕駛艙、歷史單價分析、客戶管理、產品管理(含 4x5 小算盤)、系統設定(5 大子分頁)、使用說明(10 大操作手冊主題 + 版次履歷) 100% 對齊電腦版桌面軟體。</li>
-      <li><strong>新建報價單 10 欄順序與圓角白底型號選單</strong>：嚴格對齊「可用數量、型號、數量、規格、經銷價、報價折數%、預計報價金額、最終報價金額、小計、備註/交期」欄位順序與預設 5 列空白明細。</li>
-      <li><strong>底部雲端草稿狀態列與側邊欄紅點提醒</strong>：即時顯示目前待覆核之手機端草稿筆數，支援單擊預覽「第一筆 / 型號 / 數量 / 預計報價 / 交期」並一鍵轉為正式報價單。</li>
     </ul>
     <div style="color:#27ae60; font-weight:700; font-size:1.02rem; margin:10px 0 8px 0;">v5.5.0.8 版本更新 (2026/09)</div>
     <ul style="line-height:1.85; padding-left:20px;">

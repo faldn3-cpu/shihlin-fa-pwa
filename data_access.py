@@ -14,14 +14,24 @@
 import json
 import os
 import re
+import shutil
 import sqlite3
 from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 
 # 資料庫預設本機路徑 (採用 pathlib 跨平台路徑處理)
-DEFAULT_DB_FILE = Path(__file__).resolve().parent / "quotation_system.db"
-LEGACY_APP_DIR = Path(__file__).resolve().parent / "之前做的應用程式跟網頁" / "_QuotationApp"
+PROJECT_DIR = Path(__file__).resolve().parent
+DEFAULT_DB_FILE = PROJECT_DIR / "quotation_system.db"
+LEGACY_APP_DIR = PROJECT_DIR / "之前做的應用程式跟網頁" / "_QuotationApp"
+CENTRALIZED_LOCAL_STORE_DIR = PROJECT_DIR / "Backups" / "Centralized_Cloud_Store"
+DEFAULT_BUILTIN_SEED_PATH = PROJECT_DIR / "web" / "data" / "builtin_seed_db.json"
+
+# 標準業務人員名單 (確保一人一資料夾架構完整建立)
+DEFAULT_SALESPERSON_NAMES = [
+    "曾維崧", "曾仁君", "何宛茹", "張何達", "葉仁豪",
+    "邱文輝", "溫達仁", "楊家豪", "莊富丞", "張書偉", "黃柏翰"
+]
 
 
 def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
@@ -38,6 +48,97 @@ def _ensure_column(cursor: sqlite3.Cursor, table_name: str, col_name: str, col_d
     cols = [r[1] for r in cursor.execute(f"PRAGMA table_info({table_name})").fetchall()]
     if col_name not in cols:
         cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_def};")
+
+
+def _migrate_customer_master_unique_constraint(conn: sqlite3.Connection, db_path: Optional[Path] = None) -> None:
+    """
+    安全升級 customer_master 唯一性限制：
+    從舊版「全公司名稱唯一 UNIQUE(name)」轉換為「同業務名下公司名稱唯一 UNIQUE(owner_sales, name)」。
+    轉換前會自動備份實體資料庫檔案，並以 TRANSACTION 完整保留原有客戶 ID 與聯絡人關聯。
+    """
+    cursor = conn.cursor()
+    row = cursor.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='customer_master'"
+    ).fetchone()
+    if not row or not row[0]:
+        return
+
+    create_sql = row[0]
+    normalized_sql = re.sub(r'\s+', ' ', create_sql).upper()
+    has_composite_unique = "UNIQUE(OWNER_SALES, NAME)" in normalized_sql or "UNIQUE (OWNER_SALES, NAME)" in normalized_sql
+    has_legacy_name_unique = "NAME TEXT UNIQUE" in normalized_sql
+
+    if has_composite_unique and not has_legacy_name_unique:
+        return
+
+    target_db = Path(db_path) if db_path else DEFAULT_DB_FILE
+    if target_db.exists() and str(target_db) != ":memory:":
+        backup_dir = PROJECT_DIR / "Backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_file = backup_dir / f"{target_db.stem}_before_cust_unique_upgrade_{ts}{target_db.suffix}"
+        if not backup_file.exists():
+            shutil.copy2(target_db, backup_file)
+
+    conn.commit()
+    conn.execute("PRAGMA foreign_keys = OFF;")
+    try:
+        conn.execute("BEGIN TRANSACTION;")
+        cursor.execute("""
+        CREATE TABLE customer_master_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            owner_sales TEXT NOT NULL DEFAULT '曾維崧',
+            tax_id TEXT,
+            default_contact TEXT,
+            phone TEXT,
+            fax TEXT,
+            address TEXT,
+            payment_terms TEXT DEFAULT '月結30天',
+            status TEXT DEFAULT 'active',
+            default_discount REAL DEFAULT 1.0,
+            is_favorite INTEGER DEFAULT 0,
+            UNIQUE(owner_sales, name)
+        );
+        """)
+        cursor.execute("""
+        INSERT INTO customer_master_new (
+            id, name, owner_sales, tax_id, default_contact, phone, fax,
+            address, payment_terms, status, default_discount, is_favorite
+        )
+        SELECT
+            id,
+            name,
+            COALESCE(NULLIF(TRIM(owner_sales), ''), '曾維崧'),
+            tax_id,
+            default_contact,
+            phone,
+            fax,
+            address,
+            payment_terms,
+            COALESCE(status, 'active'),
+            COALESCE(default_discount, 1.0),
+            COALESCE(is_favorite, 0)
+        FROM customer_master;
+        """)
+        cursor.execute("DROP TABLE customer_master;")
+        cursor.execute("ALTER TABLE customer_master_new RENAME TO customer_master;")
+
+        # 同步保留 sqlite_sequence 的最大編號，避免新增 ID 碰撞
+        max_row = cursor.execute("SELECT COALESCE(MAX(id), 0) FROM customer_master").fetchone()
+        max_id = int(max_row[0]) if max_row else 0
+        seq_exists = cursor.execute("SELECT 1 FROM sqlite_sequence WHERE name='customer_master'").fetchone()
+        if seq_exists:
+            cursor.execute("UPDATE sqlite_sequence SET seq = ? WHERE name='customer_master'", (max_id,))
+        else:
+            cursor.execute("INSERT INTO sqlite_sequence (name, seq) VALUES ('customer_master', ?)", (max_id,))
+
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.execute("PRAGMA foreign_keys = ON;")
 
 
 def normalize_model_key(text: str) -> str:
@@ -219,11 +320,11 @@ def init_database(db_path: Optional[Path] = None) -> None:
         );
         """)
 
-        # 7. 客戶主檔 (綁定 owner_sales，各業務客戶完全獨立分開)
+        # 7. 客戶主檔 (綁定 owner_sales，同業務不可重複、不同業務可各自建同名公司)
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS customer_master (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
             owner_sales TEXT NOT NULL DEFAULT '曾維崧',
             tax_id TEXT,
             default_contact TEXT,
@@ -233,13 +334,15 @@ def init_database(db_path: Optional[Path] = None) -> None:
             payment_terms TEXT DEFAULT '月結30天',
             status TEXT DEFAULT 'active',
             default_discount REAL DEFAULT 1.0,
-            is_favorite INTEGER DEFAULT 0
+            is_favorite INTEGER DEFAULT 0,
+            UNIQUE(owner_sales, name)
         );
         """)
         _ensure_column(cursor, "customer_master", "owner_sales", "TEXT NOT NULL DEFAULT '曾維崧'")
         _ensure_column(cursor, "customer_master", "status", "TEXT DEFAULT 'active'")
         _ensure_column(cursor, "customer_master", "default_discount", "REAL DEFAULT 1.0")
         _ensure_column(cursor, "customer_master", "is_favorite", "INTEGER DEFAULT 0")
+        _migrate_customer_master_unique_constraint(conn, db_path)
 
         # 7b. 客戶聯絡人表 (支援同一客戶多位聯絡窗口)
         cursor.execute("""
@@ -748,7 +851,7 @@ def get_customers(keyword: str = "", sales_name: Optional[str] = None) -> List[D
 
 
 def save_customer(data: Dict[str, Any]) -> int:
-    """新增或更新業務個人所屬之客戶主檔"""
+    """新增或更新業務個人所屬之客戶主檔 (同業務不可重複、不同業務可各自建同名公司)"""
     conn = get_connection()
     try:
         cursor = conn.cursor()
@@ -765,8 +868,7 @@ def save_customer(data: Dict[str, Any]) -> int:
         INSERT INTO customer_master (
             name, owner_sales, tax_id, default_contact, phone, fax, address, payment_terms
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(name) DO UPDATE SET
-            owner_sales = excluded.owner_sales,
+        ON CONFLICT(owner_sales, name) DO UPDATE SET
             tax_id = excluded.tax_id,
             default_contact = excluded.default_contact,
             phone = excluded.phone,
@@ -775,7 +877,10 @@ def save_customer(data: Dict[str, Any]) -> int:
             payment_terms = excluded.payment_terms
         """, (name, owner_sales, tax_id, default_contact, phone, fax, address, payment_terms))
         conn.commit()
-        row = cursor.execute("SELECT id FROM customer_master WHERE name = ?", (name,)).fetchone()
+        row = cursor.execute(
+            "SELECT id FROM customer_master WHERE owner_sales = ? AND name = ?",
+            (owner_sales, name)
+        ).fetchone()
         return int(row["id"]) if row else 0
     finally:
         conn.close()
@@ -785,9 +890,10 @@ def save_quotation_customer(data: Dict[str, Any]) -> Tuple[bool, str, int]:
     """
     報價管理系統專用：新增或更新客戶主檔與多筆聯絡人清單
     支援：
-    1. 儲存/更新公司基本資料與常用客戶標記 (is_favorite)
-    2. 新增/更新聯絡人 (contact_master)
-    3. copy_as_new_contact=True 時，直接於同一家公司下新增另一位聯絡窗口
+    1. 同業務名下公司名稱不可重複，不同業務可各自建立同名公司且互不覆蓋
+    2. 儲存/更新公司基本資料與常用客戶標記 (is_favorite)
+    3. 新增/更新聯絡人 (contact_master)
+    4. copy_as_new_contact=True 時，直接於同一家公司下新增另一位聯絡窗口
     """
     name = str(data.get("name") or "").strip()
     if not name:
@@ -814,8 +920,7 @@ def save_quotation_customer(data: Dict[str, Any]) -> Tuple[bool, str, int]:
             name, owner_sales, tax_id, default_contact, phone, fax,
             address, payment_terms, status, is_favorite
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(name) DO UPDATE SET
-            owner_sales = excluded.owner_sales,
+        ON CONFLICT(owner_sales, name) DO UPDATE SET
             tax_id = excluded.tax_id,
             default_contact = CASE WHEN excluded.default_contact != '' THEN excluded.default_contact ELSE customer_master.default_contact END,
             phone = excluded.phone,
@@ -829,7 +934,10 @@ def save_quotation_customer(data: Dict[str, Any]) -> Tuple[bool, str, int]:
             address, payment_terms, status, is_favorite
         ))
 
-        row = cursor.execute("SELECT id FROM customer_master WHERE name = ?", (name,)).fetchone()
+        row = cursor.execute(
+            "SELECT id FROM customer_master WHERE owner_sales = ? AND name = ?",
+            (owner_sales, name)
+        ).fetchone()
         cid = int(row["id"]) if row else 0
 
         if cid and contact_name:
@@ -1941,8 +2049,7 @@ def migrate_from_legacy_quotation_app(
                 name, owner_sales, tax_id, default_contact, phone, fax,
                 address, payment_terms, status, default_discount, is_favorite
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(name) DO UPDATE SET
-                owner_sales = excluded.owner_sales,
+            ON CONFLICT(owner_sales, name) DO UPDATE SET
                 tax_id = CASE WHEN excluded.tax_id != '' THEN excluded.tax_id ELSE customer_master.tax_id END,
                 default_contact = CASE WHEN excluded.default_contact != '' THEN excluded.default_contact ELSE customer_master.default_contact END,
                 phone = CASE WHEN excluded.phone != '' THEN excluded.phone ELSE customer_master.phone END,
@@ -1967,7 +2074,10 @@ def migrate_from_legacy_quotation_app(
             ))
             imported_customers += 1
 
-            new_c_row = cursor.execute("SELECT id FROM customer_master WHERE name = ?", (c_name,)).fetchone()
+            new_c_row = cursor.execute(
+                "SELECT id FROM customer_master WHERE owner_sales = ? AND name = ?",
+                (default_owner, c_name)
+            ).fetchone()
             if new_c_row and g["contacts"]:
                 new_cid = new_c_row["id"]
                 cursor.execute("DELETE FROM contact_master WHERE customer_id = ?", (new_cid,))
@@ -2458,6 +2568,546 @@ def update_driver_settings(driver_id: int, driver_name: str, target_val: float, 
         """, (d_name_clean, float(target_val), unit_clean, p_type_clean, driver_id))
         conn.commit()
         return True, f"「{row['product_line']}」領先指標設定已成功更新！"
+    finally:
+        conn.close()
+
+
+def _collect_centralized_snapshot(db_path: Optional[Path] = None) -> Dict[str, Any]:
+    """從 SQLite 收集標準化且依業務分流之全系統資料快照"""
+    conn = get_connection(db_path)
+    try:
+        # 1. 全體共用區：標準產品與系統設定
+        prod_rows = conn.execute(
+            "SELECT model_no, spec, list_price, dealer_price, stock_qty, sku, category, is_order_item, stock_status "
+            "FROM product_master ORDER BY model_no ASC"
+        ).fetchall()
+        products = [dict(r) for r in prod_rows]
+
+        setting_rows = conn.execute("SELECT setting_key, setting_val FROM system_settings").fetchall()
+        settings = {str(r["setting_key"]): str(r["setting_val"]) for r in setting_rows}
+
+        # 2. 彙整所有業務姓名名單 (標準 11 人 + 資料庫出現過的人員)
+        sales_set = set(DEFAULT_SALESPERSON_NAMES)
+        for sql in [
+            "SELECT DISTINCT owner_sales FROM customer_master WHERE owner_sales IS NOT NULL AND TRIM(owner_sales) != ''",
+            "SELECT DISTINCT sales_name FROM quotation_header WHERE sales_name IS NOT NULL AND TRIM(sales_name) != ''",
+            "SELECT DISTINCT sales_name FROM quotation_draft WHERE sales_name IS NOT NULL AND TRIM(sales_name) != ''",
+            "SELECT DISTINCT owner_sales FROM personal_special_product WHERE owner_sales IS NOT NULL AND TRIM(owner_sales) != ''",
+        ]:
+            for r in conn.execute(sql).fetchall():
+                sales_set.add(str(r[0]).strip())
+
+        ordered_sales = [s for s in DEFAULT_SALESPERSON_NAMES if s in sales_set]
+        for s in sorted(sales_set):
+            if s not in ordered_sales:
+                ordered_sales.append(s)
+
+        # 3. 依業務員分別整理客戶、報價單(含明細)、草稿、個人特規品
+        contact_rows = conn.execute(
+            "SELECT id, customer_id, owner_sales, name, email, mobile FROM contact_master ORDER BY id ASC"
+        ).fetchall()
+        contacts_by_cid: Dict[int, List[Dict[str, Any]]] = {}
+        for ct in contact_rows:
+            cid = int(ct["customer_id"])
+            contacts_by_cid.setdefault(cid, []).append({
+                "name": ct["name"] or "",
+                "email": ct["email"] or "",
+                "mobile": ct["mobile"] or "",
+            })
+
+        item_rows = conn.execute(
+            "SELECT quote_no, item_index, model_no, spec, dealer_price, discount_pct, "
+            "expected_price, final_unit_price, quantity, row_subtotal, note_lead_time, "
+            "is_won, is_lost, item_status, lost_reason "
+            "FROM quotation_item ORDER BY id ASC"
+        ).fetchall()
+        items_by_qno: Dict[str, List[Dict[str, Any]]] = {}
+        for itm in item_rows:
+            qno = str(itm["quote_no"])
+            items_by_qno.setdefault(qno, []).append(dict(itm))
+
+        customers_by_sales: Dict[str, List[Dict[str, Any]]] = {}
+        quotations_by_sales: Dict[str, List[Dict[str, Any]]] = {}
+        drafts_by_sales: Dict[str, List[Dict[str, Any]]] = {}
+        specials_by_sales: Dict[str, List[Dict[str, Any]]] = {}
+
+        for s_name in ordered_sales:
+            c_rows = conn.execute(
+                "SELECT id, name, owner_sales, tax_id, default_contact, phone, fax, "
+                "address, payment_terms, status, default_discount, is_favorite "
+                "FROM customer_master WHERE owner_sales = ? ORDER BY is_favorite DESC, name ASC",
+                (s_name,)
+            ).fetchall()
+            c_list = []
+            for c in c_rows:
+                c_dict = dict(c)
+                c_dict["contacts"] = contacts_by_cid.get(int(c["id"]), [])
+                c_list.append(c_dict)
+            customers_by_sales[s_name] = c_list
+
+            q_rows = conn.execute(
+                "SELECT id, quote_no, prefix, sequence, revision, deal_id, sales_name, quote_date, valid_date, "
+                "customer_name, tax_id, contact_name, phone, fax, delivery_address, payment_terms, project_name, project_type, "
+                "subtotal, tax_rate, tax_amount, grand_total, status, is_latest, is_won, won_amount, "
+                "won_date, is_lost, is_ignored, lost_reason, lost_memo, source_type, is_deleted, deleted_at, "
+                "created_at, updated_at "
+                "FROM quotation_header WHERE sales_name = ? ORDER BY id DESC",
+                (s_name,)
+            ).fetchall()
+            q_list = []
+            for q in q_rows:
+                q_dict = dict(q)
+                q_dict["items"] = items_by_qno.get(str(q["quote_no"]), [])
+                q_list.append(q_dict)
+            quotations_by_sales[s_name] = q_list
+
+            d_rows = conn.execute(
+                "SELECT id, sales_name, customer_id, customer_name, tax_id, contact_name, phone, fax, "
+                "delivery_address, payment_terms, project_name, project_type, deal_id, subtotal, item_count, "
+                "items_json, status, created_at, updated_at "
+                "FROM quotation_draft WHERE sales_name = ? ORDER BY id DESC",
+                (s_name,)
+            ).fetchall()
+            d_list = []
+            for d in d_rows:
+                d_dict = dict(d)
+                try:
+                    d_dict["items"] = json.loads(d_dict.get("items_json") or "[]")
+                except Exception:
+                    d_dict["items"] = []
+                d_list.append(d_dict)
+            drafts_by_sales[s_name] = d_list
+
+            sp_rows = conn.execute(
+                "SELECT id, owner_sales, model_no, spec, list_price, dealer_price, stock_qty, note, "
+                "is_archived, archived_standard_price, archived_note, archived_at, created_at "
+                "FROM personal_special_product WHERE owner_sales = ? ORDER BY id DESC",
+                (s_name,)
+            ).fetchall()
+            specials_by_sales[s_name] = [dict(sp) for sp in sp_rows]
+
+        return {
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "salespersons": ordered_sales,
+            "products": products,
+            "settings": settings,
+            "customers_by_sales": customers_by_sales,
+            "quotations_by_sales": quotations_by_sales,
+            "drafts_by_sales": drafts_by_sales,
+            "special_products_by_sales": specials_by_sales,
+        }
+    finally:
+        conn.close()
+
+
+def _write_json_utf8(file_path: Path, payload: Any, compact: bool = False) -> None:
+    """使用 UTF-8 編碼與 pathlib 安全寫入 JSON 檔案"""
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(file_path, "w", encoding="utf-8") as f:
+        if compact:
+            json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
+        else:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+
+
+def export_centralized_sales_folders(
+    base_dir: Optional[Path] = None,
+    db_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """
+    集中管理模式匯出：
+    在指定總資料夾下建立：
+      00_全體共用區/standard_products.json, system_settings.json
+      01_業務個人資料區/<業務姓名>/customers_<姓名>.json, quotations_<姓名>.json, drafts_<姓名>.json, special_products_<姓名>.json
+    """
+    target_dir = Path(base_dir) if base_dir else CENTRALIZED_LOCAL_STORE_DIR
+    snapshot = _collect_centralized_snapshot(db_path)
+
+    shared_dir = target_dir / "00_全體共用區"
+    personal_root = target_dir / "01_業務個人資料區"
+    shared_dir.mkdir(parents=True, exist_ok=True)
+    personal_root.mkdir(parents=True, exist_ok=True)
+
+    _write_json_utf8(shared_dir / "standard_products.json", snapshot["products"])
+    _write_json_utf8(
+        shared_dir / "system_settings.json",
+        {
+            "generated_at": snapshot["generated_at"],
+            "salespersons": snapshot["salespersons"],
+            "settings": snapshot["settings"],
+        },
+    )
+
+    files_written = 2
+    for s_name in snapshot["salespersons"]:
+        s_dir = personal_root / s_name
+        s_dir.mkdir(parents=True, exist_ok=True)
+        _write_json_utf8(s_dir / f"customers_{s_name}.json", snapshot["customers_by_sales"].get(s_name, []))
+        _write_json_utf8(s_dir / f"quotations_{s_name}.json", snapshot["quotations_by_sales"].get(s_name, []))
+        _write_json_utf8(s_dir / f"drafts_{s_name}.json", snapshot["drafts_by_sales"].get(s_name, []))
+        _write_json_utf8(
+            s_dir / f"special_products_{s_name}.json",
+            snapshot["special_products_by_sales"].get(s_name, []),
+        )
+        files_written += 4
+
+    return {
+        "status": "success",
+        "base_dir": str(target_dir),
+        "generated_at": snapshot["generated_at"],
+        "product_count": len(snapshot["products"]),
+        "sales_count": len(snapshot["salespersons"]),
+        "files_written": files_written,
+    }
+
+
+def import_centralized_sales_folders(
+    base_dir: Optional[Path] = None,
+    db_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """
+    從集中管理模式資料夾安全匯入資料庫：
+    嚴格依 (owner_sales, name) 寫入客戶與聯絡人，確保不同業務同名公司互不覆蓋。
+    """
+    target_dir = Path(base_dir) if base_dir else CENTRALIZED_LOCAL_STORE_DIR
+    if not target_dir.exists():
+        return {"status": "error", "message": f"找不到集中管理資料夾：{target_dir}"}
+
+    init_database(db_path)
+    conn = get_connection(db_path)
+    cursor = conn.cursor()
+
+    imported_products = 0
+    imported_customers = 0
+    imported_specials = 0
+
+    try:
+        shared_dir = target_dir / "00_全體共用區"
+        prod_file = shared_dir / "standard_products.json"
+        if prod_file.exists():
+            with open(prod_file, "r", encoding="utf-8") as f:
+                prods = json.load(f)
+            for p in prods:
+                cursor.execute("""
+                INSERT INTO product_master (
+                    model_no, spec, list_price, dealer_price, stock_qty,
+                    sku, category, is_order_item, stock_status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(model_no) DO UPDATE SET
+                    spec = excluded.spec,
+                    list_price = excluded.list_price,
+                    dealer_price = excluded.dealer_price,
+                    stock_qty = excluded.stock_qty,
+                    sku = excluded.sku,
+                    category = excluded.category,
+                    is_order_item = excluded.is_order_item,
+                    stock_status = excluded.stock_status
+                """, (
+                    str(p.get("model_no") or "").strip(),
+                    str(p.get("spec") or ""),
+                    float(p.get("list_price") or 0),
+                    float(p.get("dealer_price") or 0),
+                    int(p.get("stock_qty") or 0),
+                    str(p.get("sku") or ""),
+                    str(p.get("category") or ""),
+                    int(p.get("is_order_item") or 0),
+                    str(p.get("stock_status") or "IN_STOCK"),
+                ))
+                imported_products += 1
+
+        settings_file = shared_dir / "system_settings.json"
+        if settings_file.exists():
+            with open(settings_file, "r", encoding="utf-8") as f:
+                settings_obj = json.load(f)
+            for k, v in (settings_obj.get("settings") or {}).items():
+                cursor.execute("""
+                INSERT INTO system_settings (setting_key, setting_val)
+                VALUES (?, ?)
+                ON CONFLICT(setting_key) DO UPDATE SET
+                    setting_val = excluded.setting_val
+                """, (str(k), str(v)))
+
+        personal_root = target_dir / "01_業務個人資料區"
+        if personal_root.exists():
+            for s_dir in sorted(personal_root.iterdir()):
+                if not s_dir.is_dir():
+                    continue
+                s_name = s_dir.name
+                cust_file = s_dir / f"customers_{s_name}.json"
+                if cust_file.exists():
+                    with open(cust_file, "r", encoding="utf-8") as f:
+                        cust_list = json.load(f)
+                    for c in cust_list:
+                        c_name = str(c.get("name") or "").strip()
+                        if not c_name:
+                            continue
+                        owner = str(c.get("owner_sales") or s_name).strip()
+                        cursor.execute("""
+                        INSERT INTO customer_master (
+                            name, owner_sales, tax_id, default_contact, phone, fax,
+                            address, payment_terms, status, default_discount, is_favorite
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(owner_sales, name) DO UPDATE SET
+                            tax_id = excluded.tax_id,
+                            default_contact = excluded.default_contact,
+                            phone = excluded.phone,
+                            fax = excluded.fax,
+                            address = excluded.address,
+                            payment_terms = excluded.payment_terms,
+                            status = excluded.status,
+                            default_discount = excluded.default_discount,
+                            is_favorite = excluded.is_favorite
+                        """, (
+                            c_name,
+                            owner,
+                            str(c.get("tax_id") or ""),
+                            str(c.get("default_contact") or ""),
+                            str(c.get("phone") or ""),
+                            str(c.get("fax") or ""),
+                            str(c.get("address") or ""),
+                            str(c.get("payment_terms") or "月結 30 天電匯"),
+                            str(c.get("status") or "active"),
+                            float(c.get("default_discount") or 1.0),
+                            int(c.get("is_favorite") or 0),
+                        ))
+                        c_row = cursor.execute(
+                            "SELECT id FROM customer_master WHERE owner_sales = ? AND name = ?",
+                            (owner, c_name),
+                        ).fetchone()
+                        if c_row and c.get("contacts"):
+                            cid = int(c_row["id"])
+                            cursor.execute("DELETE FROM contact_master WHERE customer_id = ?", (cid,))
+                            for ct in c["contacts"]:
+                                ct_name = str(ct.get("name") or "").strip()
+                                if ct_name:
+                                    cursor.execute("""
+                                    INSERT INTO contact_master (customer_id, owner_sales, name, email, mobile)
+                                    VALUES (?, ?, ?, ?, ?)
+                                    """, (cid, owner, ct_name, str(ct.get("email") or ""), str(ct.get("mobile") or "")))
+                        imported_customers += 1
+
+                sp_file = s_dir / f"special_products_{s_name}.json"
+                if sp_file.exists():
+                    with open(sp_file, "r", encoding="utf-8") as f:
+                        sp_list = json.load(f)
+                    for sp in sp_list:
+                        m_no = str(sp.get("model_no") or "").strip()
+                        if not m_no:
+                            continue
+                        owner = str(sp.get("owner_sales") or s_name).strip()
+                        cursor.execute("""
+                        INSERT INTO personal_special_product (
+                            owner_sales, model_no, spec, list_price, dealer_price, stock_qty,
+                            note, is_archived, archived_standard_price, archived_note, archived_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(owner_sales, model_no) DO UPDATE SET
+                            spec = excluded.spec,
+                            list_price = excluded.list_price,
+                            dealer_price = excluded.dealer_price,
+                            stock_qty = excluded.stock_qty,
+                            note = excluded.note,
+                            is_archived = excluded.is_archived,
+                            archived_standard_price = excluded.archived_standard_price,
+                            archived_note = excluded.archived_note,
+                            archived_at = excluded.archived_at
+                        """, (
+                            owner,
+                            m_no,
+                            str(sp.get("spec") or ""),
+                            float(sp.get("list_price") or 0),
+                            float(sp.get("dealer_price") or 0),
+                            int(sp.get("stock_qty") or 0),
+                            str(sp.get("note") or ""),
+                            int(sp.get("is_archived") or 0),
+                            float(sp.get("archived_standard_price") or 0),
+                            str(sp.get("archived_note") or ""),
+                            str(sp.get("archived_at") or ""),
+                        ))
+                        imported_specials += 1
+
+        conn.commit()
+        return {
+            "status": "success",
+            "imported_products": imported_products,
+            "imported_customers": imported_customers,
+            "imported_specials": imported_specials,
+        }
+    finally:
+        conn.close()
+
+
+def export_builtin_web_seed_json(
+    output_path: Optional[Path] = None,
+    db_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """
+    產生前端靜態 PWA 專用的內建基準資料庫 (web/data/builtin_seed_db.json)。
+    絕不包含任何密碼、金鑰或個人敏感憑證。
+    """
+    target_path = Path(output_path) if output_path else DEFAULT_BUILTIN_SEED_PATH
+    snapshot = _collect_centralized_snapshot(db_path)
+    _write_json_utf8(target_path, snapshot, compact=True)
+    size_bytes = target_path.stat().st_size if target_path.exists() else 0
+    return {
+        "status": "success",
+        "output_path": str(target_path),
+        "size_bytes": size_bytes,
+        "product_count": len(snapshot["products"]),
+        "sales_count": len(snapshot["salespersons"]),
+    }
+
+
+def _load_gdrive_credentials():
+    """
+    載入外部 Google Drive 授權憑證 (主帳號 OAuth token.json 優先，具備 15GB 建檔配額)。
+    絕不將任何憑證內容印出至日誌或終端機。
+    """
+    from google.oauth2.credentials import Credentials as UserCredentials
+    from google.auth.transport.requests import Request
+
+    token_path_env = os.environ.get("GDRIVE_OAUTH_TOKEN_PATH")
+    candidates = []
+    if token_path_env:
+        candidates.append(Path(token_path_env))
+    candidates.append(LEGACY_APP_DIR / "token.json")
+    candidates.append(PROJECT_DIR / "token.json")
+
+    for p in candidates:
+        if p.exists():
+            creds = UserCredentials.from_authorized_user_file(str(p))
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            if creds and creds.valid:
+                return creds
+    return None
+
+
+def _gdrive_get_or_create_folder(service, name: str, parent_id: Optional[str] = None) -> str:
+    """在 Google Drive 取得或建立指定資料夾，回傳資料夾 ID"""
+    safe_name = name.replace("'", "\\'")
+    q = f"name = '{safe_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+    if parent_id:
+        q += f" and '{parent_id}' in parents"
+    res = service.files().list(q=q, spaces="drive", fields="files(id, name)").execute()
+    files = res.get("files", [])
+    if files:
+        return files[0]["id"]
+    meta: Dict[str, Any] = {
+        "name": name,
+        "mimeType": "application/vnd.google-apps.folder",
+    }
+    if parent_id:
+        meta["parents"] = [parent_id]
+    created = service.files().create(body=meta, fields="id").execute()
+    return created["id"]
+
+
+def _gdrive_upsert_json_file(service, local_path: Path, parent_id: str) -> str:
+    """上傳或覆蓋更新 Google Drive 指定資料夾中的 JSON 檔案"""
+    import io
+    from googleapiclient.http import MediaIoBaseUpload
+
+    file_name = local_path.name
+    safe_name = file_name.replace("'", "\\'")
+    q = f"name = '{safe_name}' and '{parent_id}' in parents and trashed = false"
+    res = service.files().list(q=q, spaces="drive", fields="files(id, name)").execute()
+    existing = res.get("files", [])
+
+    raw_bytes = local_path.read_bytes()
+    media = MediaIoBaseUpload(io.BytesIO(raw_bytes), mimetype="application/json", resumable=False)
+
+    if existing:
+        fid = existing[0]["id"]
+        service.files().update(fileId=fid, media_body=media).execute()
+        return fid
+    meta = {"name": file_name, "parents": [parent_id]}
+    created = service.files().create(body=meta, media_body=media, fields="id").execute()
+    return created["id"]
+
+
+def sync_to_gdrive_pwa_folder(
+    folder_name: str = "PWA業務系統",
+    db_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """
+    先在本機建立集中管理模式分流資料夾與網頁內建基準檔，
+    再同步上傳至 Google 雲端硬碟「PWA業務系統」總資料夾：
+      - 00_全體共用區
+      - 01_業務個人資料區/<業務姓名>
+    """
+    local_res = export_centralized_sales_folders(db_path=db_path)
+    seed_res = export_builtin_web_seed_json(db_path=db_path)
+
+    creds = _load_gdrive_credentials()
+    if not creds:
+        return {
+            "status": "local_only",
+            "message": "已完成本機集中分流與內建資料建置，但找不到有效的 Google 雲端硬碟授權憑證。",
+            "local": local_res,
+            "seed": seed_res,
+        }
+
+    from googleapiclient.discovery import build
+
+    service = build("drive", "v3", credentials=creds)
+    root_q = f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+    found = service.files().list(q=root_q, spaces="drive", fields="files(id, name)").execute().get("files", [])
+    if found:
+        root_id = found[0]["id"]
+    else:
+        root_id = _gdrive_get_or_create_folder(service, folder_name)
+
+    shared_folder_id = _gdrive_get_or_create_folder(service, "00_全體共用區", root_id)
+    personal_folder_id = _gdrive_get_or_create_folder(service, "01_業務個人資料區", root_id)
+
+    uploaded_count = 0
+    local_shared = CENTRALIZED_LOCAL_STORE_DIR / "00_全體共用區"
+    for fpath in sorted(local_shared.glob("*.json")):
+        _gdrive_upsert_json_file(service, fpath, shared_folder_id)
+        uploaded_count += 1
+
+    local_personal = CENTRALIZED_LOCAL_STORE_DIR / "01_業務個人資料區"
+    synced_sales = []
+    for s_dir in sorted(local_personal.iterdir()):
+        if not s_dir.is_dir():
+            continue
+        s_folder_id = _gdrive_get_or_create_folder(service, s_dir.name, personal_folder_id)
+        for fpath in sorted(s_dir.glob("*.json")):
+            _gdrive_upsert_json_file(service, fpath, s_folder_id)
+            uploaded_count += 1
+        synced_sales.append(s_dir.name)
+
+    return {
+        "status": "success",
+        "folder_name": folder_name,
+        "root_folder_id": root_id,
+        "uploaded_files": uploaded_count,
+        "synced_sales": synced_sales,
+        "local": local_res,
+        "seed": seed_res,
+    }
+
+
+def get_centralized_storage_summary(db_path: Optional[Path] = None) -> Dict[str, Any]:
+    """回傳目前集中管理模式資料夾統計資訊"""
+    conn = get_connection(db_path)
+    try:
+        prod_cnt = conn.execute("SELECT COUNT(*) FROM product_master").fetchone()[0]
+        cust_rows = conn.execute(
+            "SELECT owner_sales, COUNT(*) AS cnt FROM customer_master GROUP BY owner_sales"
+        ).fetchall()
+        quote_rows = conn.execute(
+            "SELECT sales_name, COUNT(*) AS cnt FROM quotation_header WHERE is_deleted = 0 GROUP BY sales_name"
+        ).fetchall()
+        return {
+            "status": "success",
+            "local_store_dir": str(CENTRALIZED_LOCAL_STORE_DIR),
+            "builtin_seed_exists": DEFAULT_BUILTIN_SEED_PATH.exists(),
+            "builtin_seed_size": DEFAULT_BUILTIN_SEED_PATH.stat().st_size if DEFAULT_BUILTIN_SEED_PATH.exists() else 0,
+            "product_count": int(prod_cnt),
+            "customers_per_sales": {str(r["owner_sales"]): int(r["cnt"]) for r in cust_rows},
+            "quotations_per_sales": {str(r["sales_name"]): int(r["cnt"]) for r in quote_rows},
+        }
     finally:
         conn.close()
 

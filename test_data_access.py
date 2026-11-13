@@ -364,8 +364,73 @@ def run_all_tests():
         assert "32,000" in archived_sp["archived_note"] and "35,000" in archived_sp["archived_note"]
         print(f"  [OK] 【方案 A】驗證通過：特殊品自動由標準品取代，並封存保留價格軌跡 ({archived_sp['archived_note']})！")
 
+        # 10. 驗證「同一個業務名下公司名稱不可重複，但不同業務可以各自建檔」
+        print("\n[測試 10] 驗證客戶同公司跨業務獨立建檔與同業務更新不重複...")
+        ok_c1, msg_c1, cid_ren = data_access.save_quotation_customer({
+            "owner_sales": "曾仁君",
+            "name": "台灣精密自動化股份有限公司",
+            "tax_id": "55667788",
+            "contact_name": "王經理",
+            "phone": "03-1111111"
+        })
+        ok_c2, msg_c2, cid_chang = data_access.save_quotation_customer({
+            "owner_sales": "張何達",
+            "name": "台灣精密自動化股份有限公司",
+            "tax_id": "55667788",
+            "contact_name": "李採購",
+            "phone": "02-2222222"
+        })
+        assert ok_c1 and ok_c2, f"跨業務建同名客戶失敗: {msg_c1} / {msg_c2}"
+        assert cid_ren != cid_chang, f"不同業務同名客戶竟共用同一筆 ID={cid_ren}"
+
+        list_ren = data_access.get_customers(sales_name="曾仁君")
+        list_chang = data_access.get_customers(sales_name="張何達")
+        ren_rec = next(c for c in list_ren if c["name"] == "台灣精密自動化股份有限公司")
+        chang_rec = next(c for c in list_chang if c["name"] == "台灣精密自動化股份有限公司")
+        assert ren_rec["phone"] == "03-1111111" and ren_rec["default_contact"] == "王經理"
+        assert chang_rec["phone"] == "02-2222222" and chang_rec["default_contact"] == "李採購"
+
+        # 同業務再次儲存同名公司應更新原紀錄，且不影響張何達的資料
+        ok_c1_upd, _, cid_ren_upd = data_access.save_quotation_customer({
+            "owner_sales": "曾仁君",
+            "name": "台灣精密自動化股份有限公司",
+            "tax_id": "55667788",
+            "contact_name": "王經理",
+            "phone": "03-9999999"
+        })
+        assert ok_c1_upd and cid_ren_upd == cid_ren, "同業務建同名公司應更新原 ID 而非重複新增"
+        list_ren_after = data_access.get_customers(sales_name="曾仁君")
+        list_chang_after = data_access.get_customers(sales_name="張何達")
+        assert sum(1 for c in list_ren_after if c["name"] == "台灣精密自動化股份有限公司") == 1
+        assert next(c for c in list_ren_after if c["name"] == "台灣精密自動化股份有限公司")["phone"] == "03-9999999"
+        assert next(c for c in list_chang_after if c["name"] == "台灣精密自動化股份有限公司")["phone"] == "02-2222222"
+        print("  [OK] 跨業務可建立同名公司且互不覆蓋、同業務更新維持唯一驗證通過！")
+
+        # 11. 驗證集中管理模式 (一人一資料夾) 匯出與匯入
+        print("\n[測試 11] 驗證集中管理模式一人一資料夾匯出與匯入...")
+        import shutil
+        test_store_dir = project_dir / "test_centralized_store"
+        if test_store_dir.exists():
+            shutil.rmtree(test_store_dir, ignore_errors=True)
+        try:
+            exp_res = data_access.export_centralized_sales_folders(base_dir=test_store_dir, db_path=test_db)
+            assert exp_res["status"] == "success"
+            assert (test_store_dir / "00_全體共用區" / "standard_products.json").exists()
+            assert (test_store_dir / "00_全體共用區" / "system_settings.json").exists()
+            assert (test_store_dir / "01_業務個人資料區" / "曾仁君" / "customers_曾仁君.json").exists()
+            assert (test_store_dir / "01_業務個人資料區" / "張何達" / "customers_張何達.json").exists()
+
+            imp_res = data_access.import_centralized_sales_folders(base_dir=test_store_dir, db_path=test_db)
+            assert imp_res["status"] == "success"
+            assert imp_res["imported_products"] >= 5
+            assert imp_res["imported_customers"] >= 2
+            print("  [OK] 集中管理模式 (00_全體共用區 + 01_業務個人資料區/<業務姓名>) 匯出與匯入驗證通過！")
+        finally:
+            if test_store_dir.exists():
+                shutil.rmtree(test_store_dir, ignore_errors=True)
+
         print("\n" + "=" * 65)
-        print("[SUCCESS] 恭喜！data_access.py 全數 9 大單元測試 100% 通過！")
+        print("[SUCCESS] 恭喜！data_access.py 全數 11 大單元測試 100% 通過！")
         print("=" * 65)
 
     finally:

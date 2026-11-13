@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261113_v1_0_55" />
+  <link rel="stylesheet" href="css/style.css?v=20261113_v1_0_56" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -544,7 +544,9 @@
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label">拜訪日期<span class="required">*</span></label>
-                <input id="inputReportDate" type="date" class="form-control" required />
+                <input id="inputReportDate" type="date" class="form-control pyside-hidden-date-input" required />
+                <button type="button" id="btnDate_inputReportDate" class="pyside-date-btn form-control"
+                  data-target-input="inputReportDate">請選擇日期  ▼</button>
               </div>
 
               <div class="form-group">
@@ -680,7 +682,9 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label">預估成案日期</label>
-                    <input id="inputEstDealDate" type="date" class="form-control" />
+                    <input id="inputEstDealDate" type="date" class="form-control pyside-hidden-date-input" />
+                    <button type="button" id="btnDate_inputEstDealDate" class="pyside-date-btn form-control"
+                      data-target-input="inputEstDealDate">請選擇日期  ▼</button>
                   </div>
                   <div class="form-group">
                     <label class="form-label">預估案件總金額 (元)</label>
@@ -859,7 +863,9 @@
                   </div>
                   <div class="grid-cell-label">報價日期:</div>
                   <div class="grid-cell-content">
-                    <input type="date" id="quoteDate" class="pyside-input" style="flex:1;">
+                    <input type="date" id="quoteDate" class="pyside-input pyside-hidden-date-input" style="flex:1;">
+                    <button type="button" id="btnDate_quoteDate" class="pyside-date-btn" data-target-input="quoteDate"
+                      style="flex:1;">請選擇日期  ▼</button>
                   </div>
                 </div>
 
@@ -912,7 +918,9 @@
                 <div class="grid-row">
                   <div class="grid-cell-label">有效日期:</div>
                   <div class="grid-cell-content">
-                    <input type="date" id="quoteValidDate" class="pyside-input" style="flex:1;">
+                    <input type="date" id="quoteValidDate" class="pyside-input pyside-hidden-date-input" style="flex:1;">
+                    <button type="button" id="btnDate_quoteValidDate" class="pyside-date-btn"
+                      data-target-input="quoteValidDate" style="flex:1;">請選擇日期  ▼</button>
                   </div>
                   <div class="grid-cell-label">付款方式:</div>
                   <div class="grid-cell-content">
@@ -1189,9 +1197,11 @@
               style="width:280px;">
             <label class="pyside-p3-label" style="margin-left:10px;">報價日期:</label>
             <div class="pyside-date-range-box">
-              <input type="date" id="historyStartDate" class="pyside-date-inline">
-              <span>~</span>
-              <input type="date" id="historyEndDate" class="pyside-date-inline">
+              <input type="date" id="historyStartDate" class="pyside-date-inline pyside-hidden-date-input">
+              <span class="pyside-hidden-date-input">~</span>
+              <input type="date" id="historyEndDate" class="pyside-date-inline pyside-hidden-date-input">
+              <button type="button" id="btnRange_historyDate" class="pyside-date-range-btn"
+                data-start-input="historyStartDate" data-end-input="historyEndDate">選擇日期範圍  ▼</button>
             </div>
             <label class="pyside-checkbox-label" style="margin-left:8px;">
               <input type="checkbox" id="chkHistoryShowAll" checked>
@@ -1613,9 +1623,11 @@
           <div class="pyside-dash-ctrl-bar">
             <label class="pyside-p3-label">分析期間:</label>
             <div class="pyside-date-range-box">
-              <input type="date" id="dashStartDate" class="pyside-date-inline">
-              <span>~</span>
-              <input type="date" id="dashEndDate" class="pyside-date-inline">
+              <input type="date" id="dashStartDate" class="pyside-date-inline pyside-hidden-date-input">
+              <span class="pyside-hidden-date-input">~</span>
+              <input type="date" id="dashEndDate" class="pyside-date-inline pyside-hidden-date-input">
+              <button type="button" id="btnRange_dashDate" class="pyside-date-range-btn"
+                data-start-input="dashStartDate" data-end-input="dashEndDate">選擇日期範圍  ▼</button>
             </div>
             <select id="dashQuickRangeSelect" class="pyside-select" style="width:140px; height:36px;">
               <option value="custom">自訂區間</option>
@@ -3605,17 +3617,86 @@
     </div>
   </div>
 
+  <!-- 電腦版單一日期選取彈窗 (對標 _QuotationApp SingleCalendarPopup) -->
+  <div id="pysideSingleCalendarPopup" class="pyside-cal-popup hidden" role="dialog" aria-label="單一日期月曆">
+    <div class="pyside-cal-main-view" id="scMainView">
+      <div class="pyside-cal-header-bar">
+        <button type="button" id="scPrevMonthBtn" class="pyside-cal-nav" title="上個月">&lt;</button>
+        <button type="button" id="scHeaderBtn" class="pyside-cal-header" title="點擊切換年份與月份">2026 年 十一月</button>
+        <button type="button" id="scNextMonthBtn" class="pyside-cal-nav" title="下個月">&gt;</button>
+      </div>
+      <div class="pyside-cal-dow-row">
+        <span class="weekend">日</span>
+        <span>一</span>
+        <span>二</span>
+        <span>三</span>
+        <span>四</span>
+        <span>五</span>
+        <span class="weekend">六</span>
+      </div>
+      <div id="scDayGrid" class="pyside-cal-grid"></div>
+      <div class="pyside-cal-footer">
+        <button type="button" id="scClearBtn" class="pyside-cal-btn-clear">清除</button>
+        <span style="flex:1;"></span>
+        <button type="button" id="scTodayBtn" class="pyside-cal-btn-confirm">今天</button>
+      </div>
+    </div>
+    <div id="scYmOverlay" class="pyside-cal-ym-overlay hidden">
+      <div class="pyside-cal-ym-header">
+        <button type="button" id="scYmPrevYearBtn" class="pyside-cal-nav">&lt;</button>
+        <span id="scYmYearLabel" class="pyside-cal-ym-year">2026 年</span>
+        <button type="button" id="scYmNextYearBtn" class="pyside-cal-nav">&gt;</button>
+      </div>
+      <div id="scYmMonthGrid" class="pyside-cal-ym-grid"></div>
+    </div>
+  </div>
+
+  <!-- 電腦版日期區間選取彈窗 (對標 _QuotationApp RangeCalendarPopup) -->
+  <div id="pysideRangeCalendarPopup" class="pyside-cal-popup pyside-cal-popup-range hidden" role="dialog" aria-label="日期範圍月曆">
+    <div class="pyside-cal-main-view" id="rcMainView">
+      <div class="pyside-cal-header-bar">
+        <button type="button" id="rcPrevMonthBtn" class="pyside-cal-nav" title="上個月">&lt;</button>
+        <button type="button" id="rcHeaderBtn" class="pyside-cal-header" title="點擊切換年份與月份">2026 年 十一月</button>
+        <button type="button" id="rcNextMonthBtn" class="pyside-cal-nav" title="下個月">&gt;</button>
+      </div>
+      <div class="pyside-cal-dow-row">
+        <span class="weekend">日</span>
+        <span>一</span>
+        <span>二</span>
+        <span>三</span>
+        <span>四</span>
+        <span>五</span>
+        <span class="weekend">六</span>
+      </div>
+      <div id="rcDayGrid" class="pyside-cal-grid"></div>
+      <div id="rcStatusLabel" class="pyside-cal-status">請選擇開始日期</div>
+      <div class="pyside-cal-footer">
+        <button type="button" id="rcClearBtn" class="pyside-cal-btn-clear">清除</button>
+        <span style="flex:1;"></span>
+        <button type="button" id="rcConfirmBtn" class="pyside-cal-btn-confirm">確定</button>
+      </div>
+    </div>
+    <div id="rcYmOverlay" class="pyside-cal-ym-overlay hidden">
+      <div class="pyside-cal-ym-header">
+        <button type="button" id="rcYmPrevYearBtn" class="pyside-cal-nav">&lt;</button>
+        <span id="rcYmYearLabel" class="pyside-cal-ym-year">2026 年</span>
+        <button type="button" id="rcYmNextYearBtn" class="pyside-cal-nav">&gt;</button>
+      </div>
+      <div id="rcYmMonthGrid" class="pyside-cal-ym-grid"></div>
+    </div>
+  </div>
+
   <!-- 身分切換輕量通知浮動橫幅 -->
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261113_v1_0_55"></script>
+  <script src="js/app.js?v=20261113_v1_0_56"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261113_v1_0_55')
+        navigator.serviceWorker.register('./sw.js?v=20261113_v1_0_56')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

@@ -8095,3 +8095,355 @@ html[data-theme="dark"] .pyside-system-statusbar {
 .legacy-importer-result.hidden {
   display: none;
 }
+
+/* ============================================================================
+   電腦版月曆選擇器與彈窗樣式 (100% 對標 _QuotationApp gui_components.py)
+   ============================================================================ */
+.pyside-hidden-date-input {
+  display: none !important;
+}
+
+.pyside-date-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
+  background-color: var(--bg-input, #ffffff);
+  color: var(--text-primary, #202124);
+  border: 1px solid var(--border-card, #cbd5e1);
+  border-radius: 4px;
+  font-size: 13.5px;
+  font-weight: 500;
+  font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.pyside-date-btn:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+html[data-theme="dark"] .pyside-date-btn {
+  background-color: #282a2c;
+  color: #e3e3e3;
+  border-color: #444746;
+}
+
+html[data-theme="dark"] .pyside-date-btn:hover {
+  background-color: #333537;
+}
+
+.pyside-date-range-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 220px;
+  height: 100%;
+  padding: 0 4px;
+  background: transparent;
+  color: var(--text-primary, #202124);
+  border: none;
+  font-size: 13.5px;
+  font-weight: 700;
+  font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pyside-date-range-box:hover {
+  background-color: #f1f3f4;
+}
+
+html[data-theme="dark"] .pyside-date-range-box:hover {
+  background-color: #333537;
+}
+
+/* 電腦版深色月曆彈窗容器 */
+.pyside-cal-popup {
+  position: fixed;
+  z-index: 99999;
+  width: 348px;
+  background-color: #252535;
+  border: 1px solid #444466;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  color: #cdd6f4;
+  font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.pyside-cal-popup.hidden {
+  display: none !important;
+}
+
+.pyside-cal-popup-range {
+  width: 332px;
+}
+
+.pyside-cal-main-view.hidden,
+.pyside-cal-ym-overlay.hidden {
+  display: none !important;
+}
+
+.pyside-cal-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.pyside-cal-nav {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  color: #9999bb;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pyside-cal-nav:hover {
+  background-color: #3a3a5a;
+  color: #ffffff;
+}
+
+.pyside-cal-header {
+  flex: 1;
+  height: 32px;
+  background: transparent;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+}
+
+.pyside-cal-header:hover {
+  background-color: #3a3a5a;
+}
+
+.pyside-cal-dow-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  margin-bottom: 4px;
+  padding: 4px 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #8888aa;
+}
+
+.pyside-cal-dow-row .weekend {
+  color: #f38ba8;
+}
+
+.pyside-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+}
+
+.pyside-cal-day {
+  position: relative;
+  height: 44px;
+  background: transparent;
+  color: #cdd6f4;
+  border: none;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 1;
+}
+
+.pyside-cal-popup-range .pyside-cal-day {
+  height: 40px;
+}
+
+.pyside-cal-day-inner {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+}
+
+.pyside-cal-day.is-weekend {
+  color: #f38ba8;
+}
+
+.pyside-cal-day.is-other-month {
+  color: #555577;
+}
+
+.pyside-cal-day:hover .pyside-cal-day-inner {
+  background-color: #3a3a5a;
+  color: #ffffff;
+}
+
+.pyside-cal-day.is-today .pyside-cal-day-inner {
+  background-color: #45475a;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.pyside-cal-day.is-in-range {
+  background-color: #2a3a5a;
+  color: #aaccff;
+  border-radius: 0;
+}
+
+.pyside-cal-day.is-in-range .pyside-cal-day-inner {
+  border-radius: 0;
+}
+
+.pyside-cal-day.is-range-start.has-range::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 50%;
+  background-color: #2a3a5a;
+  z-index: 0;
+}
+
+.pyside-cal-day.is-range-end.has-range::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 50%;
+  background-color: #2a3a5a;
+  z-index: 0;
+}
+
+.pyside-cal-day.is-selected .pyside-cal-day-inner,
+.pyside-cal-day.is-range-start .pyside-cal-day-inner,
+.pyside-cal-day.is-range-end .pyside-cal-day-inner {
+  background-color: #4d8ef0;
+  color: #ffffff;
+  font-weight: 700;
+  border-radius: 50%;
+}
+
+.pyside-cal-status {
+  text-align: center;
+  color: #89b4fa;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 0 4px 0;
+  min-height: 24px;
+}
+
+.pyside-cal-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.pyside-cal-btn-clear {
+  background-color: #3a3a5a;
+  color: #ccccee;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+}
+
+.pyside-cal-btn-clear:hover {
+  background-color: #4a4a6a;
+  color: #ffffff;
+}
+
+.pyside-cal-btn-confirm {
+  background-color: #4d8ef0;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+}
+
+.pyside-cal-btn-confirm:hover {
+  background-color: #3b7be0;
+}
+
+/* 年月快速切換覆蓋層 (對標 YearMonthOverlay / YearMonthOverlaySingle) */
+.pyside-cal-ym-overlay {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+.pyside-cal-ym-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.pyside-cal-ym-year {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: center;
+}
+
+.pyside-cal-ym-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.pyside-cal-ym-btn {
+  background-color: #3a3a5a;
+  color: #cdd6f4;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 6px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+}
+
+.pyside-cal-ym-btn:hover {
+  background-color: #4a4a6a;
+  color: #ffffff;
+}
+
+.pyside-cal-ym-btn.is-current {
+  background-color: #4d8ef0;
+  color: #ffffff;
+}

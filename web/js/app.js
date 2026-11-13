@@ -5669,6 +5669,9 @@ document.addEventListener("DOMContentLoaded", () => {
     updateQuoteDraftsBadge();
     updateQuoteNoPreview();
     enforceDesktopQuotationView();
+    if (typeof syncDesktopDateButtons === "function") {
+      syncDesktopDateButtons();
+    }
   }
 
   // 100% 還原 _QuotationApp main.py 左下角即時時鐘 (yyyy-MM-dd HH:mm)
@@ -6830,6 +6833,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (inputSearchHistory) inputSearchHistory.value = "";
         if (chkHistoryShowAll) chkHistoryShowAll.checked = true;
         p3HistoryPage = 1;
+        syncDesktopDateButtons();
         loadQuotationHistory("", isTrashViewActive);
       });
     }
@@ -6986,6 +6990,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 16. 大數據分析 (Page 4) 篩選、匯出與高度拖曳桿
+    const dashStartInput = document.getElementById("dashStartDate");
+    const dashEndInput = document.getElementById("dashEndDate");
+    const onDashDateChanged = () => {
+      const qr = document.getElementById("dashQuickRangeSelect");
+      if (qr) qr.value = "custom";
+      syncDesktopDateButtons();
+      loadQuotationDashboard();
+    };
+    if (dashStartInput) dashStartInput.addEventListener("change", onDashDateChanged);
+    if (dashEndInput) dashEndInput.addEventListener("change", onDashDateChanged);
+
     const btnRefreshDash = document.getElementById("btnRefreshQuoteDashboard");
     if (btnRefreshDash) btnRefreshDash.addEventListener("click", loadQuotationDashboard);
     const chkDashLatest = document.getElementById("chkQuoteDashLatestOnly");
@@ -8998,6 +9013,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (dateInput) dateInput.value = (header.quote_date || "").replace(/\//g, "-") || new Date().toISOString().split("T")[0];
       const validDateInput = document.getElementById("quoteValidDate");
       if (validDateInput) validDateInput.value = (header.valid_date || header.quote_date || "").replace(/\//g, "-");
+      if (typeof syncDesktopDateButtons === "function") {
+        syncDesktopDateButtons();
+      }
 
       const taxIdInput = document.getElementById("quoteTaxId");
       if (taxIdInput) taxIdInput.value = header.tax_id || "";
@@ -9752,25 +9770,53 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   let p4DashDataCache = null;
 
+  // 格式化本地日期為 YYYY-MM-DD（避免時區偏差）
+  function formatYmdDashLocal(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const d = String(dateObj.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  // 對標電腦版 _QuotationApp gui_dashboard.py 快速區間邏輯
   function applyDashboardQuickDateRange(rangeCode) {
     const sInput = document.getElementById("dashStartDate");
     const eInput = document.getElementById("dashEndDate");
     const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
-    if (eInput) eInput.value = todayStr;
+    const todayStr = formatYmdDashLocal(now);
 
-    if (!sInput) return;
-    if (rangeCode === "ALL") {
-      sInput.value = "2020-01-01";
-    } else if (rangeCode === "THIS_MONTH") {
-      sInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-    } else if (rangeCode === "LAST_3M") {
-      const d = new Date(now);
-      d.setMonth(d.getMonth() - 3);
-      sInput.value = d.toISOString().slice(0, 10);
-    } else if (rangeCode === "THIS_YEAR") {
-      sInput.value = `${now.getFullYear()}-01-01`;
+    if (rangeCode === "custom") {
+      syncDesktopDateButtons();
+      return;
     }
+
+    if (rangeCode === "full_year" || rangeCode === "THIS_YEAR") {
+      if (sInput) sInput.value = `${now.getFullYear()}-01-01`;
+      if (eInput) eInput.value = `${now.getFullYear()}-12-31`;
+    } else if (rangeCode === "this_month" || rangeCode === "THIS_MONTH") {
+      if (sInput) sInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+      if (eInput) eInput.value = todayStr;
+    } else if (rangeCode === "last_1m") {
+      const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      if (sInput) sInput.value = formatYmdDashLocal(d);
+      if (eInput) eInput.value = todayStr;
+    } else if (rangeCode === "last_2m") {
+      const d = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      if (sInput) sInput.value = formatYmdDashLocal(d);
+      if (eInput) eInput.value = todayStr;
+    } else if (rangeCode === "last_3m" || rangeCode === "LAST_3M") {
+      const d = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+      if (sInput) sInput.value = formatYmdDashLocal(d);
+      if (eInput) eInput.value = todayStr;
+    } else if (rangeCode === "half_year") {
+      const d = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      if (sInput) sInput.value = formatYmdDashLocal(d);
+      if (eInput) eInput.value = todayStr;
+    } else if (rangeCode === "ALL") {
+      if (sInput) sInput.value = "2020-01-01";
+      if (eInput) eInput.value = todayStr;
+    }
+    syncDesktopDateButtons();
   }
 
   function setupDashboardDragHandles() {
@@ -12061,6 +12107,577 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // ============================================================================
+  // 電腦版月曆選擇器引擎 (100% 對標 _QuotationApp gui_components.py)
+  // 包含：PopUpDateEdit (SingleCalendarPopup) 與 DateRangePicker (RangeCalendarPopup)
+  // ============================================================================
+  const DESKTOP_CAL_MONTHS_ZH = [
+    "一月", "二月", "三月", "四月", "五月", "六月",
+    "七月", "八月", "九月", "十月", "十一月", "十二月"
+  ];
+
+  function parseYmdToParts(str) {
+    const clean = String(str || "").trim().replace(/\//g, "-");
+    const m = clean.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (!m) return null;
+    const y = parseInt(m[1], 10);
+    const mo = parseInt(m[2], 10);
+    const d = parseInt(m[3], 10);
+    if (!y || mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+    return {
+      y,
+      m: mo,
+      d,
+      ymd: `${String(y).padStart(4, "0")}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`
+    };
+  }
+
+  function formatYmdToSlashDisplay(ymdStr) {
+    const p = parseYmdToParts(ymdStr);
+    if (!p) return "";
+    return `${String(p.y).padStart(4, "0")}/${String(p.m).padStart(2, "0")}/${String(p.d).padStart(2, "0")}`;
+  }
+
+  // 同步所有隱藏原生日期欄位與電腦版外觀按鈕的文字顯示
+  function syncDesktopDateButtons() {
+    document.querySelectorAll(".pyside-date-btn[data-target-input]").forEach(btn => {
+      const targetId = btn.getAttribute("data-target-input");
+      const inputEl = targetId ? document.getElementById(targetId) : null;
+      const slashText = formatYmdToSlashDisplay(inputEl?.value || "");
+      btn.textContent = slashText ? `${slashText}  ▼` : "請選擇日期  ▼";
+    });
+
+    document.querySelectorAll(".pyside-date-range-btn[data-start-input][data-end-input]").forEach(btn => {
+      const sId = btn.getAttribute("data-start-input");
+      const eId = btn.getAttribute("data-end-input");
+      const sInput = sId ? document.getElementById(sId) : null;
+      const eInput = eId ? document.getElementById(eId) : null;
+      const sSlash = formatYmdToSlashDisplay(sInput?.value || "");
+      const eSlash = formatYmdToSlashDisplay(eInput?.value || "");
+      if (sSlash && eSlash) {
+        btn.textContent = `${sSlash} ~ ${eSlash}  ▼`;
+      } else if (sSlash) {
+        btn.textContent = `${sSlash} ~ ...  ▼`;
+      } else {
+        btn.textContent = "選擇日期範圍  ▼";
+      }
+    });
+  }
+
+  function positionDesktopCalendarPopup(popupEl, anchorEl) {
+    if (!popupEl || !anchorEl) return;
+    popupEl.classList.remove("hidden");
+    const rect = anchorEl.getBoundingClientRect();
+    const popRect = popupEl.getBoundingClientRect();
+    const vw = window.innerWidth || document.documentElement.clientWidth;
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+
+    let left = rect.left;
+    if (left + popRect.width > vw - 8) {
+      left = Math.max(8, vw - popRect.width - 8);
+    }
+    if (left < 8) left = 8;
+
+    let top = rect.bottom + 4;
+    if (top + popRect.height > vh - 8 && rect.top - popRect.height - 4 >= 8) {
+      top = rect.top - popRect.height - 4;
+    }
+
+    popupEl.style.left = `${Math.round(left)}px`;
+    popupEl.style.top = `${Math.round(top)}px`;
+  }
+
+  function closeAllDesktopCalendarPopups() {
+    const sc = document.getElementById("pysideSingleCalendarPopup");
+    const rc = document.getElementById("pysideRangeCalendarPopup");
+    if (sc) sc.classList.add("hidden");
+    if (rc) rc.classList.add("hidden");
+  }
+
+  const singleCalState = {
+    anchorBtn: null,
+    targetInput: null,
+    viewYear: new Date().getFullYear(),
+    viewMonth: new Date().getMonth() + 1,
+    selectedYmd: "",
+    ymYear: new Date().getFullYear()
+  };
+
+  function renderSingleCalendarPopup() {
+    const headerBtn = document.getElementById("scHeaderBtn");
+    const dayGrid = document.getElementById("scDayGrid");
+    if (!headerBtn || !dayGrid) return;
+
+    headerBtn.textContent = `${singleCalState.viewYear} 年  ${DESKTOP_CAL_MONTHS_ZH[singleCalState.viewMonth - 1]}`;
+    const todayYmd = formatYmdDashLocal(new Date());
+    const firstDay = new Date(singleCalState.viewYear, singleCalState.viewMonth - 1, 1);
+    const startOffset = firstDay.getDay(); // 週日為 0
+    const cursor = new Date(singleCalState.viewYear, singleCalState.viewMonth - 1, 1 - startOffset);
+
+    dayGrid.innerHTML = "";
+    for (let i = 0; i < 42; i++) {
+      const cellYmd = formatYmdDashLocal(cursor);
+      const cellYear = cursor.getFullYear();
+      const cellMonth = cursor.getMonth() + 1;
+      const cellDay = cursor.getDate();
+      const col = i % 7;
+      const isCurMonth = (cellYear === singleCalState.viewYear && cellMonth === singleCalState.viewMonth);
+      const isWeekend = (col === 0 || col === 6);
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "pyside-cal-day";
+      if (!isCurMonth) btn.classList.add("is-other-month");
+      else if (isWeekend) btn.classList.add("is-weekend");
+      if (cellYmd === todayYmd) btn.classList.add("is-today");
+      if (singleCalState.selectedYmd && cellYmd === singleCalState.selectedYmd) {
+        btn.classList.add("is-selected");
+      }
+
+      const inner = document.createElement("span");
+      inner.className = "pyside-cal-day-inner";
+      inner.textContent = String(cellDay);
+      btn.appendChild(inner);
+
+      btn.addEventListener("click", () => {
+        if (singleCalState.targetInput) {
+          singleCalState.targetInput.value = cellYmd;
+          singleCalState.selectedYmd = cellYmd;
+          syncDesktopDateButtons();
+          singleCalState.targetInput.dispatchEvent(new Event("input", { bubbles: true }));
+          singleCalState.targetInput.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        closeAllDesktopCalendarPopups();
+      });
+
+      dayGrid.appendChild(btn);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+
+  function renderSingleCalendarYmOverlay() {
+    const yearLabel = document.getElementById("scYmYearLabel");
+    const monthGrid = document.getElementById("scYmMonthGrid");
+    if (!yearLabel || !monthGrid) return;
+
+    yearLabel.textContent = `${singleCalState.ymYear} 年`;
+    monthGrid.innerHTML = "";
+    for (let m = 1; m <= 12; m++) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "pyside-cal-ym-btn";
+      if (singleCalState.ymYear === singleCalState.viewYear && m === singleCalState.viewMonth) {
+        btn.classList.add("is-current");
+      }
+      btn.textContent = `${m}月`;
+      btn.addEventListener("click", () => {
+        singleCalState.viewYear = singleCalState.ymYear;
+        singleCalState.viewMonth = m;
+        document.getElementById("scYmOverlay")?.classList.add("hidden");
+        document.getElementById("scMainView")?.classList.remove("hidden");
+        renderSingleCalendarPopup();
+      });
+      monthGrid.appendChild(btn);
+    }
+  }
+
+  // 開啟電腦版單一日期月曆彈窗 (PopUpDateEdit)
+  function openSingleCalendarPopup(anchorBtn, targetInput) {
+    const popupEl = document.getElementById("pysideSingleCalendarPopup");
+    if (!popupEl || !targetInput) return;
+
+    const wasSameOpen = !popupEl.classList.contains("hidden") && singleCalState.targetInput === targetInput;
+    closeAllDesktopCalendarPopups();
+    if (wasSameOpen) return;
+
+    const parsed = parseYmdToParts(targetInput.value);
+    const now = new Date();
+    singleCalState.anchorBtn = anchorBtn;
+    singleCalState.targetInput = targetInput;
+    singleCalState.selectedYmd = parsed ? parsed.ymd : "";
+    singleCalState.viewYear = parsed ? parsed.y : now.getFullYear();
+    singleCalState.viewMonth = parsed ? parsed.m : (now.getMonth() + 1);
+    singleCalState.ymYear = singleCalState.viewYear;
+
+    document.getElementById("scYmOverlay")?.classList.add("hidden");
+    document.getElementById("scMainView")?.classList.remove("hidden");
+    renderSingleCalendarPopup();
+    positionDesktopCalendarPopup(popupEl, anchorBtn);
+  }
+
+  const rangeCalState = {
+    anchorBtn: null,
+    startInput: null,
+    endInput: null,
+    viewYear: new Date().getFullYear(),
+    viewMonth: new Date().getMonth() + 1,
+    startYmd: "",
+    endYmd: "",
+    phase: 0, // 0: 尚未選, 1: 已選開始日等待結束日, 2: 已選起訖區間
+    ymYear: new Date().getFullYear()
+  };
+
+  function renderRangeCalendarPopup() {
+    const headerBtn = document.getElementById("rcHeaderBtn");
+    const dayGrid = document.getElementById("rcDayGrid");
+    const statusLabel = document.getElementById("rcStatusLabel");
+    if (!headerBtn || !dayGrid || !statusLabel) return;
+
+    headerBtn.textContent = `${rangeCalState.viewYear} 年  ${DESKTOP_CAL_MONTHS_ZH[rangeCalState.viewMonth - 1]}`;
+    const todayYmd = formatYmdDashLocal(new Date());
+    const firstDay = new Date(rangeCalState.viewYear, rangeCalState.viewMonth - 1, 1);
+    const startOffset = firstDay.getDay();
+    const cursor = new Date(rangeCalState.viewYear, rangeCalState.viewMonth - 1, 1 - startOffset);
+
+    const hasFullRange = Boolean(
+      rangeCalState.startYmd &&
+      rangeCalState.endYmd &&
+      rangeCalState.startYmd !== rangeCalState.endYmd
+    );
+
+    dayGrid.innerHTML = "";
+    for (let i = 0; i < 42; i++) {
+      const cellYmd = formatYmdDashLocal(cursor);
+      const cellYear = cursor.getFullYear();
+      const cellMonth = cursor.getMonth() + 1;
+      const cellDay = cursor.getDate();
+      const col = i % 7;
+      const isCurMonth = (cellYear === rangeCalState.viewYear && cellMonth === rangeCalState.viewMonth);
+      const isWeekend = (col === 0 || col === 6);
+
+      const isStart = Boolean(rangeCalState.startYmd && cellYmd === rangeCalState.startYmd);
+      const isEnd = Boolean(rangeCalState.endYmd && cellYmd === rangeCalState.endYmd);
+      const inRange = Boolean(
+        rangeCalState.startYmd &&
+        rangeCalState.endYmd &&
+        cellYmd > rangeCalState.startYmd &&
+        cellYmd < rangeCalState.endYmd
+      );
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "pyside-cal-day";
+      if (!isCurMonth) btn.classList.add("is-other-month");
+      else if (isWeekend) btn.classList.add("is-weekend");
+      if (cellYmd === todayYmd) btn.classList.add("is-today");
+      if (inRange) btn.classList.add("is-in-range");
+      if (isStart) {
+        btn.classList.add("is-range-start");
+        if (hasFullRange) btn.classList.add("has-range");
+      }
+      if (isEnd) {
+        btn.classList.add("is-range-end");
+        if (hasFullRange) btn.classList.add("has-range");
+      }
+
+      const inner = document.createElement("span");
+      inner.className = "pyside-cal-day-inner";
+      inner.textContent = String(cellDay);
+      btn.appendChild(inner);
+
+      btn.addEventListener("click", () => {
+        // 電腦版三階段點擊循環：第1下或重新點選設定開始日；第2下設定結束日（自動排序）
+        if (rangeCalState.phase === 0 || rangeCalState.phase === 2 || !rangeCalState.startYmd) {
+          rangeCalState.startYmd = cellYmd;
+          rangeCalState.endYmd = "";
+          rangeCalState.phase = 1;
+        } else {
+          if (cellYmd < rangeCalState.startYmd) {
+            rangeCalState.endYmd = rangeCalState.startYmd;
+            rangeCalState.startYmd = cellYmd;
+          } else {
+            rangeCalState.endYmd = cellYmd;
+          }
+          rangeCalState.phase = 2;
+        }
+        renderRangeCalendarPopup();
+      });
+
+      dayGrid.appendChild(btn);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    if (rangeCalState.phase === 0 || !rangeCalState.startYmd) {
+      statusLabel.textContent = "請選擇開始日期";
+    } else if (rangeCalState.phase === 1 || !rangeCalState.endYmd) {
+      statusLabel.textContent = `開始：${formatYmdToSlashDisplay(rangeCalState.startYmd)}　請選擇結束日期`;
+    } else {
+      statusLabel.textContent = `${formatYmdToSlashDisplay(rangeCalState.startYmd)} ～ ${formatYmdToSlashDisplay(rangeCalState.endYmd)}`;
+    }
+  }
+
+  function renderRangeCalendarYmOverlay() {
+    const yearLabel = document.getElementById("rcYmYearLabel");
+    const monthGrid = document.getElementById("rcYmMonthGrid");
+    if (!yearLabel || !monthGrid) return;
+
+    yearLabel.textContent = `${rangeCalState.ymYear} 年`;
+    monthGrid.innerHTML = "";
+    for (let m = 1; m <= 12; m++) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "pyside-cal-ym-btn";
+      if (rangeCalState.ymYear === rangeCalState.viewYear && m === rangeCalState.viewMonth) {
+        btn.classList.add("is-current");
+      }
+      btn.textContent = `${m}月`;
+      btn.addEventListener("click", () => {
+        rangeCalState.viewYear = rangeCalState.ymYear;
+        rangeCalState.viewMonth = m;
+        document.getElementById("rcYmOverlay")?.classList.add("hidden");
+        document.getElementById("rcMainView")?.classList.remove("hidden");
+        renderRangeCalendarPopup();
+      });
+      monthGrid.appendChild(btn);
+    }
+  }
+
+  // 開啟電腦版日期區間月曆彈窗 (DateRangePicker)
+  function openRangeCalendarPopup(anchorBtn, startInput, endInput) {
+    const popupEl = document.getElementById("pysideRangeCalendarPopup");
+    if (!popupEl || !startInput || !endInput) return;
+
+    const wasSameOpen = !popupEl.classList.contains("hidden") && rangeCalState.startInput === startInput;
+    closeAllDesktopCalendarPopups();
+    if (wasSameOpen) return;
+
+    const sParsed = parseYmdToParts(startInput.value);
+    const eParsed = parseYmdToParts(endInput.value);
+    const now = new Date();
+    const anchorParsed = eParsed || sParsed;
+
+    rangeCalState.anchorBtn = anchorBtn;
+    rangeCalState.startInput = startInput;
+    rangeCalState.endInput = endInput;
+    rangeCalState.startYmd = sParsed ? sParsed.ymd : "";
+    rangeCalState.endYmd = eParsed ? eParsed.ymd : "";
+    rangeCalState.phase = (rangeCalState.startYmd && rangeCalState.endYmd)
+      ? 2
+      : (rangeCalState.startYmd ? 1 : 0);
+    rangeCalState.viewYear = anchorParsed ? anchorParsed.y : now.getFullYear();
+    rangeCalState.viewMonth = anchorParsed ? anchorParsed.m : (now.getMonth() + 1);
+    rangeCalState.ymYear = rangeCalState.viewYear;
+
+    document.getElementById("rcYmOverlay")?.classList.add("hidden");
+    document.getElementById("rcMainView")?.classList.remove("hidden");
+    renderRangeCalendarPopup();
+    positionDesktopCalendarPopup(popupEl, anchorBtn);
+  }
+
+  function wrapHiddenDateInputSetter(inputEl) {
+    if (!inputEl || inputEl.dataset.calWrapped === "1") return;
+    const protoDesc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+    if (!protoDesc || !protoDesc.set || !protoDesc.get) return;
+    Object.defineProperty(inputEl, "value", {
+      configurable: true,
+      get() {
+        return protoDesc.get.call(this);
+      },
+      set(nextVal) {
+        protoDesc.set.call(this, nextVal);
+        syncDesktopDateButtons();
+      }
+    });
+    inputEl.dataset.calWrapped = "1";
+  }
+
+  // 初始化全系統電腦版月曆選擇元件
+  function initDesktopCalendarPickers() {
+    // 1. 攔截所有隱藏原生日期欄位的 .value 寫入，確保任何程式設值都能即時更新外觀按鈕
+    document.querySelectorAll("input.pyside-hidden-date-input").forEach(wrapHiddenDateInputSetter);
+
+    // 2. 初始化各區間預設值（對標電腦版 DateRangePicker 與 gui_dashboard）
+    const now = new Date();
+    const todayStr = formatYmdDashLocal(now);
+
+    const reportDateEl = document.getElementById("inputReportDate");
+    if (reportDateEl && !reportDateEl.value) {
+      reportDateEl.value = todayStr;
+    }
+
+    const histStartEl = document.getElementById("historyStartDate");
+    const histEndEl = document.getElementById("historyEndDate");
+    if (histStartEl && !histStartEl.value) {
+      const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+      histStartEl.value = formatYmdDashLocal(threeMonthsAgo);
+    }
+    if (histEndEl && !histEndEl.value) {
+      histEndEl.value = todayStr;
+    }
+
+    const dashStartEl = document.getElementById("dashStartDate");
+    const dashEndEl = document.getElementById("dashEndDate");
+    if (dashStartEl && dashEndEl && (!dashStartEl.value || !dashEndEl.value)) {
+      const dashQuickEl = document.getElementById("dashQuickRangeSelect");
+      applyDashboardQuickDateRange(dashQuickEl?.value || "this_month");
+    }
+
+    // 3. 綁定所有單一日期按鈕
+    document.querySelectorAll(".pyside-date-btn[data-target-input]").forEach(btn => {
+      if (btn.dataset.calBound === "1") return;
+      btn.dataset.calBound = "1";
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const targetId = btn.getAttribute("data-target-input");
+        const inputEl = targetId ? document.getElementById(targetId) : null;
+        if (inputEl) openSingleCalendarPopup(btn, inputEl);
+      });
+    });
+
+    // 4. 綁定所有日期區間按鈕
+    document.querySelectorAll(".pyside-date-range-btn[data-start-input][data-end-input]").forEach(btn => {
+      if (btn.dataset.calBound === "1") return;
+      btn.dataset.calBound = "1";
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const sId = btn.getAttribute("data-start-input");
+        const eId = btn.getAttribute("data-end-input");
+        const sInput = sId ? document.getElementById(sId) : null;
+        const eInput = eId ? document.getElementById(eId) : null;
+        if (sInput && eInput) openRangeCalendarPopup(btn, sInput, eInput);
+      });
+    });
+
+    // 5. 綁定單一日期彈窗控制鈕
+    document.getElementById("scPrevMonthBtn")?.addEventListener("click", () => {
+      const dt = new Date(singleCalState.viewYear, singleCalState.viewMonth - 2, 1);
+      singleCalState.viewYear = dt.getFullYear();
+      singleCalState.viewMonth = dt.getMonth() + 1;
+      renderSingleCalendarPopup();
+    });
+    document.getElementById("scNextMonthBtn")?.addEventListener("click", () => {
+      const dt = new Date(singleCalState.viewYear, singleCalState.viewMonth, 1);
+      singleCalState.viewYear = dt.getFullYear();
+      singleCalState.viewMonth = dt.getMonth() + 1;
+      renderSingleCalendarPopup();
+    });
+    document.getElementById("scHeaderBtn")?.addEventListener("click", () => {
+      singleCalState.ymYear = singleCalState.viewYear;
+      document.getElementById("scMainView")?.classList.add("hidden");
+      document.getElementById("scYmOverlay")?.classList.remove("hidden");
+      renderSingleCalendarYmOverlay();
+    });
+    document.getElementById("scYmPrevYearBtn")?.addEventListener("click", () => {
+      singleCalState.ymYear -= 1;
+      renderSingleCalendarYmOverlay();
+    });
+    document.getElementById("scYmNextYearBtn")?.addEventListener("click", () => {
+      singleCalState.ymYear += 1;
+      renderSingleCalendarYmOverlay();
+    });
+    document.getElementById("scClearBtn")?.addEventListener("click", () => {
+      if (singleCalState.targetInput) {
+        singleCalState.targetInput.value = "";
+        singleCalState.selectedYmd = "";
+        syncDesktopDateButtons();
+        singleCalState.targetInput.dispatchEvent(new Event("input", { bubbles: true }));
+        singleCalState.targetInput.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      closeAllDesktopCalendarPopups();
+    });
+    document.getElementById("scTodayBtn")?.addEventListener("click", () => {
+      const todayStrNow = formatYmdDashLocal(new Date());
+      if (singleCalState.targetInput) {
+        singleCalState.targetInput.value = todayStrNow;
+        singleCalState.selectedYmd = todayStrNow;
+        syncDesktopDateButtons();
+        singleCalState.targetInput.dispatchEvent(new Event("input", { bubbles: true }));
+        singleCalState.targetInput.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      closeAllDesktopCalendarPopups();
+    });
+
+    // 6. 綁定區間月曆彈窗控制鈕
+    document.getElementById("rcPrevMonthBtn")?.addEventListener("click", () => {
+      const dt = new Date(rangeCalState.viewYear, rangeCalState.viewMonth - 2, 1);
+      rangeCalState.viewYear = dt.getFullYear();
+      rangeCalState.viewMonth = dt.getMonth() + 1;
+      renderRangeCalendarPopup();
+    });
+    document.getElementById("rcNextMonthBtn")?.addEventListener("click", () => {
+      const dt = new Date(rangeCalState.viewYear, rangeCalState.viewMonth, 1);
+      rangeCalState.viewYear = dt.getFullYear();
+      rangeCalState.viewMonth = dt.getMonth() + 1;
+      renderRangeCalendarPopup();
+    });
+    document.getElementById("rcHeaderBtn")?.addEventListener("click", () => {
+      rangeCalState.ymYear = rangeCalState.viewYear;
+      document.getElementById("rcMainView")?.classList.add("hidden");
+      document.getElementById("rcYmOverlay")?.classList.remove("hidden");
+      renderRangeCalendarYmOverlay();
+    });
+    document.getElementById("rcYmPrevYearBtn")?.addEventListener("click", () => {
+      rangeCalState.ymYear -= 1;
+      renderRangeCalendarYmOverlay();
+    });
+    document.getElementById("rcYmNextYearBtn")?.addEventListener("click", () => {
+      rangeCalState.ymYear += 1;
+      renderRangeCalendarYmOverlay();
+    });
+    document.getElementById("rcClearBtn")?.addEventListener("click", () => {
+      rangeCalState.startYmd = "";
+      rangeCalState.endYmd = "";
+      rangeCalState.phase = 0;
+      renderRangeCalendarPopup();
+    });
+    document.getElementById("rcConfirmBtn")?.addEventListener("click", () => {
+      const sVal = rangeCalState.startYmd || "";
+      const eVal = rangeCalState.endYmd || sVal;
+      if (rangeCalState.startInput && rangeCalState.endInput) {
+        rangeCalState.startInput.value = sVal;
+        rangeCalState.endInput.value = eVal;
+        syncDesktopDateButtons();
+
+        if (rangeCalState.startInput.id === "historyStartDate") {
+          const chkShowAll = document.getElementById("chkHistoryShowAll");
+          if (chkShowAll && (sVal || eVal)) {
+            chkShowAll.checked = false;
+          }
+          p3HistoryPage = 1;
+          rangeCalState.startInput.dispatchEvent(new Event("change", { bubbles: true }));
+        } else if (rangeCalState.startInput.id === "dashStartDate") {
+          const qr = document.getElementById("dashQuickRangeSelect");
+          if (qr) qr.value = "custom";
+          rangeCalState.startInput.dispatchEvent(new Event("change", { bubbles: true }));
+        } else {
+          rangeCalState.startInput.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      }
+      closeAllDesktopCalendarPopups();
+    });
+
+    // 7. 點擊彈窗外部或按 Escape 自動關閉月曆彈窗
+    document.addEventListener("mousedown", (e) => {
+      const scPopup = document.getElementById("pysideSingleCalendarPopup");
+      const rcPopup = document.getElementById("pysideRangeCalendarPopup");
+      if (scPopup && !scPopup.classList.contains("hidden")) {
+        if (!scPopup.contains(e.target) && !e.target.closest?.(".pyside-date-btn")) {
+          scPopup.classList.add("hidden");
+        }
+      }
+      if (rcPopup && !rcPopup.classList.contains("hidden")) {
+        if (!rcPopup.contains(e.target) && !e.target.closest?.(".pyside-date-range-btn")) {
+          rcPopup.classList.add("hidden");
+        }
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closeAllDesktopCalendarPopups();
+      }
+    });
+
+    const dailyFormEl = document.getElementById("dailyReportForm");
+    if (dailyFormEl) {
+      dailyFormEl.addEventListener("reset", () => {
+        setTimeout(syncDesktopDateButtons, 0);
+      });
+    }
+
+    syncDesktopDateButtons();
+  }
+
+  initDesktopCalendarPickers();
   setupAuthAndImpersonationEvents();
 
 });

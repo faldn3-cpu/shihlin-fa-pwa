@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261116_v1_0_58" />
+  <link rel="stylesheet" href="css/style.css?v=20261116_v1_0_59" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -144,7 +144,7 @@
           <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
           <div class="drawer-divider"></div>
           <div class="drawer-version-tag">
-            <span class="version-text">士林電機 FA 業務系統 v1.0.55</span>
+            <span id="sidebarAppVersionText" class="version-text" data-version-template="士林電機 FA 業務系統 {v}">士林電機 FA 業務系統 v1.0.59</span>
             <button id="btnClearCacheDrawer" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
               <svg class="icon-svg-xs" viewBox="0 0 24 24">
                 <path
@@ -2238,10 +2238,9 @@
               <fieldset class="pyside-groupbox pyside-full-groupbox">
                 <legend class="pyside-groupbox-legend">當前版本資訊</legend>
                 <div style="line-height:1.9; font-size:14px;">
-                  <div style="color:var(--color-accent); font-weight:700; font-size:15px;">目前版本 : v1.0.55 (對齊桌面版
-                    v5.5.1.6)</div>
-                  <div>更新內容 : 全面開通「批次資料管理」Excel 匯入/匯出與歷史報價單三階段智慧匯入精靈</div>
-                  <div>發布時間 : 2026-11-13 17:00:00</div>
+                  <div id="lblQuoteCurrentVersion" data-version-template="目前版本 : {v}" style="color:var(--color-accent); font-weight:700; font-size:15px;">目前版本 : v1.0.59</div>
+                  <div id="lblQuoteVersionNotes">更新內容 : 支援全系統單一版本變數管理、正宗 Excel 試算表作業、固定欄寬與雙擊自動調整最適欄寬、即時財務捨入重算</div>
+                  <div id="lblQuoteVersionDate">發布時間 : 2026-11-16 13:25:00</div>
                 </div>
               </fieldset>
 
@@ -2596,7 +2595,7 @@
           </div>
 
           <div class="settings-version-tag">
-            <span class="version-text">系統版本：v1.0.55 (對齊桌面版 v5.5.1.6)</span>
+            <span id="settingsFooterVersionText" class="version-text" data-version-template="系統版本：{v}">系統版本：v1.0.59</span>
             <button id="btnClearCacheSettings" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
               <svg class="icon-svg-xs" viewBox="0 0 24 24">
                 <path
@@ -3690,35 +3689,31 @@
     </div>
   </div>
 
-  <!-- 電腦版型號智慧關聯度下拉選單浮層 (對標 _QuotationApp RelevanceCompleter) -->
+  <!-- 電腦版型號智慧關聯度下拉選單浮層 -->
   <div id="pysideModelCompleterPopup" class="pyside-completer-popup hidden" role="listbox" aria-label="型號快速選單">
     <div id="pysideModelCompleterHeader" class="pyside-completer-header">
-      <span>產品型號智慧搜尋（開頭符合優先排列）</span>
+      <span>產品型號搜尋</span>
       <span id="pysideModelCompleterCount" style="color:#64748b;">0 筆</span>
     </div>
     <div id="pysideModelCompleterList" class="pyside-completer-list"></div>
   </div>
 
-  <!-- 正宗 Excel 試算表滑鼠右鍵快捷選單 (支援多列插入、貼上、向下推擠、向下填滿與刪除) -->
+  <!-- Excel 試算表滑鼠右鍵快捷選單 -->
   <div id="pysideQuoteTableContextMenu" class="excel-context-menu hidden" role="menu" aria-label="表格右鍵功能選單">
     <button type="button" class="excel-ctx-item" data-action="copy">複製 (Ctrl+C)</button>
     <button type="button" class="excel-ctx-item" data-action="cut">剪下 (Ctrl+X)</button>
     <button type="button" class="excel-ctx-item" data-action="paste">貼上 (Ctrl+V)</button>
-    <button type="button" class="excel-ctx-item" data-action="insert-copied" id="ctxMenuInsertCopiedBtn">插入複製的儲存格
-      (向下推擠)</button>
+    <button type="button" class="excel-ctx-item" data-action="insert-copied" id="ctxMenuInsertCopiedBtn">插入複製的儲存格</button>
     <div class="excel-ctx-sep"></div>
-    <button type="button" class="excel-ctx-item" data-action="insert-above" id="ctxMenuInsertAboveBtn">在此上方插入 1
-      列空白列</button>
-    <button type="button" class="excel-ctx-item" data-action="insert-below" id="ctxMenuInsertBelowBtn">在此下方插入 1
-      列空白列</button>
+    <button type="button" class="excel-ctx-item" data-action="insert-above" id="ctxMenuInsertAboveBtn">在此上方插入 1 列空白列</button>
+    <button type="button" class="excel-ctx-item" data-action="insert-below" id="ctxMenuInsertBelowBtn">在此下方插入 1 列空白列</button>
     <button type="button" class="excel-ctx-item" data-action="insert-subtotal-above">在此上方插入方案小計</button>
     <button type="button" class="excel-ctx-item" data-action="insert-subtotal-below">在此下方插入方案小計</button>
     <div class="excel-ctx-sep"></div>
-    <button type="button" class="excel-ctx-item" data-action="fill-down-range" id="ctxMenuFillDownBtn">向下填滿選取範圍
-      (Ctrl+D)</button>
+    <button type="button" class="excel-ctx-item" data-action="fill-down-range" id="ctxMenuFillDownBtn">向下填滿選取範圍 (Ctrl+D)</button>
     <button type="button" class="excel-ctx-item" data-action="fill-down-bottom">向下填滿至表格最底</button>
     <button type="button" class="excel-ctx-item" data-action="clear-cells">清除儲存格內容 (Delete)</button>
-    <button type="button" class="excel-ctx-item" data-action="set-row-height">設定列高... (如同 Excel)</button>
+    <button type="button" class="excel-ctx-item" data-action="set-row-height">設定列高...</button>
     <div class="excel-ctx-sep"></div>
     <button type="button" class="excel-ctx-item danger" data-action="delete-rows"
       id="ctxMenuDeleteRowsBtn">刪除選取列</button>
@@ -3728,13 +3723,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261116_v1_0_58"></script>
+  <script src="js/app.js?v=20261116_v1_0_59"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261116_v1_0_58')
+        navigator.serviceWorker.register('./sw.js?v=20261116_v1_0_59')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

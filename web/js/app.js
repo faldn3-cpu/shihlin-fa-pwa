@@ -12,10 +12,29 @@
 
 document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
+  // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
+  // ============================================================================
+  const SYSTEM_APP_VERSION = "v1.0.59";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 13:25:00";
+  const SYSTEM_APP_RELEASE_NOTES = "支援單一版本變數管理、正宗 Excel 試算表作業、固定欄寬與雙擊自動最適欄寬、財務捨入即時重算";
+
+  function syncSystemVersionUI() {
+    document.querySelectorAll("[data-version-template]").forEach(el => {
+      const tpl = el.getAttribute("data-version-template") || "{v}";
+      el.textContent = tpl.replace(/\{v\}/g, SYSTEM_APP_VERSION);
+    });
+    const notesEl = document.getElementById("lblQuoteVersionNotes");
+    if (notesEl) notesEl.textContent = `更新內容 : ${SYSTEM_APP_RELEASE_NOTES}`;
+    const dateEl = document.getElementById("lblQuoteVersionDate");
+    if (dateEl) dateEl.textContent = `發布時間 : ${SYSTEM_APP_RELEASE_DATE}`;
+  }
+
+  // ============================================================================
   // 全域變數與快取
   // ============================================================================
   let customersCache = [];
   let dealsCache = [];
+  syncSystemVersionUI();
 
   // ============================================================================
   // 0. 內建基準資料庫與集中分流本地引擎 (v1.0.54 新增)
@@ -48,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function createEmptyStore() {
       return {
-        version: "v1.0.55",
+        version: SYSTEM_APP_VERSION,
         generated_at: new Date().toISOString(),
         salespersons: ["曾維崧", "何宛茹", "張何達", "張書偉", "曾仁君", "楊家豪", "溫達仁", "莊富丞", "葉仁豪", "邱文輝", "黃柏翰"],
         products: [],
@@ -66,7 +85,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         // 避免將數千筆標準品重複塞入 localStorage 配額，僅保存增量與個人業務異動層
         const deltaPayload = {
-          version: "v1.0.55",
+          version: SYSTEM_APP_VERSION,
           saved_at: new Date().toISOString(),
           extra_products: Array.isArray(store._extra_products) ? store._extra_products : [],
           settings: store.settings || {},
@@ -6199,12 +6218,76 @@ document.addEventListener("DOMContentLoaded", () => {
           resizer.className = "col-resizer";
           th.appendChild(resizer);
         }
+        resizer.setAttribute("title", "拖曳調整欄寬；點兩下自動調整為最適寬度");
 
         if (resizer.getAttribute("data-bound") === "true") return;
         resizer.setAttribute("data-bound", "true");
 
         let startX = 0;
         let startWidth = 0;
+
+        const saveTableColumnWidths = () => {
+          const currentWidths = {};
+          table.querySelectorAll("thead th.resizable-th").forEach(header => {
+            const k = header.getAttribute("data-col");
+            const w = parseInt(header.style.width, 10) || header.offsetWidth;
+            if (k && w > 0) currentWidths[k] = w;
+          });
+          localStorage.setItem(storageKey, JSON.stringify(currentWidths));
+        };
+
+        const measureTextPixelWidth = (txt, fontStr) => {
+          if (!txt) return 0;
+          if (!window.__shihlinMeasureCanvas) {
+            window.__shihlinMeasureCanvas = document.createElement("canvas");
+          }
+          const ctx = window.__shihlinMeasureCanvas.getContext("2d");
+          if (!ctx) return String(txt).length * 9;
+          ctx.font = fontStr || '14px "Microsoft JhengHei", "Segoe UI", sans-serif';
+          return ctx.measureText(String(txt)).width;
+        };
+
+        const autoFitColumnWidth = () => {
+          const headCells = Array.from(th.parentElement?.children || []);
+          const currentColIdx = headCells.indexOf(th);
+          if (currentColIdx < 0) return;
+
+          const thStyle = window.getComputedStyle(th);
+          const thFont = thStyle.font || `700 ${thStyle.fontSize || "13px"} ${thStyle.fontFamily || "Microsoft JhengHei"}`;
+          const headerText = (th.textContent || "").trim();
+          let maxW = measureTextPixelWidth(headerText, thFont) + 32;
+
+          const bodyRows = Array.from(table.querySelectorAll("tbody tr"));
+          bodyRows.forEach(tr => {
+            if (tr.classList.contains("subtotal-divider-row")) return;
+            const td = tr.cells[currentColIdx];
+            if (!td || td.colSpan > 1) return;
+
+            const comboWrap = td.querySelector(".pyside-model-combo-wrap");
+            const inp = td.querySelector("input:not([type='hidden'])");
+            if (inp) {
+              const val = String(inp.value || "").trim();
+              if (!val) return;
+              const iStyle = window.getComputedStyle(inp);
+              const iFont = iStyle.font || `${iStyle.fontWeight || "400"} ${iStyle.fontSize || "14px"} ${iStyle.fontFamily || "Microsoft JhengHei"}`;
+              const extraPad = comboWrap ? 42 : 24;
+              maxW = Math.max(maxW, measureTextPixelWidth(val, iFont) + extraPad);
+            } else {
+              const span = td.querySelector("span");
+              const val = (span ? span.textContent : td.textContent || "").trim();
+              if (!val) return;
+              const targetEl = span || td;
+              const cStyle = window.getComputedStyle(targetEl);
+              const cFont = cStyle.font || `${cStyle.fontWeight || "400"} ${cStyle.fontSize || "14px"} ${cStyle.fontFamily || "Microsoft JhengHei"}`;
+              maxW = Math.max(maxW, measureTextPixelWidth(val, cFont) + 22);
+            }
+          });
+
+          const bestWidth = Math.ceil(Math.max(52, Math.min(600, maxW)));
+          applySingleColumnWidth(th, bestWidth);
+          syncExcelTableTotalWidth(table);
+          saveTableColumnWidths();
+        };
 
         const onMouseMove = (e) => {
           const dx = e.clientX - startX;
@@ -6219,14 +6302,7 @@ document.addEventListener("DOMContentLoaded", () => {
           document.body.style.cursor = "";
           document.removeEventListener("mousemove", onMouseMove);
           document.removeEventListener("mouseup", onMouseUp);
-
-          const currentWidths = {};
-          table.querySelectorAll("thead th.resizable-th").forEach(header => {
-            const k = header.getAttribute("data-col");
-            const w = parseInt(header.style.width, 10) || header.offsetWidth;
-            if (k && w > 0) currentWidths[k] = w;
-          });
-          localStorage.setItem(storageKey, JSON.stringify(currentWidths));
+          saveTableColumnWidths();
         };
 
         resizer.addEventListener("mousedown", (e) => {
@@ -6239,6 +6315,13 @@ document.addEventListener("DOMContentLoaded", () => {
           document.body.style.cursor = "col-resize";
           document.addEventListener("mousemove", onMouseMove);
           document.addEventListener("mouseup", onMouseUp);
+        });
+
+        // 雙擊表頭分隔線 -> 自動依該欄文字內容調整最適寬度
+        resizer.addEventListener("dblclick", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          autoFitColumnWidth();
         });
       });
 
@@ -11694,7 +11777,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnCheckUpd) {
       btnCheckUpd.addEventListener("click", () => {
         const st = document.getElementById("lblUpdateCheckStatus");
-        if (st) st.textContent = "狀態：目前已是最新版本 v5.5.1.6 (資料庫連線正常)";
+        if (st) st.textContent = `狀態：目前已是最新版本 ${SYSTEM_APP_VERSION} (資料庫連線正常)`;
       });
     }
     const btnRollback = document.getElementById("btnRollbackPreviousVersion");
@@ -11867,11 +11950,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const HELP_CHANGELOG_HTML = `
     <h2 class="help-h2">[履歷] 系統升級與修復履歷 (Changelog)</h2>
-    <div style="color:#27ae60; font-weight:700; font-size:1.02rem; margin:10px 0 8px 0;">v5.5.1.6 / PWA v1.0.55 批次 Excel 匯入與三階段匯入精靈版 (2026/11)</div>
+    <div style="color:#27ae60; font-weight:700; font-size:1.02rem; margin:10px 0 8px 0;">PWA ${SYSTEM_APP_VERSION} 正宗 Excel 試算表與即時計算升級版 (2026/11)</div>
     <ul style="line-height:1.85; padding-left:20px; margin-bottom:18px;">
-      <li><strong>批次資料管理 Excel 匯入/匯出全面開通</strong>：支援桌面版 9 欄客戶 Excel、6 欄產品 Excel 的整批匯入與匯出備份（含 <code>.xlsx</code>、<code>.xlsm</code>、<code>.csv</code>），並在靜態 GitHub Pages 與本機伺服器皆可直接使用。</li>
-      <li><strong>歷史報價單三階段智慧匯入精靈</strong>：1:1 還原桌面版三階段精靈（<code>[客戶資料庫]</code> ➔ <code>[經銷牌價表參考]</code> ➔ <code>[報價單資料庫]</code>），自動依當前業務員獨立寫入，具備日期格式檢查、客戶衝突攔截與已存在單號防重略過保護。</li>
-      <li><strong>PWA 業務系統全新雲端分流資料庫與內建資料架構 (v1.0.54)</strong>：建立「00_全體共用區」與「01_業務個人資料區/&lt;業務姓名&gt;」集中同步架構，同業務名下公司不可重複、不同業務可各自建檔互不覆蓋。</li>
+      <li><strong>Excel 試算表引擎與型號智慧選單</strong>：全面支援單擊選取、雙擊或 F2 編輯、Enter 下移、方向鍵四向移動、多行列框選與 Excel 雙向複製貼上、多列插入、Ctrl+D 向下填滿、Ctrl+Z/Y 復原重做，以及電腦版型號關聯度智慧選單。</li>
+      <li><strong>固定欄寬鎖定與雙擊自動調寬</strong>：表格各欄嚴格維持設定寬度，視窗最大化或拉動外框不會連帶變形；雙擊任何欄位分隔線即可自動依欄位內文字長度調整為最適寬度。</li>
+      <li><strong>財務捨入即時重算與醒目金額欄位</strong>：切換捨入位數（如十位數改百位數）或方式後立即重算整張報價單，並為最終報價金額與小計提供高對比醒目配色與變動提示。</li>
+      <li><strong>批次資料管理 Excel 匯入與三階段歷史報價匯入精靈 (v1.0.55)</strong>：支援客戶與產品 Excel 整批匯入匯出，以及舊系統三階段報價單匯入。</li>
+      <li><strong>PWA 業務系統雲端分流與內建基準資料庫 (v1.0.54)</strong>：建立「00_全體共用區」與「01_業務個人資料區/&lt;業務姓名&gt;」集中同步架構，同業務名下公司不可重複、不同業務可各自建檔互不覆蓋。</li>
     </ul>
     <div style="color:#27ae60; font-weight:700; font-size:1.02rem; margin:10px 0 8px 0;">v5.5.0.8 版本更新 (2026/09)</div>
     <ul style="line-height:1.85; padding-left:20px;">

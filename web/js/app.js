@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.63";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 14:50:00";
-  const SYSTEM_APP_RELEASE_NOTES = "補齊全系統各頁面表格完整四邊格線與滿版對齊，並還原備註/交期 21 組預設字句下拉選單與手動輸入功能";
+  const SYSTEM_APP_VERSION = "v1.0.64";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 15:08:00";
+  const SYSTEM_APP_RELEASE_NOTES = "報價單「公司名稱」升級為可打字搜尋篩選與下拉點選二合一選單";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -309,7 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchEncryptedSeedEnvelope() {
       if (rawEncryptedEnvelopeCache) return rawEncryptedEnvelopeCache;
-      const resp = await origFetch(`./data/encrypted_seed_db.json?v=20261116_v1_0_63`);
+      const resp = await origFetch(`./data/encrypted_seed_db.json?v=20261116_v1_0_64`);
       if (!resp || !resp.ok) throw new Error("無法下載網頁加密資料包");
       rawEncryptedEnvelopeCache = await resp.json();
       return rawEncryptedEnvelopeCache;
@@ -5996,6 +5996,11 @@ document.addEventListener("DOMContentLoaded", () => {
       invalidateDesktopProductsCache();
     }
     currentSelectedCustomer = null;
+    const dCustReset = document.getElementById("quoteCustomerInput");
+    if (dCustReset) dCustReset.value = "";
+    if (typeof window.__closeDesktopCustomerCompleter === "function") {
+      window.__closeDesktopCustomerCompleter();
+    }
     const spBadge = document.getElementById("specialProductOwnerBadge");
     if (spBadge) spBadge.textContent = `所屬業務：${salesName}`;
     await populateCustomerSelectDropdown(true);
@@ -6845,6 +6850,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const custInput = document.getElementById("customerName");
     if (custInput) custInput.value = cust.name || "";
 
+    const desktopCustInput = document.getElementById("quoteCustomerInput");
+    if (desktopCustInput) desktopCustInput.value = cust.name || "";
+
     const custSel = document.getElementById("customerSelect");
     if (custSel) custSel.value = String(cust.id || "");
 
@@ -7014,8 +7022,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 更新三段式單號預覽 (Prefix-Seq-Rev)
   function updateQuoteNoPreview() {
+    const desktopCustInput = document.getElementById("quoteCustomerInput");
     const custInput = document.getElementById("customerName");
-    const custName = custInput?.value.trim() || "";
+    const custName = (desktopCustInput?.value || custInput?.value || "").trim();
     const dateInput = document.getElementById("quoteDate");
     const qDate = dateInput?.value || new Date().toISOString().split("T")[0];
 
@@ -7027,6 +7036,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (custName) {
       let cleanCust = custName.replace(/有限公司|股份有限公司|企業|實業|科技|工業/g, "").trim();
       prefix = cleanCust.slice(0, 4) || "ST";
+    }
+
+    const quoteNoMode = document.getElementById("quoteNoMode");
+    const prefixInput = document.getElementById("quotePrefixInput");
+    if (prefixInput && (!quoteNoMode || quoteNoMode.value === "auto") && !currentBaseQuoteNo) {
+      prefixInput.value = custName ? `${prefix}${yymm}` : "-- 請選擇客戶 --";
     }
 
     const badge = document.getElementById("quoteNoPreviewBadge");
@@ -7133,7 +7148,233 @@ document.addEventListener("DOMContentLoaded", () => {
       btnMobileExitBottom.addEventListener("click", () => switchPage(navItemHome, panelHome));
     }
 
-    // 3. 電腦端公司名稱下拉選單更動 -> 同步手機與電腦端客戶資訊
+    // 3. 電腦端公司名稱可打字智慧搜尋 ＋ 下拉選單二合一控制器
+    const desktopCustomerCompleterState = {
+      isOpen: false,
+      results: [],
+      activeIdx: -1
+    };
+
+    function closeDesktopCustomerCompleter() {
+      const popup = document.getElementById("pysideCustomerCompleterPopup");
+      if (popup) popup.classList.add("hidden");
+      desktopCustomerCompleterState.isOpen = false;
+    }
+
+    function getOrCreateDesktopCustomerPopup() {
+      let popup = document.getElementById("pysideCustomerCompleterPopup");
+      if (!popup) {
+        popup = document.createElement("div");
+        popup.id = "pysideCustomerCompleterPopup";
+        popup.className = "pyside-completer-popup hidden";
+        popup.innerHTML = `
+          <div class="pyside-completer-header">
+            <span>請選擇或輸入客戶名稱</span>
+            <span id="pysideCustomerCompleterCount"></span>
+          </div>
+          <div id="pysideCustomerCompleterList" class="pyside-completer-list"></div>
+        `;
+        document.body.appendChild(popup);
+      }
+      return popup;
+    }
+
+    function renderDesktopCustomerCompleterList() {
+      const listEl = document.getElementById("pysideCustomerCompleterList");
+      const countEl = document.getElementById("pysideCustomerCompleterCount");
+      if (!listEl) return;
+
+      const results = desktopCustomerCompleterState.results || [];
+      if (countEl) {
+        countEl.textContent = `共 ${results.length} 家`;
+      }
+
+      if (results.length === 0) {
+        listEl.innerHTML = `<div style="padding:14px 12px; text-align:center; color:#64748b; font-size:13px;">查無相符的客戶資料</div>`;
+        return;
+      }
+
+      listEl.innerHTML = results.map((c, idx) => {
+        const isActive = idx === desktopCustomerCompleterState.activeIdx;
+        const isFav = Number(c.is_favorite || 0) > 0;
+        const starHtml = isFav ? `<span style="color:#f59e0b; margin-right:3px;">★</span>` : "";
+        const subParts = [
+          c.tax_id ? `統編: ${c.tax_id}` : "",
+          c.default_contact ? `聯絡人: ${c.default_contact}` : "",
+          c.phone ? `電話: ${c.phone}` : ""
+        ].filter(Boolean).join(" ｜ ");
+        return `
+          <div class="pyside-completer-item ${isActive ? "is-active" : ""}" data-cust-idx="${idx}" role="option">
+            <div class="pyside-completer-left">
+              <div class="pyside-completer-model-line">
+                <span>${starHtml}${escapeHtml(c.name || "")}</span>
+              </div>
+              ${subParts ? `<div class="pyside-completer-spec">${escapeHtml(subParts)}</div>` : ""}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      listEl.querySelectorAll(".pyside-completer-item").forEach(el => {
+        el.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const idx = parseInt(el.getAttribute("data-cust-idx"), 10);
+          const chosen = desktopCustomerCompleterState.results[idx];
+          if (chosen) {
+            applySelectedCustomerToQuoteUI(chosen);
+          }
+          closeDesktopCustomerCompleter();
+        });
+      });
+
+      const activeDom = listEl.querySelector(".pyside-completer-item.is-active");
+      if (activeDom) {
+        activeDom.scrollIntoView({ block: "nearest" });
+      }
+    }
+
+    async function openDesktopCustomerCompleter({ showAll = false } = {}) {
+      const wrapEl = document.getElementById("quoteCustomerComboWrap");
+      const inputEl = document.getElementById("quoteCustomerInput");
+      if (!wrapEl || !inputEl) return;
+
+      if (!customersCache || customersCache.length === 0) {
+        await populateCustomerSelectDropdown(true);
+      }
+
+      const rawQ = showAll ? "" : String(inputEl.value || "").trim().toLowerCase();
+      let list = (customersCache || []).slice();
+      if (rawQ) {
+        list = list.filter(c => {
+          const name = String(c.name || "").toLowerCase();
+          const tax = String(c.tax_id || "").toLowerCase();
+          const contact = String(c.default_contact || "").toLowerCase();
+          const phone = String(c.phone || "").toLowerCase();
+          return name.includes(rawQ) || tax.includes(rawQ) || contact.includes(rawQ) || phone.includes(rawQ);
+        }).sort((a, b) => {
+          const aStart = String(a.name || "").toLowerCase().startsWith(rawQ) ? 0 : 1;
+          const bStart = String(b.name || "").toLowerCase().startsWith(rawQ) ? 0 : 1;
+          if (aStart !== bStart) return aStart - bStart;
+          return Number(b.is_favorite || 0) - Number(a.is_favorite || 0);
+        });
+      }
+
+      desktopCustomerCompleterState.results = list;
+      const curName = String(inputEl.value || "").trim();
+      const matchedIdx = curName ? list.findIndex(c => String(c.name || "").trim() === curName) : -1;
+      desktopCustomerCompleterState.activeIdx = matchedIdx >= 0 ? matchedIdx : (list.length > 0 ? 0 : -1);
+      desktopCustomerCompleterState.isOpen = true;
+
+      const popup = getOrCreateDesktopCustomerPopup();
+      const wPx = Math.max(360, Math.round(wrapEl.getBoundingClientRect().width));
+      popup.style.width = `${wPx}px`;
+      renderDesktopCustomerCompleterList();
+      positionPopupBelowAnchor(popup, wrapEl);
+    }
+
+    window.__closeDesktopCustomerCompleter = closeDesktopCustomerCompleter;
+
+    const custInputCombo = document.getElementById("quoteCustomerInput");
+    const custArrowCombo = document.getElementById("btnQuoteCustomerComboArrow");
+    if (custInputCombo) {
+      custInputCombo.addEventListener("focus", () => {
+        if (custInputCombo._skipNextFocusOpen) {
+          custInputCombo._skipNextFocusOpen = false;
+          return;
+        }
+        const curText = String(custInputCombo.value || "").trim();
+        const isExactSelected = Boolean(currentSelectedCustomer && currentSelectedCustomer.name === curText);
+        openDesktopCustomerCompleter({ showAll: !curText || isExactSelected });
+      });
+
+      custInputCombo.addEventListener("click", () => {
+        if (!desktopCustomerCompleterState.isOpen) {
+          const curText = String(custInputCombo.value || "").trim();
+          const isExactSelected = Boolean(currentSelectedCustomer && currentSelectedCustomer.name === curText);
+          openDesktopCustomerCompleter({ showAll: !curText || isExactSelected });
+        }
+      });
+
+      custInputCombo.addEventListener("input", () => {
+        const typed = String(custInputCombo.value || "");
+        const trimmed = typed.trim();
+        const mobileCust = document.getElementById("customerName");
+        if (mobileCust) mobileCust.value = typed;
+
+        const exactCust = trimmed ? (customersCache || []).find(c => String(c.name || "").trim() === trimmed) : null;
+        if (exactCust) {
+          const posStart = custInputCombo.selectionStart;
+          const posEnd = custInputCombo.selectionEnd;
+          applySelectedCustomerToQuoteUI(exactCust);
+          try {
+            if (typeof posStart === "number") custInputCombo.setSelectionRange(posStart, posEnd);
+          } catch (err) {}
+        } else {
+          const hiddenSel = document.getElementById("customerSelect");
+          if (hiddenSel) hiddenSel.value = "";
+          if (currentSelectedCustomer && currentSelectedCustomer.name !== trimmed) {
+            currentSelectedCustomer = null;
+          }
+          updateQuoteNoPreview();
+        }
+        openDesktopCustomerCompleter({ showAll: false });
+      });
+
+      custInputCombo.addEventListener("keydown", (e) => {
+        if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
+        const len = (desktopCustomerCompleterState.results || []).length;
+        if (!desktopCustomerCompleterState.isOpen) {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            openDesktopCustomerCompleter({ showAll: true });
+          }
+          return;
+        }
+        if (e.key === "ArrowDown" && len > 0) {
+          e.preventDefault();
+          desktopCustomerCompleterState.activeIdx = (desktopCustomerCompleterState.activeIdx + 1) % len;
+          renderDesktopCustomerCompleterList();
+          return;
+        }
+        if (e.key === "ArrowUp" && len > 0) {
+          e.preventDefault();
+          desktopCustomerCompleterState.activeIdx = (desktopCustomerCompleterState.activeIdx - 1 + len) % len;
+          renderDesktopCustomerCompleterList();
+          return;
+        }
+        if (e.key === "Enter" && len > 0 && desktopCustomerCompleterState.activeIdx >= 0) {
+          e.preventDefault();
+          const chosen = desktopCustomerCompleterState.results[desktopCustomerCompleterState.activeIdx];
+          if (chosen) {
+            applySelectedCustomerToQuoteUI(chosen);
+          }
+          closeDesktopCustomerCompleter();
+          return;
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          closeDesktopCustomerCompleter();
+        }
+      });
+    }
+
+    if (custArrowCombo) {
+      custArrowCombo.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (desktopCustomerCompleterState.isOpen) {
+          closeDesktopCustomerCompleter();
+          return;
+        }
+        if (custInputCombo) {
+          custInputCombo._skipNextFocusOpen = true;
+          custInputCombo.focus({ preventScroll: true });
+        }
+        openDesktopCustomerCompleter({ showAll: true });
+      });
+    }
+
     const custSelect = document.getElementById("customerSelect");
     if (custSelect) {
       custSelect.addEventListener("change", (e) => {
@@ -7144,6 +7385,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
     }
+
+    document.addEventListener("mousedown", (e) => {
+      const custPop = document.getElementById("pysideCustomerCompleterPopup");
+      if (
+        custPop &&
+        !custPop.classList.contains("hidden") &&
+        !custPop.contains(e.target) &&
+        !e.target.closest?.("#quoteCustomerComboWrap")
+      ) {
+        closeDesktopCustomerCompleter();
+      }
+    });
 
     // 4. 手機端客戶詳細資料展開/收合
     const btnToggleCustDetail = document.getElementById("btnToggleCustDetail");
@@ -7615,11 +7868,16 @@ document.addEventListener("DOMContentLoaded", () => {
     currentBaseQuoteNo = null;
     currentLoadedDraftId = null;
     currentSelectedCustomer = null;
+    if (typeof window.__closeDesktopCustomerCompleter === "function") {
+      window.__closeDesktopCustomerCompleter();
+    }
 
     const custSel = document.getElementById("customerSelect");
     if (custSel) custSel.value = "";
     const custInput = document.getElementById("customerName");
     if (custInput) custInput.value = "";
+    const desktopCustInput = document.getElementById("quoteCustomerInput");
+    if (desktopCustInput) desktopCustInput.value = "";
     const prefixInput = document.getElementById("quotePrefixInput");
     if (prefixInput) prefixInput.value = "-- 請選擇客戶 --";
     const taxInput = document.getElementById("quoteTaxId");
@@ -8659,7 +8917,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 匯出報價單為 Excel (CSV UTF-8 BOM 防亂碼格式)
   function exportQuoteToExcel() {
-    const custName = document.getElementById("customerName")?.value.trim() || "士林電機報價客戶";
+    const custName = (document.getElementById("quoteCustomerInput")?.value || document.getElementById("customerName")?.value || "").trim() || "士林電機報價客戶";
     const projName = document.getElementById("quoteProjectName")?.value.trim() || "專案設備";
     const qDate = document.getElementById("quoteDate")?.value || new Date().toISOString().split("T")[0];
 
@@ -9120,7 +9378,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function openLineQuoteModal() {
     const custSel = document.getElementById("customerSelect");
-    const custName = document.getElementById("customerName")?.value.trim() || (custSel && custSel.selectedIndex > 0 ? custSel.options[custSel.selectedIndex].text : "") || "貴客戶";
+    const custName = document.getElementById("quoteCustomerInput")?.value.trim() || document.getElementById("customerName")?.value.trim() || (custSel && custSel.selectedIndex > 0 ? custSel.options[custSel.selectedIndex].text : "") || "貴客戶";
     const projName = document.getElementById("quoteProjectName")?.value.trim() || "設備報價";
     const qDate = document.getElementById("quoteDate")?.value || new Date().toISOString().split("T")[0];
     const activeSales = getActiveSalesName();
@@ -9175,7 +9433,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 共用收集目前表單品項與客戶資料
   function collectCurrentQuoteFormData() {
     const custSel = document.getElementById("customerSelect");
-    const custName = document.getElementById("customerName")?.value.trim() || (custSel && custSel.selectedIndex > 0 ? custSel.options[custSel.selectedIndex].text : "");
+    const custName = document.getElementById("quoteCustomerInput")?.value.trim() || document.getElementById("customerName")?.value.trim() || (custSel && custSel.selectedIndex > 0 ? custSel.options[custSel.selectedIndex].text : "");
     if (!custName) {
       alert("[請填寫客戶名稱] 請先點擊選擇客戶名稱！");
       return null;
@@ -9623,6 +9881,8 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         const custInput = document.getElementById("customerName");
         if (custInput) custInput.value = header.customer_name || "";
+        const desktopCustInput = document.getElementById("quoteCustomerInput");
+        if (desktopCustInput) desktopCustInput.value = header.customer_name || "";
       }
 
       const projInput = document.getElementById("quoteProjectName");
@@ -9878,6 +10138,8 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       const custInput = document.getElementById("customerName");
       if (custInput) custInput.value = draft.customer_name || "";
+      const desktopCustInput = document.getElementById("quoteCustomerInput");
+      if (desktopCustInput) desktopCustInput.value = draft.customer_name || "";
       const taxInput = document.getElementById("quoteTaxId");
       if (taxInput) taxInput.value = draft.tax_id || "";
       const phoneInput = document.getElementById("quotePhone");

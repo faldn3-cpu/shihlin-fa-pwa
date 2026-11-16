@@ -5567,6 +5567,116 @@ document.addEventListener("DOMContentLoaded", () => {
     return localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
   }
 
+  // 金錢欄位變動瞬間醒目閃光提示輔助函式
+  function triggerMoneyFlash(el) {
+    if (!el) return;
+    const target = el.closest("td") || el;
+    target.classList.remove("money-value-flash");
+    void target.offsetWidth;
+    target.classList.add("money-value-flash");
+    if (target._moneyFlashTimer) clearTimeout(target._moneyFlashTimer);
+    target._moneyFlashTimer = setTimeout(() => {
+      target.classList.remove("money-value-flash");
+    }, 480);
+  }
+
+  function setMoneyTextWithFlash(el, nextText, flashTarget = null) {
+    if (!el) return;
+    const prev = el.dataset.lastMoneyText !== undefined ? el.dataset.lastMoneyText : el.textContent;
+    el.textContent = nextText;
+    el.dataset.lastMoneyText = nextText;
+    if (prev !== nextText && nextText !== "" && nextText !== "0") {
+      triggerMoneyFlash(flashTarget || el);
+    }
+  }
+
+  function refreshRoundingMetaTexts() {
+    const labelMap = { 0: "個位數", 1: "十位數", 2: "百位數", 3: "千位數" };
+    const d = parseInt(quoteFinanceSettings.round_digits, 10);
+    const unitLabel = labelMap[d] || quoteFinanceSettings.round_unit_label || "百位數";
+    const modeLabel = quoteFinanceSettings.round_mode || "無條件捨去";
+    quoteFinanceSettings.round_unit_label = unitLabel;
+    quoteFinanceSettings.round_factor = Math.pow(10, isNaN(d) ? 2 : d);
+    quoteFinanceSettings.round_summary_text = `捨入：${unitLabel} / ${modeLabel}`;
+
+    document.querySelectorAll(".rounding-rule-text").forEach(el => {
+      el.textContent = quoteFinanceSettings.round_summary_text;
+    });
+    const metaInfo = document.getElementById("quoteSidebarMetaInfo");
+    if (metaInfo) metaInfo.textContent = quoteFinanceSettings.round_summary_text;
+  }
+
+  // 依據最新財務設定（捨入位數、捨入方式、稅率）即時重算第 1 頁所有明細列金額與總計
+  function recalculateAllQuoteRowsWithCurrentSettings({ flash = true } = {}) {
+    refreshRoundingMetaTexts();
+    const itemsContainer = document.getElementById("itemsContainer");
+    const mRows = itemsContainer ? itemsContainer.querySelectorAll(".item-row") : [];
+    mRows.forEach(r => {
+      const itemId = r.id;
+      const dDP = document.getElementById(`d-${itemId}-dealer-price`);
+      const mDP = document.getElementById(`${itemId}-dealer-price`);
+      const dp = parseFloat((getCellVal(dDP) || mDP?.value || "").replace(/[^0-9.]/g, "")) || 0;
+
+      const dDisc = document.getElementById(`d-${itemId}-discount`);
+      const mDisc = document.getElementById(`${itemId}-sug-discount`);
+      const discStr = (dDisc && dDisc.value !== "") ? dDisc.value : (mDisc?.value || "");
+      const disc = parseFloat(discStr);
+
+      const dEst = document.getElementById(`d-${itemId}-est-price`);
+      const mEst = document.getElementById(`${itemId}-sug-price`);
+      const estStr = (dEst && dEst.value !== "") ? dEst.value : (mEst?.value || "");
+      const estRaw = parseFloat(estStr);
+
+      const dPrice = document.getElementById(`d-${itemId}-price`);
+      const mUnitNum = document.getElementById(`${itemId}-unit-price-num`);
+      const oldUnitP = parseFloat(dPrice?.value || mUnitNum?.value || "0") || 0;
+
+      let rawPrice = 0;
+      if (!isNaN(estRaw) && estRaw > 0) {
+        rawPrice = estRaw;
+      } else if (dp > 0 && !isNaN(disc) && disc > 0) {
+        rawPrice = dp * (disc / 100);
+      } else if (oldUnitP > 0) {
+        rawPrice = oldUnitP;
+      } else {
+        return;
+      }
+
+      const newUnitP = Math.max(0, Math.round(applyQuoteRounding(rawPrice)));
+      if (mUnitNum) mUnitNum.value = newUnitP;
+      if (dPrice) dPrice.value = newUnitP;
+
+      const dFinalCell = document.getElementById(`d-${itemId}-final-price-cell`);
+      const nextFinalText = newUnitP > 0 ? newUnitP.toLocaleString() : "";
+      if (dFinalCell) {
+        if (flash) {
+          setMoneyTextWithFlash(dFinalCell, nextFinalText);
+        } else {
+          dFinalCell.textContent = nextFinalText;
+          dFinalCell.dataset.lastMoneyText = nextFinalText;
+        }
+      }
+      const mFinal = document.getElementById(`${itemId}-final-price`);
+      if (mFinal) mFinal.value = newUnitP > 0 ? `$${newUnitP.toLocaleString()}` : "-";
+
+      const dQty = document.getElementById(`d-${itemId}-qty`);
+      const mQty = document.getElementById(`${itemId}-qty`);
+      const q = parseInt(dQty?.value || mQty?.value || "1", 10) || 1;
+      const rowSub = Math.round(newUnitP * q);
+      const dSub = document.getElementById(`d-${itemId}-subtotal`);
+      const nextSubText = rowSub > 0 ? `${rowSub.toLocaleString()}` : "0";
+      if (dSub) {
+        if (flash) {
+          setMoneyTextWithFlash(dSub, nextSubText);
+        } else {
+          dSub.textContent = nextSubText;
+          dSub.dataset.lastMoneyText = nextSubText;
+        }
+      }
+    });
+    calculateTotal();
+  }
+
   // 依據財務設定執行金額捨入 (對標舊版 PriceCalculator.apply_rounding)
   function applyQuoteRounding(rawVal) {
     const val = parseFloat(rawVal);
@@ -5708,16 +5818,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function syncExcelTableTotalWidth(table) {
     if (!table) return;
-    // 第一頁「新建報價單」表格採用「做法一：橡皮筋等比例彈性伸縮」，鋪滿 100% 視窗寬度，不鎖死像素總寬
-    if (table.id === "quoteDesktopTable") {
-      table.style.width = "100%";
-      table.style.minWidth = "100%";
-      return;
-    }
     const allTh = Array.from(table.querySelectorAll("thead th"));
     if (allTh.length === 0) return;
     let sumW = 0;
     allTh.forEach(th => {
+      if (th.classList.contains("col-corner-header")) {
+        const cw = parseInt(th.style.width, 10) || 48;
+        th.style.width = `${cw}px`;
+        th.style.minWidth = `${cw}px`;
+        th.style.maxWidth = `${cw}px`;
+        sumW += cw;
+        return;
+      }
       const explicitW = parseInt(th.style.width, 10);
       sumW += (!isNaN(explicitW) && explicitW > 0) ? explicitW : (th.offsetWidth || 80);
     });
@@ -5730,14 +5842,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function applySingleColumnWidth(th, widthPx) {
     if (!th || !(widthPx > 0)) return;
     const wStr = `${Math.round(widthPx)}px`;
-    const parentTable = th.closest("table");
-    // 第一頁「新建報價單」表格：僅設定基準比例寬度 width，不鎖死 minWidth 與 maxWidth，讓各欄隨視窗大小等比例伸縮
-    if (parentTable && parentTable.id === "quoteDesktopTable") {
-      th.style.width = wStr;
-      th.style.minWidth = "";
-      th.style.maxWidth = "";
-      return;
-    }
+    // 嚴格鎖定獨立像素欄寬（全螢幕或拉伸表格外框時，各儲存格寬度絕不跟著連動變形）
     th.style.width = wStr;
     th.style.minWidth = wStr;
     th.style.maxWidth = wStr;
@@ -6496,6 +6601,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (normalizedTab === "create") {
       if (tabCreate) tabCreate.classList.add("active");
       if (draftSec) draftSec.classList.remove("hidden");
+      recalculateAllQuoteRowsWithCurrentSettings({ flash: false });
     } else if (normalizedTab === "history") {
       if (tabHistory) tabHistory.classList.add("active");
       if (histSec) histSec.classList.remove("hidden");
@@ -7478,12 +7584,12 @@ document.addEventListener("DOMContentLoaded", () => {
           <td>
             <input type="text" inputmode="decimal" id="d-${itemId}-est-price" class="pyside-cell-input align-right" value="${rawEstPriceVal > 0 ? rawEstPriceVal : ''}">
           </td>
-          <td>
-            <span id="d-${itemId}-final-price-cell" class="pyside-cell-readonly align-right" style="font-weight:700;">${finalUnitPriceVal > 0 ? finalUnitPriceVal.toLocaleString() : ''}</span>
+          <td class="cell-final-price-td">
+            <span id="d-${itemId}-final-price-cell" class="pyside-cell-readonly align-right cell-final-price-val" data-last-money-text="${finalUnitPriceVal > 0 ? finalUnitPriceVal.toLocaleString() : ''}">${finalUnitPriceVal > 0 ? finalUnitPriceVal.toLocaleString() : ''}</span>
             <input type="hidden" id="d-${itemId}-price" value="${finalUnitPriceVal}">
           </td>
-          <td>
-            <span id="d-${itemId}-subtotal" class="pyside-cell-readonly align-right" style="font-weight:700;">${rowSubtotalVal > 0 ? rowSubtotalVal.toLocaleString() : ''}</span>
+          <td class="cell-subtotal-td">
+            <span id="d-${itemId}-subtotal" class="pyside-cell-readonly align-right cell-subtotal-val" data-last-money-text="${rowSubtotalVal > 0 ? rowSubtotalVal.toLocaleString() : ''}">${rowSubtotalVal > 0 ? rowSubtotalVal.toLocaleString() : ''}</span>
           </td>
           <td>
             <input type="text" id="d-${itemId}-delivery" class="pyside-cell-input" placeholder="" value="${escapeHtml(leadTimeVal)}">
@@ -7763,7 +7869,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (mUnitPriceNum) mUnitPriceNum.value = unitP;
       if (dPriceInput) dPriceInput.value = unitP;
       if (dFinalPriceCell) {
-        dFinalPriceCell.textContent = unitP > 0 ? unitP.toLocaleString() : "";
+        setMoneyTextWithFlash(dFinalPriceCell, unitP > 0 ? unitP.toLocaleString() : "");
       }
       if (rawEstPrice !== undefined && dEstPriceInput && document.activeElement !== dEstPriceInput) {
         dEstPriceInput.value = rawEstPrice > 0 ? Math.round(rawEstPrice) : "";
@@ -7774,7 +7880,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const q = parseInt(dQtyInput?.value || mQtyInput?.value || "1", 10) || 1;
       const sub = Math.round(unitP * q);
       if (dSubtotalSpan) {
-        dSubtotalSpan.textContent = sub > 0 ? `${sub.toLocaleString()}` : "0";
+        setMoneyTextWithFlash(dSubtotalSpan, sub > 0 ? `${sub.toLocaleString()}` : "0");
       }
       calculateTotal();
     }
@@ -7852,9 +7958,9 @@ document.addEventListener("DOMContentLoaded", () => {
       subtotal += rowSub;
 
       const subSpan = document.getElementById(`d-${itemId}-subtotal`);
-      if (subSpan) subSpan.textContent = rowSub > 0 ? `${rowSub.toLocaleString()}` : "0";
+      if (subSpan) setMoneyTextWithFlash(subSpan, rowSub > 0 ? `${rowSub.toLocaleString()}` : "0");
       const dFinalCell = document.getElementById(`d-${itemId}-final-price-cell`);
-      if (dFinalCell) dFinalCell.textContent = unitPrice > 0 ? `${unitPrice.toLocaleString()}` : "";
+      if (dFinalCell) setMoneyTextWithFlash(dFinalCell, unitPrice > 0 ? `${unitPrice.toLocaleString()}` : "");
       const mFinal = document.getElementById(`${itemId}-final-price`);
       if (mFinal) mFinal.value = unitPrice > 0 ? `$${unitPrice.toLocaleString()}` : "-";
     });
@@ -7879,13 +7985,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const dGrandTotal = document.getElementById("desktopGrandTotal");
     if (dGrandTotal) dGrandTotal.textContent = `$ ${grandTotal.toLocaleString()}`;
 
-    // 3. 更新 _QuotationApp 左下角結算總額 (合計未稅、營業稅5%、總金額含稅紅字)
+    // 3. 更新 _QuotationApp 左下角結算總額 (合計未稅、營業稅、總金額含稅紅字)並加上變動閃光
     const sumSub = document.getElementById("summarySubtotal");
-    if (sumSub) sumSub.textContent = subtotal.toLocaleString();
+    if (sumSub) setMoneyTextWithFlash(sumSub, subtotal.toLocaleString());
     const sumTax = document.getElementById("summaryTax");
-    if (sumTax) sumTax.textContent = tax.toLocaleString();
+    if (sumTax) setMoneyTextWithFlash(sumTax, tax.toLocaleString());
     const sumGrand = document.getElementById("summaryGrandTotal");
-    if (sumGrand) sumGrand.textContent = grandTotal.toLocaleString();
+    if (sumGrand) setMoneyTextWithFlash(sumGrand, grandTotal.toLocaleString());
 
     // 4. 連動更新方案小計
     updateSubtotalDividers();
@@ -8597,12 +8703,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (dEstPrice) dEstPrice.value = rawPrice > 0 ? Math.round(rawPrice) : "";
     if (unitPriceNum) unitPriceNum.value = roundedPrice;
     if (dPrice) dPrice.value = roundedPrice;
-    if (dFinalCell) dFinalCell.textContent = roundedPrice > 0 ? roundedPrice.toLocaleString() : "";
+    if (dFinalCell) setMoneyTextWithFlash(dFinalCell, roundedPrice > 0 ? roundedPrice.toLocaleString() : "");
     if (finalPriceInput) finalPriceInput.value = roundedPrice > 0 ? `$${roundedPrice.toLocaleString()}` : "-";
 
-    const q = parseInt(qtyInput?.value || "1", 10) || 1;
+    const q = parseInt(dQtyInputEl?.value || qtyInput?.value || "1", 10) || 1;
     const sub = Math.round(roundedPrice * q);
-    if (dSub) dSub.textContent = sub > 0 ? `${sub.toLocaleString()}` : "0";
+    if (dSub) setMoneyTextWithFlash(dSub, sub > 0 ? `${sub.toLocaleString()}` : "0");
 
     const mRow = document.getElementById(itemId);
     if (mRow) {
@@ -10881,6 +10987,36 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnSaveSet = document.getElementById("btnSaveQuoteSettings");
     if (btnSaveSet) btnSaveSet.addEventListener("click", saveQuotationFinanceSettingsFromUI);
 
+    // 財務計算設定（稅率、捨入位數、捨入方式）變更時即時套用重算全表並自動背景存檔
+    const onInstantFinanceSettingChanged = async () => {
+      const nextTax = parseFloat(document.getElementById("qSetTaxRate")?.value || "5.0");
+      const nextDigits = parseInt(document.getElementById("qSetRoundDigits")?.value ?? "1", 10);
+      const nextMode = document.getElementById("qSetRoundMode")?.value || "四捨五入";
+      if (!isNaN(nextTax) && nextTax >= 0) quoteFinanceSettings.tax_rate = nextTax;
+      if (!isNaN(nextDigits)) quoteFinanceSettings.round_digits = nextDigits;
+      quoteFinanceSettings.round_mode = nextMode;
+      recalculateAllQuoteRowsWithCurrentSettings({ flash: true });
+
+      try {
+        await fetch("/api/quotation-settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tax_rate: quoteFinanceSettings.tax_rate,
+            round_digits: quoteFinanceSettings.round_digits,
+            round_mode: quoteFinanceSettings.round_mode,
+            customer_sort_mode: document.getElementById("qSetCustSortMode")?.value || quoteFinanceSettings.customer_sort_mode || "常用客戶優先"
+          })
+        });
+      } catch (e) {}
+    };
+    const qSetTaxInput = document.getElementById("qSetTaxRate");
+    const qSetDigitsSel = document.getElementById("qSetRoundDigits");
+    const qSetModeSel = document.getElementById("qSetRoundMode");
+    if (qSetTaxInput) qSetTaxInput.addEventListener("change", onInstantFinanceSettingChanged);
+    if (qSetDigitsSel) qSetDigitsSel.addEventListener("change", onInstantFinanceSettingChanged);
+    if (qSetModeSel) qSetModeSel.addEventListener("change", onInstantFinanceSettingChanged);
+
     const btnSaveTerms = document.getElementById("btnSaveQuoteTerms");
     if (btnSaveTerms) btnSaveTerms.addEventListener("click", saveQuotationTermsFromUI);
 
@@ -11607,7 +11743,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await r.json();
       if (!r.ok) throw new Error(res.detail || "儲存財務設定失敗");
       await loadQuotationFinanceSettings();
-      calculateTotal();
+      recalculateAllQuoteRowsWithCurrentSettings({ flash: true });
       alert(`[儲存成功] 系統設定已立即套用！（新建預設行數：${defRows} 行｜捨入規則：${quoteFinanceSettings.round_summary_text}）`);
     } catch (err) {
       alert("[儲存失敗] " + err.message);

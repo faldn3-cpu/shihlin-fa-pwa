@@ -3489,7 +3489,8 @@
       <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
         <!-- 分頁切換列 -->
         <div class="old-import-tabs" role="tablist">
-          <button type="button" class="old-import-tab-btn active" data-import-tab="file" role="tab">檔案解析 (PDF / Excel / 掃描圖片)</button>
+          <button type="button" class="old-import-tab-btn active" data-import-tab="file" role="tab">檔案解析 (PDF / Excel /
+            掃描圖片)</button>
           <button type="button" class="old-import-tab-btn" data-import-tab="text" role="tab">複製文字貼上解析</button>
           <button type="button" class="old-import-tab-btn" data-import-tab="history" role="tab">從系統歷史報價單帶入</button>
         </div>
@@ -3498,17 +3499,23 @@
         <div id="oldImportPaneFile" class="old-import-pane">
           <div id="oldImportDropZone" class="old-import-dropzone">
             <div style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">拖曳舊報價單檔案至此，或點擊下方按鈕選取電腦檔案</div>
-            <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:4px;">支援 PDF 文字與掃描影像辨識、Excel (.xlsx / .xlsm / .xls / .csv) 及報價單圖片 (.png / .jpg)</div>
-            <div style="margin-top:10px; display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap;">
-              <button type="button" id="btnPickOldImportFile" class="btn-pyside-teal" style="height:34px; padding:0 18px;">選取檔案...</button>
+            <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:4px;">支援 PDF 文字與掃描影像辨識、Excel (.xlsx /
+              .xlsm / .xls / .csv) 及報價單圖片 (.png / .jpg)</div>
+            <div
+              style="margin-top:10px; display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap;">
+              <button type="button" id="btnPickOldImportFile" class="btn-pyside-teal"
+                style="height:34px; padding:0 18px;">選取檔案...</button>
               <span id="oldImportFileNameBadge" style="font-size:0.82rem; color:var(--text-secondary);">尚未選取檔案</span>
             </div>
-            <input type="file" id="oldImportFileInput" accept=".pdf,.xlsx,.xlsm,.xls,.csv,.png,.jpg,.jpeg,.webp" style="display:none;">
+            <input type="file" id="oldImportFileInput" accept=".pdf,.xlsx,.xlsm,.xls,.csv,.png,.jpg,.jpeg,.webp"
+              style="display:none;">
           </div>
           <div id="oldImportProgressBox" class="old-import-progress-box hidden">
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; margin-bottom:4px;">
+            <div
+              style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; margin-bottom:4px;">
               <span id="oldImportProgressText" style="font-weight:600; color:var(--text-primary);">準備解析...</span>
-              <span id="oldImportProgressPct" style="font-family:Consolas, monospace; font-weight:700; color:var(--color-accent);">0%</span>
+              <span id="oldImportProgressPct"
+                style="font-family:Consolas, monospace; font-weight:700; color:var(--color-accent);">0%</span>
             </div>
             <div class="old-import-progress-track">
               <div id="oldImportProgressBar" class="old-import-progress-bar" style="width:0%;"></div>
@@ -3521,18 +3528,23 @@
           <p style="font-size:0.84rem; color:var(--text-secondary); margin:0 0 6px 0;">
             若舊報價單為特殊排版或加密表格，可直接從 PDF、Excel 或郵件內全選複製明細文字貼於下方解析：
           </p>
-          <textarea id="oldImportRawTextInput" class="pyside-input" rows="5" placeholder="請貼上報價單表頭或產品明細文字（每行一筆型號、數量、單價或表格內容）..." style="width:100%; height:115px; resize:vertical; font-family:Consolas, Microsoft JhengHei, monospace; padding:8px;"></textarea>
+          <textarea id="oldImportRawTextInput" class="pyside-input" rows="5"
+            placeholder="請貼上報價單表頭或產品明細文字（每行一筆型號、數量、單價或表格內容）..."
+            style="width:100%; height:115px; resize:vertical; font-family:Consolas, Microsoft JhengHei, monospace; padding:8px;"></textarea>
           <div style="display:flex; justify-content:flex-end; margin-top:8px;">
-            <button type="button" id="btnParseOldImportText" class="btn-pyside-blue" style="height:32px; padding:0 16px;">立即解析貼上文字</button>
+            <button type="button" id="btnParseOldImportText" class="btn-pyside-blue"
+              style="height:32px; padding:0 16px;">立即解析貼上文字</button>
           </div>
         </div>
 
         <!-- 分頁 3：從系統歷史報價單帶入 -->
         <div id="oldImportPaneHistory" class="old-import-pane hidden">
           <div style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
-            <input type="text" id="oldImportHistorySearch" class="pyside-input" placeholder="搜尋單號、客戶名稱或專案名稱..." style="flex:1; height:32px;">
+            <input type="text" id="oldImportHistorySearch" class="pyside-input" placeholder="搜尋單號、客戶名稱或專案名稱..."
+              style="flex:1; height:32px;">
           </div>
-          <div id="importOldQuoteList" style="max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+          <div id="importOldQuoteList"
+            style="max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
             <!-- 動態載入歷史清單 -->
           </div>
         </div>
@@ -3563,11 +3575,14 @@
           </div>
 
           <!-- 明細微調工具列 -->
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:8px;">
+          <div
+            style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:8px;">
             <span style="font-size:0.8rem; color:var(--text-secondary);">請核對型號、數量與單價；若圖片辨識有誤字，請先於下表直接修正後再匯入。</span>
             <div style="display:flex; gap:6px;">
-              <button type="button" id="btnSwapImportModelSpec" class="fluent-btn secondary" style="font-size:0.78rem; padding:4px 10px;">型號與規格對調</button>
-              <button type="button" id="btnAddImportPreviewRow" class="fluent-btn secondary" style="font-size:0.78rem; padding:4px 10px;">+ 新增一列</button>
+              <button type="button" id="btnSwapImportModelSpec" class="fluent-btn secondary"
+                style="font-size:0.78rem; padding:4px 10px;">型號與規格對調</button>
+              <button type="button" id="btnAddImportPreviewRow" class="fluent-btn secondary"
+                style="font-size:0.78rem; padding:4px 10px;">+ 新增一列</button>
             </div>
           </div>
 
@@ -3576,7 +3591,8 @@
             <table class="pyside-excel-table old-import-preview-table">
               <thead>
                 <tr>
-                  <th style="width:34px; text-align:center;"><input type="checkbox" id="chkAllOldImportItems" checked title="全選或取消全選"></th>
+                  <th style="width:34px; text-align:center;"><input type="checkbox" id="chkAllOldImportItems" checked
+                      title="全選或取消全選"></th>
                   <th style="width:38px; text-align:center;">#</th>
                   <th style="width:155px;">產品型號</th>
                   <th style="width:190px;">規格說明</th>
@@ -3592,11 +3608,14 @@
           </div>
         </div>
       </div>
-      <div class="modal-footer" style="padding-top:10px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:10px; flex-wrap:wrap;">
+      <div class="modal-footer"
+        style="padding-top:10px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:10px; flex-wrap:wrap;">
         <button type="button" id="btnCancelImportOldQuote" class="btn btn-secondary">關閉</button>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button type="button" id="btnApplyOldImportAppend" class="btn-pyside-teal-dark hidden" style="height:34px; padding:0 14px;">附加至目前明細</button>
-          <button type="button" id="btnApplyOldImportReplace" class="btn-pyside-green hidden" style="height:34px; padding:0 16px;">覆蓋目前報價單並匯入</button>
+          <button type="button" id="btnApplyOldImportAppend" class="btn-pyside-teal-dark hidden"
+            style="height:34px; padding:0 14px;">附加至目前明細</button>
+          <button type="button" id="btnApplyOldImportReplace" class="btn-pyside-green hidden"
+            style="height:34px; padding:0 16px;">覆蓋目前報價單並匯入</button>
         </div>
       </div>
     </div>

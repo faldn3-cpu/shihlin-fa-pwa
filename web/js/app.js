@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.64";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 15:08:00";
-  const SYSTEM_APP_RELEASE_NOTES = "報價單「公司名稱」升級為可打字搜尋篩選與下拉點選二合一選單";
+  const SYSTEM_APP_VERSION = "v1.0.65";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 16:35:00";
+  const SYSTEM_APP_RELEASE_NOTES = "升級舊報價單 PDF/Excel/掃描圖片智慧解析預覽匯入、全系統唯讀反灰及備註選單精簡";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -309,7 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchEncryptedSeedEnvelope() {
       if (rawEncryptedEnvelopeCache) return rawEncryptedEnvelopeCache;
-      const resp = await origFetch(`./data/encrypted_seed_db.json?v=20261116_v1_0_64`);
+      const resp = await origFetch(`./data/encrypted_seed_db.json?v=20261116_v1_0_65`);
       if (!resp || !resp.ok) throw new Error("無法下載網頁加密資料包");
       rawEncryptedEnvelopeCache = await resp.json();
       return rawEncryptedEnvelopeCache;
@@ -8805,66 +8805,1796 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 從歷史報價單匯入對話框處理 (嚴格依當前業務隔離)
-  async function openImportOldQuoteModal() {
+  // ============================================================================
+  // 共用瀏覽器試算表解析工具 + 舊報價單解析引擎 (Excel / CSV / PDF / 圖片 OCR / 歷史單)
+  // ============================================================================
+  function colLettersToIndex(letters) {
+    let idx = 0;
+    for (let i = 0; i < letters.length; i++) {
+      idx = idx * 26 + (letters.charCodeAt(i) - 64);
+    }
+    return Math.max(0, idx - 1);
+  }
+
+  function indexToColLetters(idx) {
+    let s = "";
+    let n = idx + 1;
+    while (n > 0) {
+      const rem = (n - 1) % 26;
+      s = String.fromCharCode(65 + rem) + s;
+      n = Math.floor((n - 1) / 26);
+    }
+    return s;
+  }
+
+  function parseCsvToRows2D(csvText, delimiter = ",") {
+    const cleaned = String(csvText || "").replace(/^\uFEFF/, "");
+    const rows = [];
+    let row = [];
+    let field = "";
+    let inQuotes = false;
+    for (let i = 0; i < cleaned.length; i++) {
+      const ch = cleaned[i];
+      if (inQuotes) {
+        if (ch === '"' && cleaned[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else if (ch === '"') {
+          inQuotes = false;
+        } else {
+          field += ch;
+        }
+      } else {
+        if (ch === '"') {
+          inQuotes = true;
+        } else if (ch === delimiter) {
+          row.push(field.trim());
+          field = "";
+        } else if (ch === "\r" && cleaned[i + 1] === "\n") {
+          row.push(field.trim());
+          rows.push(row);
+          row = [];
+          field = "";
+          i++;
+        } else if (ch === "\n" || ch === "\r") {
+          row.push(field.trim());
+          rows.push(row);
+          row = [];
+          field = "";
+        } else {
+          field += ch;
+        }
+      }
+    }
+    if (field.length > 0 || row.length > 0) {
+      row.push(field.trim());
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  function decodeBufferWithFallback(arrayBuffer) {
+    const u8 = new Uint8Array(arrayBuffer);
+    const utf8 = new TextDecoder("utf-8", { fatal: false }).decode(u8);
+    if (!utf8.includes("\uFFFD")) return utf8;
+    try {
+      const big5 = new TextDecoder("big5").decode(u8);
+      if (big5 && (big5.match(/\uFFFD/g) || []).length < (utf8.match(/\uFFFD/g) || []).length) {
+        return big5;
+      }
+    } catch (e) {}
+    return utf8;
+  }
+
+  async function readZipEntriesMap(arrayBuffer) {
+    const bytes = new Uint8Array(arrayBuffer);
+    const view = new DataView(arrayBuffer);
+    let eocdOffset = -1;
+    const minStart = Math.max(0, bytes.length - 65557);
+    for (let i = bytes.length - 22; i >= minStart; i--) {
+      if (view.getUint32(i, true) === 0x06054b50) {
+        eocdOffset = i;
+        break;
+      }
+    }
+    if (eocdOffset < 0) throw new Error("無法識別的 Excel (.xlsx) ZIP 檔案格式");
+
+    const totalEntries = view.getUint16(eocdOffset + 10, true);
+    const cdOffset = view.getUint32(eocdOffset + 16, true);
+    const entries = new Map();
+    const decoder = new TextDecoder("utf-8");
+    let pos = cdOffset;
+
+    for (let i = 0; i < totalEntries && pos + 46 <= bytes.length; i++) {
+      if (view.getUint32(pos, true) !== 0x02014b50) break;
+      const method = view.getUint16(pos + 10, true);
+      const compSize = view.getUint32(pos + 20, true);
+      const nameLen = view.getUint16(pos + 28, true);
+      const extraLen = view.getUint16(pos + 30, true);
+      const commentLen = view.getUint16(pos + 32, true);
+      const localOffset = view.getUint32(pos + 42, true);
+      const entryName = decoder.decode(bytes.subarray(pos + 46, pos + 46 + nameLen));
+      entries.set(entryName, { method, compSize, localOffset });
+      pos += 46 + nameLen + extraLen + commentLen;
+    }
+
+    async function getEntryText(name) {
+      const meta = entries.get(name);
+      if (!meta) return null;
+      const lo = meta.localOffset;
+      if (view.getUint32(lo, true) !== 0x04034b50) return null;
+      const fnLen = view.getUint16(lo + 26, true);
+      const exLen = view.getUint16(lo + 28, true);
+      const dataStart = lo + 30 + fnLen + exLen;
+      const compressedSlice = bytes.subarray(dataStart, dataStart + meta.compSize);
+      if (meta.method === 0) {
+        return decoder.decode(compressedSlice);
+      }
+      if (meta.method === 8) {
+        if (typeof DecompressionStream === "undefined") {
+          throw new Error("目前瀏覽器不支援解壓縮元件，請更新瀏覽器或改用 CSV 匯入");
+        }
+        const ds = new DecompressionStream("deflate-raw");
+        const outBuf = await new Response(new Blob([compressedSlice]).stream().pipeThrough(ds)).arrayBuffer();
+        return decoder.decode(new Uint8Array(outBuf));
+      }
+      throw new Error(`不支援的 ZIP 壓縮方式 (${meta.method})`);
+    }
+
+    return { entries, getEntryText };
+  }
+
+  function parseSheetXmlToData(xmlStr, sharedStrings) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlStr, "application/xml");
+    const rowNodes = Array.from(doc.getElementsByTagName("row"));
+    const rows = [];
+    const cellMap = {};
+
+    rowNodes.forEach(rNode => {
+      const rowArr = [];
+      const cNodes = Array.from(rNode.getElementsByTagName("c"));
+      cNodes.forEach(cNode => {
+        const ref = (cNode.getAttribute("r") || "").toUpperCase();
+        const m = ref.match(/^([A-Z]+)\d+$/);
+        const colIdx = m ? colLettersToIndex(m[1]) : rowArr.length;
+        while (rowArr.length <= colIdx) rowArr.push("");
+
+        const t = cNode.getAttribute("t") || "";
+        let val = "";
+        if (t === "inlineStr") {
+          const tNodes = Array.from(cNode.getElementsByTagName("t"));
+          val = tNodes.map(n => n.textContent || "").join("");
+        } else {
+          const vNode = cNode.getElementsByTagName("v")[0];
+          const rawV = vNode ? (vNode.textContent || "") : "";
+          if (t === "s") {
+            const sIdx = parseInt(rawV, 10);
+            val = (!isNaN(sIdx) && sharedStrings[sIdx] !== undefined) ? sharedStrings[sIdx] : "";
+          } else {
+            val = rawV;
+          }
+        }
+        const cleanVal = String(val).trim();
+        rowArr[colIdx] = cleanVal;
+        if (ref && cleanVal !== "") {
+          cellMap[ref] = cleanVal;
+        }
+      });
+      if (rowArr.some(c => c !== "")) {
+        rows.push(rowArr);
+      }
+    });
+    return { rows, cellMap };
+  }
+
+  function parseSheetXmlToRows2D(xmlStr, sharedStrings) {
+    return parseSheetXmlToData(xmlStr, sharedStrings).rows;
+  }
+
+  async function parseExcelOrCsvFileInBrowser(file) {
+    const lowerName = (file.name || "").toLowerCase();
+    const buf = await file.arrayBuffer();
+
+    if (lowerName.endsWith(".csv")) {
+      const text = decodeBufferWithFallback(buf);
+      const firstLine = (text.split(/\r?\n/).find(l => l.trim()) || "");
+      const delim = (firstLine.split("\t").length > firstLine.split(",").length) ? "\t" : ",";
+      const rows = parseCsvToRows2D(text, delim);
+      return { sheets: { Sheet1: rows }, cellMaps: {}, sheetNames: ["Sheet1"], firstSheetRows: rows, firstSheetCellMap: {} };
+    }
+
+    const bytes = new Uint8Array(buf);
+    const isZipHeader = bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4B;
+    if (!isZipHeader) {
+      if (bytes.length >= 4 && bytes[0] === 0xD0 && bytes[1] === 0xCF && bytes[2] === 0x11 && bytes[3] === 0xE0) {
+        throw new Error("此檔案為舊版二進位 .xls 格式，請先用 Excel 另存為 .xlsx 或將明細複製後貼入「複製文字貼上解析」分頁。");
+      }
+      const txt = decodeBufferWithFallback(buf);
+      if (/<tr[\s>]/i.test(txt) && /<t[dh][\s>]/i.test(txt)) {
+        const htmlDoc = new DOMParser().parseFromString(txt, "text/html");
+        const htmlRows = [];
+        htmlDoc.querySelectorAll("tr").forEach(tr => {
+          const cells = Array.from(tr.querySelectorAll("th, td")).map(td => String(td.textContent || "").replace(/\s+/g, " ").trim());
+          if (cells.some(c => c !== "")) htmlRows.push(cells);
+        });
+        if (htmlRows.length > 0) {
+          return { sheets: { Sheet1: htmlRows }, cellMaps: {}, sheetNames: ["Sheet1"], firstSheetRows: htmlRows, firstSheetCellMap: {} };
+        }
+      }
+      const firstLine = (txt.split(/\r?\n/).find(l => l.trim()) || "");
+      if (firstLine.includes("\t") || firstLine.includes(",")) {
+        const delim = (firstLine.split("\t").length >= firstLine.split(",").length) ? "\t" : ",";
+        const txtRows = parseCsvToRows2D(txt, delim).filter(r => r.some(c => c !== ""));
+        if (txtRows.length > 0) {
+          return { sheets: { Sheet1: txtRows }, cellMaps: {}, sheetNames: ["Sheet1"], firstSheetRows: txtRows, firstSheetCellMap: {} };
+        }
+      }
+      throw new Error("無法識別此檔案的試算表結構，請改用 .xlsx / .csv 或使用「複製文字貼上解析」。");
+    }
+
+    const zip = await readZipEntriesMap(buf);
+    const sharedStrings = [];
+    const sstXml = await zip.getEntryText("xl/sharedStrings.xml");
+    if (sstXml) {
+      const sstDoc = new DOMParser().parseFromString(sstXml, "application/xml");
+      Array.from(sstDoc.getElementsByTagName("si")).forEach(si => {
+        const txt = Array.from(si.getElementsByTagName("t")).map(t => t.textContent || "").join("");
+        sharedStrings.push(txt.trim());
+      });
+    }
+
+    const relMap = new Map();
+    const relsXml = await zip.getEntryText("xl/_rels/workbook.xml.rels");
+    if (relsXml) {
+      const relsDoc = new DOMParser().parseFromString(relsXml, "application/xml");
+      Array.from(relsDoc.getElementsByTagName("Relationship")).forEach(rel => {
+        const rid = rel.getAttribute("Id") || "";
+        let target = (rel.getAttribute("Target") || "").replace(/^(\.\.\/)+/, "").replace(/^\/+/, "");
+        if (!target.startsWith("xl/")) target = `xl/${target}`;
+        relMap.set(rid, target);
+      });
+    }
+
+    const wbXml = await zip.getEntryText("xl/workbook.xml");
+    const sheetDefs = [];
+    if (wbXml) {
+      const wbDoc = new DOMParser().parseFromString(wbXml, "application/xml");
+      Array.from(wbDoc.getElementsByTagName("sheet")).forEach((sh, idx) => {
+        const name = sh.getAttribute("name") || `Sheet${idx + 1}`;
+        const rid = sh.getAttribute("r:id") || sh.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id") || "";
+        const path = relMap.get(rid) || `xl/worksheets/sheet${idx + 1}.xml`;
+        sheetDefs.push({ name, path });
+      });
+    }
+
+    const sheets = {};
+    const cellMaps = {};
+    const sheetNames = [];
+    for (const sd of sheetDefs) {
+      const sXml = await zip.getEntryText(sd.path);
+      if (sXml) {
+        const data = parseSheetXmlToData(sXml, sharedStrings);
+        sheets[sd.name] = data.rows;
+        cellMaps[sd.name] = data.cellMap;
+        sheetNames.push(sd.name);
+      }
+    }
+    if (sheetNames.length === 0) {
+      const s1Xml = await zip.getEntryText("xl/worksheets/sheet1.xml");
+      if (s1Xml) {
+        const data = parseSheetXmlToData(s1Xml, sharedStrings);
+        sheets.Sheet1 = data.rows;
+        cellMaps.Sheet1 = data.cellMap;
+        sheetNames.push("Sheet1");
+      }
+    }
+    const firstName = sheetNames[0] || "";
+    return {
+      sheets,
+      cellMaps,
+      sheetNames,
+      firstSheetRows: firstName ? sheets[firstName] : [],
+      firstSheetCellMap: firstName ? (cellMaps[firstName] || {}) : {}
+    };
+  }
+
+  let pdfJsLoadPromise = null;
+  let tesseractLoadPromise = null;
+
+  function loadExternalScriptWithFallback(urls) {
+    return new Promise((resolve, reject) => {
+      let idx = 0;
+      function tryNext() {
+        if (idx >= urls.length) {
+          reject(new Error("外部元件載入失敗，請確認網路連線或改用「複製文字貼上解析」分頁。"));
+          return;
+        }
+        const url = urls[idx++];
+        const s = document.createElement("script");
+        s.src = url;
+        s.async = true;
+        s.onload = () => resolve(url);
+        s.onerror = () => {
+          s.remove();
+          tryNext();
+        };
+        document.head.appendChild(s);
+      }
+      tryNext();
+    });
+  }
+
+  async function ensurePdfJsLoaded() {
+    if (window.pdfjsLib) {
+      if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+      }
+      return window.pdfjsLib;
+    }
+    if (!pdfJsLoadPromise) {
+      pdfJsLoadPromise = loadExternalScriptWithFallback([
+        "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
+      ]).then(() => {
+        if (!window.pdfjsLib) throw new Error("PDF 解析核心初始化失敗");
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+        return window.pdfjsLib;
+      }).catch(err => {
+        pdfJsLoadPromise = null;
+        throw err;
+      });
+    }
+    return pdfJsLoadPromise;
+  }
+
+  async function ensureTesseractLoaded() {
+    if (window.Tesseract) return window.Tesseract;
+    if (!tesseractLoadPromise) {
+      tesseractLoadPromise = loadExternalScriptWithFallback([
+        "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js",
+        "https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"
+      ]).then(() => {
+        if (!window.Tesseract) throw new Error("圖片文字辨識引擎初始化失敗");
+        return window.Tesseract;
+      }).catch(err => {
+        tesseractLoadPromise = null;
+        throw err;
+      });
+    }
+    return tesseractLoadPromise;
+  }
+
+  function normalizeImportDateString(rawVal) {
+    const s = String(rawVal || "").trim();
+    if (!s) return "";
+    if (/^\d{4,5}(\.\d+)?$/.test(s)) {
+      const serial = parseFloat(s);
+      if (serial >= 30000 && serial <= 80000) {
+        const dt = new Date(Math.round((serial - 25569) * 86400 * 1000));
+        if (!isNaN(dt.getTime())) {
+          return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
+        }
+      }
+    }
+    const clean = s.replace(/[年.]/g, "-").replace(/[月]/g, "-").replace(/日/g, "").replace(/\//g, "-");
+    const mFull = clean.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+    if (mFull) {
+      return `${mFull[1]}-${String(parseInt(mFull[2], 10)).padStart(2, "0")}-${String(parseInt(mFull[3], 10)).padStart(2, "0")}`;
+    }
+    const mRoc = clean.match(/\b(\d{2,3})-(\d{1,2})-(\d{1,2})\b/);
+    if (mRoc) {
+      const yNum = parseInt(mRoc[1], 10);
+      const western = yNum < 1900 ? yNum + 1911 : yNum;
+      return `${western}-${String(parseInt(mRoc[2], 10)).padStart(2, "0")}-${String(parseInt(mRoc[3], 10)).padStart(2, "0")}`;
+    }
+    return s;
+  }
+
+  function parseImportNumber(val) {
+    if (typeof val === "number") return isFinite(val) ? val : 0;
+    const cleaned = String(val || "").replace(/[$,，NT\s元%]/gi, "").trim();
+    if (!cleaned || cleaned === "-" || cleaned === "–") return 0;
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+  }
+
+  function scoreSkuLikelihood(val) {
+    const s = String(val || "").trim();
+    if (!s || ["-", "–", "—"].includes(s)) return 0;
+    let score = 0;
+    if (/^(SS2|SE3|SC3|SH|SF|SN|FR-|FX|HG-|MR-|Q\d|R\d|RY|RX|RJ|LCA|LCM|LCR|LCE|LCN|LTP|LTO|SDP|SDE|SDH|SDA|SME|SMH|SDG|SCL|SCN|AX|BCH|S-|MS-|TH-|[A-Z]{2,3}[\d-])/i.test(s)) {
+      score += 22;
+    }
+    if (/[A-Z0-9]/i.test(s) && s.includes("-")) score += 10;
+    else if (/^[A-Z0-9\-/.]+$/i.test(s) && /\d/.test(s)) score += 10;
+    const zhMatches = s.match(/[\u4e00-\u9fff]/g);
+    const zhCount = zhMatches ? zhMatches.length : 0;
+    if (zhCount === 0) score += 8;
+    else score -= zhCount * 5;
+    return score;
+  }
+
+  function toOcrModelSkeleton(val) {
+    return String(val || "")
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "")
+      .replace(/0/g, "O")
+      .replace(/[1L]/g, "I")
+      .replace(/2/g, "Z")
+      .replace(/5/g, "S")
+      .replace(/8/g, "B");
+  }
+
+  function computeStringEditDistance(a, b) {
+    const s1 = String(a || "");
+    const s2 = String(b || "");
+    const m = s1.length;
+    const n = s2.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+        dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+      }
+    }
+    return dp[m][n];
+  }
+
+  function parseQuotationHeaderFromLines(lines) {
+    const header = {
+      quote_no: "", quote_date: "", valid_date: "", customer_name: "",
+      tax_id: "", contact_name: "", phone: "", fax: "",
+      location: "", payment: "", project_name: "", project_type: ""
+    };
+    const keyDefs = [
+      { key: "quote_no", labels: ["報價單編號", "報價單號", "單號", "Quotation No", "Quote No"] },
+      { key: "quote_date", labels: ["報價日期", "日期", "Quote Date"] },
+      { key: "valid_date", labels: ["有效日期", "有效期限", "Valid Date"] },
+      { key: "customer_name", labels: ["客戶名稱", "買受人", "公司名稱", "Customer"] },
+      { key: "tax_id", labels: ["客戶統編", "統一編號", "統編", "Tax ID"] },
+      { key: "contact_name", labels: ["聯絡人", "連絡人", "窗口", "Contact"] },
+      { key: "phone", labels: ["聯絡電話", "連絡電話", "電話", "TEL", "Phone"] },
+      { key: "fax", labels: ["傳真號碼", "傳真", "FAX"] },
+      { key: "location", labels: ["交貨地點", "送貨地址", "地址", "Address"] },
+      { key: "payment", labels: ["付款方式", "交易條件", "付款條件", "Payment"] },
+      { key: "project_name", labels: ["專案名稱", "工程名稱", "案名", "Project"] },
+      { key: "project_type", labels: ["專案屬性"] }
+    ];
+    const allStopLabels = keyDefs.flatMap(d => d.labels).sort((a, b) => b.length - a.length);
+    const stopLookahead = allStopLabels.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+
+    for (const rawLine of (lines || [])) {
+      const line = String(rawLine || "").trim();
+      if (!line) continue;
+      if (/產品明細|項次.*型號|序號.*品名/.test(line.replace(/\s+/g, ""))) break;
+
+      for (const def of keyDefs) {
+        if (header[def.key]) continue;
+        for (const lbl of def.labels) {
+          const escLbl = lbl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const re = new RegExp(`(?:^|\\s|[,|])${escLbl}\\s*[:：]?\\s*(.+?)(?=\\s+(?:${stopLookahead})\\s*[:：]?|$)`, "i");
+          const m = line.match(re);
+          if (m && m[1]) {
+            const val = m[1].replace(/^[:：\s]+/, "").trim();
+            if (val && !allStopLabels.some(l => val.startsWith(l))) {
+              header[def.key] = val;
+              break;
+            }
+          }
+        }
+      }
+      if (!header.tax_id) {
+        const tm = line.match(/(?:統編|統一編號)\s*[:：]?\s*(\d{8})\b/);
+        if (tm) header.tax_id = tm[1];
+      }
+    }
+    if (header.quote_date) header.quote_date = normalizeImportDateString(header.quote_date);
+    if (header.valid_date) header.valid_date = normalizeImportDateString(header.valid_date);
+    return header;
+  }
+
+  function parseRawQuotationText(rawText) {
+    const rawLines = String(rawText || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const header = parseQuotationHeaderFromLines(rawLines);
+    const items = [];
+    const warnings = [];
+
+    const tabLines = rawLines.filter(l => l.includes("\t"));
+    if (tabLines.length >= 2) {
+      const rows2d = rawLines.map(l => l.split("\t").map(c => c.trim()));
+      const tabResult = parseQuotationFromRows2D(rows2d, {});
+      if (tabResult.items.length > 0) {
+        return {
+          header: { ...header, ...Object.fromEntries(Object.entries(tabResult.header).filter(([, v]) => Boolean(v))) },
+          items: tabResult.items,
+          warnings: tabResult.warnings
+        };
+      }
+    }
+
+    let inFooter = false;
+    for (let i = 0; i < rawLines.length; i++) {
+      const line = rawLines[i];
+      const compact = line.replace(/\s+/g, "");
+      if (/^(未稅小計|合計|總計|總金額|營業稅|銀行帳號|匯款帳號|戶名|說明事項|付款條件|交貨驗收條款)/.test(compact)) {
+        inFooter = true;
+        continue;
+      }
+      if (inFooter) continue;
+      if (/^(項次|序號|產品型號|品名|規格|經銷牌價|數量|單價)/.test(compact)) continue;
+      if (/^(客戶名稱|買受人|統一編號|統編|聯絡人|電話|傳真|交貨地點|地址|專案名稱|報價日期|有效日期|報價單號)[:：]?/.test(compact)) continue;
+
+      const tokens = line.split(/\s+/).filter(Boolean);
+      if (tokens.length < 2) continue;
+
+      let workTokens = [...tokens];
+      if (/^\d{1,3}[.)]?$/.test(workTokens[0]) && workTokens.length >= 3) {
+        workTokens.shift();
+      }
+
+      const trailingNums = [];
+      let remLen = workTokens.length;
+      while (remLen > 1) {
+        const tok = workTokens[remLen - 1].replace(/^[$＄NT元]+/i, "").replace(/,/g, "");
+        if (/^\d+(\.\d+)?%?$/.test(tok)) {
+          trailingNums.unshift(workTokens[remLen - 1]);
+          remLen--;
+        } else {
+          break;
+        }
+      }
+      const textTokens = workTokens.slice(0, remLen);
+      if (textTokens.length === 0) continue;
+
+      let modelTok = "";
+      let specTokens = [];
+      let bestScore = -999;
+      let bestIdx = 0;
+      textTokens.forEach((tk, idx) => {
+        const sc = scoreSkuLikelihood(tk);
+        if (sc > bestScore) {
+          bestScore = sc;
+          bestIdx = idx;
+        }
+      });
+
+      if (bestScore >= 5) {
+        modelTok = textTokens[bestIdx];
+        specTokens = textTokens.filter((_, idx) => idx !== bestIdx);
+      } else if (trailingNums.length >= 2 && /^[A-Za-z0-9\-/.+]+$/.test(textTokens[0])) {
+        modelTok = textTokens[0];
+        specTokens = textTokens.slice(1);
+      } else {
+        continue;
+      }
+
+      let qty = 1;
+      let unitPrice = 0;
+      const nonPctNums = trailingNums.filter(n => !String(n).endsWith("%")).map(n => parseImportNumber(n));
+
+      if (nonPctNums.length >= 3) {
+        const n1 = nonPctNums[nonPctNums.length - 3];
+        const n2 = nonPctNums[nonPctNums.length - 2];
+        const n3 = nonPctNums[nonPctNums.length - 1];
+        if (Math.abs(n1 * n2 - n3) <= Math.max(5, n3 * 0.02)) {
+          if (n1 <= 500 && n2 > n1) {
+            qty = Math.max(1, Math.round(n1));
+            unitPrice = Math.round(n2);
+          } else {
+            unitPrice = Math.round(n1);
+            qty = Math.max(1, Math.round(n2));
+          }
+        } else {
+          qty = n1 > 0 && n1 <= 9999 ? Math.round(n1) : 1;
+          unitPrice = Math.round(n2 || n3);
+        }
+      } else if (nonPctNums.length === 2) {
+        const a = nonPctNums[0];
+        const b = nonPctNums[1];
+        if (a >= 1 && a <= 999 && b >= a) {
+          qty = Math.round(a);
+          unitPrice = Math.round(b);
+        } else {
+          unitPrice = Math.round(a);
+        }
+      } else if (nonPctNums.length === 1) {
+        if (nonPctNums[0] <= 200) qty = Math.max(1, Math.round(nonPctNums[0]));
+        else unitPrice = Math.round(nonPctNums[0]);
+      }
+
+      if (modelTok) {
+        items.push({
+          checked: true,
+          model_no: modelTok.trim(),
+          spec: specTokens.join(" ").trim(),
+          quantity: qty,
+          dealer_price: unitPrice,
+          discount_pct: 100,
+          final_unit_price: unitPrice,
+          note_lead_time: "",
+          stock_qty: null,
+          match_status: "unmatched",
+          ocr_original: ""
+        });
+      }
+    }
+
+    if (items.length === 0) {
+      warnings.push("文字中未能自動辨識出標準明細列，請檢查內容格式或使用「+ 新增一列」手動補入。");
+    }
+    return { header, items, warnings };
+  }
+
+  function parseQuotationFromRows2D(rows2D, cellMap = {}) {
+    const warnings = [];
+    const header = {
+      quote_no: "", quote_date: "", valid_date: "", customer_name: "",
+      tax_id: "", contact_name: "", phone: "", fax: "",
+      location: "", payment: "", project_name: "", project_type: ""
+    };
+
+    for (const row of (rows2D || [])) {
+      const mIdx = row.findIndex(c => String(c || "").trim() === "___SHIHLIN_META___");
+      if (mIdx >= 0 && row[mIdx + 1]) {
+        try {
+          const payload = JSON.parse(row[mIdx + 1]);
+          if (payload && Array.isArray(payload.items)) {
+            return {
+              header: { ...header, ...(payload.header || {}) },
+              items: payload.items.map(it => ({
+                checked: true,
+                model_no: String(it.model_no || "").trim(),
+                spec: String(it.spec || "").trim(),
+                quantity: Math.max(1, Math.round(parseImportNumber(it.quantity) || 1)),
+                dealer_price: parseImportNumber(it.dealer_price),
+                discount_pct: it.discount_pct !== undefined && it.discount_pct !== "" ? parseImportNumber(it.discount_pct) : 100,
+                final_unit_price: parseImportNumber(it.final_unit_price),
+                note_lead_time: String(it.note_lead_time || "").trim(),
+                stock_qty: it.stock_qty ?? null,
+                match_status: "unmatched",
+                ocr_original: ""
+              })),
+              warnings: []
+            };
+          }
+        } catch (e) {}
+      }
+    }
+
+    if (cellMap && cellMap["C16"] && (cellMap["D8"] || cellMap["L3"] || cellMap["H16"] || cellMap["G16"])) {
+      const tplHeader = {
+        quote_no: String(cellMap["L3"] || "").trim(),
+        quote_date: normalizeImportDateString(cellMap["L4"] || ""),
+        valid_date: normalizeImportDateString(cellMap["B83"] || ""),
+        project_type: String(cellMap["B5"] || "").trim(),
+        project_name: "",
+        customer_name: String(cellMap["D8"] || "").trim(),
+        tax_id: String(cellMap["D7"] || "").trim(),
+        contact_name: String(cellMap["D9"] || "").trim(),
+        phone: String(cellMap["D10"] || "").trim(),
+        fax: String(cellMap["D11"] || "").trim(),
+        location: String(cellMap["D12"] || "").trim(),
+        payment: String(cellMap["D13"] || "").trim()
+      };
+      const tplItems = [];
+      for (let r = 16; r <= 215; r++) {
+        const model = String(cellMap[`C${r}`] || "").trim();
+        const qtyRaw = cellMap[`G${r}`];
+        if (!model && !qtyRaw) break;
+        if (!model) continue;
+
+        const spec = String(cellMap[`F${r}`] || "").trim();
+        const qty = Math.max(1, Math.round(parseImportNumber(qtyRaw) || 1));
+        const unitPrice = Math.round(parseImportNumber(cellMap[`H${r}`]));
+        const deliv = String(cellMap[`L${r}`] || "").trim();
+        let notes = String(cellMap[`M${r}`] || "").trim();
+        if (notes === "1" || notes === "1.0") notes = "";
+        else if (notes) notes = notes.replace(/[。，;；,\s]*\d+[.、)](?!\d)\s*/g, " / ").replace(/^[ /]+|[ /]+$/g, "");
+        const remark = [deliv, notes].filter(Boolean).join(" / ");
+
+        let discPct = 100;
+        const rawDisc = cellMap[`T${r}`];
+        if (rawDisc !== undefined && rawDisc !== "") {
+          const dNum = parseFloat(String(rawDisc).replace(/%/g, ""));
+          if (!isNaN(dNum) && dNum > 0) {
+            discPct = dNum <= 1.0 ? Math.round(dNum * 10000) / 100 : dNum;
+          }
+        }
+        tplItems.push({
+          checked: true,
+          model_no: model,
+          spec,
+          quantity: qty,
+          dealer_price: unitPrice,
+          discount_pct: discPct,
+          final_unit_price: unitPrice,
+          note_lead_time: remark,
+          stock_qty: null,
+          match_status: "unmatched",
+          ocr_original: ""
+        });
+      }
+      if (tplItems.length > 0) {
+        return { header: tplHeader, items: tplItems, warnings };
+      }
+    }
+
+    const findKvInRows = (keywords) => {
+      const scanLimit = Math.min(rows2D.length, 16);
+      for (let r = 0; r < scanLimit; r++) {
+        const row = rows2D[r] || [];
+        for (let c = 0; c < row.length; c++) {
+          const cell = String(row[c] || "").trim();
+          const compact = cell.replace(/\s+/g, "");
+          if (keywords.some(kw => compact.includes(kw))) {
+            if (cell.includes(":") || cell.includes("：")) {
+              const parts = cell.split(/[:：]/);
+              const tail = parts.slice(1).join(":").trim();
+              if (tail) return tail;
+            }
+            for (let k = c + 1; k < row.length; k++) {
+              const nextVal = String(row[k] || "").trim();
+              if (nextVal && nextVal !== ":" && nextVal !== "：") return nextVal;
+            }
+          }
+        }
+      }
+      return "";
+    };
+
+    header.quote_no = findKvInRows(["報價單編號", "報價單號", "單號", "QuotationNo"]);
+    header.quote_date = normalizeImportDateString(findKvInRows(["報價日期", "日期", "Date"]));
+    header.valid_date = normalizeImportDateString(findKvInRows(["有效日期", "有效期限", "ValidDate"]));
+    header.customer_name = findKvInRows(["客戶名稱", "買受人", "公司名稱", "Customer"]);
+    header.tax_id = findKvInRows(["客戶統編", "統一編號", "統編", "TaxID"]);
+    header.contact_name = findKvInRows(["聯絡人", "連絡人", "Contact"]);
+    header.phone = findKvInRows(["聯絡電話", "連絡電話", "電話", "Phone", "Tel"]);
+    header.fax = findKvInRows(["傳真", "Fax"]);
+    header.location = findKvInRows(["交貨地點", "送貨地址", "地址"]);
+    header.payment = findKvInRows(["付款方式", "付款條件", "交易條件", "Payment"]);
+    header.project_name = findKvInRows(["專案名稱", "工程名稱", "Project"]);
+
+    let headerRowIdx = -1;
+    const colMap = {};
+    for (let r = 0; r < rows2D.length; r++) {
+      const row = rows2D[r] || [];
+      const rowCompact = row.join("").replace(/\s+/g, "");
+      if (/(品名|規格|型號|Model|SKU)/i.test(rowCompact) && /(數量|單價|牌價|金額|小計|Price|Qty)/i.test(rowCompact)) {
+        headerRowIdx = r;
+        row.forEach((cell, cIdx) => {
+          const clean = String(cell || "").replace(/\s+/g, "");
+          if (/(型號|料號|SKU|Model)/i.test(clean) && colMap.model === undefined) colMap.model = cIdx;
+          else if (/(規格|說明|Spec)/i.test(clean) && colMap.spec === undefined) colMap.spec = cIdx;
+          else if (/(品名|名稱|Name)/i.test(clean) && colMap.name === undefined) colMap.name = cIdx;
+          else if (/(數量|件數|Qty)/i.test(clean) && colMap.qty === undefined) colMap.qty = cIdx;
+          else if (/(經銷牌價|經銷價|牌價)/.test(clean) && colMap.dealer_price === undefined) colMap.dealer_price = cIdx;
+          else if (/(折數|折扣|Discount)/i.test(clean) && colMap.discount === undefined) colMap.discount = cIdx;
+          else if (/(最終單價|單價|售價|期望價|預計報價|Price)/i.test(clean) && colMap.price === undefined) colMap.price = cIdx;
+          else if (/(小計|總價|金額|Amount)/i.test(clean) && colMap.subtotal === undefined) colMap.subtotal = cIdx;
+          else if (/(備註|交期|Remark)/i.test(clean) && colMap.remark === undefined) colMap.remark = cIdx;
+        });
+        break;
+      }
+    }
+
+    const items = [];
+    if (headerRowIdx >= 0) {
+      for (let r = headerRowIdx + 1; r < rows2D.length; r++) {
+        const row = rows2D[r] || [];
+        if (!row.some(c => String(c || "").trim() !== "")) continue;
+        const compact = row.join("").replace(/\s+/g, "");
+        if (/^(未稅小計|合計|總計|營業稅|Total|說明事項|系統還原)/.test(compact) || compact.includes("___SHIHLIN_META___")) {
+          break;
+        }
+        const getCol = (k) => (colMap[k] !== undefined && colMap[k] < row.length) ? String(row[colMap[k]] || "").trim() : "";
+        let pModel = getCol("model");
+        let pSpec = getCol("spec") || getCol("name");
+        if (!pModel && !pSpec) continue;
+
+        if (!pModel && pSpec && scoreSkuLikelihood(pSpec) >= 10) {
+          pModel = pSpec;
+          pSpec = "";
+        } else if (scoreSkuLikelihood(pSpec) > scoreSkuLikelihood(pModel)) {
+          const tmp = pModel;
+          pModel = pSpec;
+          pSpec = tmp;
+        }
+        if (pModel === "-" && !pSpec) continue;
+
+        const pQty = Math.max(1, Math.round(parseImportNumber(getCol("qty")) || 1));
+        const pDealer = parseImportNumber(getCol("dealer_price"));
+        const pDisc = parseImportNumber(getCol("discount")) || 100;
+        let pPrice = parseImportNumber(getCol("price"));
+        const pSub = parseImportNumber(getCol("subtotal"));
+        if (pPrice <= 0 && pSub > 0) pPrice = Math.round(pSub / pQty);
+        if (pPrice <= 0 && pDealer > 0) pPrice = Math.round(pDealer * (pDisc / 100));
+        if (!pModel && pPrice <= 0 && pSub <= 0) continue;
+
+        items.push({
+          checked: true,
+          model_no: pModel,
+          spec: pSpec,
+          quantity: pQty,
+          dealer_price: pDealer > 0 ? pDealer : pPrice,
+          discount_pct: pDisc > 0 ? pDisc : 100,
+          final_unit_price: pPrice,
+          note_lead_time: getCol("remark"),
+          stock_qty: null,
+          match_status: "unmatched",
+          ocr_original: ""
+        });
+      }
+    } else {
+      warnings.push("未偵測到明確的明細表頭列，已嘗試以純文字模式解析。");
+      const fallback = parseRawQuotationText(rows2D.map(r => r.join("\t")).join("\n"));
+      return {
+        header: { ...fallback.header, ...Object.fromEntries(Object.entries(header).filter(([, v]) => Boolean(v))) },
+        items: fallback.items,
+        warnings: warnings.concat(fallback.warnings)
+      };
+    }
+
+    if (items.length === 0) {
+      warnings.push("試算表中未能解析出有效的報價明細列，請確認檔案內容或手動新增補齊。");
+    }
+    return { header, items, warnings };
+  }
+
+  function extractPdfItemsGeometric(pageObjects) {
+    const items = [];
+    const smartJoinTokens = (tokens) => {
+      if (!tokens || tokens.length === 0) return "";
+      const sorted = [...tokens].sort((a, b) => (Math.abs(a.y - b.y) > 4 ? a.y - b.y : a.x - b.x));
+      let out = "";
+      for (let i = 0; i < sorted.length; i++) {
+        const w = sorted[i];
+        if (i === 0) {
+          out += w.text;
+        } else {
+          const prev = sorted[i - 1];
+          const sameLine = Math.abs(w.y - prev.y) <= 4.5;
+          const gap = w.x - prev.xEnd;
+          if (!sameLine || gap >= 2.0) out += " " + w.text;
+          else out += w.text;
+        }
+      }
+      return out.trim();
+    };
+
+    for (const pg of (pageObjects || [])) {
+      const words = pg.words || [];
+      if (words.length === 0) continue;
+
+      const hSeq = words.find(w => /^(序號|項次|No|NO|編號)$/.test(w.text));
+      const hModel = words.find(w => /品名|型號|SKU|Model/i.test(w.text));
+      const hSpec = words.find(w => /規格/.test(w.text));
+      const anchors = [hSeq, hModel, hSpec].filter(Boolean);
+      if (anchors.length < 2) continue;
+
+      const hTop = Math.min(...anchors.map(w => w.y));
+      const tableHeaderWords = words.filter(w => Math.abs(w.y - hTop) <= 10);
+      const hQty = tableHeaderWords.find(w => /數量|Qty/i.test(w.text));
+      const hPrice = tableHeaderWords.find(w => /單價|價格|Price/i.test(w.text));
+      const hSub = tableHeaderWords.find(w => /小計|金額|Amount/i.test(w.text));
+      const hRemark = tableHeaderWords.find(w => /備註|交期|Remark/i.test(w.text));
+
+      const pw = pg.width || 595;
+      const bSeqModel = (hSeq && hModel) ? (hSeq.xEnd + hModel.x) / 2 : pw * 0.08;
+      const bModelSpec = (hModel && hSpec) ? (hModel.xEnd + hSpec.x) / 2 : pw * 0.27;
+      const bSpecQty = (hQty ? hQty.x - 6 : pw * 0.50);
+      const bQtyPrice = (hQty && hPrice) ? (hQty.xEnd + hPrice.x) / 2 : pw * 0.57;
+      const bPriceSub = (hPrice && hSub) ? (hPrice.xEnd + hSub.x) / 2 : pw * 0.68;
+      const bSubRemark = (hSub && hRemark) ? (hSub.xEnd + hRemark.x) / 2 : pw * 0.79;
+
+      const bodyWords = words
+        .filter(w => w.y > hTop + 8)
+        .sort((a, b) => (Math.abs(a.y - b.y) > 4 ? a.y - b.y : a.x - b.x));
+
+      const footerWord = bodyWords.find(w => /^(合計|未稅小計|未稅合計|總計|總金額|營業稅|說明事項)/.test(w.text.replace(/\s+/g, "")));
+      const limitY = footerWord ? footerWord.y - 4 : Infinity;
+      const validBodyWords = bodyWords.filter(w => w.y < limitY);
+      if (validBodyWords.length === 0) continue;
+
+      const visualLines = [];
+      for (const w of validBodyWords) {
+        const last = visualLines[visualLines.length - 1];
+        if (!last || Math.abs(w.y - last.y) > 5) {
+          visualLines.push({ y: w.y, words: [w] });
+        } else {
+          last.words.push(w);
+        }
+      }
+
+      const blocks = [];
+      for (const vl of visualLines) {
+        const hasNewSeq = vl.words.some(w => w.x < bSeqModel && /^\d{1,3}[.)]?$/.test(w.text));
+        const prevBlock = blocks[blocks.length - 1];
+        if (!prevBlock || hasNewSeq || (vl.y - prevBlock.lastY) > 16) {
+          blocks.push({ lastY: vl.y, words: [...vl.words] });
+        } else {
+          prevBlock.words.push(...vl.words);
+          prevBlock.lastY = vl.y;
+        }
+      }
+
+      for (const blk of blocks) {
+        const colModel = [];
+        const colSpec = [];
+        const colQty = [];
+        const colPrice = [];
+        const colSub = [];
+        const colRemark = [];
+        for (const w of blk.words) {
+          const cx = w.x + w.w * 0.5;
+          if (cx < bSeqModel) continue;
+          if (cx < bModelSpec) colModel.push(w);
+          else if (cx < bSpecQty) colSpec.push(w);
+          else if (cx < bQtyPrice) colQty.push(w);
+          else if (cx < bPriceSub) colPrice.push(w);
+          else if (cx < bSubRemark) colSub.push(w);
+          else colRemark.push(w);
+        }
+        let pModel = smartJoinTokens(colModel);
+        let pSpec = smartJoinTokens(colSpec);
+        if (!pModel && !pSpec) continue;
+        if (!pModel && pSpec && scoreSkuLikelihood(pSpec) >= 10) {
+          pModel = pSpec;
+          pSpec = "";
+        } else if (scoreSkuLikelihood(pSpec) > scoreSkuLikelihood(pModel)) {
+          const t = pModel;
+          pModel = pSpec;
+          pSpec = t;
+        }
+        const pQty = Math.max(1, Math.round(parseImportNumber(smartJoinTokens(colQty)) || 1));
+        let pPrice = Math.round(parseImportNumber(smartJoinTokens(colPrice)));
+        const pSub = Math.round(parseImportNumber(smartJoinTokens(colSub)));
+        if (pPrice <= 0 && pSub > 0) pPrice = Math.round(pSub / pQty);
+        if (!pModel && pPrice <= 0) continue;
+
+        items.push({
+          checked: true,
+          model_no: pModel,
+          spec: pSpec,
+          quantity: pQty,
+          dealer_price: pPrice,
+          discount_pct: 100,
+          final_unit_price: pPrice,
+          note_lead_time: smartJoinTokens(colRemark),
+          stock_qty: null,
+          match_status: "unmatched",
+          ocr_original: ""
+        });
+      }
+    }
+    return items;
+  }
+
+  function enhanceCanvasForOcr(canvas) {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return canvas;
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+      const contrasted = Math.max(0, Math.min(255, (gray - 128) * 1.25 + 128));
+      data[i] = contrasted;
+      data[i + 1] = contrasted;
+      data[i + 2] = contrasted;
+    }
+    ctx.putImageData(imgData, 0, 0);
+    return canvas;
+  }
+
+  async function runTesseractOcrOnCanvas(canvas, progressPrefix, onProgress) {
+    const Tesseract = await ensureTesseractLoaded();
+    enhanceCanvasForOcr(canvas);
+    const res = await Tesseract.recognize(canvas, "chi_tra+eng", {
+      logger: (m) => {
+        if (!onProgress) return;
+        const pct = typeof m?.progress === "number" ? Math.round(m.progress * 100) : null;
+        if (m?.status === "loading language traineddata" || m?.status === "loading tesseract core") {
+          onProgress(null, `${progressPrefix} 正在載入繁體中文與英數辨識語言包（首次使用需下載約 15 秒）...`);
+        } else if (m?.status === "recognizing text" && pct !== null) {
+          onProgress(pct, `${progressPrefix} 正在進行文字掃描辨識 (${pct}%)...`);
+        }
+      }
+    });
+    return String(res?.data?.text || "");
+  }
+
+  async function parsePdfQuotationInBrowser(file, onProgress) {
+    onProgress?.(5, "正在載入 PDF 解析引擎...");
+    const pdfjsLib = await ensurePdfJsLoaded();
+    const buf = await file.arrayBuffer();
+    onProgress?.(18, "正在讀取 PDF 頁面與座標結構...");
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+
+    const pageObjects = [];
+    const allLines = [];
+    let nonSpaceChars = 0;
+
+    for (let p = 1; p <= pdf.numPages; p++) {
+      onProgress?.(20 + Math.round((p / pdf.numPages) * 35), `正在解析第 ${p} / ${pdf.numPages} 頁文字與欄位...`);
+      const page = await pdf.getPage(p);
+      const viewport = page.getViewport({ scale: 1.0 });
+      const textContent = await page.getTextContent();
+      const words = [];
+
+      for (const it of (textContent.items || [])) {
+        const txt = String(it.str || "").trim();
+        if (!txt) continue;
+        nonSpaceChars += txt.replace(/\s+/g, "").length;
+        const tx = pdfjsLib.Util.transform(viewport.transform, it.transform);
+        const w = Math.max(2, Math.abs(it.width || txt.length * 5));
+        const x = tx[4];
+        const y = tx[5];
+        words.push({ text: txt, x, xEnd: x + w, y, w });
+      }
+
+      const lineGroups = [];
+      words.sort((a, b) => (Math.abs(a.y - b.y) > 4 ? a.y - b.y : a.x - b.x));
+      for (const w of words) {
+        const last = lineGroups[lineGroups.length - 1];
+        if (!last || Math.abs(w.y - last.y) > 4.5) {
+          lineGroups.push({ y: w.y, tokens: [w] });
+        } else {
+          last.tokens.push(w);
+        }
+      }
+      lineGroups.forEach(lg => {
+        lg.tokens.sort((a, b) => a.x - b.x);
+        allLines.push(lg.tokens.map(t => t.text).join(" "));
+      });
+      pageObjects.push({ pageNum: p, width: viewport.width, height: viewport.height, words });
+    }
+
+    if (nonSpaceChars >= 25) {
+      onProgress?.(75, "正在比對報價單表頭與表格幾何座標...");
+      const header = parseQuotationHeaderFromLines(allLines);
+      let items = extractPdfItemsGeometric(pageObjects);
+      const warnings = [];
+      if (items.length === 0) {
+        warnings.push("PDF 表格非標準雙線排版，已自動切換為純文字結構解析。");
+        const fallback = parseRawQuotationText(allLines.join("\n"));
+        items = fallback.items;
+        warnings.push(...fallback.warnings);
+      }
+      onProgress?.(92, "PDF 文字與明細提取完成...");
+      return { header, items, warnings };
+    }
+
+    const maxPages = Math.min(pdf.numPages, 6);
+    const ocrTexts = [];
+    const warnings = ["已偵測為純圖片掃描檔 PDF，並透過圖片文字辨識引擎讀取內容；建議匯入前仔細核對型號與金額。"];
+    if (pdf.numPages > maxPages) {
+      warnings.push(`此掃描檔共有 ${pdf.numPages} 頁，為維持流暢度僅自動辨識前 ${maxPages} 頁。`);
+    }
+
+    for (let p = 1; p <= maxPages; p++) {
+      const page = await pdf.getPage(p);
+      const viewport = page.getViewport({ scale: 2.2 });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const ctx = canvas.getContext("2d");
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const txt = await runTesseractOcrOnCanvas(canvas, `第 ${p}/${maxPages} 頁`, (pct, msg) => {
+        const overall = pct !== null ? Math.round(((p - 1 + pct / 100) / maxPages) * 80 + 15) : null;
+        onProgress?.(overall, msg);
+      });
+      ocrTexts.push(txt);
+    }
+
+    const ocrResult = parseRawQuotationText(ocrTexts.join("\n"));
+    return {
+      header: ocrResult.header,
+      items: ocrResult.items,
+      warnings: warnings.concat(ocrResult.warnings)
+    };
+  }
+
+  async function parseImageFileViaOcrInBrowser(file, onProgress) {
+    onProgress?.(8, "正在讀取圖片並進行掃描增強...");
+    const objUrl = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error("無法載入圖片檔案，請確認圖片是否損毀"));
+        image.src = objUrl;
+      });
+      const minTarget = 1400;
+      const maxTarget = 2600;
+      let scale = 1;
+      if (img.width < minTarget) scale = Math.min(2.5, minTarget / Math.max(1, img.width));
+      if (img.width * scale > maxTarget) scale = maxTarget / Math.max(1, img.width);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      const txt = await runTesseractOcrOnCanvas(canvas, "圖片掃描", (pct, msg) => {
+        onProgress?.(pct !== null ? Math.round(15 + pct * 0.78) : null, msg);
+      });
+      const parsed = parseRawQuotationText(txt);
+      const warnings = ["已完成圖片文字辨識；因圖片清晰度差異可能產生少數誤字，匯入前請先核對預覽表格。"];
+      return {
+        header: parsed.header,
+        items: parsed.items,
+        warnings: warnings.concat(parsed.warnings)
+      };
+    } finally {
+      URL.revokeObjectURL(objUrl);
+    }
+  }
+
+  async function buildImportProductLookupMaps() {
+    await ensureDesktopProductsCacheLoaded();
+    let specialList = [];
+    try {
+      const activeSales = getActiveSalesName();
+      const sResp = await fetch(`/api/special-products?sales_name=${encodeURIComponent(activeSales)}`);
+      if (sResp.ok) {
+        const sData = await sResp.json();
+        specialList = Array.isArray(sData) ? sData : (sData.active || []);
+      }
+    } catch (e) {}
+
+    const allProducts = [...(desktopFullProductsCache || []), ...(specialList || []).map(sp => ({ ...sp, is_special: true }))];
+    const exactMap = new Map();
+    const skeletonMap = new Map();
+
+    allProducts.forEach(p => {
+      const model = String(p.model_no || "").trim();
+      if (!model) return;
+      const upper = model.toUpperCase();
+      if (!exactMap.has(upper)) exactMap.set(upper, p);
+      const skel = toOcrModelSkeleton(upper);
+      if (skel.length >= 3) {
+        if (!skeletonMap.has(skel)) skeletonMap.set(skel, []);
+        skeletonMap.get(skel).push(p);
+      }
+    });
+    return { exactMap, skeletonMap };
+  }
+
+  function matchSingleImportItemWithMaps(item, maps) {
+    const rawModel = String(item.model_no || "").trim();
+    const upper = rawModel.toUpperCase();
+    const compactUpper = upper.replace(/\s+/g, "");
+    let matchedProd = maps.exactMap.get(upper) || maps.exactMap.get(compactUpper) || null;
+    let status = "unmatched";
+    let ocrOrig = "";
+
+    if (matchedProd) {
+      status = "matched";
+    } else if (compactUpper.length >= 3) {
+      const skel = toOcrModelSkeleton(compactUpper);
+      const candidates = maps.skeletonMap.get(skel) || [];
+      if (candidates.length > 0) {
+        let bestCand = candidates[0];
+        let bestDist = Infinity;
+        for (const c of candidates) {
+          const d = computeStringEditDistance(compactUpper, String(c.model_no || "").toUpperCase());
+          if (d < bestDist) {
+            bestDist = d;
+            bestCand = c;
+          }
+        }
+        matchedProd = bestCand;
+        status = "corrected";
+        ocrOrig = rawModel;
+      }
+    }
+
+    const next = { ...item, match_status: status, ocr_original: ocrOrig };
+    if (matchedProd) {
+      next.model_no = String(matchedProd.model_no || rawModel).trim();
+      if (!next.spec && matchedProd.spec) next.spec = String(matchedProd.spec).trim();
+      next.stock_qty = matchedProd.stock_qty !== undefined && matchedProd.stock_qty !== null ? matchedProd.stock_qty : null;
+      next.is_special = Boolean(matchedProd.is_special);
+
+      const dbDealer = parseFloat(matchedProd.dealer_price) || 0;
+      if (dbDealer > 0) {
+        next.dealer_price = dbDealer;
+        if (next.final_unit_price > 0) {
+          next.discount_pct = Math.round((next.final_unit_price / dbDealer) * 10000) / 100;
+        } else {
+          next.final_unit_price = applyQuoteRounding(dbDealer);
+          next.discount_pct = 100;
+        }
+      }
+    } else {
+      next.stock_qty = null;
+      next.dealer_price = next.dealer_price > 0 ? next.dealer_price : (next.final_unit_price || 0);
+    }
+    return next;
+  }
+
+  let oldImportModalBound = false;
+  let oldImportProductMaps = { exactMap: new Map(), skeletonMap: new Map() };
+  let oldImportPreviewState = {
+    header: {},
+    items: [],
+    warnings: [],
+    historyQuotes: []
+  };
+
+  function renderOldImportWarnings(warnings) {
+    const box = document.getElementById("oldImportWarningsBox");
+    if (!box) return;
+    if (!warnings || warnings.length === 0) {
+      box.classList.add("hidden");
+      box.innerHTML = "";
+      return;
+    }
+    box.innerHTML = warnings.map(w => `<div>[提醒] ${escapeHtml(w)}</div>`).join("");
+    box.classList.remove("hidden");
+  }
+
+  function updateOldImportProgress(pct, text) {
+    const box = document.getElementById("oldImportProgressBox");
+    const bar = document.getElementById("oldImportProgressBar");
+    const txtEl = document.getElementById("oldImportProgressText");
+    const pctEl = document.getElementById("oldImportProgressPct");
+    if (box) box.classList.remove("hidden");
+    if (txtEl && text) txtEl.textContent = text;
+    if (typeof pct === "number" && !isNaN(pct)) {
+      const clamped = Math.max(0, Math.min(100, Math.round(pct)));
+      if (bar) bar.style.width = `${clamped}%`;
+      if (pctEl) pctEl.textContent = `${clamped}%`;
+    }
+  }
+
+  function updateOldImportMatchSummary() {
+    const summaryEl = document.getElementById("oldImportMatchSummary");
+    const items = oldImportPreviewState.items || [];
+    if (!summaryEl) return;
+    const total = items.length;
+    const matched = items.filter(it => it.match_status === "matched").length;
+    const corrected = items.filter(it => it.match_status === "corrected").length;
+    const unmatched = total - matched - corrected;
+    summaryEl.textContent = `共 ${total} 筆明細（吻合 ${matched} / 修正 ${corrected} / 待核對 ${unmatched}）`;
+  }
+
+  function renderOldImportPreviewTable() {
+    const tbody = document.getElementById("oldImportPreviewTableBody");
+    const chkAll = document.getElementById("chkAllOldImportItems");
+    if (!tbody) return;
+    const items = oldImportPreviewState.items || [];
+
+    tbody.innerHTML = items.map((it, idx) => {
+      let badgeHtml = `<span class="old-import-match-badge unmatched">無吻合品項</span>`;
+      if (it.match_status === "matched") {
+        badgeHtml = `<span class="old-import-match-badge matched">資料庫吻合</span>`;
+      } else if (it.match_status === "corrected") {
+        badgeHtml = `<span class="old-import-match-badge corrected" title="原始識別文字：${escapeHtml(it.ocr_original || '')}">已自動修正</span>`;
+      }
+      return `
+        <tr data-imp-idx="${idx}">
+          <td style="text-align:center;"><input type="checkbox" class="old-imp-row-chk" ${it.checked !== false ? "checked" : ""}></td>
+          <td style="text-align:center; font-family:Consolas, monospace;">${idx + 1}</td>
+          <td><input type="text" class="old-imp-field" data-field="model_no" value="${escapeHtml(it.model_no || "")}"></td>
+          <td><input type="text" class="old-imp-field" data-field="spec" value="${escapeHtml(it.spec || "")}"></td>
+          <td><input type="number" class="old-imp-field" data-field="quantity" min="1" value="${Math.max(1, Math.round(it.quantity || 1))}" style="text-align:center;"></td>
+          <td><input type="number" class="old-imp-field" data-field="final_unit_price" min="0" value="${Math.round(it.final_unit_price || 0)}" style="text-align:right;"></td>
+          <td><input type="text" class="old-imp-field" data-field="note_lead_time" value="${escapeHtml(it.note_lead_time || "")}"></td>
+          <td style="text-align:center;" class="old-imp-badge-cell">${badgeHtml}</td>
+          <td style="text-align:center;">
+            <button type="button" class="fluent-btn danger btn-del-old-imp-row" style="font-size:0.74rem; padding:2px 7px;">移除</button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    if (chkAll) {
+      chkAll.checked = items.length > 0 && items.every(it => it.checked !== false);
+    }
+
+    tbody.querySelectorAll("tr").forEach(tr => {
+      const idx = parseInt(tr.getAttribute("data-imp-idx"), 10);
+      const chk = tr.querySelector(".old-imp-row-chk");
+      if (chk) {
+        chk.addEventListener("change", () => {
+          if (oldImportPreviewState.items[idx]) oldImportPreviewState.items[idx].checked = chk.checked;
+          if (chkAll) {
+            chkAll.checked = oldImportPreviewState.items.length > 0 && oldImportPreviewState.items.every(it => it.checked !== false);
+          }
+        });
+      }
+      tr.querySelectorAll(".old-imp-field").forEach(inp => {
+        inp.addEventListener("input", () => {
+          const item = oldImportPreviewState.items[idx];
+          if (!item) return;
+          const field = inp.getAttribute("data-field");
+          if (field === "quantity") item.quantity = Math.max(1, Math.round(parseFloat(inp.value) || 1));
+          else if (field === "final_unit_price") item.final_unit_price = Math.max(0, Math.round(parseFloat(inp.value) || 0));
+          else item[field] = inp.value;
+
+          if (field === "model_no") {
+            const updated = matchSingleImportItemWithMaps(item, oldImportProductMaps);
+            updated.final_unit_price = item.final_unit_price;
+            oldImportPreviewState.items[idx] = updated;
+            const badgeCell = tr.querySelector(".old-imp-badge-cell");
+            if (badgeCell) {
+              if (updated.match_status === "matched") badgeCell.innerHTML = `<span class="old-import-match-badge matched">資料庫吻合</span>`;
+              else if (updated.match_status === "corrected") badgeCell.innerHTML = `<span class="old-import-match-badge corrected">已自動修正</span>`;
+              else badgeCell.innerHTML = `<span class="old-import-match-badge unmatched">無吻合品項</span>`;
+            }
+            updateOldImportMatchSummary();
+          }
+        });
+      });
+      const delBtn = tr.querySelector(".btn-del-old-imp-row");
+      if (delBtn) {
+        delBtn.addEventListener("click", () => {
+          oldImportPreviewState.items.splice(idx, 1);
+          renderOldImportPreviewTable();
+          updateOldImportMatchSummary();
+        });
+      }
+    });
+
+    updateOldImportMatchSummary();
+  }
+
+  function populateOldImportPreviewSection(parsedResult) {
+    const h = parsedResult?.header || {};
+    oldImportPreviewState.header = h;
+    oldImportPreviewState.items = (parsedResult?.items || []).map(it => matchSingleImportItemWithMaps(it, oldImportProductMaps));
+    oldImportPreviewState.warnings = parsedResult?.warnings || [];
+
+    const setField = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = String(val || "");
+    };
+    setField("oldImpCustName", h.customer_name);
+    setField("oldImpTaxId", h.tax_id);
+    setField("oldImpContact", h.contact_name);
+    setField("oldImpPhone", h.phone);
+    setField("oldImpFax", h.fax);
+    setField("oldImpPayment", h.payment);
+    setField("oldImpLocation", h.location);
+    setField("oldImpProjectName", h.project_name);
+    setField("oldImpQuoteNo", h.quote_no);
+    setField("oldImpQuoteDate", h.quote_date);
+    setField("oldImpValidDate", h.valid_date);
+
+    renderOldImportWarnings(oldImportPreviewState.warnings);
+    renderOldImportPreviewTable();
+
+    const previewSec = document.getElementById("oldImportPreviewSection");
+    const btnAppend = document.getElementById("btnApplyOldImportAppend");
+    const btnReplace = document.getElementById("btnApplyOldImportReplace");
+    if (previewSec) previewSec.classList.remove("hidden");
+    if (btnAppend) btnAppend.classList.remove("hidden");
+    if (btnReplace) btnReplace.classList.remove("hidden");
+  }
+
+  function readPreviewHeaderFromInputs() {
+    const val = (id) => (document.getElementById(id)?.value || "").trim();
+    return {
+      customer_name: val("oldImpCustName"),
+      tax_id: val("oldImpTaxId"),
+      contact_name: val("oldImpContact"),
+      phone: val("oldImpPhone"),
+      fax: val("oldImpFax"),
+      payment: val("oldImpPayment"),
+      location: val("oldImpLocation"),
+      project_name: val("oldImpProjectName"),
+      quote_no: val("oldImpQuoteNo"),
+      quote_date: normalizeImportDateString(val("oldImpQuoteDate")),
+      valid_date: normalizeImportDateString(val("oldImpValidDate")),
+      project_type: oldImportPreviewState.header?.project_type || ""
+    };
+  }
+
+  async function applyOldImportPreviewToQuotation(mode = "replace") {
+    const selectedItems = (oldImportPreviewState.items || []).filter(it => it.checked !== false && (it.model_no || it.spec));
+    if (selectedItems.length === 0) {
+      alert("[無勾選品項] 請至少勾選一筆明細後再匯入。");
+      return;
+    }
+
+    const hdr = readPreviewHeaderFromInputs();
+    if (mode === "replace") {
+      const existingModels = Array.from(document.querySelectorAll("#itemsContainer .item-row")).some(r => {
+        const c = document.getElementById(`${r.id}-code`)?.value || "";
+        return c.trim() !== "";
+      });
+      const existingCust = (document.getElementById("quoteCustomerInput")?.value || "").trim();
+      if ((existingModels || existingCust) && !confirm("確定要以預覽內容覆蓋目前報價單的客戶與品項明細嗎？未儲存的修改將會被取代。")) {
+        return;
+      }
+
+      resetQuotationEditor();
+      const desktopBody = document.getElementById("quoteDesktopTableBody");
+      const itemsContainer = document.getElementById("itemsContainer");
+      if (desktopBody) desktopBody.innerHTML = "";
+      if (itemsContainer) itemsContainer.innerHTML = "";
+      quoteItemCount = 0;
+
+      if (!customersCache || customersCache.length === 0) {
+        try { await populateCustomerSelectDropdown(false); } catch (e) {}
+      }
+      if (hdr.customer_name || hdr.tax_id) {
+        const cleanTargetCust = hdr.customer_name.replace(/有限公司|股份有限公司|企業|實業/g, "").trim();
+        const matchedCust = (customersCache || []).find(c =>
+          (hdr.tax_id && c.tax_id === hdr.tax_id) ||
+          c.name === hdr.customer_name ||
+          (cleanTargetCust && String(c.name || "").includes(cleanTargetCust))
+        );
+        if (matchedCust) {
+          applySelectedCustomerToQuoteUI(matchedCust);
+        }
+      }
+      const setDomVal = (id, v) => {
+        const el = document.getElementById(id);
+        if (el && v) el.value = v;
+      };
+      setDomVal("quoteCustomerInput", hdr.customer_name);
+      setDomVal("customerName", hdr.customer_name);
+      setDomVal("quoteTaxId", hdr.tax_id);
+      setDomVal("quotePhone", hdr.phone);
+      setDomVal("quoteFax", hdr.fax);
+      setDomVal("quoteDeliveryLocation", hdr.location);
+      setDomVal("quotePaymentTerms", hdr.payment);
+      setDomVal("quoteProjectName", hdr.project_name);
+
+      if (hdr.contact_name) {
+        const contSel = document.getElementById("quoteContactSelect");
+        if (contSel) {
+          const hasOpt = Array.from(contSel.options).some(o => o.value === hdr.contact_name);
+          if (!hasOpt) {
+            const opt = document.createElement("option");
+            opt.value = hdr.contact_name;
+            opt.textContent = hdr.contact_name;
+            contSel.appendChild(opt);
+          }
+          contSel.value = hdr.contact_name;
+        }
+      }
+      if (hdr.project_type) {
+        const attrSel = document.getElementById("quoteProjectAttribute");
+        if (attrSel && Array.from(attrSel.options).some(o => o.value === hdr.project_type)) {
+          attrSel.value = hdr.project_type;
+        }
+      }
+      if (hdr.quote_date && /^\d{4}-\d{2}-\d{2}$/.test(hdr.quote_date)) setDomVal("quoteDate", hdr.quote_date);
+      if (hdr.valid_date && /^\d{4}-\d{2}-\d{2}$/.test(hdr.valid_date)) setDomVal("quoteValidDate", hdr.valid_date);
+      syncDesktopDateButtons();
+      updateQuoteNoPreview();
+    } else {
+      const existingRows = Array.from(document.querySelectorAll("#itemsContainer .item-row"));
+      const allBlank = existingRows.length > 0 && existingRows.every(r => !(document.getElementById(`${r.id}-code`)?.value || "").trim());
+      if (allBlank) {
+        const desktopBody = document.getElementById("quoteDesktopTableBody");
+        const itemsContainer = document.getElementById("itemsContainer");
+        if (desktopBody) desktopBody.innerHTML = "";
+        if (itemsContainer) itemsContainer.innerHTML = "";
+        quoteItemCount = 0;
+      }
+    }
+
+    selectedItems.forEach(it => {
+      addBlankItem({
+        model_no: it.model_no,
+        spec: it.spec,
+        stock_qty: it.stock_qty,
+        dealer_price: it.dealer_price,
+        discount_pct: it.discount_pct,
+        final_unit_price: it.final_unit_price,
+        quantity: it.quantity,
+        note_lead_time: it.note_lead_time,
+        is_special: Boolean(it.is_special)
+      }, { skipRecalc: true });
+    });
+
+    refreshItemIndices();
+    calculateTotal();
+    if (typeof resetExcelTableEngineState === "function") {
+      resetExcelTableEngineState();
+    }
+
+    const modal = document.getElementById("importOldQuoteModal");
+    if (modal) modal.classList.add("hidden");
+    alert(`[匯入完成] 已成功匯入 ${selectedItems.length} 筆報價明細。`);
+  }
+
+  async function processOldImportUploadedFile(file) {
+    if (!file) return;
+    const badge = document.getElementById("oldImportFileNameBadge");
+    if (badge) badge.textContent = `${file.name} (${Math.max(1, Math.round(file.size / 1024))} KB)`;
+
+    const lowerName = (file.name || "").toLowerCase();
+    renderOldImportWarnings([]);
+    updateOldImportProgress(5, `準備解析「${file.name}」...`);
+
+    try {
+      oldImportProductMaps = await buildImportProductLookupMaps();
+      let result = null;
+      if (lowerName.endsWith(".pdf")) {
+        result = await parsePdfQuotationInBrowser(file, updateOldImportProgress);
+      } else if (/\.(png|jpe?g|webp|bmp)$/i.test(lowerName)) {
+        result = await parseImageFileViaOcrInBrowser(file, updateOldImportProgress);
+      } else {
+        updateOldImportProgress(25, "正在讀取 Excel / CSV 檔案資料...");
+        const sheetData = await parseExcelOrCsvFileInBrowser(file);
+        updateOldImportProgress(65, "正在解析報價表頭與明細欄位...");
+        for (const sName of (sheetData.sheetNames || [])) {
+          const candidate = parseQuotationFromRows2D(sheetData.sheets[sName] || [], (sheetData.cellMaps && sheetData.cellMaps[sName]) || {});
+          if (!result || (candidate.items && candidate.items.length > (result.items || []).length)) {
+            result = candidate;
+          }
+          if (result.items && result.items.length > 0) break;
+        }
+        if (!result) result = { header: {}, items: [], warnings: ["未能讀取任何工作表內容。"] };
+      }
+      updateOldImportProgress(100, "解析完成，請於下方預覽區核對資料。");
+      populateOldImportPreviewSection(result);
+    } catch (err) {
+      updateOldImportProgress(0, "解析中斷");
+      renderOldImportWarnings([err?.message || "檔案解析失敗，請改用「複製文字貼上解析」分頁嘗試匯入。"]);
+    }
+  }
+
+  function renderOldImportHistoryList(filterText = "") {
+    const listEl = document.getElementById("importOldQuoteList");
+    if (!listEl) return;
+    const kw = String(filterText || "").trim().toLowerCase();
+    const quotes = (oldImportPreviewState.historyQuotes || []).filter(q => {
+      if (!kw) return true;
+      return String(q.quote_no || "").toLowerCase().includes(kw) ||
+        String(q.customer_name || "").toLowerCase().includes(kw) ||
+        String(q.project_name || "").toLowerCase().includes(kw);
+    });
+
+    if (quotes.length === 0) {
+      listEl.innerHTML = '<div style="padding:16px; text-align:center; color:var(--text-muted);">查無符合條件之歷史報價單</div>';
+      return;
+    }
+
+    listEl.innerHTML = quotes.slice(0, 50).map(q => `
+      <div class="import-quote-row" data-quoteno="${escapeHtml(q.quote_no)}" style="padding:10px 14px; border:1px solid var(--border-color); border-radius:6px; background:var(--bg-card); cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-weight:700; color:var(--primary-color, #2563eb); font-family:monospace;">${escapeHtml(q.quote_no)}</div>
+          <div style="font-size:0.85rem; color:var(--text-main); font-weight:600; margin-top:2px;">${escapeHtml(q.customer_name)} ｜ ${escapeHtml(q.project_name || "設備報價")}</div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${escapeHtml(q.quote_date)} ｜ $ ${(q.grand_total || 0).toLocaleString()}</div>
+        </div>
+        <button type="button" class="fluent-btn secondary" style="font-size:0.8rem; padding:4px 10px;">載入預覽</button>
+      </div>
+    `).join("");
+
+    listEl.querySelectorAll(".import-quote-row").forEach(row => {
+      row.addEventListener("click", async () => {
+        const qNo = row.dataset.quoteno;
+        try {
+          const detailResp = await fetch(`/api/quotations/${encodeURIComponent(qNo)}`);
+          if (!detailResp.ok) throw new Error("讀取品項明細失敗");
+          const data = await detailResp.json();
+          const items = (data.items || []).map(itm => ({
+            checked: true,
+            model_no: itm.model_no || "",
+            spec: itm.spec || "",
+            quantity: Math.max(1, Math.round(itm.quantity || 1)),
+            dealer_price: parseFloat(itm.dealer_price) || 0,
+            discount_pct: itm.discount_pct !== undefined ? parseFloat(itm.discount_pct) : 100,
+            final_unit_price: parseFloat(itm.final_unit_price) || 0,
+            note_lead_time: itm.note_lead_time || "",
+            stock_qty: itm.stock_qty ?? null,
+            match_status: "matched",
+            ocr_original: ""
+          }));
+          if (items.length === 0) {
+            alert("[該單據無品項] 此報價單無任何產品明細。");
+            return;
+          }
+          populateOldImportPreviewSection({
+            header: {
+              quote_no: data.quote_no || qNo,
+              quote_date: data.quote_date || "",
+              valid_date: data.valid_date || "",
+              customer_name: data.customer_name || "",
+              tax_id: data.tax_id || "",
+              contact_name: data.contact_name || "",
+              phone: data.phone || "",
+              fax: data.fax || "",
+              location: data.delivery_location || data.location || "",
+              payment: data.payment_terms || "",
+              project_name: data.project_name || "",
+              project_type: data.project_type || ""
+            },
+            items,
+            warnings: []
+          });
+        } catch (e) {
+          alert("[讀取失敗] " + e.message);
+        }
+      });
+    });
+  }
+
+  function bindOldImportModalEventsOnce() {
+    if (oldImportModalBound) return;
+    oldImportModalBound = true;
+
     const modal = document.getElementById("importOldQuoteModal");
     const closeBtn = document.getElementById("btnCloseImportOldQuoteModal");
     const cancelBtn = document.getElementById("btnCancelImportOldQuote");
+    const closeModal = () => { if (modal) modal.classList.add("hidden"); };
+    if (closeBtn) closeBtn.addEventListener("click", closeModal);
+    if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
+
+    document.querySelectorAll(".old-import-tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const target = btn.getAttribute("data-import-tab");
+        document.querySelectorAll(".old-import-tab-btn").forEach(b => b.classList.toggle("active", b === btn));
+        const paneFile = document.getElementById("oldImportPaneFile");
+        const paneText = document.getElementById("oldImportPaneText");
+        const paneHistory = document.getElementById("oldImportPaneHistory");
+        if (paneFile) paneFile.classList.toggle("hidden", target !== "file");
+        if (paneText) paneText.classList.toggle("hidden", target !== "text");
+        if (paneHistory) paneHistory.classList.toggle("hidden", target !== "history");
+      });
+    });
+
+    const pickBtn = document.getElementById("btnPickOldImportFile");
+    const fileInput = document.getElementById("oldImportFileInput");
+    const dropZone = document.getElementById("oldImportDropZone");
+    if (pickBtn && fileInput) {
+      pickBtn.addEventListener("click", () => {
+        fileInput.value = "";
+        fileInput.click();
+      });
+    }
+    if (fileInput) {
+      fileInput.addEventListener("change", () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (file) processOldImportUploadedFile(file);
+      });
+    }
+    if (dropZone) {
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("is-dragover");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("is-dragover"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("is-dragover");
+        const file = e.dataTransfer?.files?.[0];
+        if (file) processOldImportUploadedFile(file);
+      });
+    }
+
+    const btnParseText = document.getElementById("btnParseOldImportText");
+    if (btnParseText) {
+      btnParseText.addEventListener("click", async () => {
+        const rawText = (document.getElementById("oldImportRawTextInput")?.value || "").trim();
+        if (!rawText) {
+          alert("[請貼上文字] 請先於上方輸入框貼上舊報價單文字內容。");
+          return;
+        }
+        oldImportProductMaps = await buildImportProductLookupMaps();
+        const result = parseRawQuotationText(rawText);
+        populateOldImportPreviewSection(result);
+      });
+    }
+
+    const historySearch = document.getElementById("oldImportHistorySearch");
+    if (historySearch) {
+      historySearch.addEventListener("input", (e) => {
+        renderOldImportHistoryList(e.target.value);
+      });
+    }
+
+    const btnSwap = document.getElementById("btnSwapImportModelSpec");
+    if (btnSwap) {
+      btnSwap.addEventListener("click", async () => {
+        oldImportProductMaps = await buildImportProductLookupMaps();
+        const hasAnyChecked = oldImportPreviewState.items.some(it => it.checked !== false);
+        oldImportPreviewState.items = oldImportPreviewState.items.map(it => {
+          if (hasAnyChecked && it.checked === false) return it;
+          const swapped = { ...it, model_no: it.spec || "", spec: it.model_no || "" };
+          const reMatched = matchSingleImportItemWithMaps(swapped, oldImportProductMaps);
+          reMatched.final_unit_price = it.final_unit_price;
+          return reMatched;
+        });
+        renderOldImportPreviewTable();
+      });
+    }
+
+    const btnAddRow = document.getElementById("btnAddImportPreviewRow");
+    if (btnAddRow) {
+      btnAddRow.addEventListener("click", () => {
+        oldImportPreviewState.items.push({
+          checked: true,
+          model_no: "",
+          spec: "",
+          quantity: 1,
+          dealer_price: 0,
+          discount_pct: 100,
+          final_unit_price: 0,
+          note_lead_time: "",
+          stock_qty: null,
+          match_status: "unmatched",
+          ocr_original: ""
+        });
+        renderOldImportPreviewTable();
+      });
+    }
+
+    const chkAll = document.getElementById("chkAllOldImportItems");
+    if (chkAll) {
+      chkAll.addEventListener("change", () => {
+        const checked = chkAll.checked;
+        oldImportPreviewState.items.forEach(it => { it.checked = checked; });
+        renderOldImportPreviewTable();
+      });
+    }
+
+    const btnApplyAppend = document.getElementById("btnApplyOldImportAppend");
+    const btnApplyReplace = document.getElementById("btnApplyOldImportReplace");
+    if (btnApplyAppend) btnApplyAppend.addEventListener("click", () => applyOldImportPreviewToQuotation("append"));
+    if (btnApplyReplace) btnApplyReplace.addEventListener("click", () => applyOldImportPreviewToQuotation("replace"));
+  }
+
+  // 開啟從舊報價單匯入整合工作台 (支援電腦檔案 PDF/Excel/掃描圖片、文字貼上及系統歷史單)
+  async function openImportOldQuoteModal() {
+    bindOldImportModalEventsOnce();
+    const modal = document.getElementById("importOldQuoteModal");
     const listEl = document.getElementById("importOldQuoteList");
+    const progressBox = document.getElementById("oldImportProgressBox");
+    const previewSec = document.getElementById("oldImportPreviewSection");
+    const btnAppend = document.getElementById("btnApplyOldImportAppend");
+    const btnReplace = document.getElementById("btnApplyOldImportReplace");
+    const fileBadge = document.getElementById("oldImportFileNameBadge");
+
+    if (progressBox) progressBox.classList.add("hidden");
+    if (previewSec) previewSec.classList.add("hidden");
+    if (btnAppend) btnAppend.classList.add("hidden");
+    if (btnReplace) btnReplace.classList.add("hidden");
+    if (fileBadge) fileBadge.textContent = "尚未選取檔案";
+    renderOldImportWarnings([]);
+    oldImportPreviewState.header = {};
+    oldImportPreviewState.items = [];
+
+    document.querySelectorAll(".old-import-tab-btn").forEach(b => {
+      b.classList.toggle("active", b.getAttribute("data-import-tab") === "file");
+    });
+    const paneFile = document.getElementById("oldImportPaneFile");
+    const paneText = document.getElementById("oldImportPaneText");
+    const paneHistory = document.getElementById("oldImportPaneHistory");
+    if (paneFile) paneFile.classList.remove("hidden");
+    if (paneText) paneText.classList.add("hidden");
+    if (paneHistory) paneHistory.classList.add("hidden");
 
     if (modal) modal.classList.remove("hidden");
-    function closeModal() {
-      if (modal) modal.classList.add("hidden");
-    }
-    if (closeBtn) closeBtn.onclick = closeModal;
-    if (cancelBtn) cancelBtn.onclick = closeModal;
+
+    buildImportProductLookupMaps().then(maps => { oldImportProductMaps = maps; }).catch(() => {});
 
     if (!listEl) return;
     listEl.innerHTML = '<div style="padding:16px; text-align:center; color:var(--text-muted);">正在載入個人歷史報價清單...</div>';
-
     try {
       const activeSales = getActiveSalesName();
       const resp = await fetch(`/api/quotations?sales_name=${encodeURIComponent(activeSales)}`);
       if (!resp.ok) throw new Error("讀取歷史報價單失敗");
       const quotes = await resp.json();
-
-      if (!Array.isArray(quotes) || quotes.length === 0) {
+      oldImportPreviewState.historyQuotes = Array.isArray(quotes) ? quotes : [];
+      if (oldImportPreviewState.historyQuotes.length === 0) {
         listEl.innerHTML = '<div style="padding:16px; text-align:center; color:var(--text-muted);">目前無過往報價單可供匯入</div>';
-        return;
+      } else {
+        renderOldImportHistoryList(document.getElementById("oldImportHistorySearch")?.value || "");
       }
-
-      listEl.innerHTML = quotes.slice(0, 50).map(q => `
-        <div class="import-quote-row" data-quoteno="${escapeHtml(q.quote_no)}" style="padding:10px 14px; border:1px solid var(--border-color); border-radius:6px; background:var(--bg-card); cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <div style="font-weight:700; color:var(--primary-color, #2563eb); font-family:monospace;">${escapeHtml(q.quote_no)}</div>
-            <div style="font-size:0.85rem; color:var(--text-main); font-weight:600; margin-top:2px;">${escapeHtml(q.customer_name)} ｜ ${escapeHtml(q.project_name || '設備報價')}</div>
-            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${escapeHtml(q.quote_date)} ｜ $ ${(q.grand_total || 0).toLocaleString()}</div>
-          </div>
-          <button type="button" class="fluent-btn secondary" style="font-size:0.8rem; padding:4px 10px;">匯入品項</button>
-        </div>
-      `).join("");
-
-      listEl.querySelectorAll('.import-quote-row').forEach(row => {
-        row.addEventListener("click", async () => {
-          const qNo = row.dataset.quoteno;
-          try {
-            const detailResp = await fetch(`/api/quotations/${encodeURIComponent(qNo)}`);
-            if (!detailResp.ok) throw new Error("讀取品項明細失敗");
-            const data = await detailResp.json();
-            const items = data.items || [];
-            if (items.length === 0) {
-              alert("[該單據無品項] 此報價單無任何產品明細。");
-              return;
-            }
-            items.forEach(itm => addBlankItem(itm));
-            closeModal();
-            calculateTotal();
-            alert(`[匯入完成] 已成功自單號【${qNo}】匯入 ${items.length} 項品項！`);
-          } catch (e) {
-            alert("[匯入失敗] " + e.message);
-          }
-        });
-      });
     } catch (err) {
       listEl.innerHTML = `<div style="padding:16px; text-align:center; color:var(--color-danger, #ef4444);">載入失敗：${escapeHtml(err.message)}</div>`;
     }
@@ -8915,11 +10645,21 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 匯出報價單為 Excel (CSV UTF-8 BOM 防亂碼格式)
+  // 匯出報價單為 Excel (CSV UTF-8 BOM 防亂碼格式，內含系統完整還原標記)
   function exportQuoteToExcel() {
+    const csvCell = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
     const custName = (document.getElementById("quoteCustomerInput")?.value || document.getElementById("customerName")?.value || "").trim() || "士林電機報價客戶";
     const projName = document.getElementById("quoteProjectName")?.value.trim() || "專案設備";
     const qDate = document.getElementById("quoteDate")?.value || new Date().toISOString().split("T")[0];
+    const taxId = document.getElementById("quoteTaxId")?.value.trim() || "";
+    const contactName = document.getElementById("quoteContactSelect")?.value.trim() || "";
+    const phone = document.getElementById("quotePhone")?.value.trim() || "";
+    const fax = document.getElementById("quoteFax")?.value.trim() || "";
+    const location = document.getElementById("quoteDeliveryLocation")?.value.trim() || "";
+    const payment = document.getElementById("quotePaymentTerms")?.value.trim() || "";
+    const validDate = document.getElementById("quoteValidDate")?.value || "";
+    const projectType = document.getElementById("quoteProjectAttribute")?.value || "";
+    const quoteNo = `${document.getElementById("quotePrefixInput")?.value || ""}-${document.getElementById("quoteSeqInput")?.value || ""}-${document.getElementById("quoteRevInput")?.value || ""}`.replace(/^-+|-+$/g, "");
 
     const itemsContainer = document.getElementById("itemsContainer");
     const mRows = itemsContainer ? itemsContainer.querySelectorAll('.item-row') : [];
@@ -8931,14 +10671,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let csvContent = "\uFEFF";
     csvContent += "士林電機 FA 業務報價單\n";
-    csvContent += `客戶名稱,${custName},報價日期,${qDate}\n`;
-    csvContent += `專案名稱,${projName},統一編號,${document.getElementById("quoteTaxId")?.value || ""}\n`;
-    csvContent += `聯絡人,${document.getElementById("quoteContactSelect")?.value || ""},電話,${document.getElementById("quotePhone")?.value || ""}\n`;
-    csvContent += `付款條件,${document.getElementById("quotePaymentTerms")?.value || ""},有效日期,${document.getElementById("quoteValidDate")?.value || ""}\n\n`;
+    csvContent += `客戶名稱,${csvCell(custName)},報價日期,${csvCell(qDate)}\n`;
+    csvContent += `專案名稱,${csvCell(projName)},統一編號,${csvCell(taxId)}\n`;
+    csvContent += `聯絡人,${csvCell(contactName)},電話,${csvCell(phone)}\n`;
+    csvContent += `付款條件,${csvCell(payment)},有效日期,${csvCell(validDate)}\n\n`;
 
     csvContent += "項次,產品型號,規格說明,經銷牌價,折數%,最終單價(未稅),數量,小計(未稅),備註交期\n";
 
     let subtotal = 0;
+    const metaItems = [];
     mRows.forEach((r, idx) => {
       const itemId = r.id;
       const model = document.getElementById(`${itemId}-code`)?.value || "-";
@@ -8951,7 +10692,18 @@ document.addEventListener("DOMContentLoaded", () => {
       subtotal += rowSub;
       const delivery = document.getElementById(`${itemId}-delivery`)?.value || "";
 
-      csvContent += `${idx + 1},"${model}","${spec}",${dpStr},${disc}%,${price},${qty},${rowSub},"${delivery}"\n`;
+      csvContent += `${idx + 1},${csvCell(model)},${csvCell(spec)},${dpStr},${disc}%,${price},${qty},${rowSub},${csvCell(delivery)}\n`;
+      if (model !== "-" || spec || price > 0) {
+        metaItems.push({
+          model_no: model === "-" ? "" : model,
+          spec,
+          dealer_price: parseFloat(dpStr) || 0,
+          discount_pct: parseFloat(disc) || 100,
+          final_unit_price: price,
+          quantity: qty,
+          note_lead_time: delivery
+        });
+      }
     });
 
     const tax = Math.round(subtotal * 0.05);
@@ -8960,6 +10712,25 @@ document.addEventListener("DOMContentLoaded", () => {
     csvContent += `\n未稅小計,,,,,,,${subtotal}\n`;
     csvContent += `營業稅(5%),,,,,,,${tax}\n`;
     csvContent += `含稅總計,,,,,,,${grandTotal}\n`;
+
+    const metaPayload = {
+      header: {
+        quote_no: quoteNo,
+        quote_date: qDate,
+        valid_date: validDate,
+        customer_name: custName,
+        tax_id: taxId,
+        contact_name: contactName,
+        phone,
+        fax,
+        location,
+        payment,
+        project_name: projName,
+        project_type: projectType
+      },
+      items: metaItems
+    };
+    csvContent += `\n\n系統還原資料標記,___SHIHLIN_META___,${csvCell(JSON.stringify(metaPayload))}\n`;
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
@@ -11694,235 +13465,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ========================================================================
-    // 批次資料管理：瀏覽器原生 Excel (.xlsx/.xlsm/.csv) 解析與匯出引擎 (v1.0.55)
+    // 批次資料管理：瀏覽器原生 Excel 匯出引擎 (共用意圖解析函式已提升至共用作用域)
     // ========================================================================
-    function colLettersToIndex(letters) {
-      let idx = 0;
-      for (let i = 0; i < letters.length; i++) {
-        idx = idx * 26 + (letters.charCodeAt(i) - 64);
-      }
-      return Math.max(0, idx - 1);
-    }
-
-    function indexToColLetters(idx) {
-      let s = "";
-      let n = idx + 1;
-      while (n > 0) {
-        const rem = (n - 1) % 26;
-        s = String.fromCharCode(65 + rem) + s;
-        n = Math.floor((n - 1) / 26);
-      }
-      return s;
-    }
-
-    function parseCsvToRows2D(csvText) {
-      const cleaned = csvText.replace(/^\uFEFF/, "");
-      const rows = [];
-      let row = [];
-      let field = "";
-      let inQuotes = false;
-      for (let i = 0; i < cleaned.length; i++) {
-        const ch = cleaned[i];
-        if (inQuotes) {
-          if (ch === '"' && cleaned[i + 1] === '"') {
-            field += '"';
-            i++;
-          } else if (ch === '"') {
-            inQuotes = false;
-          } else {
-            field += ch;
-          }
-        } else {
-          if (ch === '"') {
-            inQuotes = true;
-          } else if (ch === ",") {
-            row.push(field.trim());
-            field = "";
-          } else if (ch === "\r" && cleaned[i + 1] === "\n") {
-            row.push(field.trim());
-            rows.push(row);
-            row = [];
-            field = "";
-            i++;
-          } else if (ch === "\n" || ch === "\r") {
-            row.push(field.trim());
-            rows.push(row);
-            row = [];
-            field = "";
-          } else {
-            field += ch;
-          }
-        }
-      }
-      if (field.length > 0 || row.length > 0) {
-        row.push(field.trim());
-        rows.push(row);
-      }
-      return rows;
-    }
-
-    async function readZipEntriesMap(arrayBuffer) {
-      const bytes = new Uint8Array(arrayBuffer);
-      const view = new DataView(arrayBuffer);
-      let eocdOffset = -1;
-      const minStart = Math.max(0, bytes.length - 65557);
-      for (let i = bytes.length - 22; i >= minStart; i--) {
-        if (view.getUint32(i, true) === 0x06054b50) {
-          eocdOffset = i;
-          break;
-        }
-      }
-      if (eocdOffset < 0) throw new Error("無法識別的 Excel (.xlsx) ZIP 檔案格式");
-
-      const totalEntries = view.getUint16(eocdOffset + 10, true);
-      const cdOffset = view.getUint32(eocdOffset + 16, true);
-      const entries = new Map();
-      const decoder = new TextDecoder("utf-8");
-      let pos = cdOffset;
-
-      for (let i = 0; i < totalEntries && pos + 46 <= bytes.length; i++) {
-        if (view.getUint32(pos, true) !== 0x02014b50) break;
-        const method = view.getUint16(pos + 10, true);
-        const compSize = view.getUint32(pos + 20, true);
-        const nameLen = view.getUint16(pos + 28, true);
-        const extraLen = view.getUint16(pos + 30, true);
-        const commentLen = view.getUint16(pos + 32, true);
-        const localOffset = view.getUint32(pos + 42, true);
-        const entryName = decoder.decode(bytes.subarray(pos + 46, pos + 46 + nameLen));
-        entries.set(entryName, { method, compSize, localOffset });
-        pos += 46 + nameLen + extraLen + commentLen;
-      }
-
-      async function getEntryText(name) {
-        const meta = entries.get(name);
-        if (!meta) return null;
-        const lo = meta.localOffset;
-        if (view.getUint32(lo, true) !== 0x04034b50) return null;
-        const fnLen = view.getUint16(lo + 26, true);
-        const exLen = view.getUint16(lo + 28, true);
-        const dataStart = lo + 30 + fnLen + exLen;
-        const compressedSlice = bytes.subarray(dataStart, dataStart + meta.compSize);
-        if (meta.method === 0) {
-          return decoder.decode(compressedSlice);
-        }
-        if (meta.method === 8) {
-          if (typeof DecompressionStream === "undefined") {
-            throw new Error("目前瀏覽器不支援 DecompressionStream，請更新瀏覽器或改用 CSV 匯入");
-          }
-          const ds = new DecompressionStream("deflate-raw");
-          const outBuf = await new Response(new Blob([compressedSlice]).stream().pipeThrough(ds)).arrayBuffer();
-          return decoder.decode(new Uint8Array(outBuf));
-        }
-        throw new Error(`不支援的 ZIP 壓縮方式 (${meta.method})`);
-      }
-
-      return { entries, getEntryText };
-    }
-
-    function parseSheetXmlToRows2D(xmlStr, sharedStrings) {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(xmlStr, "application/xml");
-      const rowNodes = Array.from(doc.getElementsByTagName("row"));
-      const rows = [];
-
-      rowNodes.forEach(rNode => {
-        const rowArr = [];
-        const cNodes = Array.from(rNode.getElementsByTagName("c"));
-        cNodes.forEach(cNode => {
-          const ref = cNode.getAttribute("r") || "";
-          const m = ref.match(/^([A-Z]+)\d+$/i);
-          const colIdx = m ? colLettersToIndex(m[1].toUpperCase()) : rowArr.length;
-          while (rowArr.length <= colIdx) rowArr.push("");
-
-          const t = cNode.getAttribute("t") || "";
-          let val = "";
-          if (t === "inlineStr") {
-            const tNodes = Array.from(cNode.getElementsByTagName("t"));
-            val = tNodes.map(n => n.textContent || "").join("");
-          } else {
-            const vNode = cNode.getElementsByTagName("v")[0];
-            const rawV = vNode ? (vNode.textContent || "") : "";
-            if (t === "s") {
-              const sIdx = parseInt(rawV, 10);
-              val = (!isNaN(sIdx) && sharedStrings[sIdx] !== undefined) ? sharedStrings[sIdx] : "";
-            } else {
-              val = rawV;
-            }
-          }
-          rowArr[colIdx] = String(val).trim();
-        });
-        if (rowArr.some(c => c !== "")) {
-          rows.push(rowArr);
-        }
-      });
-      return rows;
-    }
-
-    async function parseExcelOrCsvFileInBrowser(file) {
-      const lowerName = (file.name || "").toLowerCase();
-      if (lowerName.endsWith(".csv")) {
-        const text = await file.text();
-        const rows = parseCsvToRows2D(text);
-        return { sheets: { Sheet1: rows }, sheetNames: ["Sheet1"], firstSheetRows: rows };
-      }
-
-      const buf = await file.arrayBuffer();
-      const zip = await readZipEntriesMap(buf);
-
-      const sharedStrings = [];
-      const sstXml = await zip.getEntryText("xl/sharedStrings.xml");
-      if (sstXml) {
-        const sstDoc = new DOMParser().parseFromString(sstXml, "application/xml");
-        Array.from(sstDoc.getElementsByTagName("si")).forEach(si => {
-          const txt = Array.from(si.getElementsByTagName("t")).map(t => t.textContent || "").join("");
-          sharedStrings.push(txt.trim());
-        });
-      }
-
-      const relMap = new Map();
-      const relsXml = await zip.getEntryText("xl/_rels/workbook.xml.rels");
-      if (relsXml) {
-        const relsDoc = new DOMParser().parseFromString(relsXml, "application/xml");
-        Array.from(relsDoc.getElementsByTagName("Relationship")).forEach(rel => {
-          const rid = rel.getAttribute("Id") || "";
-          let target = rel.getAttribute("Target") || "";
-          target = target.replace(/^\/+/, "");
-          if (!target.startsWith("xl/")) target = `xl/${target}`;
-          relMap.set(rid, target);
-        });
-      }
-
-      const wbXml = await zip.getEntryText("xl/workbook.xml");
-      const sheetDefs = [];
-      if (wbXml) {
-        const wbDoc = new DOMParser().parseFromString(wbXml, "application/xml");
-        Array.from(wbDoc.getElementsByTagName("sheet")).forEach((sh, idx) => {
-          const name = sh.getAttribute("name") || `Sheet${idx + 1}`;
-          const rid = sh.getAttribute("r:id") || sh.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id") || "";
-          const path = relMap.get(rid) || `xl/worksheets/sheet${idx + 1}.xml`;
-          sheetDefs.push({ name, path });
-        });
-      }
-
-      const sheets = {};
-      const sheetNames = [];
-      for (const sd of sheetDefs) {
-        const sXml = await zip.getEntryText(sd.path);
-        if (sXml) {
-          sheets[sd.name] = parseSheetXmlToRows2D(sXml, sharedStrings);
-          sheetNames.push(sd.name);
-        }
-      }
-      if (sheetNames.length === 0) {
-        const s1Xml = await zip.getEntryText("xl/worksheets/sheet1.xml");
-        if (s1Xml) {
-          sheets.Sheet1 = parseSheetXmlToRows2D(s1Xml, sharedStrings);
-          sheetNames.push("Sheet1");
-        }
-      }
-      const firstSheetRows = sheetNames.length > 0 ? sheets[sheetNames[0]] : [];
-      return { sheets, sheetNames, firstSheetRows };
-    }
 
     function escapeXmlText(val) {
       return String(val ?? "")
@@ -13746,10 +15290,6 @@ document.addEventListener("DOMContentLoaded", () => {
       popup.className = "pyside-completer-popup hidden";
       popup.style.width = "340px";
       popup.innerHTML = `
-        <div class="pyside-completer-header">
-          <span>預設交期與備註字句</span>
-          <span id="pysideDeliveryCompleterCount"></span>
-        </div>
         <div id="pysideDeliveryCompleterList" class="pyside-completer-list"></div>
       `;
       document.body.appendChild(popup);
@@ -13757,13 +15297,13 @@ document.addEventListener("DOMContentLoaded", () => {
     return popup;
   }
 
-  function applyDesktopDeliveryOption(optionText) {
+  function applyDesktopDeliveryOption(optionText, isCustomMode = false) {
     const itemId = desktopDeliveryState.itemId;
     const rowEl = desktopDeliveryState.rowEl;
     closeDesktopDeliveryCompleter();
     if (!itemId) return;
 
-    runWithExcelUndoCheckpoint("選擇備註/交期預設字句", () => {
+    runWithExcelUndoCheckpoint(isCustomMode ? "切換為自定義備註" : "選擇備註/交期預設字句", () => {
       const dInput = document.getElementById(`d-${itemId}-delivery`);
       const mInput = document.getElementById(`${itemId}-delivery`);
       if (dInput) {
@@ -13772,6 +15312,22 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       if (mInput) mInput.value = optionText;
     });
+
+    const dInputAfter = document.getElementById(`d-${itemId}-delivery`);
+    if (isCustomMode && rowEl && dInputAfter && typeof enterExcelEditMode === "function") {
+      const tdEl = dInputAfter.closest("td");
+      const rows = typeof getExcelRows === "function" ? getExcelRows() : [];
+      const rIdx = rows.indexOf(rowEl);
+      const cIdx = tdEl ? Array.from(rowEl.cells).indexOf(tdEl) : -1;
+      if (rIdx >= 0 && cIdx >= 0) {
+        excelTableState.anchor = { r: rIdx, c: cIdx };
+        excelTableState.focus = { r: rIdx, c: cIdx };
+        enterExcelEditMode("edit", null);
+        return;
+      }
+      dInputAfter.focus();
+      return;
+    }
 
     if (rowEl && typeof focusExcelProxyInput === "function") {
       renderExcelSelectionUI();
@@ -13789,7 +15345,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const popup = getOrCreateDesktopDeliveryPopup();
     const listEl = document.getElementById("pysideDeliveryCompleterList");
-    const countEl = document.getElementById("pysideDeliveryCompleterCount");
 
     desktopDeliveryState.rowEl = rowEl;
     desktopDeliveryState.itemId = itemId;
@@ -13797,14 +15352,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const allOptions = ["", ...(PRESET_DELIVERY_OPTIONS || [])];
     const currentVal = String(inputEl.value || "").trim();
-    if (countEl) {
-      countEl.textContent = `${PRESET_DELIVERY_OPTIONS.length} 組預設`;
-    }
 
     if (listEl) {
       listEl.innerHTML = allOptions.map((opt, idx) => {
-        const isCurrent = opt === currentVal;
-        const label = opt === "" ? "（空白 / 清除備註）" : escapeHtml(opt);
+        const isCurrent = opt !== "" && opt === currentVal;
+        const label = opt === "" ? "自定義備註" : escapeHtml(opt);
         return `
           <div class="pyside-completer-item ${isCurrent ? "is-active" : ""}" data-deliv-idx="${idx}" role="option">
             <div class="pyside-completer-left">
@@ -13821,7 +15373,8 @@ document.addEventListener("DOMContentLoaded", () => {
           e.preventDefault();
           e.stopPropagation();
           const idx = parseInt(el.getAttribute("data-deliv-idx"), 10);
-          applyDesktopDeliveryOption(allOptions[idx] ?? "");
+          const optVal = allOptions[idx] ?? "";
+          applyDesktopDeliveryOption(optVal, idx === 0);
         });
       });
     }
@@ -14334,7 +15887,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const handleTr = rows[bottom];
     const handleTd = handleTr?.cells[right];
-    if (handleTd && excelTableState.mode === "select") {
+    if (handleTd && excelTableState.mode === "select" && isExcelRoleEditable(handleTr, right)) {
       const handle = document.createElement("div");
       handle.className = "excel-fill-handle";
       handle.title = "拖曳向下複製填滿";

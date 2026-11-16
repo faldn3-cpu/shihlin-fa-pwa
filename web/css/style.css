@@ -8898,3 +8898,307 @@ html[data-theme="dark"] .cell-subtotal-val {
   animation: moneyValueFlashPulse 0.48s ease-out;
   border-radius: 4px;
 }
+
+/* ============================================================================
+   全系統唯讀 / 不可輸入欄位與唯讀表格反灰標準化 + 舊報價單匯入預覽工作台 (v1.0.65)
+   ============================================================================ */
+input[readonly]:not(#quoteCustomerInput):not(#customerName):not(.pyside-hidden-date-input),
+textarea[readonly],
+.pyside-input[readonly],
+.pyside-readonly,
+.form-control[readonly],
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background-color: #e2e8f0 !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+  cursor: default !important;
+}
+
+html[data-theme="dark"] input[readonly]:not(#quoteCustomerInput):not(#customerName):not(.pyside-hidden-date-input),
+html[data-theme="dark"] textarea[readonly],
+html[data-theme="dark"] .pyside-input[readonly],
+html[data-theme="dark"] .pyside-readonly,
+html[data-theme="dark"] .form-control[readonly],
+html[data-theme="dark"] input:disabled,
+html[data-theme="dark"] select:disabled,
+html[data-theme="dark"] textarea:disabled {
+  background-color: #1e293b !important;
+  color: #cbd5e1 !important;
+  border-color: #475569 !important;
+  cursor: default !important;
+}
+
+/* 報價明細表：可用數量欄位不可輸入，反灰呈現 */
+#quoteDesktopTable tbody tr.desktop-item-row td:nth-child(2) {
+  background-color: #f1f5f9 !important;
+  cursor: default !important;
+}
+
+#quoteDesktopTable tbody tr.desktop-item-row td:nth-child(2) .pyside-cell-readonly {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+  font-weight: 600;
+  cursor: default !important;
+}
+
+html[data-theme="dark"] #quoteDesktopTable tbody tr.desktop-item-row td:nth-child(2) {
+  background-color: #0f172a !important;
+}
+
+html[data-theme="dark"] #quoteDesktopTable tbody tr.desktop-item-row td:nth-child(2) .pyside-cell-readonly {
+  background-color: #1e293b !important;
+  border-color: #475569 !important;
+  color: #cbd5e1 !important;
+}
+
+/* 其他頁面僅供檢視之唯讀表格儲存格統一呈現柔和商業灰，與可輸入白底格子明確區隔 */
+.pyside-excel-table:not(#quoteDesktopTable):not(.old-import-preview-table) tbody td,
+.fluent-table tbody td,
+.sales-order-table tbody td {
+  background-color: #f1f5f9 !important;
+  color: #1e293b;
+  cursor: default;
+}
+
+.pyside-excel-table:not(#quoteDesktopTable):not(.old-import-preview-table) tbody tr:nth-child(even) td,
+.fluent-table tbody tr:nth-child(even) td,
+.sales-order-table tbody tr:nth-child(even) td {
+  background-color: #e2e8f0 !important;
+}
+
+.pyside-excel-table:not(#quoteDesktopTable):not(.old-import-preview-table) tbody tr.active-row td,
+.pyside-excel-table:not(#quoteDesktopTable):not(.old-import-preview-table) tbody tr.selected-row td {
+  background-color: var(--color-accent-light) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="dark"] .pyside-excel-table:not(#quoteDesktopTable):not(.old-import-preview-table) tbody td,
+html[data-theme="dark"] .fluent-table tbody td,
+html[data-theme="dark"] .sales-order-table tbody td {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+}
+
+html[data-theme="dark"] .pyside-excel-table:not(#quoteDesktopTable):not(.old-import-preview-table) tbody tr:nth-child(even) td,
+html[data-theme="dark"] .fluent-table tbody tr:nth-child(even) td,
+html[data-theme="dark"] .sales-order-table tbody tr:nth-child(even) td {
+  background-color: #0f172a !important;
+}
+
+html[data-theme="dark"] .pyside-excel-table:not(#quoteDesktopTable):not(.old-import-preview-table) tbody tr.active-row td,
+html[data-theme="dark"] .pyside-excel-table:not(#quoteDesktopTable):not(.old-import-preview-table) tbody tr.selected-row td {
+  background-color: var(--color-accent-light) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 舊報價單匯入預覽工作台 Modal 樣式 */
+.old-import-modal-content {
+  width: 96vw;
+  max-width: 1020px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.old-import-modal-content .modal-body {
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+.old-import-tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--border-card);
+  padding-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.old-import-tab-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+  background: var(--bg-surface-secondary);
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.old-import-tab-btn.active {
+  background: var(--color-accent);
+  color: #ffffff;
+  border-color: var(--color-accent);
+}
+
+.old-import-dropzone {
+  border: 2px dashed var(--border-card);
+  border-radius: 8px;
+  padding: 18px 16px;
+  text-align: center;
+  background: var(--bg-subtle);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.old-import-dropzone.is-dragover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-light);
+}
+
+.old-import-progress-box {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--bg-surface-secondary);
+  border: 1px solid var(--border-light);
+}
+
+.old-import-progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border-light);
+  overflow: hidden;
+}
+
+.old-import-progress-bar {
+  height: 100%;
+  background: var(--color-accent);
+  transition: width 0.18s ease;
+}
+
+.old-import-warnings {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+html[data-theme="dark"] .old-import-warnings {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: #d97706;
+  color: #fde68a;
+}
+
+.old-import-preview-section {
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+}
+
+.old-import-preview-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 8px;
+}
+
+.old-import-header-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+  gap: 8px;
+}
+
+.old-import-header-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.old-import-header-grid label input {
+  height: 28px;
+  font-size: 0.84rem;
+}
+
+.old-import-preview-table-wrap {
+  margin-top: 8px;
+  max-height: 250px;
+  overflow: auto;
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+}
+
+.old-import-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.old-import-preview-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-surface-secondary);
+  padding: 6px 6px;
+  font-weight: 700;
+}
+
+.old-import-preview-table td {
+  padding: 3px 4px;
+  background: var(--bg-card);
+}
+
+.old-import-preview-table td input[type="text"],
+.old-import-preview-table td input[type="number"] {
+  width: 100%;
+  height: 26px;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 2px 5px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  box-sizing: border-box;
+}
+
+.old-import-match-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.old-import-match-badge.matched {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.old-import-match-badge.corrected {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.old-import-match-badge.unmatched {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+html[data-theme="dark"] .old-import-match-badge.matched {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+}
+
+html[data-theme="dark"] .old-import-match-badge.corrected {
+  background: rgba(245, 158, 11, 0.22);
+  color: #fde68a;
+}
+
+html[data-theme="dark"] .old-import-match-badge.unmatched {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fca5a5;
+}

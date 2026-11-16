@@ -271,7 +271,12 @@ class JsonVaultViewerApp:
 
         self.current_decrypted_data = decrypted
         self._detect_and_load_schema(file_path.name, decrypted)
-        lock_label = "[已加密保險箱 -> 成功於記憶體解密]" if is_encrypted else "[警告：此為舊版未加密檔案]"
+        if is_encrypted and envelope.get("key_scope") == "web_auto":
+            lock_label = "[網頁自動解鎖資料包（亂碼存放） -> 管理員驗證通過於記憶體解密]"
+        elif is_encrypted:
+            lock_label = "[管理員私人保險箱 -> 成功於記憶體解密]"
+        else:
+            lock_label = "[警告：此為舊版未加密檔案]"
         self.var_status.set(
             f"{lock_label} 檔案：{file_path.name} ｜ 大小：{self._fmt_size(file_path.stat().st_size)} ｜ 筆數：{len(self.current_rows)} 筆"
         )
@@ -501,18 +506,27 @@ class JsonVaultViewerApp:
 
         sync_cloud = messagebox.askyesno(
             "確認重新加密",
-            "即將把新密碼寫入本機 .env 並以新密碼重新加密所有檔案。\n是否同時重新加密並上傳覆蓋 Google 雲端硬碟「PWA業務系統」資料夾？",
+            "即將把新密碼寫入本機 .env，並以新密碼重新加密本機與雲端後台檔案\n"
+            "（網頁端採用獨立自動解鎖機制，管理員修改私人密碼不影響業務正常免密碼登入）。\n\n"
+            "是否同時重新加密並上傳覆蓋 Google 雲端硬碟「PWA業務系統」資料夾？",
         )
         try:
             data_access.save_vault_password_to_env(new_pw1)
             self.var_password.set(new_pw1)
             if sync_cloud:
                 res = data_access.sync_to_gdrive_pwa_folder("PWA業務系統", password=new_pw1)
-                msg = f"已完成新密碼儲存與加密！\n雲端同步狀態：{res.get('status')}（共上傳 {res.get('uploaded_files', 0)} 個加密檔）"
+                msg = (
+                    f"已完成管理員私人密碼更新與後台資料重新加密！\n"
+                    f"雲端同步狀態：{res.get('status')}（共上傳 {res.get('uploaded_files', 0)} 個管理員專屬加密檔）\n"
+                    f"（網頁端業務登入維持免輸密碼自動解鎖，不受影響）"
+                )
             else:
                 res_loc = data_access.export_centralized_sales_folders(encrypt=True, password=new_pw1)
-                res_web = data_access.export_builtin_web_seed_json(encrypt=True, password=new_pw1)
-                msg = f"已完成本機資料夾（{res_loc.get('files_written', 0)} 個檔案）與網頁加密資料包（{res_web.get('product_count', 0)} 筆產品）重新加密！"
+                res_web = data_access.export_builtin_web_seed_json(encrypt=True)
+                msg = (
+                    f"已完成本機後台資料夾（{res_loc.get('files_written', 0)} 個管理員專屬加密檔）重新加密！\n"
+                    f"網頁加密資料包（{res_web.get('product_count', 0)} 筆產品）維持自動解鎖機制，業務端無須變更密碼。"
+                )
             self.refresh_file_tree()
             self.reload_current_file()
             messagebox.showinfo("更新完成", msg)

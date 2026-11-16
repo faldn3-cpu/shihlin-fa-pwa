@@ -485,8 +485,8 @@ def run_all_tests():
         assert not any(q["quote_no"] == "LEGACY2611-001-00" for q in data_access.list_quotations(sales_name="張書偉"))
         print("  [OK] 批次匯入客戶、產品與歷史報價單三階段智慧匯入精靈（含業務隔離與異常攔截）驗證通過！")
 
-        # 13. 驗證 JSON 檔案加密亂碼保護、解密還原與防竄改攔截
-        print("\n[測試 13] 驗證 JSON 檔案加密亂碼保護、解密還原與防竄改攔截...")
+        # 13. 驗證 JSON 檔案加密亂碼保護、雙層金鑰隔離與防竄改攔截
+        print("\n[測試 13] 驗證 JSON 檔案加密亂碼保護、雙層金鑰隔離與防竄改攔截...")
         enc_test_dir = project_dir / "test_encrypted_vault_dir"
         if enc_test_dir.exists():
             shutil.rmtree(enc_test_dir, ignore_errors=True)
@@ -502,29 +502,50 @@ def run_all_tests():
             assert "台灣精密自動化股份有限公司" not in raw_text, "加密後之 JSON 檔案不得包含明文客戶名稱"
             assert "03-9999999" not in raw_text, "加密後之 JSON 檔案不得包含明文電話號碼"
 
-            # 驗證正確密碼可 100% 還原
+            # 驗證正確管理員密碼可 100% 還原後台檔案
             decrypted_custs = data_access._read_json_utf8(cust_enc_path, password=test_pw)
             assert any(c.get("name") == "台灣精密自動化股份有限公司" for c in decrypted_custs)
 
-            # 驗證錯誤密碼遭精準攔截
-            wrong_blocked = False
-            try:
-                data_access._read_json_utf8(cust_enc_path, password="WrongPassword!")
-            except ValueError:
-                wrong_blocked = True
-            assert wrong_blocked, "錯誤密碼竟未被加密引擎攔截"
+            # 驗證錯誤密碼與網頁自動解鎖金鑰皆絕對無法解開後台個人資料檔
+            for bad_pw in ("WrongPassword!", data_access.WEB_SEED_AUTO_KEY):
+                wrong_blocked = False
+                try:
+                    data_access._read_json_utf8(cust_enc_path, password=bad_pw)
+                except ValueError:
+                    wrong_blocked = True
+                assert wrong_blocked, "非授權密碼或網頁自動金鑰竟未在後台檔案遭攔截"
 
-            # 驗證網頁加密種子檔匯出與解密還原
+            # 驗證網頁自動解鎖資料包：磁碟為亂碼且採用 web_auto 範疇，網頁可自動解鎖，錯誤密碼仍被拒絕
             seed_enc_file = enc_test_dir / "test_encrypted_seed.json"
             seed_res = data_access.export_builtin_web_seed_json(
-                output_path=seed_enc_file, db_path=test_db, encrypt=True, password=test_pw
+                output_path=seed_enc_file, db_path=test_db, encrypt=True
             )
-            assert seed_res["status"] == "success" and seed_enc_file.exists()
+            assert seed_res["status"] == "success" and seed_res.get("key_scope") == "web_auto"
+            assert seed_enc_file.exists()
             seed_raw = seed_enc_file.read_text(encoding="utf-8")
-            assert "__encrypted_vault__" in seed_raw and "BATCH-SA3-001" not in seed_raw
-            seed_dec = data_access._read_json_utf8(seed_enc_file, password=test_pw)
-            assert any(p.get("model_no") == "BATCH-SA3-001" for p in seed_dec.get("products", []))
-            print("  [OK] 全系統 JSON 加密亂碼鎖定、正確密碼無損解密與錯誤密碼攔截驗證通過！")
+            assert "__encrypted_vault__" in seed_raw and '"key_scope":"web_auto"' in seed_raw
+            assert "BATCH-SA3-001" not in seed_raw
+
+            # 模擬網頁瀏覽器以自動金鑰解鎖
+            seed_dec_web = data_access._read_json_utf8(seed_enc_file, password=data_access.WEB_SEED_AUTO_KEY)
+            assert any(p.get("model_no") == "BATCH-SA3-001" for p in seed_dec_web.get("products", []))
+
+            # 若本機已設定管理員 .env 密碼，驗證管理員輸入私人密碼亦可在檢視器開啟，輸入錯誤密碼仍遭拒絕
+            try:
+                real_admin_pw = data_access.get_vault_password(None)
+            except ValueError:
+                real_admin_pw = ""
+            if real_admin_pw:
+                seed_dec_admin = data_access._read_json_utf8(seed_enc_file, password=real_admin_pw)
+                assert any(p.get("model_no") == "BATCH-SA3-001" for p in seed_dec_admin.get("products", []))
+
+            seed_wrong_blocked = False
+            try:
+                data_access._read_json_utf8(seed_enc_file, password="WrongPassword!")
+            except ValueError:
+                seed_wrong_blocked = True
+            assert seed_wrong_blocked, "錯誤密碼竟未被網頁資料包檢視驗證攔截"
+            print("  [OK] 後台私人密碼與網頁自動金鑰雙層隔離、正確密碼解密及防竄改攔截驗證通過！")
         finally:
             if enc_test_dir.exists():
                 shutil.rmtree(enc_test_dir, ignore_errors=True)

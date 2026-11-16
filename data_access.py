@@ -33,6 +33,8 @@ DEFAULT_BUILTIN_SEED_PATH = PROJECT_DIR / "web" / "data" / "encrypted_seed_db.js
 LEGACY_PLAIN_SEED_PATH = PROJECT_DIR / "web" / "data" / "builtin_seed_db.json"
 VAULT_ENV_FILE = PROJECT_DIR / ".env"
 VAULT_PBKDF2_ITERATIONS = 100000
+# 網頁前端靜態資料包專用自動解鎖金鑰（與管理員 .env 私人後台密碼完全分離）
+WEB_SEED_AUTO_KEY = "ShihlinFA#WebSeedAutoKey$2026!v1"
 
 # 標準業務人員名單 (確保一人一資料夾架構完整建立)
 DEFAULT_SALESPERSON_NAMES = [
@@ -2754,6 +2756,8 @@ def save_vault_password_to_env(new_password: str) -> None:
         lines.append(f"PWA_VAULT_PASSWORD={clean_pw}")
 
     VAULT_ENV_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    if "PWA_VAULT_PASSWORD" in os.environ:
+        os.environ["PWA_VAULT_PASSWORD"] = clean_pw
 
 
 def _derive_vault_keys(password: str, salt: bytes, iterations: int = VAULT_PBKDF2_ITERATIONS) -> Tuple[bytes, bytes]:
@@ -2774,7 +2778,11 @@ def _xor_sha256_ctr_stream(data: bytes, enc_key: bytes, nonce: bytes) -> bytes:
     return (int.from_bytes(data, "little") ^ int.from_bytes(keystream, "little")).to_bytes(total_len, "little")
 
 
-def encrypt_json_payload(payload: Any, password: Optional[str] = None) -> Dict[str, Any]:
+def encrypt_json_payload(
+    payload: Any,
+    password: Optional[str] = None,
+    key_scope: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     將任意 JSON 資料物件加密成不可讀的亂碼外封包（Encrypt-then-MAC 保護），
     防止雲端或網頁檔案遭下載後直接以記事本檢視內容。
@@ -2787,7 +2795,7 @@ def encrypt_json_payload(payload: Any, password: Optional[str] = None) -> Dict[s
     ciphertext_bytes = _xor_sha256_ctr_stream(raw_bytes, enc_key, nonce)
     mac_hex = hmac.new(mac_key, nonce + ciphertext_bytes, hashlib.sha256).hexdigest()
 
-    return {
+    envelope: Dict[str, Any] = {
         "__encrypted_vault__": True,
         "alg": "PBKDF2-SHA256-CTR-HMAC",
         "iterations": VAULT_PBKDF2_ITERATIONS,
@@ -2796,11 +2804,16 @@ def encrypt_json_payload(payload: Any, password: Optional[str] = None) -> Dict[s
         "mac": mac_hex,
         "ciphertext": base64.b64encode(ciphertext_bytes).decode("ascii"),
     }
+    if key_scope:
+        envelope["key_scope"] = str(key_scope)
+    return envelope
 
 
 def decrypt_json_payload(envelope: Any, password: Optional[str] = None) -> Any:
     """
     驗證簽章並解密亂碼外封包為原始資料；若為未加密之舊版備份則維持相容回傳。
+    若檔案為網頁自動解鎖資料包 (key_scope='web_auto')，管理員輸入正確的本機私人主密碼時亦可直接解開檢視；
+    輸入錯誤密碼則一律拒絕解密。
     """
     if not (isinstance(envelope, dict) and envelope.get("__encrypted_vault__") is True):
         return envelope
@@ -2817,7 +2830,22 @@ def decrypt_json_payload(envelope: Any, password: Optional[str] = None) -> Any:
 
     enc_key, mac_key = _derive_vault_keys(pwd, salt, iterations)
     expected_mac = hmac.new(mac_key, nonce + ciphertext_bytes, hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(expected_mac, mac_hex):
+    mac_matched = hmac.compare_digest(expected_mac, mac_hex)
+
+    # 若為網頁自動解鎖專用資料包，且操作者已通過管理員私人主密碼身分驗證，才允許在後台檢視器中連動解開
+    if not mac_matched and envelope.get("key_scope") == "web_auto":
+        try:
+            real_admin_pw = get_vault_password(None)
+        except ValueError:
+            real_admin_pw = ""
+        if real_admin_pw and hmac.compare_digest(pwd, real_admin_pw):
+            auto_enc_key, auto_mac_key = _derive_vault_keys(WEB_SEED_AUTO_KEY, salt, iterations)
+            expected_auto_mac = hmac.new(auto_mac_key, nonce + ciphertext_bytes, hashlib.sha256).hexdigest()
+            if hmac.compare_digest(expected_auto_mac, mac_hex):
+                enc_key = auto_enc_key
+                mac_matched = True
+
+    if not mac_matched:
         raise ValueError("解密失敗：密碼不正確或檔案內容已遭竄改。")
 
     plain_bytes = _xor_sha256_ctr_stream(ciphertext_bytes, enc_key, nonce)
@@ -2830,10 +2858,11 @@ def _write_json_utf8(
     compact: bool = False,
     encrypt: bool = True,
     password: Optional[str] = None,
+    key_scope: Optional[str] = None,
 ) -> None:
     """使用 UTF-8 編碼與 pathlib 安全寫入 JSON 檔案（預設自動加密為亂碼封包）"""
     file_path.parent.mkdir(parents=True, exist_ok=True)
-    final_obj = encrypt_json_payload(payload, password=password) if encrypt else payload
+    final_obj = encrypt_json_payload(payload, password=password, key_scope=key_scope) if encrypt else payload
     with open(file_path, "w", encoding="utf-8") as f:
         if compact or encrypt:
             json.dump(final_obj, f, ensure_ascii=False, separators=(",", ":"))
@@ -3083,14 +3112,19 @@ def export_builtin_web_seed_json(
     db_path: Optional[Path] = None,
     encrypt: bool = True,
     password: Optional[str] = None,
+    use_web_auto_key: bool = True,
 ) -> Dict[str, Any]:
     """
     產生前端靜態 PWA 專用的加密內建基準資料庫 (web/data/encrypted_seed_db.json)。
-    資料全面加密為亂碼封包，絕不包含未保護之明文或密碼金鑰。
+    預設採用與管理員 .env 私人主密碼完全分離之網頁專用自動金鑰加密為亂碼封包，
+    讓業務在網頁端免輸入密碼即可登入使用，且絕對不包含管理員私人密碼。
     """
     target_path = Path(output_path) if output_path else DEFAULT_BUILTIN_SEED_PATH
     snapshot = _collect_centralized_snapshot(db_path)
-    _write_json_utf8(target_path, snapshot, compact=True, encrypt=encrypt, password=password)
+    use_auto = not (password and str(password).strip() and not use_web_auto_key)
+    seed_pw = WEB_SEED_AUTO_KEY if use_auto else str(password).strip()
+    scope = "web_auto" if use_auto else None
+    _write_json_utf8(target_path, snapshot, compact=True, encrypt=encrypt, password=seed_pw, key_scope=scope)
     size_bytes = target_path.stat().st_size if target_path.exists() else 0
     return {
         "status": "success",
@@ -3099,6 +3133,7 @@ def export_builtin_web_seed_json(
         "product_count": len(snapshot["products"]),
         "sales_count": len(snapshot["salespersons"]),
         "encrypted": encrypt,
+        "key_scope": scope or "admin",
     }
 
 
@@ -3183,7 +3218,7 @@ def sync_to_gdrive_pwa_folder(
       - 01_業務個人資料區/<業務姓名>
     """
     local_res = export_centralized_sales_folders(db_path=db_path, encrypt=encrypt, password=password)
-    seed_res = export_builtin_web_seed_json(db_path=db_path, encrypt=encrypt, password=password)
+    seed_res = export_builtin_web_seed_json(db_path=db_path, encrypt=encrypt)
 
     creds = _load_gdrive_credentials()
     if not creds:

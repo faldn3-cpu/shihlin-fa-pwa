@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.60";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 14:00:00";
-  const SYSTEM_APP_RELEASE_NOTES = "刪除明文資料檔，全面將網頁資料包與 Google 雲端檔案加密為亂碼，並支援密碼解鎖與獨立桌面檢視器";
+  const SYSTEM_APP_VERSION = "v1.0.61";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 14:20:00";
+  const SYSTEM_APP_RELEASE_NOTES = "網頁端改為自動解鎖加密資料包（業務免輸入密碼直接 Google 登入），後台雲端檔案維持管理員專屬密碼獨立保護";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -66,7 +66,10 @@ document.addEventListener("DOMContentLoaded", () => {
     let storeLoadPromise = null;
     let rawEncryptedEnvelopeCache = null;
 
-    const WEB_VAULT_PW_STORAGE_KEY = "shihlin_pwa_vault_pass";
+    // 網頁前端專用自動解鎖金鑰（與管理員電腦 .env 私人後台密碼完全分離）
+    function getWebBuiltinAutoKey() {
+      return ["ShihlinFA", "#WebSeedAutoKey", "$2026!v1"].join("");
+    }
 
     // 純 JS + Web Crypto 相容之 SHA-256 / HMAC / PBKDF2 / CTR 解密引擎（100% 位元組對齊 data_access.py）
     const SHA256_K = new Int32Array([
@@ -306,27 +309,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchEncryptedSeedEnvelope() {
       if (rawEncryptedEnvelopeCache) return rawEncryptedEnvelopeCache;
-      const resp = await origFetch(`./data/encrypted_seed_db.json?v=20261116_v1_0_60`);
+      const resp = await origFetch(`./data/encrypted_seed_db.json?v=20261116_v1_0_61`);
       if (!resp || !resp.ok) throw new Error("無法下載網頁加密資料包");
       rawEncryptedEnvelopeCache = await resp.json();
       return rawEncryptedEnvelopeCache;
     }
 
     window.__shihlinVerifyAndUnlockWebVault = async (inputPassword) => {
-      const pw = String(inputPassword || "").trim();
-      if (!pw) {
-        return { ok: false, error: "請先輸入「資料保險箱解密密碼」才能解鎖讀取客戶與報價資料。" };
-      }
+      const pw = String(inputPassword || "").trim() || getWebBuiltinAutoKey();
       try {
+        localStorage.removeItem("shihlin_pwa_vault_pass");
         const env = await fetchEncryptedSeedEnvelope();
         const decrypted = await decryptVaultEnvelopeInBrowser(env, pw);
-        localStorage.setItem(WEB_VAULT_PW_STORAGE_KEY, pw);
         storeMem = null;
         storeLoadPromise = null;
         await ensureSeedLoaded();
         return { ok: true, productCount: Array.isArray(decrypted?.products) ? decrypted.products.length : 0 };
       } catch (err) {
-        return { ok: false, error: err?.message || "解密密碼錯誤" };
+        return { ok: false, error: err?.message || "自動解鎖資料包失敗" };
       }
     };
 
@@ -375,8 +375,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const baseStore = createEmptyStore();
         try {
           const envelope = await fetchEncryptedSeedEnvelope();
-          const savedVaultPw = localStorage.getItem(WEB_VAULT_PW_STORAGE_KEY) || "";
-          const seedJson = await decryptVaultEnvelopeInBrowser(envelope, savedVaultPw);
+          const seedJson = await decryptVaultEnvelopeInBrowser(envelope, getWebBuiltinAutoKey());
           if (seedJson && typeof seedJson === "object") {
             baseStore.generated_at = seedJson.generated_at || baseStore.generated_at;
             baseStore.salespersons = Array.isArray(seedJson.salespersons) ? seedJson.salespersons : baseStore.salespersons;
@@ -12581,30 +12580,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const loginOverlay = document.getElementById("loginOverlaySection");
     if (loginOverlay) {
       setLoginStatusMessage(customMsg, isError);
-      const pwInput = document.getElementById("inputWebVaultPassword");
-      const savedPw = localStorage.getItem("shihlin_pwa_vault_pass") || "";
-      if (pwInput && !pwInput.value && savedPw) {
-        pwInput.value = savedPw;
-      }
       loginOverlay.classList.remove("hidden");
     }
   }
 
   async function verifyVaultPasswordBeforeLogin() {
-    const isStaticEnv = window.location.hostname.includes("github.io") || window.location.protocol === "file:";
-    const pwInput = document.getElementById("inputWebVaultPassword");
-    const enteredPw = (pwInput?.value || localStorage.getItem("shihlin_pwa_vault_pass") || "").trim();
-
-    if (!isStaticEnv && !enteredPw) {
-      return true; // 本機後端開發模式不強制卡靜態檔密碼
-    }
-    if (typeof window.__shihlinVerifyAndUnlockWebVault === "function") {
-      setLoginStatusMessage("正在驗證資料解密密碼並於記憶體解鎖...", false);
-      const res = await window.__shihlinVerifyAndUnlockWebVault(enteredPw);
-      if (!res || !res.ok) {
-        setLoginStatusMessage(res?.error || "資料解密密碼錯誤，無法解鎖資料！", true);
-        return false;
+    try {
+      if (typeof window.__shihlinVerifyAndUnlockWebVault === "function") {
+        await window.__shihlinVerifyAndUnlockWebVault("");
       }
+    } catch (err) {
+      console.warn("[內建資料庫] 預載自動解鎖提醒:", err?.message || err);
     }
     return true;
   }
@@ -12620,21 +12606,10 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.removeItem("is_admin_user");
     }
 
-    const btnToggleVaultPw = document.getElementById("btnToggleWebVaultPw");
-    const inputVaultPw = document.getElementById("inputWebVaultPassword");
-    if (btnToggleVaultPw && inputVaultPw) {
-      btnToggleVaultPw.addEventListener("click", () => {
-        const isMasked = inputVaultPw.type === "password";
-        inputVaultPw.type = isMasked ? "text" : "password";
-        btnToggleVaultPw.textContent = isMasked ? "隱藏" : "顯示";
-      });
-    }
-
     const btnGoogleLogin = document.getElementById("btnGoogleLogin");
     if (btnGoogleLogin) {
       btnGoogleLogin.addEventListener("click", async () => {
-        const okVault = await verifyVaultPasswordBeforeLogin();
-        if (!okVault) return;
+        await verifyVaultPasswordBeforeLogin();
         if (!googleTokenClient && !initGoogleIdentityServices()) {
           setLoginStatusMessage("Google 驗證元件載入中，若網路受限可點擊下方「管理員測試權限直接進入」。", true);
           return;
@@ -12651,8 +12626,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnTestEnvQuickLogin = document.getElementById("btnTestEnvQuickLogin");
     if (btnTestEnvQuickLogin) {
       btnTestEnvQuickLogin.addEventListener("click", async () => {
-        const okVault = await verifyVaultPasswordBeforeLogin();
-        if (!okVault) return;
+        await verifyVaultPasswordBeforeLogin();
 
         const defaultAdminProfile = {
           name: "曾維崧",
@@ -12671,7 +12645,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const targetSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
         setupAdminImpersonator();
         switchSimulatedSalesperson(targetSales, false);
-        showAuthToast("[測試權限已啟用] 資料保險箱已解鎖，可由頂部「管理員身分模擬」切換人員");
+        showAuthToast("[測試權限已啟用] 已進入系統，可由頂部「管理員身分模擬」切換人員");
       });
     }
 
@@ -12754,14 +12728,10 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // 判斷是否已經完成登入驗證：若尚未登入或靜態環境尚未輸入加密保險箱密碼，顯示全螢幕鎖定驗證畫面
-    const isStaticEnvCheck = window.location.hostname.includes("github.io") || window.location.protocol === "file:";
+    // 判斷是否已經完成登入驗證：若尚未登入，顯示全螢幕 Google 驗證畫面
     const hasLoggedIn = localStorage.getItem("has_logged_in") === "true";
-    const hasVaultPw = Boolean(localStorage.getItem("shihlin_pwa_vault_pass"));
     if (!hasLoggedIn) {
       openLoginOverlay();
-    } else if (isStaticEnvCheck && !hasVaultPw) {
-      openLoginOverlay("資料庫已全面升級為加密保險箱，請輸入解密密碼解鎖資料。", false);
     } else {
       setupAdminImpersonator();
     }

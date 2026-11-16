@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261116_v1_0_60" />
+  <link rel="stylesheet" href="css/style.css?v=20261116_v1_0_61" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -3551,22 +3551,6 @@
 
       <div id="loginStatusMessage" class="login-status-msg hidden"></div>
 
-      <div class="vault-unlock-box" style="margin: 10px 0 14px 0; text-align: left;">
-        <label for="inputWebVaultPassword"
-          style="display:block; font-size:13px; font-weight:700; margin-bottom:5px; color:var(--text-primary, #1e293b);">
-          資料保險箱解密密碼
-        </label>
-        <div style="display:flex; gap:6px; align-items:center;">
-          <input type="password" id="inputWebVaultPassword" class="form-control" autocomplete="off"
-            placeholder="請輸入資料加密主密碼..." style="flex:1;" />
-          <button type="button" id="btnToggleWebVaultPw" class="fluent-btn secondary"
-            style="padding:7px 12px; font-size:12px;">顯示</button>
-        </div>
-        <div style="font-size:12px; color:#64748b; margin-top:4px;">
-          網頁與雲端資料庫已全面加密鎖定，需輸入正確主密碼才可解鎖檢視。
-        </div>
-      </div>
-
       <div class="login-actions">
         <button type="button" id="btnGoogleLogin" class="login-google-btn">
           <svg style="width:20px; height:20px; flex-shrink:0;" viewBox="0 0 24 24">
@@ -3746,13 +3730,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261116_v1_0_60"></script>
+  <script src="js/app.js?v=20261116_v1_0_61"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261116_v1_0_60')
+        navigator.serviceWorker.register('./sw.js?v=20261116_v1_0_61')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

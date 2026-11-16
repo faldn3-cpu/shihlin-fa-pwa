@@ -11,9 +11,13 @@
 6. 預留環境變數切換機制，未來直升公司 SQL Server Express 時，僅需更動本檔連線引擎。
 """
 
+import base64
+import hashlib
+import hmac
 import json
 import os
 import re
+import secrets
 import shutil
 import sqlite3
 from datetime import datetime, date, timedelta
@@ -25,7 +29,10 @@ PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_DB_FILE = PROJECT_DIR / "quotation_system.db"
 LEGACY_APP_DIR = PROJECT_DIR / "之前做的應用程式跟網頁" / "_QuotationApp"
 CENTRALIZED_LOCAL_STORE_DIR = PROJECT_DIR / "Backups" / "Centralized_Cloud_Store"
-DEFAULT_BUILTIN_SEED_PATH = PROJECT_DIR / "web" / "data" / "builtin_seed_db.json"
+DEFAULT_BUILTIN_SEED_PATH = PROJECT_DIR / "web" / "data" / "encrypted_seed_db.json"
+LEGACY_PLAIN_SEED_PATH = PROJECT_DIR / "web" / "data" / "builtin_seed_db.json"
+VAULT_ENV_FILE = PROJECT_DIR / ".env"
+VAULT_PBKDF2_ITERATIONS = 100000
 
 # 標準業務人員名單 (確保一人一資料夾架構完整建立)
 DEFAULT_SALESPERSON_NAMES = [
@@ -2700,23 +2707,156 @@ def _collect_centralized_snapshot(db_path: Optional[Path] = None) -> Dict[str, A
         conn.close()
 
 
-def _write_json_utf8(file_path: Path, payload: Any, compact: bool = False) -> None:
-    """使用 UTF-8 編碼與 pathlib 安全寫入 JSON 檔案"""
+def get_vault_password(custom_password: Optional[str] = None) -> str:
+    """
+    安全讀取資料保險箱主密碼（順序：指定參數 -> 環境變數 -> 本機 .env 檔案）。
+    絕不在任何日誌、錯誤訊息或終端機輸出密碼內容。
+    """
+    if custom_password is not None and str(custom_password).strip() != "":
+        return str(custom_password).strip()
+
+    env_pw = os.environ.get("PWA_VAULT_PASSWORD", "").strip()
+    if env_pw:
+        return env_pw
+
+    if VAULT_ENV_FILE.exists():
+        for raw_line in VAULT_ENV_FILE.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            if k.strip() == "PWA_VAULT_PASSWORD":
+                val = v.strip().strip('"').strip("'")
+                if val:
+                    return val
+
+    raise ValueError("尚未設定資料加密主密碼，請檢查本機 .env 設定或輸入密碼。")
+
+
+def save_vault_password_to_env(new_password: str) -> None:
+    """將新的資料加密主密碼安全寫入本機 .env 設定檔（UTF-8 編碼）"""
+    clean_pw = str(new_password or "").strip()
+    if len(clean_pw) < 4:
+        raise ValueError("資料加密密碼長度至少需 4 個字元。")
+
+    lines: List[str] = []
+    found = False
+    if VAULT_ENV_FILE.exists():
+        for raw_line in VAULT_ENV_FILE.read_text(encoding="utf-8").splitlines():
+            if raw_line.strip().startswith("PWA_VAULT_PASSWORD="):
+                lines.append(f"PWA_VAULT_PASSWORD={clean_pw}")
+                found = True
+            else:
+                lines.append(raw_line)
+    if not found:
+        if not lines:
+            lines.append("# 士林電機 FA 業務戰情與報價系統 - 本機機密設定 (.env，已加入 .gitignore 排除)")
+        lines.append(f"PWA_VAULT_PASSWORD={clean_pw}")
+
+    VAULT_ENV_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _derive_vault_keys(password: str, salt: bytes, iterations: int = VAULT_PBKDF2_ITERATIONS) -> Tuple[bytes, bytes]:
+    """使用 PBKDF2-HMAC-SHA256 從主密碼衍生 32-byte 加密金鑰與 32-byte 防竄改簽章金鑰"""
+    master = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations, dklen=64)
+    return master[:32], master[32:64]
+
+
+def _xor_sha256_ctr_stream(data: bytes, enc_key: bytes, nonce: bytes) -> bytes:
+    """使用 SHA256-CTR 金鑰流對位元組進行高速 XOR 加密／解密（與瀏覽器端演算 100% 互通）"""
+    total_len = len(data)
+    if total_len == 0:
+        return b""
+    n_blocks = (total_len + 31) // 32
+    sha256_fn = hashlib.sha256
+    prefix = enc_key + nonce
+    keystream = b"".join(sha256_fn(prefix + i.to_bytes(4, "big")).digest() for i in range(n_blocks))[:total_len]
+    return (int.from_bytes(data, "little") ^ int.from_bytes(keystream, "little")).to_bytes(total_len, "little")
+
+
+def encrypt_json_payload(payload: Any, password: Optional[str] = None) -> Dict[str, Any]:
+    """
+    將任意 JSON 資料物件加密成不可讀的亂碼外封包（Encrypt-then-MAC 保護），
+    防止雲端或網頁檔案遭下載後直接以記事本檢視內容。
+    """
+    pwd = get_vault_password(password)
+    raw_bytes = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    salt = secrets.token_bytes(16)
+    nonce = secrets.token_bytes(16)
+    enc_key, mac_key = _derive_vault_keys(pwd, salt, VAULT_PBKDF2_ITERATIONS)
+    ciphertext_bytes = _xor_sha256_ctr_stream(raw_bytes, enc_key, nonce)
+    mac_hex = hmac.new(mac_key, nonce + ciphertext_bytes, hashlib.sha256).hexdigest()
+
+    return {
+        "__encrypted_vault__": True,
+        "alg": "PBKDF2-SHA256-CTR-HMAC",
+        "iterations": VAULT_PBKDF2_ITERATIONS,
+        "salt": salt.hex(),
+        "nonce": nonce.hex(),
+        "mac": mac_hex,
+        "ciphertext": base64.b64encode(ciphertext_bytes).decode("ascii"),
+    }
+
+
+def decrypt_json_payload(envelope: Any, password: Optional[str] = None) -> Any:
+    """
+    驗證簽章並解密亂碼外封包為原始資料；若為未加密之舊版備份則維持相容回傳。
+    """
+    if not (isinstance(envelope, dict) and envelope.get("__encrypted_vault__") is True):
+        return envelope
+
+    pwd = get_vault_password(password)
+    try:
+        iterations = int(envelope.get("iterations") or VAULT_PBKDF2_ITERATIONS)
+        salt = bytes.fromhex(str(envelope["salt"]))
+        nonce = bytes.fromhex(str(envelope["nonce"]))
+        mac_hex = str(envelope["mac"]).lower()
+        ciphertext_bytes = base64.b64decode(str(envelope["ciphertext"]))
+    except Exception as exc:
+        raise ValueError("加密檔案結構毀損或格式不正確。") from exc
+
+    enc_key, mac_key = _derive_vault_keys(pwd, salt, iterations)
+    expected_mac = hmac.new(mac_key, nonce + ciphertext_bytes, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected_mac, mac_hex):
+        raise ValueError("解密失敗：密碼不正確或檔案內容已遭竄改。")
+
+    plain_bytes = _xor_sha256_ctr_stream(ciphertext_bytes, enc_key, nonce)
+    return json.loads(plain_bytes.decode("utf-8"))
+
+
+def _write_json_utf8(
+    file_path: Path,
+    payload: Any,
+    compact: bool = False,
+    encrypt: bool = True,
+    password: Optional[str] = None,
+) -> None:
+    """使用 UTF-8 編碼與 pathlib 安全寫入 JSON 檔案（預設自動加密為亂碼封包）"""
     file_path.parent.mkdir(parents=True, exist_ok=True)
+    final_obj = encrypt_json_payload(payload, password=password) if encrypt else payload
     with open(file_path, "w", encoding="utf-8") as f:
-        if compact:
-            json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
+        if compact or encrypt:
+            json.dump(final_obj, f, ensure_ascii=False, separators=(",", ":"))
         else:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
+            json.dump(final_obj, f, ensure_ascii=False, indent=2)
+
+
+def _read_json_utf8(file_path: Path, password: Optional[str] = None) -> Any:
+    """安全讀取並自動解密本機或雲端 JSON 檔案"""
+    with open(file_path, "r", encoding="utf-8") as f:
+        obj = json.load(f)
+    return decrypt_json_payload(obj, password=password)
 
 
 def export_centralized_sales_folders(
     base_dir: Optional[Path] = None,
     db_path: Optional[Path] = None,
+    encrypt: bool = True,
+    password: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     集中管理模式匯出：
-    在指定總資料夾下建立：
+    在指定總資料夾下建立（預設全數加密為亂碼）：
       00_全體共用區/standard_products.json, system_settings.json
       01_業務個人資料區/<業務姓名>/customers_<姓名>.json, quotations_<姓名>.json, drafts_<姓名>.json, special_products_<姓名>.json
     """
@@ -2728,7 +2868,7 @@ def export_centralized_sales_folders(
     shared_dir.mkdir(parents=True, exist_ok=True)
     personal_root.mkdir(parents=True, exist_ok=True)
 
-    _write_json_utf8(shared_dir / "standard_products.json", snapshot["products"])
+    _write_json_utf8(shared_dir / "standard_products.json", snapshot["products"], encrypt=encrypt, password=password)
     _write_json_utf8(
         shared_dir / "system_settings.json",
         {
@@ -2736,18 +2876,22 @@ def export_centralized_sales_folders(
             "salespersons": snapshot["salespersons"],
             "settings": snapshot["settings"],
         },
+        encrypt=encrypt,
+        password=password,
     )
 
     files_written = 2
     for s_name in snapshot["salespersons"]:
         s_dir = personal_root / s_name
         s_dir.mkdir(parents=True, exist_ok=True)
-        _write_json_utf8(s_dir / f"customers_{s_name}.json", snapshot["customers_by_sales"].get(s_name, []))
-        _write_json_utf8(s_dir / f"quotations_{s_name}.json", snapshot["quotations_by_sales"].get(s_name, []))
-        _write_json_utf8(s_dir / f"drafts_{s_name}.json", snapshot["drafts_by_sales"].get(s_name, []))
+        _write_json_utf8(s_dir / f"customers_{s_name}.json", snapshot["customers_by_sales"].get(s_name, []), encrypt=encrypt, password=password)
+        _write_json_utf8(s_dir / f"quotations_{s_name}.json", snapshot["quotations_by_sales"].get(s_name, []), encrypt=encrypt, password=password)
+        _write_json_utf8(s_dir / f"drafts_{s_name}.json", snapshot["drafts_by_sales"].get(s_name, []), encrypt=encrypt, password=password)
         _write_json_utf8(
             s_dir / f"special_products_{s_name}.json",
             snapshot["special_products_by_sales"].get(s_name, []),
+            encrypt=encrypt,
+            password=password,
         )
         files_written += 4
 
@@ -2758,15 +2902,17 @@ def export_centralized_sales_folders(
         "product_count": len(snapshot["products"]),
         "sales_count": len(snapshot["salespersons"]),
         "files_written": files_written,
+        "encrypted": encrypt,
     }
 
 
 def import_centralized_sales_folders(
     base_dir: Optional[Path] = None,
     db_path: Optional[Path] = None,
+    password: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    從集中管理模式資料夾安全匯入資料庫：
+    從集中管理模式資料夾安全解密並匯入資料庫：
     嚴格依 (owner_sales, name) 寫入客戶與聯絡人，確保不同業務同名公司互不覆蓋。
     """
     target_dir = Path(base_dir) if base_dir else CENTRALIZED_LOCAL_STORE_DIR
@@ -2785,8 +2931,7 @@ def import_centralized_sales_folders(
         shared_dir = target_dir / "00_全體共用區"
         prod_file = shared_dir / "standard_products.json"
         if prod_file.exists():
-            with open(prod_file, "r", encoding="utf-8") as f:
-                prods = json.load(f)
+            prods = _read_json_utf8(prod_file, password=password)
             for p in prods:
                 cursor.execute("""
                 INSERT INTO product_master (
@@ -2817,8 +2962,7 @@ def import_centralized_sales_folders(
 
         settings_file = shared_dir / "system_settings.json"
         if settings_file.exists():
-            with open(settings_file, "r", encoding="utf-8") as f:
-                settings_obj = json.load(f)
+            settings_obj = _read_json_utf8(settings_file, password=password)
             for k, v in (settings_obj.get("settings") or {}).items():
                 cursor.execute("""
                 INSERT INTO system_settings (setting_key, setting_val)
@@ -2835,8 +2979,7 @@ def import_centralized_sales_folders(
                 s_name = s_dir.name
                 cust_file = s_dir / f"customers_{s_name}.json"
                 if cust_file.exists():
-                    with open(cust_file, "r", encoding="utf-8") as f:
-                        cust_list = json.load(f)
+                    cust_list = _read_json_utf8(cust_file, password=password)
                     for c in cust_list:
                         c_name = str(c.get("name") or "").strip()
                         if not c_name:
@@ -2888,8 +3031,7 @@ def import_centralized_sales_folders(
 
                 sp_file = s_dir / f"special_products_{s_name}.json"
                 if sp_file.exists():
-                    with open(sp_file, "r", encoding="utf-8") as f:
-                        sp_list = json.load(f)
+                    sp_list = _read_json_utf8(sp_file, password=password)
                     for sp in sp_list:
                         m_no = str(sp.get("model_no") or "").strip()
                         if not m_no:
@@ -2939,14 +3081,16 @@ def import_centralized_sales_folders(
 def export_builtin_web_seed_json(
     output_path: Optional[Path] = None,
     db_path: Optional[Path] = None,
+    encrypt: bool = True,
+    password: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    產生前端靜態 PWA 專用的內建基準資料庫 (web/data/builtin_seed_db.json)。
-    絕不包含任何密碼、金鑰或個人敏感憑證。
+    產生前端靜態 PWA 專用的加密內建基準資料庫 (web/data/encrypted_seed_db.json)。
+    資料全面加密為亂碼封包，絕不包含未保護之明文或密碼金鑰。
     """
     target_path = Path(output_path) if output_path else DEFAULT_BUILTIN_SEED_PATH
     snapshot = _collect_centralized_snapshot(db_path)
-    _write_json_utf8(target_path, snapshot, compact=True)
+    _write_json_utf8(target_path, snapshot, compact=True, encrypt=encrypt, password=password)
     size_bytes = target_path.stat().st_size if target_path.exists() else 0
     return {
         "status": "success",
@@ -2954,6 +3098,7 @@ def export_builtin_web_seed_json(
         "size_bytes": size_bytes,
         "product_count": len(snapshot["products"]),
         "sales_count": len(snapshot["salespersons"]),
+        "encrypted": encrypt,
     }
 
 
@@ -3028,15 +3173,17 @@ def _gdrive_upsert_json_file(service, local_path: Path, parent_id: str) -> str:
 def sync_to_gdrive_pwa_folder(
     folder_name: str = "PWA業務系統",
     db_path: Optional[Path] = None,
+    encrypt: bool = True,
+    password: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    先在本機建立集中管理模式分流資料夾與網頁內建基準檔，
+    先在本機建立集中管理模式分流資料夾（已全面加密）與網頁加密內建基準檔，
     再同步上傳至 Google 雲端硬碟「PWA業務系統」總資料夾：
       - 00_全體共用區
       - 01_業務個人資料區/<業務姓名>
     """
-    local_res = export_centralized_sales_folders(db_path=db_path)
-    seed_res = export_builtin_web_seed_json(db_path=db_path)
+    local_res = export_centralized_sales_folders(db_path=db_path, encrypt=encrypt, password=password)
+    seed_res = export_builtin_web_seed_json(db_path=db_path, encrypt=encrypt, password=password)
 
     creds = _load_gdrive_credentials()
     if not creds:

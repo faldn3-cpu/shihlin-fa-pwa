@@ -485,8 +485,52 @@ def run_all_tests():
         assert not any(q["quote_no"] == "LEGACY2611-001-00" for q in data_access.list_quotations(sales_name="張書偉"))
         print("  [OK] 批次匯入客戶、產品與歷史報價單三階段智慧匯入精靈（含業務隔離與異常攔截）驗證通過！")
 
+        # 13. 驗證 JSON 檔案加密亂碼保護、解密還原與防竄改攔截
+        print("\n[測試 13] 驗證 JSON 檔案加密亂碼保護、解密還原與防竄改攔截...")
+        enc_test_dir = project_dir / "test_encrypted_vault_dir"
+        if enc_test_dir.exists():
+            shutil.rmtree(enc_test_dir, ignore_errors=True)
+        try:
+            test_pw = "TestVault#2026"
+            exp_enc = data_access.export_centralized_sales_folders(
+                base_dir=enc_test_dir, db_path=test_db, encrypt=True, password=test_pw
+            )
+            assert exp_enc["status"] == "success" and exp_enc["encrypted"] is True
+            cust_enc_path = enc_test_dir / "01_業務個人資料區" / "曾仁君" / "customers_曾仁君.json"
+            raw_text = cust_enc_path.read_text(encoding="utf-8")
+            assert "__encrypted_vault__" in raw_text, "匯出之 JSON 未加上加密外封包"
+            assert "台灣精密自動化股份有限公司" not in raw_text, "加密後之 JSON 檔案不得包含明文客戶名稱"
+            assert "03-9999999" not in raw_text, "加密後之 JSON 檔案不得包含明文電話號碼"
+
+            # 驗證正確密碼可 100% 還原
+            decrypted_custs = data_access._read_json_utf8(cust_enc_path, password=test_pw)
+            assert any(c.get("name") == "台灣精密自動化股份有限公司" for c in decrypted_custs)
+
+            # 驗證錯誤密碼遭精準攔截
+            wrong_blocked = False
+            try:
+                data_access._read_json_utf8(cust_enc_path, password="WrongPassword!")
+            except ValueError:
+                wrong_blocked = True
+            assert wrong_blocked, "錯誤密碼竟未被加密引擎攔截"
+
+            # 驗證網頁加密種子檔匯出與解密還原
+            seed_enc_file = enc_test_dir / "test_encrypted_seed.json"
+            seed_res = data_access.export_builtin_web_seed_json(
+                output_path=seed_enc_file, db_path=test_db, encrypt=True, password=test_pw
+            )
+            assert seed_res["status"] == "success" and seed_enc_file.exists()
+            seed_raw = seed_enc_file.read_text(encoding="utf-8")
+            assert "__encrypted_vault__" in seed_raw and "BATCH-SA3-001" not in seed_raw
+            seed_dec = data_access._read_json_utf8(seed_enc_file, password=test_pw)
+            assert any(p.get("model_no") == "BATCH-SA3-001" for p in seed_dec.get("products", []))
+            print("  [OK] 全系統 JSON 加密亂碼鎖定、正確密碼無損解密與錯誤密碼攔截驗證通過！")
+        finally:
+            if enc_test_dir.exists():
+                shutil.rmtree(enc_test_dir, ignore_errors=True)
+
         print("\n" + "=" * 65)
-        print("[SUCCESS] 恭喜！data_access.py 全數 12 大單元測試 100% 通過！")
+        print("[SUCCESS] 恭喜！data_access.py 全數 13 大單元測試 100% 通過！")
         print("=" * 65)
 
     finally:

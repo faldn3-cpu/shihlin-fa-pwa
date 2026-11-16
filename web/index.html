@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261116_v1_0_59" />
+  <link rel="stylesheet" href="css/style.css?v=20261116_v1_0_60" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -144,7 +144,8 @@
           <!-- 4 方格點擊滑出的抽屜導覽選單 (App Launcher Drawer) -->
           <div class="drawer-divider"></div>
           <div class="drawer-version-tag">
-            <span id="sidebarAppVersionText" class="version-text" data-version-template="士林電機 FA 業務系統 {v}">士林電機 FA 業務系統 v1.0.59</span>
+            <span id="sidebarAppVersionText" class="version-text" data-version-template="士林電機 FA 業務系統 {v}">士林電機 FA 業務系統
+              v1.0.59</span>
             <button id="btnClearCacheDrawer" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
               <svg class="icon-svg-xs" viewBox="0 0 24 24">
                 <path
@@ -2238,7 +2239,8 @@
               <fieldset class="pyside-groupbox pyside-full-groupbox">
                 <legend class="pyside-groupbox-legend">當前版本資訊</legend>
                 <div style="line-height:1.9; font-size:14px;">
-                  <div id="lblQuoteCurrentVersion" data-version-template="目前版本 : {v}" style="color:var(--color-accent); font-weight:700; font-size:15px;">目前版本 : v1.0.59</div>
+                  <div id="lblQuoteCurrentVersion" data-version-template="目前版本 : {v}"
+                    style="color:var(--color-accent); font-weight:700; font-size:15px;">目前版本 : v1.0.59</div>
                   <div id="lblQuoteVersionNotes">更新內容 : 支援全系統單一版本變數管理、正宗 Excel 試算表作業、固定欄寬與雙擊自動調整最適欄寬、即時財務捨入重算</div>
                   <div id="lblQuoteVersionDate">發布時間 : 2026-11-16 13:25:00</div>
                 </div>
@@ -2595,7 +2597,8 @@
           </div>
 
           <div class="settings-version-tag">
-            <span id="settingsFooterVersionText" class="version-text" data-version-template="系統版本：{v}">系統版本：v1.0.59</span>
+            <span id="settingsFooterVersionText" class="version-text"
+              data-version-template="系統版本：{v}">系統版本：v1.0.59</span>
             <button id="btnClearCacheSettings" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
               <svg class="icon-svg-xs" viewBox="0 0 24 24">
                 <path
@@ -3548,6 +3551,22 @@
 
       <div id="loginStatusMessage" class="login-status-msg hidden"></div>
 
+      <div class="vault-unlock-box" style="margin: 10px 0 14px 0; text-align: left;">
+        <label for="inputWebVaultPassword"
+          style="display:block; font-size:13px; font-weight:700; margin-bottom:5px; color:var(--text-primary, #1e293b);">
+          資料保險箱解密密碼
+        </label>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="password" id="inputWebVaultPassword" class="form-control" autocomplete="off"
+            placeholder="請輸入資料加密主密碼..." style="flex:1;" />
+          <button type="button" id="btnToggleWebVaultPw" class="fluent-btn secondary"
+            style="padding:7px 12px; font-size:12px;">顯示</button>
+        </div>
+        <div style="font-size:12px; color:#64748b; margin-top:4px;">
+          網頁與雲端資料庫已全面加密鎖定，需輸入正確主密碼才可解鎖檢視。
+        </div>
+      </div>
+
       <div class="login-actions">
         <button type="button" id="btnGoogleLogin" class="login-google-btn">
           <svg style="width:20px; height:20px; flex-shrink:0;" viewBox="0 0 24 24">
@@ -3703,14 +3722,18 @@
     <button type="button" class="excel-ctx-item" data-action="copy">複製 (Ctrl+C)</button>
     <button type="button" class="excel-ctx-item" data-action="cut">剪下 (Ctrl+X)</button>
     <button type="button" class="excel-ctx-item" data-action="paste">貼上 (Ctrl+V)</button>
-    <button type="button" class="excel-ctx-item" data-action="insert-copied" id="ctxMenuInsertCopiedBtn">插入複製的儲存格</button>
+    <button type="button" class="excel-ctx-item" data-action="insert-copied"
+      id="ctxMenuInsertCopiedBtn">插入複製的儲存格</button>
     <div class="excel-ctx-sep"></div>
-    <button type="button" class="excel-ctx-item" data-action="insert-above" id="ctxMenuInsertAboveBtn">在此上方插入 1 列空白列</button>
-    <button type="button" class="excel-ctx-item" data-action="insert-below" id="ctxMenuInsertBelowBtn">在此下方插入 1 列空白列</button>
+    <button type="button" class="excel-ctx-item" data-action="insert-above" id="ctxMenuInsertAboveBtn">在此上方插入 1
+      列空白列</button>
+    <button type="button" class="excel-ctx-item" data-action="insert-below" id="ctxMenuInsertBelowBtn">在此下方插入 1
+      列空白列</button>
     <button type="button" class="excel-ctx-item" data-action="insert-subtotal-above">在此上方插入方案小計</button>
     <button type="button" class="excel-ctx-item" data-action="insert-subtotal-below">在此下方插入方案小計</button>
     <div class="excel-ctx-sep"></div>
-    <button type="button" class="excel-ctx-item" data-action="fill-down-range" id="ctxMenuFillDownBtn">向下填滿選取範圍 (Ctrl+D)</button>
+    <button type="button" class="excel-ctx-item" data-action="fill-down-range" id="ctxMenuFillDownBtn">向下填滿選取範圍
+      (Ctrl+D)</button>
     <button type="button" class="excel-ctx-item" data-action="fill-down-bottom">向下填滿至表格最底</button>
     <button type="button" class="excel-ctx-item" data-action="clear-cells">清除儲存格內容 (Delete)</button>
     <button type="button" class="excel-ctx-item" data-action="set-row-height">設定列高...</button>
@@ -3723,13 +3746,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261116_v1_0_59"></script>
+  <script src="js/app.js?v=20261116_v1_0_60"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261116_v1_0_59')
+        navigator.serviceWorker.register('./sw.js?v=20261116_v1_0_60')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);
@@ -3738,7 +3761,7 @@
             console.warn('[PWA] Service Worker 註冊失敗：', err);
           });
       });
-    }
+  }
   </script>
 </body>
 

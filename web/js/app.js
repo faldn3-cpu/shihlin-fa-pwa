@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.59";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 13:25:00";
-  const SYSTEM_APP_RELEASE_NOTES = "支援單一版本變數管理、正宗 Excel 試算表作業、固定欄寬與雙擊自動最適欄寬、財務捨入即時重算";
+  const SYSTEM_APP_VERSION = "v1.0.60";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 14:00:00";
+  const SYSTEM_APP_RELEASE_NOTES = "刪除明文資料檔，全面將網頁資料包與 Google 雲端檔案加密為亂碼，並支援密碼解鎖與獨立桌面檢視器";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -64,6 +64,271 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let storeMem = null;
     let storeLoadPromise = null;
+    let rawEncryptedEnvelopeCache = null;
+
+    const WEB_VAULT_PW_STORAGE_KEY = "shihlin_pwa_vault_pass";
+
+    // 純 JS + Web Crypto 相容之 SHA-256 / HMAC / PBKDF2 / CTR 解密引擎（100% 位元組對齊 data_access.py）
+    const SHA256_K = new Int32Array([
+      0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+      0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+      0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+      0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+      0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+      0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+      0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+      0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+    ]);
+
+    function sha256CompressBlock(wBuf, state) {
+      for (let i = 16; i < 64; i++) {
+        const w15 = wBuf[i - 15];
+        const s0 = ((w15 >>> 7) | (w15 << 25)) ^ ((w15 >>> 18) | (w15 << 14)) ^ (w15 >>> 3);
+        const w2 = wBuf[i - 2];
+        const s1 = ((w2 >>> 17) | (w2 << 15)) ^ ((w2 >>> 19) | (w2 << 13)) ^ (w2 >>> 10);
+        wBuf[i] = (wBuf[i - 16] + s0 + wBuf[i - 7] + s1) | 0;
+      }
+      let a = state[0], b = state[1], c = state[2], d = state[3];
+      let e = state[4], f = state[5], g = state[6], h = state[7];
+      for (let i = 0; i < 64; i++) {
+        const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+        const ch = (e & f) ^ (~e & g);
+        const temp1 = (h + S1 + ch + SHA256_K[i] + wBuf[i]) | 0;
+        const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+        const maj = (a & b) ^ (a & c) ^ (b & c);
+        const temp2 = (S0 + maj) | 0;
+        h = g; g = f; f = e; e = (d + temp1) | 0;
+        d = c; c = b; b = a; a = (temp1 + temp2) | 0;
+      }
+      state[0] = (state[0] + a) | 0;
+      state[1] = (state[1] + b) | 0;
+      state[2] = (state[2] + c) | 0;
+      state[3] = (state[3] + d) | 0;
+      state[4] = (state[4] + e) | 0;
+      state[5] = (state[5] + f) | 0;
+      state[6] = (state[6] + g) | 0;
+      state[7] = (state[7] + h) | 0;
+    }
+
+    function sha256BytesSync(bytes) {
+      const len = bytes.length;
+      const totalLen = Math.ceil((len + 9) / 64) * 64;
+      const padded = new Uint8Array(totalLen);
+      padded.set(bytes);
+      padded[len] = 0x80;
+      const bitLen = len * 8;
+      padded[totalLen - 4] = (bitLen >>> 24) & 0xff;
+      padded[totalLen - 3] = (bitLen >>> 16) & 0xff;
+      padded[totalLen - 2] = (bitLen >>> 8) & 0xff;
+      padded[totalLen - 1] = bitLen & 0xff;
+
+      const state = new Int32Array([0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]);
+      const wBuf = new Int32Array(64);
+      for (let off = 0; off < totalLen; off += 64) {
+        for (let j = 0; j < 16; j++) {
+          const p = off + j * 4;
+          wBuf[j] = (padded[p] << 24) | (padded[p + 1] << 16) | (padded[p + 2] << 8) | padded[p + 3];
+        }
+        sha256CompressBlock(wBuf, state);
+      }
+      const out = new Uint8Array(32);
+      for (let i = 0; i < 8; i++) {
+        out[i * 4] = (state[i] >>> 24) & 0xff;
+        out[i * 4 + 1] = (state[i] >>> 16) & 0xff;
+        out[i * 4 + 2] = (state[i] >>> 8) & 0xff;
+        out[i * 4 + 3] = state[i] & 0xff;
+      }
+      return out;
+    }
+
+    function hmacSha256BytesSync(keyBytes, msgBytes) {
+      let k = keyBytes.length > 64 ? sha256BytesSync(keyBytes) : keyBytes;
+      const ipad = new Uint8Array(64 + msgBytes.length);
+      const opad = new Uint8Array(64 + 32);
+      for (let i = 0; i < 64; i++) {
+        const b = i < k.length ? k[i] : 0;
+        ipad[i] = b ^ 0x36;
+        opad[i] = b ^ 0x5c;
+      }
+      ipad.set(msgBytes, 64);
+      opad.set(sha256BytesSync(ipad), 64);
+      return sha256BytesSync(opad);
+    }
+
+    function pbkdf2Sha256Sync(pwBytes, saltBytes, iterations, dkLen) {
+      const numBlocks = Math.ceil(dkLen / 32);
+      const out = new Uint8Array(numBlocks * 32);
+      const saltBlock = new Uint8Array(saltBytes.length + 4);
+      saltBlock.set(saltBytes);
+      for (let b = 1; b <= numBlocks; b++) {
+        saltBlock[saltBytes.length] = (b >>> 24) & 0xff;
+        saltBlock[saltBytes.length + 1] = (b >>> 16) & 0xff;
+        saltBlock[saltBytes.length + 2] = (b >>> 8) & 0xff;
+        saltBlock[saltBytes.length + 3] = b & 0xff;
+        let u = hmacSha256BytesSync(pwBytes, saltBlock);
+        const t = new Uint8Array(u);
+        for (let iter = 1; iter < iterations; iter++) {
+          u = hmacSha256BytesSync(pwBytes, u);
+          for (let j = 0; j < 32; j++) t[j] ^= u[j];
+        }
+        out.set(t, (b - 1) * 32);
+      }
+      return out.slice(0, dkLen);
+    }
+
+    function hexToBytes(hexStr) {
+      const clean = String(hexStr || "").trim();
+      const out = new Uint8Array(clean.length / 2);
+      for (let i = 0; i < out.length; i++) {
+        out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+      }
+      return out;
+    }
+
+    function bytesToHex(bytes) {
+      return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function base64ToBytes(b64Str) {
+      const bin = atob(b64Str);
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    }
+
+    // 零配置高速 CTR 解密（每組輸入固定為 32+16+4=52 位元組，免去重複配置陣列負擔）
+    function xorSha256CtrStream(cipherBytes, encKey, nonceBytes) {
+      const total = cipherBytes.length;
+      const out = new Uint8Array(total);
+      const wBuf = new Int32Array(64);
+      const baseWords = new Int32Array(12);
+      for (let i = 0; i < 8; i++) {
+        const p = i * 4;
+        baseWords[i] = (encKey[p] << 24) | (encKey[p + 1] << 16) | (encKey[p + 2] << 8) | encKey[p + 3];
+      }
+      for (let i = 0; i < 4; i++) {
+        const p = i * 4;
+        baseWords[8 + i] = (nonceBytes[p] << 24) | (nonceBytes[p + 1] << 16) | (nonceBytes[p + 2] << 8) | nonceBytes[p + 3];
+      }
+      const state = new Int32Array(8);
+      const nBlocks = Math.ceil(total / 32);
+
+      for (let blk = 0; blk < nBlocks; blk++) {
+        for (let i = 0; i < 12; i++) wBuf[i] = baseWords[i];
+        wBuf[12] = blk | 0;
+        wBuf[13] = 0x80000000 | 0;
+        wBuf[14] = 0;
+        wBuf[15] = 416; // 52 bytes * 8 bits
+
+        state[0] = 0x6a09e667; state[1] = 0xbb67ae85; state[2] = 0x3c6ef372; state[3] = 0xa54ff53a;
+        state[4] = 0x510e527f; state[5] = 0x9b05688c; state[6] = 0x1f83d9ab; state[7] = 0x5be0cd19;
+        sha256CompressBlock(wBuf, state);
+
+        const baseOff = blk * 32;
+        const limit = Math.min(32, total - baseOff);
+        for (let j = 0; j < limit; j++) {
+          const word = state[j >>> 2];
+          const ksByte = (word >>> ((3 - (j & 3)) * 8)) & 0xff;
+          out[baseOff + j] = cipherBytes[baseOff + j] ^ ksByte;
+        }
+      }
+      return out;
+    }
+
+    async function decryptVaultEnvelopeInBrowser(envelope, password) {
+      if (!envelope || typeof envelope !== "object" || envelope.__encrypted_vault__ !== true) {
+        return envelope;
+      }
+      const pwd = String(password || "").trim();
+      if (!pwd) {
+        throw new Error("尚未輸入資料加密主密碼");
+      }
+      const iterations = Number(envelope.iterations) || 100000;
+      const salt = hexToBytes(envelope.salt);
+      const nonce = hexToBytes(envelope.nonce);
+      const cipherBytes = base64ToBytes(envelope.ciphertext);
+      const expectedMac = String(envelope.mac || "").toLowerCase();
+      const pwBytes = new TextEncoder().encode(pwd);
+
+      let encKey;
+      let macKey;
+      let macValid = false;
+
+      if (window.crypto && window.crypto.subtle) {
+        try {
+          const baseKey = await window.crypto.subtle.importKey("raw", pwBytes, "PBKDF2", false, ["deriveBits"]);
+          const bits = await window.crypto.subtle.deriveBits(
+            { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
+            baseKey,
+            512
+          );
+          const master = new Uint8Array(bits);
+          encKey = master.slice(0, 32);
+          macKey = master.slice(32, 64);
+
+          const hmacKeyObj = await window.crypto.subtle.importKey(
+            "raw",
+            macKey,
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["sign"]
+          );
+          const macInput = new Uint8Array(nonce.length + cipherBytes.length);
+          macInput.set(nonce);
+          macInput.set(cipherBytes, nonce.length);
+          const sigBuf = await window.crypto.subtle.sign("HMAC", hmacKeyObj, macInput);
+          const actualMac = bytesToHex(new Uint8Array(sigBuf));
+          macValid = (actualMac === expectedMac);
+        } catch (err) {
+          encKey = null;
+        }
+      }
+
+      if (!encKey) {
+        const master = pbkdf2Sha256Sync(pwBytes, salt, iterations, 64);
+        encKey = master.slice(0, 32);
+        macKey = master.slice(32, 64);
+        const macInput = new Uint8Array(nonce.length + cipherBytes.length);
+        macInput.set(nonce);
+        macInput.set(cipherBytes, nonce.length);
+        const actualMac = bytesToHex(hmacSha256BytesSync(macKey, macInput));
+        macValid = (actualMac === expectedMac);
+      }
+
+      if (!macValid) {
+        throw new Error("解密密碼不正確或加密檔案已遭竄改");
+      }
+
+      const plainBytes = xorSha256CtrStream(cipherBytes, encKey, nonce);
+      const jsonText = new TextDecoder("utf-8").decode(plainBytes);
+      return JSON.parse(jsonText);
+    }
+
+    async function fetchEncryptedSeedEnvelope() {
+      if (rawEncryptedEnvelopeCache) return rawEncryptedEnvelopeCache;
+      const resp = await origFetch(`./data/encrypted_seed_db.json?v=20261116_v1_0_60`);
+      if (!resp || !resp.ok) throw new Error("無法下載網頁加密資料包");
+      rawEncryptedEnvelopeCache = await resp.json();
+      return rawEncryptedEnvelopeCache;
+    }
+
+    window.__shihlinVerifyAndUnlockWebVault = async (inputPassword) => {
+      const pw = String(inputPassword || "").trim();
+      if (!pw) {
+        return { ok: false, error: "請先輸入「資料保險箱解密密碼」才能解鎖讀取客戶與報價資料。" };
+      }
+      try {
+        const env = await fetchEncryptedSeedEnvelope();
+        const decrypted = await decryptVaultEnvelopeInBrowser(env, pw);
+        localStorage.setItem(WEB_VAULT_PW_STORAGE_KEY, pw);
+        storeMem = null;
+        storeLoadPromise = null;
+        await ensureSeedLoaded();
+        return { ok: true, productCount: Array.isArray(decrypted?.products) ? decrypted.products.length : 0 };
+      } catch (err) {
+        return { ok: false, error: err?.message || "解密密碼錯誤" };
+      }
+    };
 
     function createEmptyStore() {
       return {
@@ -109,22 +374,21 @@ document.addEventListener("DOMContentLoaded", () => {
       storeLoadPromise = (async () => {
         const baseStore = createEmptyStore();
         try {
-          const seedResp = await origFetch("./data/builtin_seed_db.json?v=20261113_v1_0_55");
-          if (seedResp && seedResp.ok) {
-            const seedJson = await seedResp.json();
-            if (seedJson && typeof seedJson === "object") {
-              baseStore.generated_at = seedJson.generated_at || baseStore.generated_at;
-              baseStore.salespersons = Array.isArray(seedJson.salespersons) ? seedJson.salespersons : baseStore.salespersons;
-              baseStore.products = Array.isArray(seedJson.products) ? seedJson.products : [];
-              baseStore.settings = seedJson.settings && typeof seedJson.settings === "object" ? { ...seedJson.settings } : {};
-              baseStore.customers_by_sales = seedJson.customers_by_sales && typeof seedJson.customers_by_sales === "object" ? seedJson.customers_by_sales : {};
-              baseStore.quotations_by_sales = seedJson.quotations_by_sales && typeof seedJson.quotations_by_sales === "object" ? seedJson.quotations_by_sales : {};
-              baseStore.drafts_by_sales = seedJson.drafts_by_sales && typeof seedJson.drafts_by_sales === "object" ? seedJson.drafts_by_sales : {};
-              baseStore.special_products_by_sales = seedJson.special_products_by_sales && typeof seedJson.special_products_by_sales === "object" ? seedJson.special_products_by_sales : {};
-            }
+          const envelope = await fetchEncryptedSeedEnvelope();
+          const savedVaultPw = localStorage.getItem(WEB_VAULT_PW_STORAGE_KEY) || "";
+          const seedJson = await decryptVaultEnvelopeInBrowser(envelope, savedVaultPw);
+          if (seedJson && typeof seedJson === "object") {
+            baseStore.generated_at = seedJson.generated_at || baseStore.generated_at;
+            baseStore.salespersons = Array.isArray(seedJson.salespersons) ? seedJson.salespersons : baseStore.salespersons;
+            baseStore.products = Array.isArray(seedJson.products) ? seedJson.products : [];
+            baseStore.settings = seedJson.settings && typeof seedJson.settings === "object" ? { ...seedJson.settings } : {};
+            baseStore.customers_by_sales = seedJson.customers_by_sales && typeof seedJson.customers_by_sales === "object" ? seedJson.customers_by_sales : {};
+            baseStore.quotations_by_sales = seedJson.quotations_by_sales && typeof seedJson.quotations_by_sales === "object" ? seedJson.quotations_by_sales : {};
+            baseStore.drafts_by_sales = seedJson.drafts_by_sales && typeof seedJson.drafts_by_sales === "object" ? seedJson.drafts_by_sales : {};
+            baseStore.special_products_by_sales = seedJson.special_products_by_sales && typeof seedJson.special_products_by_sales === "object" ? seedJson.special_products_by_sales : {};
           }
         } catch (err) {
-          console.warn("[內建資料庫] 載入 builtin_seed_db.json 失敗，改以空白基準與本地異動層啟動:", err);
+          console.warn("[內建加密資料庫] 尚未解鎖或載入失敗:", err?.message || err);
         }
 
         // 疊加瀏覽器本機異動層 (確保業務在網頁新建/修改的資料於重整後保留)
@@ -12313,12 +12577,36 @@ document.addEventListener("DOMContentLoaded", () => {
   ensureGisClientReady();
 
   // 開啟登入驗證畫面 (供初次進入或點擊「切換帳號」時呼叫)
-  function openLoginOverlay() {
+  function openLoginOverlay(customMsg = "", isError = false) {
     const loginOverlay = document.getElementById("loginOverlaySection");
     if (loginOverlay) {
-      setLoginStatusMessage("");
+      setLoginStatusMessage(customMsg, isError);
+      const pwInput = document.getElementById("inputWebVaultPassword");
+      const savedPw = localStorage.getItem("shihlin_pwa_vault_pass") || "";
+      if (pwInput && !pwInput.value && savedPw) {
+        pwInput.value = savedPw;
+      }
       loginOverlay.classList.remove("hidden");
     }
+  }
+
+  async function verifyVaultPasswordBeforeLogin() {
+    const isStaticEnv = window.location.hostname.includes("github.io") || window.location.protocol === "file:";
+    const pwInput = document.getElementById("inputWebVaultPassword");
+    const enteredPw = (pwInput?.value || localStorage.getItem("shihlin_pwa_vault_pass") || "").trim();
+
+    if (!isStaticEnv && !enteredPw) {
+      return true; // 本機後端開發模式不強制卡靜態檔密碼
+    }
+    if (typeof window.__shihlinVerifyAndUnlockWebVault === "function") {
+      setLoginStatusMessage("正在驗證資料解密密碼並於記憶體解鎖...", false);
+      const res = await window.__shihlinVerifyAndUnlockWebVault(enteredPw);
+      if (!res || !res.ok) {
+        setLoginStatusMessage(res?.error || "資料解密密碼錯誤，無法解鎖資料！", true);
+        return false;
+      }
+    }
+    return true;
   }
 
   function setupAuthAndImpersonationEvents() {
@@ -12332,9 +12620,21 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.removeItem("is_admin_user");
     }
 
+    const btnToggleVaultPw = document.getElementById("btnToggleWebVaultPw");
+    const inputVaultPw = document.getElementById("inputWebVaultPassword");
+    if (btnToggleVaultPw && inputVaultPw) {
+      btnToggleVaultPw.addEventListener("click", () => {
+        const isMasked = inputVaultPw.type === "password";
+        inputVaultPw.type = isMasked ? "text" : "password";
+        btnToggleVaultPw.textContent = isMasked ? "隱藏" : "顯示";
+      });
+    }
+
     const btnGoogleLogin = document.getElementById("btnGoogleLogin");
     if (btnGoogleLogin) {
-      btnGoogleLogin.addEventListener("click", () => {
+      btnGoogleLogin.addEventListener("click", async () => {
+        const okVault = await verifyVaultPasswordBeforeLogin();
+        if (!okVault) return;
         if (!googleTokenClient && !initGoogleIdentityServices()) {
           setLoginStatusMessage("Google 驗證元件載入中，若網路受限可點擊下方「管理員測試權限直接進入」。", true);
           return;
@@ -12350,7 +12650,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const btnTestEnvQuickLogin = document.getElementById("btnTestEnvQuickLogin");
     if (btnTestEnvQuickLogin) {
-      btnTestEnvQuickLogin.addEventListener("click", () => {
+      btnTestEnvQuickLogin.addEventListener("click", async () => {
+        const okVault = await verifyVaultPasswordBeforeLogin();
+        if (!okVault) return;
+
         const defaultAdminProfile = {
           name: "曾維崧",
           email: "tsengweisung@gmail.com",
@@ -12368,7 +12671,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const targetSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
         setupAdminImpersonator();
         switchSimulatedSalesperson(targetSales, false);
-        showAuthToast("[測試權限已啟用] 可由頂部「管理員身分模擬」任意切換全體業務身分");
+        showAuthToast("[測試權限已啟用] 資料保險箱已解鎖，可由頂部「管理員身分模擬」切換人員");
       });
     }
 
@@ -12451,10 +12754,14 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // 判斷是否已經完成登入驗證：若尚未登入，立即顯示 Google 身分驗證全螢幕遮罩
+    // 判斷是否已經完成登入驗證：若尚未登入或靜態環境尚未輸入加密保險箱密碼，顯示全螢幕鎖定驗證畫面
+    const isStaticEnvCheck = window.location.hostname.includes("github.io") || window.location.protocol === "file:";
     const hasLoggedIn = localStorage.getItem("has_logged_in") === "true";
+    const hasVaultPw = Boolean(localStorage.getItem("shihlin_pwa_vault_pass"));
     if (!hasLoggedIn) {
       openLoginOverlay();
+    } else if (isStaticEnvCheck && !hasVaultPw) {
+      openLoginOverlay("資料庫已全面升級為加密保險箱，請輸入解密密碼解鎖資料。", false);
     } else {
       setupAdminImpersonator();
     }

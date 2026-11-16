@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.62";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 14:35:00";
-  const SYSTEM_APP_RELEASE_NOTES = "統一報價單表格所有欄位四邊格線與內框顯示，並將管理員檢視工具改為僅留本機不公開";
+  const SYSTEM_APP_VERSION = "v1.0.63";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 14:50:00";
+  const SYSTEM_APP_RELEASE_NOTES = "補齊全系統各頁面表格完整四邊格線與滿版對齊，並還原備註/交期 21 組預設字句下拉選單與手動輸入功能";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -309,7 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchEncryptedSeedEnvelope() {
       if (rawEncryptedEnvelopeCache) return rawEncryptedEnvelopeCache;
-      const resp = await origFetch(`./data/encrypted_seed_db.json?v=20261116_v1_0_62`);
+      const resp = await origFetch(`./data/encrypted_seed_db.json?v=20261116_v1_0_63`);
       if (!resp || !resp.ok) throw new Error("無法下載網頁加密資料包");
       rawEncryptedEnvelopeCache = await resp.json();
       return rawEncryptedEnvelopeCache;
@@ -5830,18 +5830,27 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   let PRESET_DELIVERY_OPTIONS = [
-    "現貨供應",
-    "訂單確認後 1~2 週",
-    "訂單確認後 2~3 週",
-    "訂單確認後 3~4 週",
-    "訂單確認後 4~6 週",
-    "訂單確認後 6~8 週",
-    "訂單確認後 8~12 週",
-    "德國原廠空運約 3~4 週",
-    "日本原廠進口約 4~6 週",
-    "特殊規格，交期另議",
-    "需提供設備規格後確認交期",
-    "數量有限，售完為止"
+    "交期待確認",
+    "目前現貨",
+    "下單後1~3個工作天",
+    "下單後3~5個工作天",
+    "下單後5~7個工作天",
+    "下單後1~2週",
+    "下單後2~3週",
+    "下單後3~4週",
+    "下單後1~2個月",
+    "下單後2~3個月",
+    "下單後3~4個月",
+    "下單後4~5個月",
+    "下單後5~6個月",
+    "下單後6~8個月",
+    "下單後8~10個月",
+    "下單後10~12個月",
+    "標準交期2個月以上，若有需求建議較早下單。",
+    "標準交期3個月以上，若有需求建議較早下單。",
+    "標準交期4個月以上，若有需求建議較早下單。",
+    "標準交期5個月以上，若有需求建議較早下單。",
+    "標準交期6個月以上，若有需求建議較早下單。"
   ];
 
   // 取得目前檢視/登入之業務姓名 (用於客戶、歷史報價、手機草稿、個人特殊品完全隔離)
@@ -6100,6 +6109,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function syncExcelTableTotalWidth(table) {
     if (!table) return;
+    if (table.id !== "quoteDesktopTable") {
+      table.style.width = "100%";
+      table.style.minWidth = "100%";
+      return;
+    }
     const allTh = Array.from(table.querySelectorAll("thead th"));
     if (allTh.length === 0) return;
     let sumW = 0;
@@ -6124,10 +6138,16 @@ document.addEventListener("DOMContentLoaded", () => {
   function applySingleColumnWidth(th, widthPx) {
     if (!th || !(widthPx > 0)) return;
     const wStr = `${Math.round(widthPx)}px`;
-    // 嚴格鎖定獨立像素欄寬（全螢幕或拉伸表格外框時，各儲存格寬度絕不跟著連動變形）
+    const tbl = th.closest("table");
     th.style.width = wStr;
-    th.style.minWidth = wStr;
-    th.style.maxWidth = wStr;
+    if (tbl && tbl.id === "quoteDesktopTable") {
+      // 嚴格鎖定新建報價單主表獨立像素欄寬（全螢幕或拉伸表格外框時，各儲存格寬度絕不跟著連動變形）
+      th.style.minWidth = wStr;
+      th.style.maxWidth = wStr;
+    } else {
+      th.style.minWidth = "";
+      th.style.maxWidth = "";
+    }
   }
 
   // 標記並對齊單一資料列的儲存格順序，使其與目前 thead th 的欄位順序 100% 一致
@@ -6448,6 +6468,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (raw) savedWidths = JSON.parse(raw) || {};
       } catch (e) {}
 
+      const isMainQuoteTable = table.id === "quoteDesktopTable";
       const thList = Array.from(table.querySelectorAll("thead th"));
       thList.forEach((th, colIdx) => {
         if (!th.hasAttribute("data-orig-idx")) {
@@ -6455,10 +6476,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         if (th.classList.contains("col-corner-header")) return;
 
-        // 紀錄原始推薦寬度，供第 8 頁「還原預設欄寬」按鈕使用
+        // 紀錄原始推薦寬度，供第 8 頁「還原預設欄寬」按鈕使用（非主表若無設定寬度則保留彈性撐滿 100%）
+        const origExplicitW = parseInt(th.style.width, 10);
         if (!th.hasAttribute("data-default-width")) {
-          const initW = parseInt(th.style.width, 10) || th.offsetWidth || 100;
-          th.setAttribute("data-default-width", String(initW));
+          if (origExplicitW > 0) {
+            th.setAttribute("data-default-width", String(origExplicitW));
+          } else if (isMainQuoteTable) {
+            th.setAttribute("data-default-width", String(th.offsetWidth || 100));
+          }
         }
 
         if (!th.classList.contains("resizable-th")) {
@@ -7938,7 +7963,10 @@ document.addEventListener("DOMContentLoaded", () => {
             <span id="d-${itemId}-subtotal" class="pyside-cell-readonly align-right cell-subtotal-val" data-last-money-text="${rowSubtotalVal > 0 ? rowSubtotalVal.toLocaleString() : ''}">${rowSubtotalVal > 0 ? rowSubtotalVal.toLocaleString() : ''}</span>
           </td>
           <td>
-            <input type="text" id="d-${itemId}-delivery" class="pyside-cell-input" placeholder="" value="${escapeHtml(leadTimeVal)}">
+            <div class="pyside-model-combo-wrap" id="d-${itemId}-delivery-wrap">
+              <input type="text" id="d-${itemId}-delivery" class="cell-delivery-input" autocomplete="off" placeholder="" value="${escapeHtml(leadTimeVal)}">
+              <button type="button" id="d-${itemId}-delivery-btn" class="pyside-model-combo-arrow" style="background:none; border:none; pointer-events:auto; cursor:pointer;" title="展開預設交期與備註選單">▼</button>
+            </div>
           </td>
         </tr>
       `;
@@ -8077,6 +8105,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const dSpecInput = document.getElementById(`d-${itemId}-spec`);
     const dDealerPriceInput = document.getElementById(`d-${itemId}-dealer-price`);
     const dDeliveryInput = document.getElementById(`d-${itemId}-delivery`);
+    const dDeliveryBtn = document.getElementById(`d-${itemId}-delivery-btn`);
     const dPriceInput = document.getElementById(`d-${itemId}-price`);
     const dEstPriceInput = document.getElementById(`d-${itemId}-est-price`);
     const dFinalPriceCell = document.getElementById(`d-${itemId}-final-price-cell`);
@@ -8198,8 +8227,21 @@ document.addEventListener("DOMContentLoaded", () => {
       openDeliveryModal();
     }
     if (mDeliveryInput) mDeliveryInput.addEventListener("click", triggerDeliveryPicker);
+    if (dDeliveryBtn) {
+      dDeliveryBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const dRow = document.getElementById(`d-${itemId}`);
+        if (typeof openDesktopDeliveryCompleter === "function" && dRow) {
+          const popupEl = document.getElementById("pysideDeliveryCompleterPopup");
+          if (!popupEl || popupEl.classList.contains("hidden") || desktopDeliveryState.rowEl !== dRow) {
+            openDesktopDeliveryCompleter(dRow);
+          }
+        } else {
+          triggerDeliveryPicker();
+        }
+      });
+    }
     if (dDeliveryInput) {
-      dDeliveryInput.addEventListener("dblclick", triggerDeliveryPicker);
       dDeliveryInput.addEventListener("input", () => {
         if (mDeliveryInput) mDeliveryInput.value = dDeliveryInput.value;
       });
@@ -10137,7 +10179,7 @@ document.addEventListener("DOMContentLoaded", () => {
         activeContainer.innerHTML = `<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:0.88rem;">目前業務【${escapeHtml(activeSales)}】名下尚無生效中之個人特殊品。可於上方表單新增。</div>`;
       } else {
         activeContainer.innerHTML = `
-          <table style="width:100%; border-collapse:collapse; font-size:0.86rem;">
+          <table class="pyside-excel-table" style="width:100%; table-layout:auto; border-collapse:collapse; font-size:0.86rem;">
             <thead>
               <tr style="background:var(--table-header-bg, #f1f5f9); border-bottom:1px solid var(--border-color);">
                 <th style="padding:8px 10px; text-align:left;">特殊品型號</th>
@@ -10244,7 +10286,7 @@ document.addEventListener("DOMContentLoaded", () => {
         archivedContainer.innerHTML = `<div style="padding:16px; text-align:center; color:var(--text-muted); font-size:0.86rem;">尚無封存紀錄</div>`;
       } else {
         archivedContainer.innerHTML = `
-          <table style="width:100%; border-collapse:collapse; font-size:0.84rem;">
+          <table class="pyside-excel-table" style="width:100%; table-layout:auto; border-collapse:collapse; font-size:0.84rem;">
             <thead>
               <tr style="background:var(--table-header-bg, #f1f5f9); border-bottom:1px solid var(--border-color);">
                 <th style="padding:8px 10px; text-align:left;">型號</th>
@@ -10546,13 +10588,14 @@ document.addEventListener("DOMContentLoaded", () => {
       if (freqBody) {
         const sortedFreq = [...topCusts].sort((a, b) => Number(b.quote_count || 0) - Number(a.quote_count || 0)).slice(0, 10);
         freqBody.innerHTML = sortedFreq.length === 0
-          ? `<tr><td colspan="4" style="text-align:center; padding:14px; color:#95a5a6;">尚無統計資料</td></tr>`
+          ? `<tr><td colspan="5" style="text-align:center; padding:14px; color:#95a5a6;">尚無統計資料</td></tr>`
           : sortedFreq.map((c, i) => `
               <tr>
                 <td class="col-idx">${i + 1}</td>
                 <td>${escapeHtml(c.customer_name)}</td>
                 <td style="text-align:center; font-weight:700; color:#2980b9;">${c.quote_count}</td>
                 <td style="text-align:right; font-family:Consolas, monospace;">$${Number(c.total_quoted || 0).toLocaleString()}</td>
+                <td style="text-align:right; font-family:Consolas, monospace; color:#27ae60; font-weight:700;">$${Number(c.won_amount || 0).toLocaleString()}</td>
               </tr>
             `).join("");
       }
@@ -10581,14 +10624,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
         lostCustBody.innerHTML = lostList.length === 0
           ? `<tr><td colspan="4" style="text-align:center; padding:14px; color:#95a5a6;">尚無失注客戶紀錄</td></tr>`
-          : lostList.map((c, i) => `
-              <tr>
-                <td class="col-idx">${i + 1}</td>
-                <td>${escapeHtml(c.customer_name)}</td>
-                <td style="text-align:center; color:#e74c3c; font-weight:700;">1</td>
-                <td style="text-align:right; font-family:Consolas, monospace;">$${c.lost_amount.toLocaleString()}</td>
-              </tr>
-            `).join("");
+          : lostList.map((c, i) => {
+              const matchedLost = (allQuotes || []).filter(q => q.customer_name === c.customer_name && (q.status === "已失注" || q.is_lost === 1));
+              const lostRef = matchedLost.length > 0 ? matchedLost[0].quote_no : "1 筆";
+              return `
+                <tr>
+                  <td class="col-idx">${i + 1}</td>
+                  <td>${escapeHtml(c.customer_name)}</td>
+                  <td style="text-align:right; font-family:Consolas, monospace; color:#e74c3c; font-weight:700;">$${c.lost_amount.toLocaleString()}</td>
+                  <td style="text-align:center;">${escapeHtml(lostRef)}</td>
+                </tr>
+              `;
+            }).join("");
       }
 
       const topItemsBody = document.getElementById("dashTopItemsBody");
@@ -13417,6 +13464,109 @@ document.addEventListener("DOMContentLoaded", () => {
     desktopCompleterState.isOpen = false;
   }
 
+  const desktopDeliveryState = {
+    isOpen: false,
+    rowEl: null,
+    itemId: ""
+  };
+
+  function closeDesktopDeliveryCompleter() {
+    const popup = document.getElementById("pysideDeliveryCompleterPopup");
+    if (popup) popup.classList.add("hidden");
+    desktopDeliveryState.isOpen = false;
+  }
+
+  function getOrCreateDesktopDeliveryPopup() {
+    let popup = document.getElementById("pysideDeliveryCompleterPopup");
+    if (!popup) {
+      popup = document.createElement("div");
+      popup.id = "pysideDeliveryCompleterPopup";
+      popup.className = "pyside-completer-popup hidden";
+      popup.style.width = "340px";
+      popup.innerHTML = `
+        <div class="pyside-completer-header">
+          <span>預設交期與備註字句</span>
+          <span id="pysideDeliveryCompleterCount"></span>
+        </div>
+        <div id="pysideDeliveryCompleterList" class="pyside-completer-list"></div>
+      `;
+      document.body.appendChild(popup);
+    }
+    return popup;
+  }
+
+  function applyDesktopDeliveryOption(optionText) {
+    const itemId = desktopDeliveryState.itemId;
+    const rowEl = desktopDeliveryState.rowEl;
+    closeDesktopDeliveryCompleter();
+    if (!itemId) return;
+
+    runWithExcelUndoCheckpoint("選擇備註/交期預設字句", () => {
+      const dInput = document.getElementById(`d-${itemId}-delivery`);
+      const mInput = document.getElementById(`${itemId}-delivery`);
+      if (dInput) {
+        dInput.value = optionText;
+        dInput.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      if (mInput) mInput.value = optionText;
+    });
+
+    if (rowEl && typeof focusExcelProxyInput === "function") {
+      renderExcelSelectionUI();
+      focusExcelProxyInput();
+    }
+  }
+
+  function openDesktopDeliveryCompleter(rowEl) {
+    if (!rowEl) return;
+    closeDesktopModelCompleter();
+    const itemId = rowEl.getAttribute("data-itemid");
+    const inputEl = itemId ? document.getElementById(`d-${itemId}-delivery`) : null;
+    const wrapEl = itemId ? document.getElementById(`d-${itemId}-delivery-wrap`) : null;
+    if (!inputEl || !wrapEl) return;
+
+    const popup = getOrCreateDesktopDeliveryPopup();
+    const listEl = document.getElementById("pysideDeliveryCompleterList");
+    const countEl = document.getElementById("pysideDeliveryCompleterCount");
+
+    desktopDeliveryState.rowEl = rowEl;
+    desktopDeliveryState.itemId = itemId;
+    desktopDeliveryState.isOpen = true;
+
+    const allOptions = ["", ...(PRESET_DELIVERY_OPTIONS || [])];
+    const currentVal = String(inputEl.value || "").trim();
+    if (countEl) {
+      countEl.textContent = `${PRESET_DELIVERY_OPTIONS.length} 組預設`;
+    }
+
+    if (listEl) {
+      listEl.innerHTML = allOptions.map((opt, idx) => {
+        const isCurrent = opt === currentVal;
+        const label = opt === "" ? "（空白 / 清除備註）" : escapeHtml(opt);
+        return `
+          <div class="pyside-completer-item ${isCurrent ? "is-active" : ""}" data-deliv-idx="${idx}" role="option">
+            <div class="pyside-completer-left">
+              <div class="pyside-completer-model-line" style="font-weight:${isCurrent ? "700" : "500"};">
+                <span>${label}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      listEl.querySelectorAll(".pyside-completer-item").forEach(el => {
+        el.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const idx = parseInt(el.getAttribute("data-deliv-idx"), 10);
+          applyDesktopDeliveryOption(allOptions[idx] ?? "");
+        });
+      });
+    }
+
+    positionPopupBelowAnchor(popup, wrapEl);
+  }
+
   function renderDesktopModelCompleterList() {
     const listEl = document.getElementById("pysideModelCompleterList");
     const countEl = document.getElementById("pysideModelCompleterCount");
@@ -14028,6 +14178,7 @@ document.addEventListener("DOMContentLoaded", () => {
     activeEditUndoBaseline = null;
     excelTableState.mode = "select";
     closeDesktopModelCompleter();
+    closeDesktopDeliveryCompleter();
     renderExcelSelectionUI();
   }
 
@@ -14045,6 +14196,7 @@ document.addEventListener("DOMContentLoaded", () => {
     activeEditUndoBaseline = null;
     excelTableState.mode = "select";
     closeDesktopModelCompleter();
+    closeDesktopDeliveryCompleter();
     renderExcelSelectionUI();
     focusExcelProxyInput();
   }
@@ -14613,12 +14765,18 @@ document.addEventListener("DOMContentLoaded", () => {
       if (rIdx < 0 || cIdx < 0) return;
 
       if (arrowBtn) {
+        e.preventDefault();
         commitExcelActiveEdit();
         excelTableState.anchor = { r: rIdx, c: cIdx };
         excelTableState.focus = { r: rIdx, c: cIdx };
         excelTableState.mode = "select";
         renderExcelSelectionUI();
-        openDesktopModelCompleter(tr, { showAll: true });
+        const role = getExcelRoleByColIndex(cIdx);
+        if (role === "delivery") {
+          openDesktopDeliveryCompleter(tr);
+        } else {
+          openDesktopModelCompleter(tr, { showAll: true });
+        }
         return;
       }
 
@@ -15093,7 +15251,7 @@ document.addEventListener("DOMContentLoaded", () => {
       excelPasteMatrix(matrix);
     });
 
-    // 9. 全域點擊關閉型號選單與右鍵選單
+    // 9. 全域點擊關閉型號選單、備註交期選單與右鍵選單
     document.addEventListener("mousedown", (e) => {
       const ctxMenuEl = document.getElementById("pysideQuoteTableContextMenu");
       if (ctxMenuEl && !ctxMenuEl.classList.contains("hidden") && !ctxMenuEl.contains(e.target)) {
@@ -15107,6 +15265,15 @@ document.addEventListener("DOMContentLoaded", () => {
         !e.target.closest?.(".pyside-model-combo-wrap")
       ) {
         closeDesktopModelCompleter();
+      }
+      const delivCompEl = document.getElementById("pysideDeliveryCompleterPopup");
+      if (
+        delivCompEl &&
+        !delivCompEl.classList.contains("hidden") &&
+        !delivCompEl.contains(e.target) &&
+        !e.target.closest?.(".pyside-model-combo-wrap")
+      ) {
+        closeDesktopDeliveryCompleter();
       }
     });
 

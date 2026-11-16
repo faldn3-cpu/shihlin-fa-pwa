@@ -6372,11 +6372,16 @@ html[data-theme="dark"] .pyside-table-container {
 }
 
 .pyside-excel-table {
-  width: max-content;
-  min-width: 0;
+  width: 100%;
+  min-width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
   font-size: 14px;
+}
+
+#quoteDesktopTable.pyside-excel-table {
+  width: max-content;
+  min-width: 0;
 }
 
 .pyside-excel-table th {
@@ -6973,7 +6978,8 @@ html[data-theme="dark"] .pyside-model-combo-wrap {
   border-color: var(--border-card);
 }
 
-.pyside-model-combo-wrap input.cell-model-input {
+.pyside-model-combo-wrap input.cell-model-input,
+.pyside-model-combo-wrap input.cell-delivery-input {
   border: none !important;
   background: transparent !important;
   width: 100%;
@@ -8749,15 +8755,23 @@ html[data-theme="dark"] .excel-ctx-item:hover:not(:disabled) {
 }
 
 /* ============================================================================
-   統一報價單表格完整格線與內框 / 最終報價金額與小計欄位醒目強化 (v1.0.62)
+   統一全系統表格完整格線與內框 / 最終報價金額與小計欄位醒目強化 (v1.0.63)
    ============================================================================ */
 .pyside-excel-table th,
-.pyside-excel-table td {
+.pyside-excel-table td,
+.fluent-table th,
+.fluent-table td,
+.sales-order-table th,
+.sales-order-table td {
   border: 1px solid #cbd5e1 !important;
 }
 
 html[data-theme="dark"] .pyside-excel-table th,
-html[data-theme="dark"] .pyside-excel-table td {
+html[data-theme="dark"] .pyside-excel-table td,
+html[data-theme="dark"] .fluent-table th,
+html[data-theme="dark"] .fluent-table td,
+html[data-theme="dark"] .sales-order-table th,
+html[data-theme="dark"] .sales-order-table td {
   border: 1px solid #334155 !important;
 }
 
@@ -8873,6 +8887,7 @@ html[data-theme="dark"] .cell-subtotal-val {
     background-color: #fde047;
     box-shadow: inset 0 0 0 2px #f59e0b;
   }
+
   100% {
     background-color: transparent;
     box-shadow: inset 0 0 0 0 transparent;

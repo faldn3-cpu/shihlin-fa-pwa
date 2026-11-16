@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.67";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 17:15:00";
-  const SYSTEM_APP_RELEASE_NOTES = "移除專案名稱未輸入時的預設「標準設備報價」字樣，未填寫則保持空白";
+  const SYSTEM_APP_VERSION = "v1.0.68";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 18:00:00";
+  const SYSTEM_APP_RELEASE_NOTES = "實作本機異動層 (Delta) 差異化儲存與 IndexedDB 雙重保護，修復頁面重新整理後新報價單遺失問題";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -42,6 +42,63 @@ document.addEventListener("DOMContentLoaded", () => {
   //    並嚴格落實「同一業務名下公司不可重複，不同業務可各自獨立建同名公司」。
   // ============================================================================
   const CENTRALIZED_LOCAL_STORAGE_KEY = "shihlin_pwa_centralized_store_v2";
+  const IDB_DB_NAME = "ShihlinFaPwaDB";
+  const IDB_DB_VERSION = 1;
+  const IDB_STORE_NAME = "pwa_delta_store";
+  const IDB_KEY = "centralized_delta_v1";
+
+  function openShihlinIdb() {
+    return new Promise((resolve) => {
+      if (typeof indexedDB === "undefined") {
+        return resolve(null);
+      }
+      try {
+        const req = indexedDB.open(IDB_DB_NAME, IDB_DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(IDB_STORE_NAME)) {
+            db.createObjectStore(IDB_STORE_NAME);
+          }
+        };
+        req.onsuccess = (e) => resolve(e.target.result);
+        req.onerror = () => resolve(null);
+      } catch (err) {
+        resolve(null);
+      }
+    });
+  }
+
+  async function saveToShihlinIdb(key, value) {
+    try {
+      const db = await openShihlinIdb();
+      if (!db) return false;
+      return new Promise((resolve) => {
+        const tx = db.transaction(IDB_STORE_NAME, "readwrite");
+        const store = tx.objectStore(IDB_STORE_NAME);
+        const req = store.put(value, key);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => resolve(false);
+      });
+    } catch (err) {
+      return false;
+    }
+  }
+
+  async function loadFromShihlinIdb(key) {
+    try {
+      const db = await openShihlinIdb();
+      if (!db) return null;
+      return new Promise((resolve) => {
+        const tx = db.transaction(IDB_STORE_NAME, "readonly");
+        const store = tx.objectStore(IDB_STORE_NAME);
+        const req = store.get(key);
+        req.onsuccess = (e) => resolve(e.target.result || null);
+        req.onerror = () => resolve(null);
+      });
+    } catch (err) {
+      return null;
+    }
+  }
   const DEFAULT_QUOTATION_TERMS_TEXT = [
     "1. 交貨期限：收到正式訂單後 7~14 個工作天內交貨（特殊訂製品依雙方確認交期為準）。",
     "2. 交貨地點：貴公司指定之台灣本島廠區（一樓平面卸貨）。",
@@ -348,20 +405,68 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function persistLocalDelta(store) {
       try {
-        // 避免將數千筆標準品重複塞入 localStorage 配額，僅保存增量與個人業務異動層
+        const seedQuoteNos = store._seedQuoteNos || new Set();
+        const seedCustNames = store._seedCustNames || new Set();
+
+        // 僅挑選真正新增或被修改過的報價單，避免將數百筆歷史種子單重複傾倒進 localStorage 配額
+        const deltaQuotations = {};
+        if (store.quotations_by_sales && typeof store.quotations_by_sales === "object") {
+          Object.keys(store.quotations_by_sales).forEach(sales => {
+            const list = store.quotations_by_sales[sales];
+            if (!Array.isArray(list)) return;
+            const dirtyQuotes = list.filter(q => {
+              if (!q) return false;
+              // 1. 在 PWA 介面新建或透過 Excel/PDF 舊單匯入的單據
+              if (q.source_type === "PWA_BUILTIN" || q.source_type === "LEGACY_IMPORT") return true;
+              // 2. 單號不在種子庫中
+              if (!seedQuoteNos.has(String(q.quote_no || ""))) return true;
+              // 3. 種子單但被軟刪除或手動修改過狀態/備註/成交/最新版號註記
+              if (Number(q.is_deleted) === 1 || q._modified === true) return true;
+              return false;
+            });
+            if (dirtyQuotes.length > 0) {
+              deltaQuotations[sales] = dirtyQuotes;
+            }
+          });
+        }
+
+        // 僅挑選真正新增或異動過的客戶主檔
+        const deltaCustomers = {};
+        if (store.customers_by_sales && typeof store.customers_by_sales === "object") {
+          Object.keys(store.customers_by_sales).forEach(sales => {
+            const list = store.customers_by_sales[sales];
+            if (!Array.isArray(list)) return;
+            const dirtyCusts = list.filter(c => {
+              if (!c) return false;
+              if (!seedCustNames.has(String(c.name || "").trim())) return true;
+              if (c._modified === true) return true;
+              return false;
+            });
+            if (dirtyCusts.length > 0) {
+              deltaCustomers[sales] = dirtyCusts;
+            }
+          });
+        }
+
         const deltaPayload = {
           version: SYSTEM_APP_VERSION,
           saved_at: new Date().toISOString(),
           extra_products: Array.isArray(store._extra_products) ? store._extra_products : [],
           settings: store.settings || {},
-          customers_by_sales: store.customers_by_sales || {},
-          quotations_by_sales: store.quotations_by_sales || {},
+          customers_by_sales: deltaCustomers,
+          deleted_customer_ids: Array.from(store._deletedCustIds || []),
+          quotations_by_sales: deltaQuotations,
           drafts_by_sales: store.drafts_by_sales || {},
           special_products_by_sales: store.special_products_by_sales || {},
           daily_reports_by_sales: store.daily_reports_by_sales || {},
           deals_by_sales: store.deals_by_sales || {}
         };
-        localStorage.setItem(CENTRALIZED_LOCAL_STORAGE_KEY, JSON.stringify(deltaPayload));
+
+        const serialized = JSON.stringify(deltaPayload);
+        localStorage.setItem(CENTRALIZED_LOCAL_STORAGE_KEY, serialized);
+
+        // 同步寫入 IndexedDB 做為大容量雙重保護備份
+        saveToShihlinIdb(IDB_KEY, deltaPayload).catch(() => {});
       } catch (err) {
         console.warn("[內建資料庫] 寫入瀏覽器本機儲存空間失敗:", err);
       }
@@ -390,33 +495,126 @@ document.addEventListener("DOMContentLoaded", () => {
           console.warn("[內建加密資料庫] 尚未解鎖或載入失敗:", err?.message || err);
         }
 
-        // 疊加瀏覽器本機異動層 (確保業務在網頁新建/修改的資料於重整後保留)
+        // 記錄種子單號與種子客戶名稱，作為後續判定異動之唯一標準
+        const seedQuoteNos = new Set();
+        if (baseStore.quotations_by_sales && typeof baseStore.quotations_by_sales === "object") {
+          Object.values(baseStore.quotations_by_sales).flat().forEach(q => {
+            if (q && q.quote_no) seedQuoteNos.add(String(q.quote_no));
+          });
+        }
+        baseStore._seedQuoteNos = seedQuoteNos;
+
+        const seedCustNames = new Set();
+        if (baseStore.customers_by_sales && typeof baseStore.customers_by_sales === "object") {
+          Object.values(baseStore.customers_by_sales).flat().forEach(c => {
+            if (c && c.name) seedCustNames.add(String(c.name).trim());
+          });
+        }
+        baseStore._seedCustNames = seedCustNames;
+        baseStore._deletedCustIds = new Set();
+
+        // 疊加瀏覽器本機異動層 (優先嘗試 localStorage，並以 IndexedDB 為互補備份)
+        let delta = null;
         try {
           const rawDelta = localStorage.getItem(CENTRALIZED_LOCAL_STORAGE_KEY);
           if (rawDelta) {
-            const delta = JSON.parse(rawDelta);
-            if (delta && typeof delta === "object") {
-              if (Array.isArray(delta.extra_products) && delta.extra_products.length > 0) {
-                baseStore._extra_products = delta.extra_products;
-                const prodMap = new Map(baseStore.products.map(p => [String(p.model_no || "").toUpperCase(), p]));
-                delta.extra_products.forEach(ep => {
-                  const key = String(ep.model_no || "").toUpperCase();
-                  if (key) prodMap.set(key, ep);
-                });
-                baseStore.products = Array.from(prodMap.values());
-              }
-              if (delta.settings && typeof delta.settings === "object") {
-                baseStore.settings = { ...baseStore.settings, ...delta.settings };
-              }
-              ["customers_by_sales", "quotations_by_sales", "drafts_by_sales", "special_products_by_sales", "daily_reports_by_sales", "deals_by_sales"].forEach(bucket => {
-                if (delta[bucket] && typeof delta[bucket] === "object") {
-                  baseStore[bucket] = { ...baseStore[bucket], ...delta[bucket] };
-                }
-              });
-            }
+            delta = JSON.parse(rawDelta);
           }
         } catch (e) {
-          console.warn("[內建資料庫] 解析本地增量層失敗:", e);
+          console.warn("[內建資料庫] 讀取 localStorage 失敗:", e);
+        }
+
+        // 若 localStorage 查無資料，嘗試從 IndexedDB 還原
+        if (!delta) {
+          try {
+            const idbDelta = await loadFromShihlinIdb(IDB_KEY);
+            if (idbDelta && typeof idbDelta === "object") {
+              delta = idbDelta;
+            }
+          } catch (e) {
+            console.warn("[內建資料庫] 讀取 IndexedDB 備份失敗:", e);
+          }
+        }
+
+        if (delta && typeof delta === "object") {
+          // 1. 額外自訂產品
+          if (Array.isArray(delta.extra_products) && delta.extra_products.length > 0) {
+            baseStore._extra_products = delta.extra_products;
+            const prodMap = new Map(baseStore.products.map(p => [String(p.model_no || "").toUpperCase(), p]));
+            delta.extra_products.forEach(ep => {
+              const key = String(ep.model_no || "").toUpperCase();
+              if (key) prodMap.set(key, ep);
+            });
+            baseStore.products = Array.from(prodMap.values());
+          }
+
+          // 2. 系統設定
+          if (delta.settings && typeof delta.settings === "object") {
+            baseStore.settings = { ...baseStore.settings, ...delta.settings };
+          }
+
+          // 3. 客戶主檔差異合併 (種子客戶與增量客戶融合，並過濾已刪除客戶)
+          if (Array.isArray(delta.deleted_customer_ids)) {
+            delta.deleted_customer_ids.forEach(cid => baseStore._deletedCustIds.add(Number(cid)));
+          }
+          if (delta.customers_by_sales && typeof delta.customers_by_sales === "object") {
+            Object.keys(delta.customers_by_sales).forEach(sales => {
+              const seedCusts = Array.isArray(baseStore.customers_by_sales[sales]) ? baseStore.customers_by_sales[sales] : [];
+              const deltaCusts = Array.isArray(delta.customers_by_sales[sales]) ? delta.customers_by_sales[sales] : [];
+              if (deltaCusts.length === 0) return;
+
+              const map = new Map();
+              seedCusts.forEach(c => {
+                if (c && c.name) map.set(String(c.name).trim(), c);
+              });
+              deltaCusts.forEach(dc => {
+                if (dc && dc.name) {
+                  const k = String(dc.name).trim();
+                  if (map.has(k)) {
+                    map.set(k, { ...map.get(k), ...dc });
+                  } else {
+                    map.set(k, dc);
+                  }
+                }
+              });
+              baseStore.customers_by_sales[sales] = Array.from(map.values()).filter(c => !baseStore._deletedCustIds.has(Number(c.id)));
+            });
+          }
+
+          // 4. 報價單差異合併 (以單號唯一識別：新單置頂、改單覆蓋、種子單完整保留)
+          if (delta.quotations_by_sales && typeof delta.quotations_by_sales === "object") {
+            Object.keys(delta.quotations_by_sales).forEach(sales => {
+              const seedList = Array.isArray(baseStore.quotations_by_sales[sales]) ? baseStore.quotations_by_sales[sales] : [];
+              const deltaList = Array.isArray(delta.quotations_by_sales[sales]) ? delta.quotations_by_sales[sales] : [];
+              if (deltaList.length === 0) return;
+
+              const map = new Map();
+              seedList.forEach(q => {
+                if (q && q.quote_no) map.set(String(q.quote_no), q);
+              });
+              deltaList.forEach(dq => {
+                if (dq && dq.quote_no) map.set(String(dq.quote_no), dq);
+              });
+
+              // 排序：ID 較大者優先，若無 ID 則以日期/建立時間排序 (確保新開的單據置頂於第 1 列)
+              const mergedQuotes = Array.from(map.values()).sort((a, b) => {
+                const idA = Number(a.id) || 0;
+                const idB = Number(b.id) || 0;
+                if (idA !== idB) return idB - idA;
+                const dA = String(a.quote_date || a.created_at || "");
+                const dB = String(b.quote_date || b.created_at || "");
+                return dB.localeCompare(dA);
+              });
+              baseStore.quotations_by_sales[sales] = mergedQuotes;
+            });
+          }
+
+          // 5. 其他尚未有種子資料之獨立業務層
+          ["drafts_by_sales", "special_products_by_sales", "daily_reports_by_sales", "deals_by_sales"].forEach(bucket => {
+            if (delta[bucket] && typeof delta[bucket] === "object") {
+              baseStore[bucket] = { ...baseStore[bucket], ...delta[bucket] };
+            }
+          });
         }
 
         storeMem = baseStore;
@@ -503,6 +701,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const contactEmail = String(payload.contact_email || "").trim();
 
       if (existing) {
+        existing._modified = true;
         existing.owner_sales = ownerSales;
         if (payload.tax_id !== undefined) existing.tax_id = String(payload.tax_id || "").trim();
         if (payload.phone !== undefined) existing.phone = String(payload.phone || "").trim();
@@ -623,6 +822,8 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         });
         if (!removed) return jsonResponse({ detail: "找不到指定的客戶或無權限刪除" }, 404);
+        if (!store._deletedCustIds) store._deletedCustIds = new Set();
+        store._deletedCustIds.add(cid);
         persistLocalDelta(store);
         return jsonResponse({ status: "success", message: "客戶資料已成功刪除" });
       }
@@ -729,7 +930,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         bucket.forEach(q => {
-          if (q.prefix === prefix && Number(q.sequence) === seq) q.is_latest = 0;
+          if (q.prefix === prefix && Number(q.sequence) === seq) {
+            q.is_latest = 0;
+            q._modified = true;
+          }
         });
 
         const quoteNo = `${prefix}-${String(seq).padStart(3, "0")}-${String(rev).padStart(2, "0")}`;
@@ -826,12 +1030,14 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!action && upperMethod === "DELETE") {
           target.is_deleted = 1;
           target.deleted_at = new Date().toISOString().slice(0, 19).replace("T", " ");
+          target._modified = true;
           persistLocalDelta(store);
           return jsonResponse({ status: "success", message: `報價單【${quoteNo}】已成功移至垃圾桶` });
         }
         if (action === "restore" && upperMethod === "POST") {
           target.is_deleted = 0;
           target.deleted_at = null;
+          target._modified = true;
           persistLocalDelta(store);
           return jsonResponse({ status: "success", message: `報價單【${quoteNo}】已成功自垃圾桶復原` });
         }
@@ -846,6 +1052,7 @@ document.addEventListener("DOMContentLoaded", () => {
           target.lost_reason = bodyObj?.lost_reason || null;
           target.lost_memo = bodyObj?.lost_memo || null;
           target.updated_at = new Date().toISOString().slice(0, 19).replace("T", " ");
+          target._modified = true;
           persistLocalDelta(store);
           return jsonResponse({ status: "success", message: `報價單【${quoteNo}】狀態已更新為「${st}」` });
         }

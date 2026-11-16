@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.65";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 16:35:00";
-  const SYSTEM_APP_RELEASE_NOTES = "升級舊報價單 PDF/Excel/掃描圖片智慧解析預覽匯入、全系統唯讀反灰及備註選單精簡";
+  const SYSTEM_APP_VERSION = "v1.0.66";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 16:58:00";
+  const SYSTEM_APP_RELEASE_NOTES = "修正舊版報價單 PDF 分散對齊表頭、型號規格欄位與客戶聯絡資訊精準解析";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -309,7 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchEncryptedSeedEnvelope() {
       if (rawEncryptedEnvelopeCache) return rawEncryptedEnvelopeCache;
-      const resp = await origFetch(`./data/encrypted_seed_db.json?v=20261116_v1_0_65`);
+      const resp = await origFetch(`./data/encrypted_seed_db.json?v=20261116_v1_0_66`);
       if (!resp || !resp.ok) throw new Error("無法下載網頁加密資料包");
       rawEncryptedEnvelopeCache = await resp.json();
       return rawEncryptedEnvelopeCache;
@@ -9203,7 +9203,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const s = String(val || "").trim();
     if (!s || ["-", "–", "—"].includes(s)) return 0;
     let score = 0;
-    if (/^(SS2|SE3|SC3|SH|SF|SN|FR-|FX|HG-|MR-|Q\d|R\d|RY|RX|RJ|LCA|LCM|LCR|LCE|LCN|LTP|LTO|SDP|SDE|SDH|SDA|SME|SMH|SDG|SCL|SCN|AX|BCH|S-|MS-|TH-|[A-Z]{2,3}[\d-])/i.test(s)) {
+    if (/^(?:SS2|SE3|SC3|SH|SF|SN|FR-|FX|HG-|MR-|Q\d|R\d|RY|RX|RJ|LCA|LCM|LCR|LCE|LCN|LTP|LTO|SDP|SDE|SDH|SDA|SME|SMH|SDG|SCL|SCN|AX|BCH|S-|MS-|TH-|[A-Z]{2,3}[\d-])(?![\u4e00-\u9fff])/i.test(s)) {
       score += 22;
     }
     if (/[A-Z0-9]/i.test(s) && s.includes("-")) score += 10;
@@ -9213,6 +9213,27 @@ document.addEventListener("DOMContentLoaded", () => {
     if (zhCount === 0) score += 8;
     else score -= zhCount * 5;
     return score;
+  }
+
+  function isQuotationTableHeaderText(rawLine) {
+    const s = String(rawLine || "").trim();
+    if (!s || /[，。、；！？]/.test(s)) return false;
+    const compact = s.replace(/[\s　]+/g, "");
+    if (compact.length > 80) return false;
+    let roleCount = 0;
+    if (/項目|項次|序號|編號/.test(compact)) roleCount++;
+    if (/產品型號|品名|型號|Model|SKU/i.test(compact)) roleCount++;
+    if (/規格/.test(compact)) roleCount++;
+    if (/需求數量|數量|Qty/i.test(compact)) roleCount++;
+    if (/最終單價|單價|售價|經銷價|Price/i.test(compact)) roleCount++;
+    if (/總金額|小計|金額|Amount/i.test(compact)) roleCount++;
+    if (/備註|交期|Remark/i.test(compact)) roleCount++;
+    return roleCount >= 3 && /(品名|型號|規格|Model|SKU)/i.test(compact) && /(數量|單價|售價|金額|小計|Qty|Price)/i.test(compact);
+  }
+
+  function isQuotationFooterLine(rawLine) {
+    const compact = String(rawLine || "").replace(/[\s　]+/g, "");
+    return /^(銷售金額|未稅小計|未稅合計|含稅總計|應稅|營業稅|合計|總計|總金額|銀行帳號|匯款帳號|戶名|說明事項|付款條件|交貨驗收條款|以上報價|此致|備註[:：])/.test(compact);
   }
 
   function toOcrModelSkeleton(val) {
@@ -9251,50 +9272,165 @@ document.addEventListener("DOMContentLoaded", () => {
       tax_id: "", contact_name: "", phone: "", fax: "",
       location: "", payment: "", project_name: "", project_type: ""
     };
-    const keyDefs = [
-      { key: "quote_no", labels: ["報價單編號", "報價單號", "單號", "Quotation No", "Quote No"] },
-      { key: "quote_date", labels: ["報價日期", "日期", "Quote Date"] },
-      { key: "valid_date", labels: ["有效日期", "有效期限", "Valid Date"] },
-      { key: "customer_name", labels: ["客戶名稱", "買受人", "公司名稱", "Customer"] },
-      { key: "tax_id", labels: ["客戶統編", "統一編號", "統編", "Tax ID"] },
-      { key: "contact_name", labels: ["聯絡人", "連絡人", "窗口", "Contact"] },
-      { key: "phone", labels: ["聯絡電話", "連絡電話", "電話", "TEL", "Phone"] },
-      { key: "fax", labels: ["傳真號碼", "傳真", "FAX"] },
-      { key: "location", labels: ["交貨地點", "送貨地址", "地址", "Address"] },
-      { key: "payment", labels: ["付款方式", "交易條件", "付款條件", "Payment"] },
-      { key: "project_name", labels: ["專案名稱", "工程名稱", "案名", "Project"] },
-      { key: "project_type", labels: ["專案屬性"] }
+
+    const STOP_LABELS_SPACED = [
+      "報[\\s　]*價[\\s　]*單[\\s　]*編[\\s　]*號",
+      "報[\\s　]*價[\\s　]*單[\\s　]*號",
+      "客[\\s　]*戶[\\s　]*名[\\s　]*稱",
+      "客[\\s　]*戶[\\s　]*統[\\s　]*編",
+      "統[\\s　]*一[\\s　]*編[\\s　]*號",
+      "[連聯][\\s　]*絡[\\s　]*電[\\s　]*話",
+      "傳[\\s　]*真[\\s　]*電[\\s　]*話",
+      "傳[\\s　]*真[\\s　]*號[\\s　]*碼",
+      "[連聯][\\s　]*絡[\\s　]*人",
+      "交[\\s　]*貨[\\s　]*地[\\s　]*點",
+      "送[\\s　]*貨[\\s　]*地[\\s　]*址",
+      "付[\\s　]*款[\\s　]*方[\\s　]*式",
+      "付[\\s　]*款[\\s　]*條[\\s　]*件",
+      "交[\\s　]*易[\\s　]*條[\\s　]*件",
+      "專[\\s　]*案[\\s　]*名[\\s　]*稱",
+      "專[\\s　]*案[\\s　]*屬[\\s　]*性",
+      "有[\\s　]*效[\\s　]*日[\\s　]*期",
+      "有[\\s　]*效[\\s　]*期[\\s　]*限",
+      "報[\\s　]*價[\\s　]*日[\\s　]*期",
+      "士[\\s　]*林[\\s　]*電[\\s　]*機",
+      "士[\\s　]*電",
+      "供[\\s　]*應[\\s　]*商",
+      "日[\\s　]*期",
+      "傳[\\s　]*真",
+      "電[\\s　]*話",
+      "手[\\s　]*機",
+      "統[\\s　]*編",
+      "地[\\s　]*址",
+      "TEL", "FAX", "Phone", "Fax", "Email", "Address", "Customer", "Payment", "Project"
     ];
-    const allStopLabels = keyDefs.flatMap(d => d.labels).sort((a, b) => b.length - a.length);
-    const stopLookahead = allStopLabels.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+    const rightColCutRe = new RegExp(`[\\s　]+(?:${STOP_LABELS_SPACED.join("|")})(?=[\\s　:：]|$)`, "i");
+    const pureStopLabelRe = new RegExp(`^(?:${STOP_LABELS_SPACED.join("|")})$`, "i");
 
-    for (const rawLine of (lines || [])) {
-      const line = String(rawLine || "").trim();
-      if (!line) continue;
-      if (/產品明細|項次.*型號|序號.*品名/.test(line.replace(/\s+/g, ""))) break;
+    const preCleaned = (lines || [])
+      .map(l => String(l || "").replace(/選擇此欄[－\-]?>\s*/g, "").trim())
+      .filter(Boolean);
 
-      for (const def of keyDefs) {
-        if (header[def.key]) continue;
-        for (const lbl of def.labels) {
-          const escLbl = lbl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const re = new RegExp(`(?:^|\\s|[,|])${escLbl}\\s*[:：]?\\s*(.+?)(?=\\s+(?:${stopLookahead})\\s*[:：]?|$)`, "i");
-          const m = line.match(re);
-          if (m && m[1]) {
-            const val = m[1].replace(/^[:：\s]+/, "").trim();
-            if (val && !allStopLabels.some(l => val.startsWith(l))) {
-              header[def.key] = val;
-              break;
-            }
-          }
-        }
+    const customerBoxStartIdx = preCleaned.findIndex(l =>
+      /(?:客[\s　]*戶[\s　]*名[\s　]*稱|買[\s　]*受[\s　]*人|公[\s　]*司[\s　]*名[\s　]*稱|報[\s　]*價[\s　]*單[\s　]*(?:編[\s　]*號|號))/.test(l)
+    );
+    const scanStartIdx = customerBoxStartIdx >= 0 ? customerBoxStartIdx : 0;
+
+    const headerLines = [];
+    for (let i = scanStartIdx; i < preCleaned.length; i++) {
+      const line = preCleaned[i];
+      if (isQuotationTableHeaderText(line) || /產品明細|項次.*型號|序號.*品名/.test(line.replace(/\s+/g, ""))) {
+        break;
+      }
+      headerLines.push(line);
+    }
+
+    const extractAfterLabel = (line, labelPat, isDate = false) => {
+      const re = new RegExp(`(?:^|[\\s　,|])${labelPat}[\\s　]*[:：]?[\\s　]*(.+)$`, "i");
+      const m = line.match(re);
+      if (!m || !m[1]) return "";
+      let val = m[1].replace(/^[:：\s　]+/, "").trim();
+      const cutM = val.match(rightColCutRe);
+      if (cutM && typeof cutM.index === "number") {
+        val = val.slice(0, cutM.index).trim();
+      }
+      if (!val || pureStopLabelRe.test(val)) return "";
+      if (isDate) {
+        const dm = val.match(/(\d{2,4}[/.\-年]\d{1,2}[/.\-月]\d{1,2}日?|\d{4}_年_\d{1,2}_月_\d{1,2}_日)/);
+        return dm ? dm[1] : "";
+      }
+      return val;
+    };
+
+    const OWN_TAX_IDS = new Set(["11039306"]);
+
+    for (const line of headerLines) {
+      if (!header.quote_no) {
+        header.quote_no =
+          extractAfterLabel(line, "報[\\s　]*價[\\s　]*單[\\s　]*編[\\s　]*號") ||
+          extractAfterLabel(line, "報[\\s　]*價[\\s　]*單[\\s　]*號") ||
+          extractAfterLabel(line, "(?:Quotation|Quote)[\\s　]*No");
+      }
+      if (!header.quote_date) {
+        const qd =
+          extractAfterLabel(line, "報[\\s　]*價[\\s　]*日[\\s　]*期", true) ||
+          extractAfterLabel(line, "日[\\s　]*期", true) ||
+          extractAfterLabel(line, "Quote[\\s　]*Date", true);
+        if (qd) header.quote_date = normalizeImportDateString(qd.replace(/_/g, ""));
+      }
+      if (!header.valid_date) {
+        const vd =
+          extractAfterLabel(line, "有[\\s　]*效[\\s　]*日[\\s　]*期", true) ||
+          extractAfterLabel(line, "有[\\s　]*效[\\s　]*期[\\s　]*限", true) ||
+          extractAfterLabel(line, "Valid[\\s　]*Date", true);
+        if (vd) header.valid_date = normalizeImportDateString(vd.replace(/_/g, ""));
+      }
+      if (!header.customer_name) {
+        header.customer_name =
+          extractAfterLabel(line, "客[\\s　]*戶[\\s　]*名[\\s　]*稱") ||
+          extractAfterLabel(line, "買[\\s　]*受[\\s　]*人") ||
+          extractAfterLabel(line, "公[\\s　]*司[\\s　]*名[\\s　]*稱") ||
+          extractAfterLabel(line, "Customer");
+      }
+      if (!header.contact_name) {
+        header.contact_name =
+          extractAfterLabel(line, "[連聯][\\s　]*絡[\\s　]*人") ||
+          extractAfterLabel(line, "窗[\\s　]*口") ||
+          extractAfterLabel(line, "Contact");
+      }
+      if (!header.payment) {
+        header.payment =
+          extractAfterLabel(line, "付[\\s　]*款[\\s　]*方[\\s　]*式") ||
+          extractAfterLabel(line, "付[\\s　]*款[\\s　]*條[\\s　]*件") ||
+          extractAfterLabel(line, "交[\\s　]*易[\\s　]*條[\\s　]*件") ||
+          extractAfterLabel(line, "Payment");
+      }
+      if (!header.location) {
+        header.location =
+          extractAfterLabel(line, "交[\\s　]*貨[\\s　]*地[\\s　]*點") ||
+          extractAfterLabel(line, "送[\\s　]*貨[\\s　]*地[\\s　]*址") ||
+          extractAfterLabel(line, "Address");
+      }
+      if (!header.project_name) {
+        header.project_name =
+          extractAfterLabel(line, "專[\\s　]*案[\\s　]*名[\\s　]*稱") ||
+          extractAfterLabel(line, "工[\\s　]*程[\\s　]*名[\\s　]*稱") ||
+          extractAfterLabel(line, "Project");
+      }
+      if (!header.project_type) {
+        header.project_type = extractAfterLabel(line, "專[\\s　]*案[\\s　]*屬[\\s　]*性");
+      }
+      if (!header.fax) {
+        const fVal =
+          extractAfterLabel(line, "傳[\\s　]*真[\\s　]*電[\\s　]*話") ||
+          extractAfterLabel(line, "傳[\\s　]*真[\\s　]*號[\\s　]*碼") ||
+          extractAfterLabel(line, "傳[\\s　]*真") ||
+          extractAfterLabel(line, "FAX");
+        const fm = fVal.match(/([+(]?\d[\d\-()\s]{5,}\d)/);
+        if (fm) header.fax = fm[1].trim();
+      }
+      if (!header.phone) {
+        const lineWithoutFax = line.replace(/傳[\s　]*真(?:[\s　]*(?:電[\s　]*話|號[\s　]*碼))?[\s　]*[:：]?[\s　]*[\d\-()\s]+/gi, " ");
+        const pVal =
+          extractAfterLabel(lineWithoutFax, "[連聯][\\s　]*絡[\\s　]*電[\\s　]*話") ||
+          extractAfterLabel(lineWithoutFax, "客[\\s　]*戶[\\s　]*電[\\s　]*話") ||
+          extractAfterLabel(lineWithoutFax, "電[\\s　]*話") ||
+          extractAfterLabel(lineWithoutFax, "(?:TEL|Phone)");
+        const pm = pVal.match(/([+(]?\d[\d\-()\s]{5,}\d)/);
+        if (pm) header.phone = pm[1].trim();
       }
       if (!header.tax_id) {
-        const tm = line.match(/(?:統編|統一編號)\s*[:：]?\s*(\d{8})\b/);
-        if (tm) header.tax_id = tm[1];
+        const lineCleanTax = line.replace(/士[\s　]*林[\s　]*電[\s　]*機.*$/g, "");
+        const tVal =
+          extractAfterLabel(lineCleanTax, "客[\\s　]*戶[\\s　]*統[\\s　]*編") ||
+          extractAfterLabel(lineCleanTax, "統[\\s　]*一[\\s　]*編[\\s　]*號") ||
+          extractAfterLabel(lineCleanTax, "統[\\s　]*編");
+        const tm = tVal.match(/\b(\d{8})\b/);
+        if (tm && !OWN_TAX_IDS.has(tm[1])) {
+          header.tax_id = tm[1];
+        }
       }
     }
-    if (header.quote_date) header.quote_date = normalizeImportDateString(header.quote_date);
-    if (header.valid_date) header.valid_date = normalizeImportDateString(header.valid_date);
     return header;
   }
 
@@ -9317,17 +9453,59 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    let inFooter = false;
+    let inTableBody = false;
+    const hasExplicitTableHeader = rawLines.some(l => isQuotationTableHeaderText(l));
+
     for (let i = 0; i < rawLines.length; i++) {
       const line = rawLines[i];
-      const compact = line.replace(/\s+/g, "");
-      if (/^(未稅小計|合計|總計|總金額|營業稅|銀行帳號|匯款帳號|戶名|說明事項|付款條件|交貨驗收條款)/.test(compact)) {
-        inFooter = true;
+      if (hasExplicitTableHeader && !inTableBody) {
+        if (isQuotationTableHeaderText(line)) inTableBody = true;
         continue;
       }
-      if (inFooter) continue;
-      if (/^(項次|序號|產品型號|品名|規格|經銷牌價|數量|單價)/.test(compact)) continue;
-      if (/^(客戶名稱|買受人|統一編號|統編|聯絡人|電話|傳真|交貨地點|地址|專案名稱|報價日期|有效日期|報價單號)[:：]?/.test(compact)) continue;
+      if (isQuotationFooterLine(line)) {
+        break;
+      }
+      const compact = line.replace(/[\s　]+/g, "");
+      if (isQuotationTableHeaderText(line)) continue;
+      if (/^(項次|項目|序號|產品型號|品名|規格|經銷牌價|數量|單價)/.test(compact)) continue;
+      if (/^(客戶名稱|買受人|統一編號|統編|聯絡人|連絡人|電話|傳真|交貨地點|地址|專案名稱|報價日期|有效日期|報價單號|報價單編號|付款方式)/.test(compact)) continue;
+
+      // 優先比對標準明細整列格式：序號 + 欄1(品名/型號) + 欄2(型號/規格) + 數量 + 單價 + 小計 + 選填備註
+      const structuredM = line.match(/^(\d{1,3})[.)]?\s+(.+?)\s+([A-Za-z0-9][A-Za-z0-9\-_/.()+]*)\s+(\d[\d,]*)\s+([\d,]+)\s+([\d,]+)(?:\s+(.*))?$/);
+      if (structuredM) {
+        const partA = structuredM[2].trim();
+        const partB = structuredM[3].trim();
+        if (!(/^[-–—]+$/.test(partA) && /^[-–—]+$/.test(partB))) {
+          const qty = Math.max(1, Math.round(parseImportNumber(structuredM[4]) || 1));
+          let unitPrice = Math.round(parseImportNumber(structuredM[5]));
+          const sub = Math.round(parseImportNumber(structuredM[6]));
+          if (unitPrice <= 0 && sub > 0) unitPrice = Math.round(sub / qty);
+          if (unitPrice > 0 || sub > 0) {
+            let modelTok = partB;
+            let specTok = partA;
+            if (scoreSkuLikelihood(partA) > scoreSkuLikelihood(partB)) {
+              modelTok = partA;
+              specTok = partB;
+            }
+            items.push({
+              checked: true,
+              model_no: modelTok,
+              spec: specTok,
+              quantity: qty,
+              dealer_price: unitPrice,
+              discount_pct: 100,
+              final_unit_price: unitPrice,
+              note_lead_time: (structuredM[7] || "").trim(),
+              stock_qty: null,
+              match_status: "unmatched",
+              ocr_original: ""
+            });
+            continue;
+          }
+        }
+      }
+
+      if (/^\d{1,3}\s*[-–—]\s*0(?:\s+0)?$/.test(line)) continue;
 
       const tokens = line.split(/\s+/).filter(Boolean);
       if (tokens.length < 2) continue;
@@ -9407,7 +9585,7 @@ document.addEventListener("DOMContentLoaded", () => {
         else unitPrice = Math.round(nonPctNums[0]);
       }
 
-      if (modelTok) {
+      if (modelTok && (!/^[-–—]+$/.test(modelTok) || unitPrice > 0)) {
         items.push({
           checked: true,
           model_no: modelTok.trim(),
@@ -9649,7 +9827,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const items = [];
     const smartJoinTokens = (tokens) => {
       if (!tokens || tokens.length === 0) return "";
-      const sorted = [...tokens].sort((a, b) => (Math.abs(a.y - b.y) > 4 ? a.y - b.y : a.x - b.x));
+      const sorted = [...tokens].sort((a, b) => (Math.abs(a.y - b.y) > 4.5 ? a.y - b.y : a.x - b.x));
       let out = "";
       for (let i = 0; i < sorted.length; i++) {
         const w = sorted[i];
@@ -9670,51 +9848,139 @@ document.addEventListener("DOMContentLoaded", () => {
       const words = pg.words || [];
       if (words.length === 0) continue;
 
-      const hSeq = words.find(w => /^(序號|項次|No|NO|編號)$/.test(w.text));
-      const hModel = words.find(w => /品名|型號|SKU|Model/i.test(w.text));
-      const hSpec = words.find(w => /規格/.test(w.text));
-      const anchors = [hSeq, hModel, hSpec].filter(Boolean);
-      if (anchors.length < 2) continue;
-
-      const hTop = Math.min(...anchors.map(w => w.y));
-      const tableHeaderWords = words.filter(w => Math.abs(w.y - hTop) <= 10);
-      const hQty = tableHeaderWords.find(w => /數量|Qty/i.test(w.text));
-      const hPrice = tableHeaderWords.find(w => /單價|價格|Price/i.test(w.text));
-      const hSub = tableHeaderWords.find(w => /小計|金額|Amount/i.test(w.text));
-      const hRemark = tableHeaderWords.find(w => /備註|交期|Remark/i.test(w.text));
-
-      const pw = pg.width || 595;
-      const bSeqModel = (hSeq && hModel) ? (hSeq.xEnd + hModel.x) / 2 : pw * 0.08;
-      const bModelSpec = (hModel && hSpec) ? (hModel.xEnd + hSpec.x) / 2 : pw * 0.27;
-      const bSpecQty = (hQty ? hQty.x - 6 : pw * 0.50);
-      const bQtyPrice = (hQty && hPrice) ? (hQty.xEnd + hPrice.x) / 2 : pw * 0.57;
-      const bPriceSub = (hPrice && hSub) ? (hPrice.xEnd + hSub.x) / 2 : pw * 0.68;
-      const bSubRemark = (hSub && hRemark) ? (hSub.xEnd + hRemark.x) / 2 : pw * 0.79;
-
-      const bodyWords = words
-        .filter(w => w.y > hTop + 8)
-        .sort((a, b) => (Math.abs(a.y - b.y) > 4 ? a.y - b.y : a.x - b.x));
-
-      const footerWord = bodyWords.find(w => /^(合計|未稅小計|未稅合計|總計|總金額|營業稅|說明事項)/.test(w.text.replace(/\s+/g, "")));
-      const limitY = footerWord ? footerWord.y - 4 : Infinity;
-      const validBodyWords = bodyWords.filter(w => w.y < limitY);
-      if (validBodyWords.length === 0) continue;
-
-      const visualLines = [];
-      for (const w of validBodyWords) {
-        const last = visualLines[visualLines.length - 1];
-        if (!last || Math.abs(w.y - last.y) > 5) {
-          visualLines.push({ y: w.y, words: [w] });
+      const sortedWords = [...words].sort((a, b) => (Math.abs(a.y - b.y) > 4.5 ? a.y - b.y : a.x - b.x));
+      const allLines = [];
+      for (const w of sortedWords) {
+        const last = allLines[allLines.length - 1];
+        if (!last || Math.abs(w.y - last.y) > 4.5) {
+          allLines.push({ y: w.y, words: [w] });
         } else {
           last.words.push(w);
         }
       }
+      allLines.forEach(ln => ln.words.sort((a, b) => a.x - b.x));
 
+      const headerLineIdx = allLines.findIndex(ln => isQuotationTableHeaderText(ln.words.map(w => w.text).join(" ")));
+      if (headerLineIdx < 0) continue;
+
+      const headerLine = allLines[headerLineIdx];
+      const charBoxes = [];
+      let compactHeader = "";
+      for (const t of headerLine.words) {
+        const clean = String(t.text || "").replace(/[\s　]+/g, "");
+        const len = clean.length;
+        if (!len) continue;
+        for (let ci = 0; ci < len; ci++) {
+          const x0 = t.x + (ci / len) * t.w;
+          const x1 = t.x + ((ci + 1) / len) * t.w;
+          compactHeader += clean[ci];
+          charBoxes.push({ x: x0, xEnd: x1 });
+        }
+      }
+
+      const roleSpecs = [
+        { role: "seq", re: /(項目|項次|序號|編號|No)/i },
+        { role: "colA", re: /(產品型號|品名|型號|Model|SKU)/i },
+        { role: "colB", re: /(規格說明|規格|Spec)/i },
+        { role: "qty", re: /(需求數量|數量|Qty)/i },
+        { role: "price", re: /(最終單價|單價|售價|經銷價|Price)/i },
+        { role: "sub", re: /(總金額|小計|金額|Amount)/i },
+        { role: "remark", re: /(備註交期|備註|交期|Remark)/i }
+      ];
+
+      const detectedCols = [];
+      for (const spec of roleSpecs) {
+        const m = compactHeader.match(spec.re);
+        if (m && typeof m.index === "number") {
+          const sIdx = m.index;
+          const eIdx = sIdx + m[0].length - 1;
+          const startBox = charBoxes[sIdx];
+          const endBox = charBoxes[eIdx];
+          if (startBox && endBox) {
+            detectedCols.push({
+              role: spec.role,
+              x: startBox.x,
+              xEnd: endBox.xEnd,
+              cx: (startBox.x + endBox.xEnd) / 2
+            });
+          }
+        }
+      }
+      if (detectedCols.length < 3) continue;
+      detectedCols.sort((a, b) => a.x - b.x);
+
+      // 擷取表頭與頁尾合計之間的明細視覺列
+      const validBodyLines = [];
+      for (let li = headerLineIdx + 1; li < allLines.length; li++) {
+        const ln = allLines[li];
+        const lineText = ln.words.map(w => w.text).join(" ");
+        if (isQuotationFooterLine(lineText)) break;
+        validBodyLines.push(ln);
+      }
+      if (validBodyLines.length === 0) continue;
+
+      // 利用表格本體 X 軸空白間隙投影校正每個欄位的實際左右邊界
+      const pw = pg.width || 595;
+      const intervals = [];
+      for (const ln of validBodyLines) {
+        const compact = ln.words.map(w => w.text).join("").replace(/[\s　]+/g, "");
+        if (/小計|合計|銷售金額/.test(compact)) continue;
+        for (const w of ln.words) {
+          if (w.w > pw * 0.45) continue;
+          intervals.push({ start: w.x, end: Math.max(w.x + 1, w.xEnd) });
+        }
+      }
+      intervals.sort((a, b) => a.start - b.start);
+      const clusters = [];
+      for (const iv of intervals) {
+        const lastCl = clusters[clusters.length - 1];
+        if (!lastCl || iv.start - lastCl.end > 4.5) {
+          clusters.push({ start: iv.start, end: iv.end, cx: (iv.start + iv.end) / 2 });
+        } else {
+          lastCl.end = Math.max(lastCl.end, iv.end);
+          lastCl.cx = (lastCl.start + lastCl.end) / 2;
+        }
+      }
+
+      detectedCols.forEach((col, ci) => {
+        const prevMid = ci > 0 ? (detectedCols[ci - 1].cx + col.cx) / 2 : -Infinity;
+        const nextMid = ci + 1 < detectedCols.length ? (col.cx + detectedCols[ci + 1].cx) / 2 : Infinity;
+        let chosen = clusters.find(cl => cl.start <= col.xEnd + 4 && cl.end >= col.x - 4);
+        if (!chosen) {
+          const candidates = clusters.filter(cl => cl.cx >= prevMid && cl.cx <= nextMid);
+          if (candidates.length > 0) {
+            chosen = candidates.sort((a, b) => Math.abs(a.cx - col.cx) - Math.abs(b.cx - col.cx))[0];
+          }
+        }
+        col.cluster = chosen || null;
+      });
+
+      const colBounds = [];
+      let curLeft = 0;
+      for (let ci = 0; ci < detectedCols.length; ci++) {
+        const col = detectedCols[ci];
+        let rightEdge = pw + 20;
+        if (ci + 1 < detectedCols.length) {
+          const nextCol = detectedCols[ci + 1];
+          if (col.cluster && nextCol.cluster && col.cluster !== nextCol.cluster && col.cluster.end < nextCol.cluster.start) {
+            rightEdge = (col.cluster.end + nextCol.cluster.start) / 2;
+          } else {
+            rightEdge = (col.xEnd + nextCol.x) / 2;
+          }
+        }
+        colBounds.push({ role: col.role, minX: curLeft, maxX: rightEdge });
+        curLeft = rightEdge;
+      }
+
+      const seqBound = colBounds.find(b => b.role === "seq");
+      const seqMaxX = seqBound ? seqBound.maxX : (detectedCols[0]?.xEnd + 10 || pw * 0.08);
+
+      // 依序號或垂直間距分組為明細列區塊
       const blocks = [];
-      for (const vl of visualLines) {
-        const hasNewSeq = vl.words.some(w => w.x < bSeqModel && /^\d{1,3}[.)]?$/.test(w.text));
+      for (const vl of validBodyLines) {
+        const hasNewSeq = vl.words.some(w => (w.x + w.w * 0.5) < seqMaxX && /^\d{1,3}[.)]?$/.test(w.text.trim()));
         const prevBlock = blocks[blocks.length - 1];
-        if (!prevBlock || hasNewSeq || (vl.y - prevBlock.lastY) > 16) {
+        if (!prevBlock || hasNewSeq || (vl.y - prevBlock.lastY) > 15) {
           blocks.push({ lastY: vl.y, words: [...vl.words] });
         } else {
           prevBlock.words.push(...vl.words);
@@ -9723,38 +9989,48 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       for (const blk of blocks) {
-        const colModel = [];
-        const colSpec = [];
-        const colQty = [];
-        const colPrice = [];
-        const colSub = [];
-        const colRemark = [];
+        const buckets = { seq: [], colA: [], colB: [], qty: [], price: [], sub: [], remark: [] };
         for (const w of blk.words) {
           const cx = w.x + w.w * 0.5;
-          if (cx < bSeqModel) continue;
-          if (cx < bModelSpec) colModel.push(w);
-          else if (cx < bSpecQty) colSpec.push(w);
-          else if (cx < bQtyPrice) colQty.push(w);
-          else if (cx < bPriceSub) colPrice.push(w);
-          else if (cx < bSubRemark) colSub.push(w);
-          else colRemark.push(w);
+          const matchB = colBounds.find(b => cx >= b.minX && cx < b.maxX);
+          if (matchB && buckets[matchB.role]) {
+            buckets[matchB.role].push(w);
+          }
         }
-        let pModel = smartJoinTokens(colModel);
-        let pSpec = smartJoinTokens(colSpec);
-        if (!pModel && !pSpec) continue;
-        if (!pModel && pSpec && scoreSkuLikelihood(pSpec) >= 10) {
+
+        const rawA = smartJoinTokens(buckets.colA);
+        const rawB = smartJoinTokens(buckets.colB);
+        const rawQtyStr = smartJoinTokens(buckets.qty);
+        const rawPriceStr = smartJoinTokens(buckets.price);
+        const rawSubStr = smartJoinTokens(buckets.sub);
+        const rawRemark = smartJoinTokens(buckets.remark);
+
+        if (!rawA && !rawB) continue;
+        if (/(合計|總計|營業稅|應稅|銷售金額|以上報價|此致|說明事項)/.test(rawA + rawB)) continue;
+
+        let pPrice = Math.round(parseImportNumber(rawPriceStr));
+        const pSub = Math.round(parseImportNumber(rawSubStr));
+        const parsedQty = parseImportNumber(rawQtyStr);
+        const pQty = parsedQty > 0 ? Math.max(1, Math.round(parsedQty)) : 1;
+        if (pPrice <= 0 && pSub > 0) pPrice = Math.round(pSub / pQty);
+
+        const isPlaceholderA = !rawA || /^[-–—]+$/.test(rawA);
+        const isPlaceholderB = !rawB || /^[-–—]+$/.test(rawB);
+        if (isPlaceholderA && isPlaceholderB) continue;
+        if ((rawA === "-" || !rawA) && !rawB && pPrice === 0 && pSub === 0) continue;
+        if (!rawQtyStr && pPrice === 0 && pSub === 0 && (rawA === "-" || rawB === "-")) continue;
+
+        let pModel = rawA;
+        let pSpec = rawB;
+        if (!pModel && pSpec && scoreSkuLikelihood(pSpec) >= 5) {
           pModel = pSpec;
           pSpec = "";
-        } else if (scoreSkuLikelihood(pSpec) > scoreSkuLikelihood(pModel)) {
-          const t = pModel;
+        } else if (pModel && pSpec && scoreSkuLikelihood(pSpec) > scoreSkuLikelihood(pModel)) {
+          const tmp = pModel;
           pModel = pSpec;
-          pSpec = t;
+          pSpec = tmp;
         }
-        const pQty = Math.max(1, Math.round(parseImportNumber(smartJoinTokens(colQty)) || 1));
-        let pPrice = Math.round(parseImportNumber(smartJoinTokens(colPrice)));
-        const pSub = Math.round(parseImportNumber(smartJoinTokens(colSub)));
-        if (pPrice <= 0 && pSub > 0) pPrice = Math.round(pSub / pQty);
-        if (!pModel && pPrice <= 0) continue;
+        if (!pModel && pPrice <= 0 && pSub <= 0) continue;
 
         items.push({
           checked: true,
@@ -9764,7 +10040,7 @@ document.addEventListener("DOMContentLoaded", () => {
           dealer_price: pPrice,
           discount_pct: 100,
           final_unit_price: pPrice,
-          note_lead_time: smartJoinTokens(colRemark),
+          note_lead_time: rawRemark,
           stock_qty: null,
           match_status: "unmatched",
           ocr_original: ""
@@ -9826,18 +10102,33 @@ document.addEventListener("DOMContentLoaded", () => {
       const words = [];
 
       for (const it of (textContent.items || [])) {
-        const txt = String(it.str || "").trim();
-        if (!txt) continue;
-        nonSpaceChars += txt.replace(/\s+/g, "").length;
+        const rawStr = String(it.str || "");
+        if (!rawStr.trim()) continue;
+        nonSpaceChars += rawStr.replace(/\s+/g, "").length;
         const tx = pdfjsLib.Util.transform(viewport.transform, it.transform);
-        const w = Math.max(2, Math.abs(it.width || txt.length * 5));
-        const x = tx[4];
-        const y = tx[5];
-        words.push({ text: txt, x, xEnd: x + w, y, w });
+        const totalW = Math.max(2, Math.abs(it.width || rawStr.length * 5));
+        const baseX = tx[4];
+        const baseY = tx[5];
+        const totalLen = Math.max(1, rawStr.length);
+
+        if (/\s{2,}/.test(rawStr)) {
+          const segRe = /\S+(?: \S+)*/g;
+          let sm;
+          while ((sm = segRe.exec(rawStr)) !== null) {
+            const segTxt = sm[0].trim();
+            if (!segTxt) continue;
+            const segX = baseX + (sm.index / totalLen) * totalW;
+            const segW = Math.max(2, (sm[0].length / totalLen) * totalW);
+            words.push({ text: segTxt, x: segX, xEnd: segX + segW, y: baseY, w: segW });
+          }
+        } else {
+          const txt = rawStr.trim();
+          words.push({ text: txt, x: baseX, xEnd: baseX + totalW, y: baseY, w: totalW });
+        }
       }
 
       const lineGroups = [];
-      words.sort((a, b) => (Math.abs(a.y - b.y) > 4 ? a.y - b.y : a.x - b.x));
+      words.sort((a, b) => (Math.abs(a.y - b.y) > 4.5 ? a.y - b.y : a.x - b.x));
       for (const w of words) {
         const last = lineGroups[lineGroups.length - 1];
         if (!last || Math.abs(w.y - last.y) > 4.5) {

@@ -9004,7 +9004,7 @@ html[data-theme="dark"] .pyside-excel-table:not(#quoteDesktopTable):not(.old-imp
 }
 
 .old-import-modal-content .modal-body {
-  overflow-y: auto;
+  overflow-y: auto !important;
   flex: 1 1 auto;
 }
 
@@ -9014,6 +9014,14 @@ html[data-theme="dark"] .pyside-excel-table:not(#quoteDesktopTable):not(.old-imp
   border-bottom: 1px solid var(--border-card);
   padding-bottom: 8px;
   flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.old-import-pane,
+.old-import-progress-box,
+.old-import-warnings,
+.old-import-preview-section {
+  flex-shrink: 0;
 }
 
 .old-import-tab-btn {

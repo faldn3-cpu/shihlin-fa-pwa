@@ -546,7 +546,7 @@
                 <label class="form-label">拜訪日期<span class="required">*</span></label>
                 <input id="inputReportDate" type="date" class="form-control pyside-hidden-date-input" required />
                 <button type="button" id="btnDate_inputReportDate" class="pyside-date-btn form-control"
-                  data-target-input="inputReportDate">請選擇日期  ▼</button>
+                  data-target-input="inputReportDate">請選擇日期 ▼</button>
               </div>
 
               <div class="form-group">
@@ -684,7 +684,7 @@
                     <label class="form-label">預估成案日期</label>
                     <input id="inputEstDealDate" type="date" class="form-control pyside-hidden-date-input" />
                     <button type="button" id="btnDate_inputEstDealDate" class="pyside-date-btn form-control"
-                      data-target-input="inputEstDealDate">請選擇日期  ▼</button>
+                      data-target-input="inputEstDealDate">請選擇日期 ▼</button>
                   </div>
                   <div class="form-group">
                     <label class="form-label">預估案件總金額 (元)</label>
@@ -865,7 +865,7 @@
                   <div class="grid-cell-content">
                     <input type="date" id="quoteDate" class="pyside-input pyside-hidden-date-input" style="flex:1;">
                     <button type="button" id="btnDate_quoteDate" class="pyside-date-btn" data-target-input="quoteDate"
-                      style="flex:1;">請選擇日期  ▼</button>
+                      style="flex:1;">請選擇日期 ▼</button>
                   </div>
                 </div>
 
@@ -918,9 +918,10 @@
                 <div class="grid-row">
                   <div class="grid-cell-label">有效日期:</div>
                   <div class="grid-cell-content">
-                    <input type="date" id="quoteValidDate" class="pyside-input pyside-hidden-date-input" style="flex:1;">
+                    <input type="date" id="quoteValidDate" class="pyside-input pyside-hidden-date-input"
+                      style="flex:1;">
                     <button type="button" id="btnDate_quoteValidDate" class="pyside-date-btn"
-                      data-target-input="quoteValidDate" style="flex:1;">請選擇日期  ▼</button>
+                      data-target-input="quoteValidDate" style="flex:1;">請選擇日期 ▼</button>
                   </div>
                   <div class="grid-cell-label">付款方式:</div>
                   <div class="grid-cell-content">
@@ -1201,7 +1202,7 @@
               <span class="pyside-hidden-date-input">~</span>
               <input type="date" id="historyEndDate" class="pyside-date-inline pyside-hidden-date-input">
               <button type="button" id="btnRange_historyDate" class="pyside-date-range-btn"
-                data-start-input="historyStartDate" data-end-input="historyEndDate">選擇日期範圍  ▼</button>
+                data-start-input="historyStartDate" data-end-input="historyEndDate">選擇日期範圍 ▼</button>
             </div>
             <label class="pyside-checkbox-label" style="margin-left:8px;">
               <input type="checkbox" id="chkHistoryShowAll" checked>
@@ -1627,7 +1628,7 @@
               <span class="pyside-hidden-date-input">~</span>
               <input type="date" id="dashEndDate" class="pyside-date-inline pyside-hidden-date-input">
               <button type="button" id="btnRange_dashDate" class="pyside-date-range-btn"
-                data-start-input="dashStartDate" data-end-input="dashEndDate">選擇日期範圍  ▼</button>
+                data-start-input="dashStartDate" data-end-input="dashEndDate">選擇日期範圍 ▼</button>
             </div>
             <select id="dashQuickRangeSelect" class="pyside-select" style="width:140px; height:36px;">
               <option value="custom">自訂區間</option>
@@ -3652,7 +3653,8 @@
   </div>
 
   <!-- 電腦版日期區間選取彈窗 (對標 _QuotationApp RangeCalendarPopup) -->
-  <div id="pysideRangeCalendarPopup" class="pyside-cal-popup pyside-cal-popup-range hidden" role="dialog" aria-label="日期範圍月曆">
+  <div id="pysideRangeCalendarPopup" class="pyside-cal-popup pyside-cal-popup-range hidden" role="dialog"
+    aria-label="日期範圍月曆">
     <div class="pyside-cal-main-view" id="rcMainView">
       <div class="pyside-cal-header-bar">
         <button type="button" id="rcPrevMonthBtn" class="pyside-cal-nav" title="上個月">&lt;</button>

@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.66";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 16:58:00";
-  const SYSTEM_APP_RELEASE_NOTES = "修正舊版報價單 PDF 分散對齊表頭、型號規格欄位與客戶聯絡資訊精準解析";
+  const SYSTEM_APP_VERSION = "v1.0.67";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 17:15:00";
+  const SYSTEM_APP_RELEASE_NOTES = "移除專案名稱未輸入時的預設「標準設備報價」字樣，未填寫則保持空白";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -309,7 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchEncryptedSeedEnvelope() {
       if (rawEncryptedEnvelopeCache) return rawEncryptedEnvelopeCache;
-      const resp = await origFetch(`./data/encrypted_seed_db.json?v=20261116_v1_0_66`);
+      const resp = await origFetch(`./data/encrypted_seed_db.json?v=20261116_v1_0_67`);
       if (!resp || !resp.ok) throw new Error("無法下載網頁加密資料包");
       rawEncryptedEnvelopeCache = await resp.json();
       return rawEncryptedEnvelopeCache;
@@ -10658,7 +10658,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="import-quote-row" data-quoteno="${escapeHtml(q.quote_no)}" style="padding:10px 14px; border:1px solid var(--border-color); border-radius:6px; background:var(--bg-card); cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
         <div>
           <div style="font-weight:700; color:var(--primary-color, #2563eb); font-family:monospace;">${escapeHtml(q.quote_no)}</div>
-          <div style="font-size:0.85rem; color:var(--text-main); font-weight:600; margin-top:2px;">${escapeHtml(q.customer_name)} ｜ ${escapeHtml(q.project_name || "設備報價")}</div>
+          <div style="font-size:0.85rem; color:var(--text-main); font-weight:600; margin-top:2px;">${escapeHtml(q.customer_name)}${(q.project_name && q.project_name !== "標準設備報價") ? " ｜ " + escapeHtml(q.project_name) : ""}</div>
           <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${escapeHtml(q.quote_date)} ｜ $ ${(q.grand_total || 0).toLocaleString()}</div>
         </div>
         <button type="button" class="fluent-btn secondary" style="font-size:0.8rem; padding:4px 10px;">載入預覽</button>
@@ -10701,7 +10701,7 @@ document.addEventListener("DOMContentLoaded", () => {
               fax: data.fax || "",
               location: data.delivery_location || data.location || "",
               payment: data.payment_terms || "",
-              project_name: data.project_name || "",
+              project_name: (data.project_name && data.project_name !== "標準設備報價") ? data.project_name : "",
               project_type: data.project_type || ""
             },
             items,
@@ -10940,7 +10940,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function exportQuoteToExcel() {
     const csvCell = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
     const custName = (document.getElementById("quoteCustomerInput")?.value || document.getElementById("customerName")?.value || "").trim() || "士林電機報價客戶";
-    const projName = document.getElementById("quoteProjectName")?.value.trim() || "專案設備";
+    const projName = document.getElementById("quoteProjectName")?.value.trim() || "";
     const qDate = document.getElementById("quoteDate")?.value || new Date().toISOString().split("T")[0];
     const taxId = document.getElementById("quoteTaxId")?.value.trim() || "";
     const contactName = document.getElementById("quoteContactSelect")?.value.trim() || "";
@@ -11441,7 +11441,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function openLineQuoteModal() {
     const custSel = document.getElementById("customerSelect");
     const custName = document.getElementById("quoteCustomerInput")?.value.trim() || document.getElementById("customerName")?.value.trim() || (custSel && custSel.selectedIndex > 0 ? custSel.options[custSel.selectedIndex].text : "") || "貴客戶";
-    const projName = document.getElementById("quoteProjectName")?.value.trim() || "設備報價";
+    const projName = document.getElementById("quoteProjectName")?.value.trim() || "";
     const qDate = document.getElementById("quoteDate")?.value || new Date().toISOString().split("T")[0];
     const activeSales = getActiveSalesName();
 
@@ -11451,7 +11451,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let lines = [];
     lines.push("【士林電機 FA 業務報價單】");
     lines.push(`客戶名稱：${custName}`);
-    lines.push(`專案案場：${projName}`);
+    if (projName) lines.push(`專案案場：${projName}`);
     lines.push(`報價日期：${qDate}`);
     lines.push("----------------------------------------");
 
@@ -11558,7 +11558,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let prefix = (prefixInput && prefixInput !== "-- 請選擇客戶 --") ? prefixInput : `${prefixName}${yymm}`;
 
     const crmProject = document.getElementById("crmCaseSelect")?.value || "";
-    const projName = document.getElementById("quoteProjectName")?.value.trim() || crmProject || "標準設備報價";
+    const projName = document.getElementById("quoteProjectName")?.value.trim() || crmProject || "";
     const projType = document.getElementById("quoteProjectAttribute")?.value || "一次性專案";
     const qDate = document.getElementById("quoteDate")?.value || now.toISOString().split("T")[0];
     const vDate = document.getElementById("quoteValidDate")?.value || qDate;
@@ -11871,7 +11871,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <td style="text-align:center; font-weight:600; color:#2c3e50;">${escapeHtml(baseNo)}</td>
           <td style="text-align:center;">${escapeHtml(revStr)}</td>
           <td style="max-width:170px; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(q.customer_name || "")}</td>
-          <td style="max-width:175px; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(q.project_name || "")}</td>
+          <td style="max-width:175px; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(q.project_name && q.project_name !== "標準設備報價" ? q.project_name : "")}</td>
           <td style="text-align:right; font-family:Consolas, monospace;">${Number(q.subtotal || 0).toLocaleString()}</td>
           <td style="text-align:center;">${formatStatusBadgeP3(q.status)}</td>
           <td style="text-align:center; font-family:Consolas, monospace;">${escapeHtml(q.quote_date || "")}</td>
@@ -11907,7 +11907,7 @@ document.addEventListener("DOMContentLoaded", () => {
         baseNo,
         revStr,
         q.customer_name || "",
-        q.project_name || "",
+        (q.project_name && q.project_name !== "標準設備報價") ? q.project_name : "",
         Number(q.subtotal || 0),
         q.status || "報價中",
         q.quote_date || "",
@@ -11948,7 +11948,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const projInput = document.getElementById("quoteProjectName");
-      if (projInput) projInput.value = header.project_name || "";
+      if (projInput) projInput.value = (header.project_name && header.project_name !== "標準設備報價") ? header.project_name : "";
       const projAttr = document.getElementById("quoteProjectAttribute");
       if (projAttr && header.project_type) projAttr.value = header.project_type;
 
@@ -12211,7 +12211,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const projInput = document.getElementById("quoteProjectName");
-    if (projInput) projInput.value = draft.project_name || "";
+    if (projInput) projInput.value = (draft.project_name && draft.project_name !== "標準設備報價") ? draft.project_name : "";
 
     const itemsContainer = document.getElementById("itemsContainer");
     if (itemsContainer) itemsContainer.innerHTML = "";

@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261113_v1_0_56" />
+  <link rel="stylesheet" href="css/style.css?v=20261116_v1_0_57" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -3688,17 +3688,46 @@
     </div>
   </div>
 
+  <!-- 電腦版型號智慧關聯度下拉選單浮層 (對標 _QuotationApp RelevanceCompleter) -->
+  <div id="pysideModelCompleterPopup" class="pyside-completer-popup hidden" role="listbox" aria-label="型號快速選單">
+    <div id="pysideModelCompleterHeader" class="pyside-completer-header">
+      <span>產品型號智慧搜尋（開頭符合優先排列）</span>
+      <span id="pysideModelCompleterCount" style="color:#64748b;">0 筆</span>
+    </div>
+    <div id="pysideModelCompleterList" class="pyside-completer-list"></div>
+  </div>
+
+  <!-- 正宗 Excel 試算表滑鼠右鍵快捷選單 (支援多列插入、貼上、向下推擠、向下填滿與刪除) -->
+  <div id="pysideQuoteTableContextMenu" class="excel-context-menu hidden" role="menu" aria-label="表格右鍵功能選單">
+    <button type="button" class="excel-ctx-item" data-action="copy">複製 (Ctrl+C)</button>
+    <button type="button" class="excel-ctx-item" data-action="cut">剪下 (Ctrl+X)</button>
+    <button type="button" class="excel-ctx-item" data-action="paste">貼上 (Ctrl+V)</button>
+    <button type="button" class="excel-ctx-item" data-action="insert-copied" id="ctxMenuInsertCopiedBtn">插入複製的儲存格 (向下推擠)</button>
+    <div class="excel-ctx-sep"></div>
+    <button type="button" class="excel-ctx-item" data-action="insert-above" id="ctxMenuInsertAboveBtn">在此上方插入 1 列空白列</button>
+    <button type="button" class="excel-ctx-item" data-action="insert-below" id="ctxMenuInsertBelowBtn">在此下方插入 1 列空白列</button>
+    <button type="button" class="excel-ctx-item" data-action="insert-subtotal-above">在此上方插入方案小計</button>
+    <button type="button" class="excel-ctx-item" data-action="insert-subtotal-below">在此下方插入方案小計</button>
+    <div class="excel-ctx-sep"></div>
+    <button type="button" class="excel-ctx-item" data-action="fill-down-range" id="ctxMenuFillDownBtn">向下填滿選取範圍 (Ctrl+D)</button>
+    <button type="button" class="excel-ctx-item" data-action="fill-down-bottom">向下填滿至表格最底</button>
+    <button type="button" class="excel-ctx-item" data-action="clear-cells">清除儲存格內容 (Delete)</button>
+    <button type="button" class="excel-ctx-item" data-action="set-row-height">設定列高... (如同 Excel)</button>
+    <div class="excel-ctx-sep"></div>
+    <button type="button" class="excel-ctx-item danger" data-action="delete-rows" id="ctxMenuDeleteRowsBtn">刪除選取列</button>
+  </div>
+
   <!-- 身分切換輕量通知浮動橫幅 -->
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261113_v1_0_56"></script>
+  <script src="js/app.js?v=20261116_v1_0_57"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261113_v1_0_56')
+        navigator.serviceWorker.register('./sw.js?v=20261116_v1_0_57')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

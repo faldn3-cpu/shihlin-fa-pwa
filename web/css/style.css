@@ -8447,3 +8447,302 @@ html[data-theme="dark"] .pyside-date-range-box:hover {
   background-color: #4d8ef0;
   color: #ffffff;
 }
+
+/* ============================================================================
+   正宗 Microsoft Excel 報價單表格引擎 & 電腦版型號智慧選單樣式 (v1.0.57)
+   ============================================================================ */
+.pyside-excel-table {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pyside-excel-table th.excel-header-highlight {
+  background-color: #dbeafe !important;
+  color: #1d4ed8 !important;
+  border-bottom: 2px solid #0284c7 !important;
+}
+
+html[data-theme="dark"] .pyside-excel-table th.excel-header-highlight {
+  background-color: #1e3a5f !important;
+  color: #93c5fd !important;
+  border-bottom: 2px solid #38bdf8 !important;
+}
+
+.pyside-excel-table td.cell-vertical-index {
+  cursor: pointer;
+  user-select: none;
+}
+
+.pyside-excel-table td.cell-vertical-index.excel-header-highlight {
+  background-color: #dbeafe !important;
+  color: #1d4ed8 !important;
+  font-weight: 800;
+  box-shadow: inset -2px 0 0 #0284c7;
+}
+
+html[data-theme="dark"] .pyside-excel-table td.cell-vertical-index.excel-header-highlight {
+  background-color: #1e3a5f !important;
+  color: #93c5fd !important;
+  box-shadow: inset -2px 0 0 #38bdf8;
+}
+
+.pyside-excel-table td {
+  position: relative;
+}
+
+.pyside-excel-table td.excel-cell-in-range:not(.cell-vertical-index) {
+  background-color: rgba(2, 132, 199, 0.13) !important;
+}
+
+html[data-theme="dark"] .pyside-excel-table td.excel-cell-in-range:not(.cell-vertical-index) {
+  background-color: rgba(56, 189, 248, 0.18) !important;
+}
+
+.pyside-excel-table td.excel-cell-fill-preview:not(.cell-vertical-index) {
+  background-color: rgba(16, 185, 129, 0.16) !important;
+  box-shadow: inset 0 0 0 1px #10b981;
+}
+
+.pyside-excel-table td.excel-cell-active:not(.cell-vertical-index) {
+  overflow: visible !important;
+  z-index: 4;
+  box-shadow: inset 0 0 0 2px #0284c7 !important;
+  background-color: var(--bg-card) !important;
+}
+
+.pyside-excel-table td.excel-cell-active.excel-cell-editing:not(.cell-vertical-index) {
+  box-shadow: inset 0 0 0 2px #0f766e, 0 2px 8px rgba(15, 118, 110, 0.22) !important;
+  z-index: 6;
+}
+
+.pyside-excel-table td.excel-cell-copied:not(.cell-vertical-index) {
+  outline: 2px dashed #059669;
+  outline-offset: -2px;
+}
+
+.excel-fill-handle {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 8px;
+  height: 8px;
+  background-color: #0284c7;
+  border: 1.5px solid #ffffff;
+  border-radius: 1px;
+  cursor: crosshair;
+  z-index: 10;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+
+.excel-fill-handle:hover {
+  transform: scale(1.25);
+  background-color: #0369a1;
+}
+
+.excel-plain-cell-input {
+  width: 100%;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13.5px;
+  padding: 2px 5px;
+  box-sizing: border-box;
+  outline: none;
+  text-overflow: ellipsis;
+}
+
+.excel-plain-cell-input:hover {
+  border-color: var(--border-card);
+  background-color: var(--bg-input);
+}
+
+.excel-plain-cell-input:focus {
+  border-color: var(--border-focus);
+  background-color: var(--bg-input);
+}
+
+.excel-plain-cell-input.align-right {
+  text-align: right;
+  font-family: Consolas, Monaco, monospace;
+}
+
+/* 電腦版型號智慧關聯度補全浮層 */
+.pyside-completer-popup {
+  position: fixed;
+  z-index: 99998;
+  width: 440px;
+  max-width: calc(100vw - 16px);
+  max-height: 320px;
+  background-color: var(--bg-card, #ffffff);
+  color: var(--text-primary, #1e293b);
+  border: 1px solid var(--border-focus, #0284c7);
+  border-radius: 6px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.24);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+}
+
+.pyside-completer-popup.hidden {
+  display: none !important;
+}
+
+.pyside-completer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  background-color: var(--bg-subtle, #f1f5f9);
+  border-bottom: 1px solid var(--border-light, #e2e8f0);
+  color: var(--text-secondary, #475569);
+}
+
+.pyside-completer-list {
+  overflow-y: auto;
+  max-height: 280px;
+}
+
+.pyside-completer-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-light, #f1f5f9);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.pyside-completer-item:hover,
+.pyside-completer-item.is-active {
+  background-color: #dbeafe;
+  color: #0f172a;
+}
+
+html[data-theme="dark"] .pyside-completer-item:hover,
+html[data-theme="dark"] .pyside-completer-item.is-active {
+  background-color: #1e3a5f;
+  color: #f8fafc;
+}
+
+.pyside-completer-left {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pyside-completer-model-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pyside-completer-order-tag {
+  color: #c2410c;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.pyside-completer-special-tag {
+  color: #7c3aed;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.pyside-completer-spec {
+  font-size: 11.5px;
+  color: var(--text-tertiary, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pyside-completer-right {
+  text-align: right;
+  flex-shrink: 0;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 12px;
+}
+
+.pyside-completer-price {
+  font-weight: 700;
+  color: #0284c7;
+}
+
+.pyside-completer-stock {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Excel 試算表滑鼠右鍵功能選單 */
+.excel-context-menu {
+  position: fixed;
+  z-index: 99999;
+  min-width: 245px;
+  background-color: var(--bg-card, #ffffff);
+  color: var(--text-primary, #1e293b);
+  border: 1px solid var(--border-card, #cbd5e1);
+  border-radius: 6px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.25);
+  padding: 5px 0;
+  display: flex;
+  flex-direction: column;
+  font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+}
+
+.excel-context-menu.hidden {
+  display: none !important;
+}
+
+.excel-ctx-item {
+  width: 100%;
+  text-align: left;
+  padding: 7px 14px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary, #1e293b);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+}
+
+.excel-ctx-item:hover:not(:disabled) {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+html[data-theme="dark"] .excel-ctx-item:hover:not(:disabled) {
+  background-color: #1e3a5f;
+  color: #7dd3fc;
+}
+
+.excel-ctx-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.excel-ctx-item.danger {
+  color: #dc2626;
+}
+
+.excel-ctx-item.danger:hover:not(:disabled) {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.excel-ctx-sep {
+  height: 1px;
+  background-color: var(--border-light, #e2e8f0);
+  margin: 4px 0;
+}

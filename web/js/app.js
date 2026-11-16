@@ -5591,6 +5591,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // 當業務人員身份切換時，重新載入該業務專屬客戶、產品牌價(含個人特殊品)、歷史報價與草稿
   async function onQuotationSalespersonChanged(salesName) {
     quoteProductsCache = [];
+    if (typeof invalidateDesktopProductsCache === "function") {
+      invalidateDesktopProductsCache();
+    }
     currentSelectedCustomer = null;
     const spBadge = document.getElementById("specialProductOwnerBadge");
     if (spBadge) spBadge.textContent = `所屬業務：${salesName}`;
@@ -5646,7 +5649,13 @@ document.addEventListener("DOMContentLoaded", () => {
       initQuoteRowOrderSwapper();
       initQuoteTableHeightDragHandle();
       initQuoteWorkspaceBoundaryResizers();
+      if (typeof initExcelQuoteTableEngine === "function") {
+        initExcelQuoteTableEngine();
+      }
       isQuotationModuleInitialized = true;
+    }
+    if (typeof ensureDesktopProductsCacheLoaded === "function") {
+      ensureDesktopProductsCacheLoaded();
     }
     const qDate = document.getElementById("quoteDate");
     if (qDate && !qDate.value) {
@@ -5963,7 +5972,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const indexCell = e.target.closest("td.cell-vertical-index");
       const tr = e.target.closest("tr");
       if (!tr) return;
-      if (indexCell) {
+      // 僅在按住 Alt 鍵拖曳左側項次時啟用列順序對調，保留直接點擊與拖曳給 Excel 多列選取
+      if (indexCell && e.altKey) {
         tr.setAttribute("draggable", "true");
       } else {
         tr.removeAttribute("draggable");
@@ -7151,9 +7161,13 @@ document.addEventListener("DOMContentLoaded", () => {
     updateDesktopBannerForRow(null);
     const defRows = parseInt(localStorage.getItem("shihlin_quote_default_rows") || "5", 10) || 5;
     for (let i = 0; i < defRows; i++) {
-      addBlankItem();
+      addBlankItem(null, { skipRecalc: true });
     }
+    refreshItemIndices();
     calculateTotal();
+    if (typeof resetExcelTableEngineState === "function") {
+      resetExcelTableEngineState();
+    }
   }
 
   // 視窗寬度自適應模式守護 (>= 768px 電腦端 Excel 試算表，< 768px 手機端圖三卡片)
@@ -7165,6 +7179,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
   window.addEventListener("resize", enforceDesktopQuotationView);
+
+  // 安全讀寫儲存格數值（相容 span 文字元素與 Excel input 輸入框）
+  function getCellVal(el) {
+    if (!el) return "";
+    return (el.tagName === "INPUT" || el.tagName === "TEXTAREA") ? String(el.value || "") : String(el.textContent || "");
+  }
+
+  function setCellVal(el, val) {
+    if (!el) return;
+    if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+      el.value = val;
+    } else {
+      el.textContent = val;
+    }
+  }
 
   // 更新電腦版第 2 排選取明細橫幅與動作按鈕 (100% 還原 _QuotationApp gui_page1.py update_banner_for_row)
   function updateDesktopBannerForRow(rowEl) {
@@ -7223,7 +7252,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const itemId = rowEl.getAttribute("data-itemid");
     const model = document.getElementById(`d-${itemId}-model-input`)?.value.trim() || document.getElementById(`${itemId}-code`)?.value.trim() || "";
-    const spec = document.getElementById(`d-${itemId}-spec`)?.textContent?.trim() || "";
+    const spec = getCellVal(document.getElementById(`d-${itemId}-spec`)).trim();
     const sku = document.getElementById(`${itemId}-sku`)?.value.trim() || "";
     const isOrder = !document.getElementById(`${itemId}-order-badge`)?.classList.contains("hidden");
 
@@ -7286,13 +7315,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 新增品項 (100% 同步手機端 _QuotationApp\pwa 卡片與電腦端 _QuotationApp 10 欄試算表)
-  function addBlankItem(initialData = null) {
+  // 新增品項 (100% 同步手機端卡片與電腦端 Excel 試算表，支援在任意指定列上方/下方精準插入)
+  function addBlankItem(initialData = null, options = {}) {
     quoteItemCount++;
     const itemId = `item-${quoteItemCount}`;
     const itemsContainer = document.getElementById("itemsContainer");
     const desktopTableBody = document.getElementById("quoteDesktopTableBody");
-    if (!itemsContainer) return;
+    if (!itemsContainer) return null;
 
     const currentCount = itemsContainer.querySelectorAll('.item-row').length + 1;
     const modelVal = initialData?.model_no || "";
@@ -7303,13 +7332,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const isOrderItem = Boolean(initialData?.is_order_item);
     const isSpecialProduct = Boolean(initialData?.is_special);
 
-    const stockQtyVal = initialData?.stock_qty !== undefined && initialData?.stock_qty !== null
+    const stockQtyVal = initialData?.stock_qty !== undefined && initialData?.stock_qty !== null && initialData?.stock_qty !== ""
       ? initialData.stock_qty
       : (hasModel ? 0 : null);
     const stockDisplay = stockQtyVal !== null ? `${Number(stockQtyVal).toLocaleString()} 台` : "-";
     const desktopStockDisplay = stockQtyVal !== null ? `${Number(stockQtyVal).toLocaleString()}` : "";
 
-    const dealerPriceVal = parseFloat(initialData?.dealer_price) || 0;
+    const dealerPriceVal = parseFloat(String(initialData?.dealer_price ?? "").replace(/,/g, "")) || 0;
     const dealerPriceDisplay = dealerPriceVal > 0 ? `$${dealerPriceVal.toLocaleString()}` : "-";
     const desktopDealerDisplay = dealerPriceVal > 0 ? dealerPriceVal.toLocaleString() : "";
 
@@ -7317,7 +7346,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const discountVal = hasDiscount ? initialData.discount_pct : (hasModel ? 100 : "");
 
     let rawEstPriceVal = 0;
-    if (dealerPriceVal > 0 && discountVal !== "") {
+    if (initialData && initialData.raw_est_price !== undefined && initialData.raw_est_price !== null && initialData.raw_est_price !== "") {
+      rawEstPriceVal = parseFloat(initialData.raw_est_price) || 0;
+    } else if (dealerPriceVal > 0 && discountVal !== "") {
       rawEstPriceVal = Math.round(dealerPriceVal * (parseFloat(discountVal) / 100));
     }
 
@@ -7334,7 +7365,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const sugPriceVal = rawEstPriceVal > 0 ? rawEstPriceVal : "";
     const finalPriceDisplay = finalUnitPriceVal > 0 ? `$${finalUnitPriceVal.toLocaleString()}` : "-";
-    const qtyVal = parseInt(initialData?.quantity, 10) || 1;
+    const hasExplicitQty = initialData && initialData.quantity !== undefined && initialData.quantity !== null && initialData.quantity !== "";
+    const qtyVal = hasExplicitQty ? (parseInt(initialData.quantity, 10) || 1) : 1;
     const rowSubtotalVal = initialData?.row_subtotal !== undefined
       ? (parseFloat(initialData.row_subtotal) || Math.round(finalUnitPriceVal * qtyVal))
       : Math.round(finalUnitPriceVal * qtyVal);
@@ -7414,8 +7446,9 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
     itemsContainer.insertAdjacentHTML('beforeend', mobileItemHTML);
 
-    // 2. 電腦端 QuoteTableWidget 10 欄試算表表格列 HTML (100% 還原附圖 1 欄位順序與圓角白框型號選單)
+    // 2. 電腦端 Excel 試算表表格列 HTML（全可編輯格改為支援方向鍵移動的文字框與純淨框線）
     // 欄位順序：項次 | 9:可用數量 | 0:型號 | 6:數量 | 1:規格 | 2:經銷價 | 3:報價折數% | 4:預計報價金額 | 5:最終報價金額 | 7:小計 | 8:備註/交期
+    let createdDesktopRow = null;
     if (desktopTableBody) {
       const desktopRowHTML = `
         <tr id="d-${itemId}" class="desktop-item-row" data-itemid="${itemId}">
@@ -7425,25 +7458,25 @@ document.addEventListener("DOMContentLoaded", () => {
           </td>
           <td>
             <div class="pyside-model-combo-wrap" id="d-${itemId}-model-wrap">
-              <input type="text" id="d-${itemId}-model-input" class="cell-model-input" placeholder="" value="${escapeHtml(modelVal)}">
-              <button type="button" id="d-${itemId}-model" class="pyside-model-combo-arrow" style="background:none; border:none; pointer-events:auto; cursor:pointer;" title="從產品庫挑選">▼</button>
+              <input type="text" id="d-${itemId}-model-input" class="cell-model-input" autocomplete="off" placeholder="" value="${escapeHtml(modelVal)}">
+              <button type="button" id="d-${itemId}-model" class="pyside-model-combo-arrow" style="background:none; border:none; pointer-events:auto; cursor:pointer;" title="展開型號智慧選單">▼</button>
             </div>
             <input type="hidden" id="d-${itemId}-code" value="${escapeHtml(modelVal)}">
           </td>
           <td>
-            <input type="number" id="d-${itemId}-qty" class="pyside-cell-input align-center" min="1" value="${hasModel || initialData ? qtyVal : ''}">
+            <input type="text" inputmode="decimal" id="d-${itemId}-qty" class="pyside-cell-input align-center" value="${hasModel || hasExplicitQty ? qtyVal : ''}">
           </td>
           <td>
-            <span id="d-${itemId}-spec" class="pyside-cell-readonly" title="${escapeHtml(specVal)}">${escapeHtml(specVal)}</span>
+            <input type="text" id="d-${itemId}-spec" class="excel-plain-cell-input" value="${escapeHtml(specVal)}" title="${escapeHtml(specVal)}">
           </td>
           <td>
-            <span id="d-${itemId}-dealer-price" class="pyside-cell-readonly align-right">${escapeHtml(desktopDealerDisplay)}</span>
+            <input type="text" inputmode="decimal" id="d-${itemId}-dealer-price" class="excel-plain-cell-input align-right" value="${escapeHtml(desktopDealerDisplay)}">
           </td>
           <td>
-            <input type="number" id="d-${itemId}-discount" class="pyside-cell-input align-right" step="any" value="${escapeHtml(String(discountVal))}">
+            <input type="text" inputmode="decimal" id="d-${itemId}-discount" class="pyside-cell-input align-right" value="${escapeHtml(String(discountVal))}">
           </td>
           <td>
-            <input type="number" id="d-${itemId}-est-price" class="pyside-cell-input align-right" step="any" value="${rawEstPriceVal > 0 ? rawEstPriceVal : ''}">
+            <input type="text" inputmode="decimal" id="d-${itemId}-est-price" class="pyside-cell-input align-right" value="${rawEstPriceVal > 0 ? rawEstPriceVal : ''}">
           </td>
           <td>
             <span id="d-${itemId}-final-price-cell" class="pyside-cell-readonly align-right" style="font-weight:700;">${finalUnitPriceVal > 0 ? finalUnitPriceVal.toLocaleString() : ''}</span>
@@ -7457,28 +7490,39 @@ document.addEventListener("DOMContentLoaded", () => {
           </td>
         </tr>
       `;
-      desktopTableBody.insertAdjacentHTML('beforeend', desktopRowHTML);
+      if (options.insertBeforeRowEl && options.insertBeforeRowEl.parentElement === desktopTableBody) {
+        options.insertBeforeRowEl.insertAdjacentHTML('beforebegin', desktopRowHTML);
+      } else if (options.insertAfterRowEl && options.insertAfterRowEl.parentElement === desktopTableBody) {
+        options.insertAfterRowEl.insertAdjacentHTML('afterend', desktopRowHTML);
+      } else {
+        desktopTableBody.insertAdjacentHTML('beforeend', desktopRowHTML);
+      }
 
-      const dRow = document.getElementById(`d-${itemId}`);
-      if (dRow) {
-        dRow.addEventListener("click", () => {
-          updateDesktopBannerForRow(dRow);
+      createdDesktopRow = document.getElementById(`d-${itemId}`);
+      if (createdDesktopRow) {
+        createdDesktopRow.addEventListener("click", () => {
+          updateDesktopBannerForRow(createdDesktopRow);
         });
       }
+      syncMobileItemsOrderWithDesktop();
     }
 
-    refreshItemIndices();
     setupItemRowEvents(itemId);
-    calculateTotal();
+    if (!options.skipRecalc) {
+      refreshItemIndices();
+      calculateTotal();
+    }
+    return createdDesktopRow;
   }
 
-  // 插入方案小計列 (100% 還原 _QuotationApp gui_page1.py insert_subtotal_row：[小計] + --- 方案小計 --- #c0392b 粗體紅字)
-  function insertSubtotalRow(defaultTitle = "") {
+  // 插入方案小計列 (支援在任意列上方/下方插入，並自動依區段重算金額)
+  function insertSubtotalRow(defaultTitle = "", options = {}) {
     const desktopTableBody = document.getElementById("quoteDesktopTableBody");
-    if (!desktopTableBody) return;
+    if (!desktopTableBody) return null;
 
-    const rowId = `subtotal-row-${Date.now()}`;
+    const rowId = `subtotal-row-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     const title = defaultTitle || `--- 方案小計 ---`;
+    const noteVal = options.note || "";
 
     const subtotalHTML = `
       <tr id="${rowId}" class="subtotal-divider-row">
@@ -7499,11 +7543,27 @@ document.addEventListener("DOMContentLoaded", () => {
           <span class="segment-subtotal-val pyside-cell-readonly align-right" style="color:#c0392b; font-weight:700;">0</span>
         </td>
         <td>
-          <input type="text" class="pyside-cell-input" placeholder="備註...">
+          <input type="text" class="pyside-cell-input subtotal-note-input" placeholder="備註..." value="${escapeHtml(noteVal)}">
         </td>
       </tr>
     `;
-    desktopTableBody.insertAdjacentHTML('beforeend', subtotalHTML);
+
+    let targetAfter = options.insertAfterRowEl || null;
+    if (!options.insertBeforeRowEl && !targetAfter && typeof excelGetActiveRowEl === "function") {
+      const actRow = excelGetActiveRowEl();
+      if (actRow && actRow.parentElement === desktopTableBody) {
+        targetAfter = actRow;
+      }
+    }
+
+    if (options.insertBeforeRowEl && options.insertBeforeRowEl.parentElement === desktopTableBody) {
+      options.insertBeforeRowEl.insertAdjacentHTML('beforebegin', subtotalHTML);
+    } else if (targetAfter && targetAfter.parentElement === desktopTableBody) {
+      targetAfter.insertAdjacentHTML('afterend', subtotalHTML);
+    } else {
+      desktopTableBody.insertAdjacentHTML('beforeend', subtotalHTML);
+    }
+
     const rowEl = document.getElementById(rowId);
     if (rowEl) {
       rowEl.addEventListener("click", () => {
@@ -7514,9 +7574,12 @@ document.addEventListener("DOMContentLoaded", () => {
         titleInp.addEventListener("input", () => updateDesktopBannerForRow(rowEl));
       }
     }
-    refreshItemIndices();
-    calculateTotal();
-    if (rowEl) updateDesktopBannerForRow(rowEl);
+    if (!options.skipRecalc) {
+      refreshItemIndices();
+      calculateTotal();
+      if (rowEl) updateDesktopBannerForRow(rowEl);
+    }
+    return rowEl;
   }
 
   // 更新各方案小計區段數值 (加總上一個小計列之後到本小計列之間的所有明細)
@@ -7559,6 +7622,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // 2. 電腦端 10 欄表格元件
     const dModelBtn = document.getElementById(`d-${itemId}-model`);
     const dModelInput = document.getElementById(`d-${itemId}-model-input`);
+    const dSpecInput = document.getElementById(`d-${itemId}-spec`);
+    const dDealerPriceInput = document.getElementById(`d-${itemId}-dealer-price`);
     const dDeliveryInput = document.getElementById(`d-${itemId}-delivery`);
     const dPriceInput = document.getElementById(`d-${itemId}-price`);
     const dEstPriceInput = document.getElementById(`d-${itemId}-est-price`);
@@ -7572,7 +7637,17 @@ document.addEventListener("DOMContentLoaded", () => {
       openProductModal();
     }
     if (mTitleBtn) mTitleBtn.addEventListener("click", triggerProductPicker);
-    if (dModelBtn) dModelBtn.addEventListener("click", triggerProductPicker);
+    if (dModelBtn) {
+      dModelBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const dRow = document.getElementById(`d-${itemId}`);
+        if (typeof openDesktopModelCompleter === "function" && dRow) {
+          openDesktopModelCompleter(dRow, { showAll: true });
+        } else {
+          triggerProductPicker();
+        }
+      });
+    }
 
     // 電腦端型號輸入框直接輸入或貼上後自動查價匹配 (_QuotationApp lookup_product)
     if (dModelInput) {
@@ -7586,18 +7661,55 @@ document.addEventListener("DOMContentLoaded", () => {
           mTitleBtn.textContent = kw || "點擊選擇產品...";
           mTitleBtn.classList.toggle("selected", Boolean(kw));
         }
-        if (!kw) return;
-        const activeSales = getActiveSalesName();
-        try {
-          const resp = await fetch(`/api/products?q=${encodeURIComponent(kw)}&sales_name=${encodeURIComponent(activeSales)}`);
-          if (resp.ok) {
-            const list = await resp.json();
-            const exact = (list || []).find(p => p.model_no && p.model_no.toUpperCase() === kw.toUpperCase());
-            if (exact) {
-              applyProductToItemRow(itemId, exact);
-            }
-          }
-        } catch (e) {}
+        const dRow = document.getElementById(`d-${itemId}`);
+        if (!kw) {
+          if (dRow) updateDesktopBannerForRow(dRow);
+          return;
+        }
+        let exact = null;
+        if (typeof findExactDesktopProduct === "function") {
+          exact = await findExactDesktopProduct(kw);
+        }
+        if (exact) {
+          applyProductToItemRow(itemId, exact);
+        } else {
+          // 若手動輸入未建檔型號，清空舊產品殘留之牌價與庫存，防止錯價（對標電腦版 gui_page1）
+          if (dDealerPriceInput) setCellVal(dDealerPriceInput, "");
+          if (mDealerPriceInput) mDealerPriceInput.value = "-";
+          const dStockEl = document.getElementById(`d-${itemId}-stock`);
+          if (dStockEl) dStockEl.textContent = "";
+          const mStockEl = document.getElementById(`${itemId}-stock`);
+          if (mStockEl) mStockEl.value = "-";
+          onDiscountChanged(dDiscountInput?.value || "", 'desktop');
+          if (dRow) updateDesktopBannerForRow(dRow);
+        }
+      });
+    }
+
+    if (dSpecInput) {
+      dSpecInput.addEventListener("input", () => {
+        const val = dSpecInput.value;
+        dSpecInput.title = val;
+        const mRow = document.getElementById(itemId);
+        if (mRow) mRow.dataset.spec = val;
+        const dRow = document.getElementById(`d-${itemId}`);
+        if (dRow && dRow.classList.contains("active-row")) {
+          updateDesktopBannerForRow(dRow);
+        }
+      });
+    }
+
+    if (dDealerPriceInput) {
+      dDealerPriceInput.addEventListener("input", () => {
+        const num = parseFloat(String(dDealerPriceInput.value || "").replace(/[^0-9.]/g, ""));
+        if (mDealerPriceInput) {
+          mDealerPriceInput.value = (!isNaN(num) && num > 0) ? `$${num.toLocaleString()}` : "-";
+        }
+        const discVal = dDiscountInput?.value !== "" ? dDiscountInput.value : "100";
+        if (dDiscountInput && dDiscountInput.value === "" && !isNaN(num) && num > 0) {
+          dDiscountInput.value = "100";
+        }
+        onDiscountChanged(discVal, 'desktop');
       });
     }
 
@@ -7642,7 +7754,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function getDealerPrice() {
-      const dpStr = (document.getElementById(`d-${itemId}-dealer-price`)?.textContent || mDealerPriceInput?.value || "").replace(/[^0-9.]/g, '');
+      const dpStr = (getCellVal(document.getElementById(`d-${itemId}-dealer-price`)) || mDealerPriceInput?.value || "").replace(/[^0-9.]/g, '');
       return parseFloat(dpStr) || 0;
     }
 
@@ -7806,6 +7918,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const resp = await fetch(`/api/products?sales_name=${encodeURIComponent(activeSales)}`);
       if (resp.ok) {
         quoteProductsCache = await resp.json();
+        if (typeof invalidateDesktopProductsCache === "function") {
+          invalidateDesktopProductsCache();
+        }
       }
       const itemsContainer = document.getElementById("itemsContainer");
       const mRows = itemsContainer ? itemsContainer.querySelectorAll('.item-row') : [];
@@ -7821,7 +7936,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (prod && prod.dealer_price) {
           const newDP = prod.dealer_price;
           const dDP = document.getElementById(`d-${itemId}-dealer-price`);
-          if (dDP) dDP.textContent = `${newDP.toLocaleString()}`;
+          if (dDP) setCellVal(dDP, `${newDP.toLocaleString()}`);
           const mDP = document.getElementById(`${itemId}-dealer-price`);
           if (mDP) mDP.value = `$${newDP.toLocaleString()}`;
 
@@ -8338,6 +8453,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const resp = await fetch(`/api/products?q=${encodeURIComponent(query)}&sales_name=${encodeURIComponent(activeSales)}`);
       if (resp.ok) {
         quoteProductsCache = await resp.json();
+        if (typeof invalidateDesktopProductsCache === "function") {
+          invalidateDesktopProductsCache();
+        }
       }
     } catch (err) {
       console.warn("查詢產品庫失敗:", err);
@@ -8457,8 +8575,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const dCodeInput = document.getElementById(`d-${itemId}-code`);
     if (dCodeInput) dCodeInput.value = model;
     if (dStock) dStock.textContent = `${stockQty.toLocaleString()}`;
-    if (dSpec) dSpec.textContent = spec || "";
-    if (dDP) dDP.textContent = price > 0 ? `${price.toLocaleString()}` : "";
+    if (dSpec) {
+      setCellVal(dSpec, spec || "");
+      dSpec.title = spec || "";
+    }
+    if (dDP) setCellVal(dDP, price > 0 ? `${price.toLocaleString()}` : "");
+
+    const dQtyInputEl = document.getElementById(`d-${itemId}-qty`);
+    if (dQtyInputEl && !dQtyInputEl.value.trim()) {
+      dQtyInputEl.value = qtyInput?.value?.trim() || "1";
+    }
 
     const discVal = sugDiscountInput && sugDiscountInput.value !== "" ? parseFloat(sugDiscountInput.value) : 100;
     const disc = isNaN(discVal) ? 100 : discVal;
@@ -8577,7 +8703,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!model) {
         continue;
       }
-      const dpStr = (document.getElementById(`d-${itemId}-dealer-price`)?.textContent || document.getElementById(`${itemId}-dealer-price`)?.value || "0").replace(/[^0-9.]/g, '');
+      const dpStr = (getCellVal(document.getElementById(`d-${itemId}-dealer-price`)) || document.getElementById(`${itemId}-dealer-price`)?.value || "0").replace(/[^0-9.]/g, '');
       const dealerPrice = parseFloat(dpStr) || 0;
       const discount = parseFloat(document.getElementById(`d-${itemId}-discount`)?.value || document.getElementById(`${itemId}-sug-discount`)?.value || "100") || 100;
       const sp = parseFloat(document.getElementById(`${itemId}-unit-price-num`)?.value || document.getElementById(`d-${itemId}-price`)?.value || document.getElementById(`${itemId}-sug-price`)?.value || "0") || 0;
@@ -8587,11 +8713,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const leadTime = document.getElementById(`d-${itemId}-delivery`)?.value || document.getElementById(`${itemId}-delivery`)?.value || "";
       const sku = document.getElementById(`${itemId}-sku`)?.value || "";
       const stockQty = r.dataset.stock !== "" && r.dataset.stock !== undefined ? parseInt(r.dataset.stock, 10) : 0;
+      const specText = getCellVal(document.getElementById(`d-${itemId}-spec`)).trim() || r.dataset.spec || "";
 
       itemsData.push({
         model_no: model,
         sku: sku,
-        spec: r.dataset.spec || "",
+        spec: specText,
         stock_qty: stockQty,
         dealer_price: dealerPrice,
         discount_pct: discount,
@@ -9070,6 +9197,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       calculateTotal();
       updateQuoteNoPreview();
+      if (typeof resetExcelTableEngineState === "function") {
+        resetExcelTableEngineState();
+      }
       switchQuoteSubTab("create");
 
       alert(`[已載入報價單] 已成功載入單號【${header.quote_no}】！\n若於電腦端修改後點擊「儲存報價」，系統將遵循 Append-Only 規則自動生成新版次。`);
@@ -9628,6 +9758,7 @@ document.addEventListener("DOMContentLoaded", () => {
               const resData = await r.json();
               if (!r.ok) throw new Error(resData.detail || "轉正發行失敗");
               quoteProductsCache = [];
+              if (typeof invalidateDesktopProductsCache === "function") invalidateDesktopProductsCache();
               alert(`[方案 A 執行成功] ${resData.message}`);
               loadSpecialProductsManager();
             } catch (e) {
@@ -9647,6 +9778,7 @@ document.addEventListener("DOMContentLoaded", () => {
               });
               if (r.ok) {
                 quoteProductsCache = [];
+                if (typeof invalidateDesktopProductsCache === "function") invalidateDesktopProductsCache();
                 loadSpecialProductsManager();
               }
             } catch (e) {
@@ -12675,6 +12807,1812 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     syncDesktopDateButtons();
+  }
+
+  // ============================================================================
+  // 正宗 Microsoft Excel 報價單表格操作引擎 + 電腦版型號智慧下拉選單 (v1.0.57)
+  // ============================================================================
+  let desktopFullProductsCache = [];
+  let desktopFullProductsCacheSales = "";
+  let desktopProductsLoadPromise = null;
+
+  function invalidateDesktopProductsCache() {
+    desktopFullProductsCache = [];
+    desktopFullProductsCacheSales = "";
+    desktopProductsLoadPromise = null;
+  }
+
+  async function ensureDesktopProductsCacheLoaded(force = false) {
+    const activeSales = getActiveSalesName();
+    if (!force && desktopFullProductsCache.length > 0 && desktopFullProductsCacheSales === activeSales) {
+      return desktopFullProductsCache;
+    }
+    if (desktopProductsLoadPromise && desktopFullProductsCacheSales === activeSales && !force) {
+      return desktopProductsLoadPromise;
+    }
+    desktopFullProductsCacheSales = activeSales;
+    desktopProductsLoadPromise = (async () => {
+      try {
+        const resp = await fetch(`/api/products?limit=20000&sales_name=${encodeURIComponent(activeSales)}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          desktopFullProductsCache = Array.isArray(data) ? data : [];
+        }
+      } catch (err) {
+        console.warn("載入電腦版型號快取失敗:", err);
+      }
+      return desktopFullProductsCache;
+    })();
+    return desktopProductsLoadPromise;
+  }
+
+  async function findExactDesktopProduct(modelText) {
+    const kw = String(modelText || "").trim().toUpperCase();
+    if (!kw) return null;
+    const list = await ensureDesktopProductsCacheLoaded();
+    let hit = list.find(p => String(p.model_no || "").trim().toUpperCase() === kw);
+    if (hit) return hit;
+    try {
+      const activeSales = getActiveSalesName();
+      const resp = await fetch(`/api/products?q=${encodeURIComponent(modelText.trim())}&sales_name=${encodeURIComponent(activeSales)}`);
+      if (resp.ok) {
+        const remote = await resp.json();
+        hit = (remote || []).find(p => String(p.model_no || "").trim().toUpperCase() === kw) || null;
+      }
+    } catch (e) {}
+    return hit;
+  }
+
+  // 對標電腦版 RelevanceProxyModel：前綴符合置頂 A-Z，內文包含排在後方 A-Z
+  function filterAndSortDesktopProducts(keyword) {
+    const kw = String(keyword || "").trim().toUpperCase();
+    const list = desktopFullProductsCache || [];
+    if (!kw) {
+      const top = [...list].sort((a, b) => {
+        const sa = Number(a.stock_qty) || 0;
+        const sb = Number(b.stock_qty) || 0;
+        if (sb !== sa) return sb - sa;
+        return String(a.model_no || "").localeCompare(String(b.model_no || ""));
+      });
+      return { list: top.slice(0, 100), totalCount: list.length };
+    }
+
+    const startsList = [];
+    const containsList = [];
+    const specList = [];
+    list.forEach(p => {
+      const m = String(p.model_no || "").toUpperCase();
+      if (m.startsWith(kw)) {
+        startsList.push(p);
+      } else if (m.includes(kw)) {
+        containsList.push(p);
+      } else {
+        const sp = String(p.spec || p.sku || "").toUpperCase();
+        if (sp.includes(kw)) specList.push(p);
+      }
+    });
+
+    const cmpModel = (a, b) => String(a.model_no || "").toUpperCase().localeCompare(String(b.model_no || "").toUpperCase());
+    startsList.sort(cmpModel);
+    containsList.sort(cmpModel);
+    specList.sort(cmpModel);
+
+    const merged = startsList.concat(containsList);
+    if (merged.length < 20) {
+      merged.push(...specList);
+    }
+    return { list: merged.slice(0, 100), totalCount: merged.length };
+  }
+
+  const desktopCompleterState = {
+    isOpen: false,
+    rowEl: null,
+    itemId: "",
+    inputEl: null,
+    results: [],
+    activeIdx: 0
+  };
+
+  function closeDesktopModelCompleter() {
+    const popup = document.getElementById("pysideModelCompleterPopup");
+    if (popup) popup.classList.add("hidden");
+    desktopCompleterState.isOpen = false;
+  }
+
+  function renderDesktopModelCompleterList() {
+    const listEl = document.getElementById("pysideModelCompleterList");
+    const countEl = document.getElementById("pysideModelCompleterCount");
+    if (!listEl) return;
+
+    const results = desktopCompleterState.results || [];
+    if (countEl) {
+      const suffix = desktopCompleterState.totalCount > results.length ? ` (顯示前 ${results.length} 筆)` : "";
+      countEl.textContent = `共 ${desktopCompleterState.totalCount || results.length} 筆${suffix}`;
+    }
+
+    if (results.length === 0) {
+      listEl.innerHTML = `<div style="padding:14px 12px; text-align:center; color:#64748b; font-size:13px;">查無符合型號（按 Enter 可保留手動輸入型號）</div>`;
+      return;
+    }
+
+    listEl.innerHTML = results.map((p, idx) => {
+      const priceStr = Number(p.dealer_price) > 0 ? `$${Number(p.dealer_price).toLocaleString()}` : "-";
+      const stockNum = p.stock_qty !== undefined && p.stock_qty !== null ? Number(p.stock_qty) : 0;
+      const isActive = idx === desktopCompleterState.activeIdx;
+      const orderTag = p.is_order_item ? `<span class="pyside-completer-order-tag">[訂購品]</span>` : "";
+      const specialTag = p.is_special ? `<span class="pyside-completer-special-tag">[個人特殊品]</span>` : "";
+      return `
+        <div class="pyside-completer-item ${isActive ? "is-active" : ""}" data-comp-idx="${idx}" role="option">
+          <div class="pyside-completer-left">
+            <div class="pyside-completer-model-line">
+              <span>${escapeHtml(p.model_no || "")}</span>
+              ${orderTag}
+              ${specialTag}
+            </div>
+            <div class="pyside-completer-spec">${escapeHtml(p.spec || p.series || "")}</div>
+          </div>
+          <div class="pyside-completer-right">
+            <div class="pyside-completer-price">${priceStr}</div>
+            <div class="pyside-completer-stock">庫存: ${stockNum.toLocaleString()}</div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    listEl.querySelectorAll(".pyside-completer-item").forEach(itemEl => {
+      itemEl.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const idx = parseInt(itemEl.getAttribute("data-comp-idx"), 10);
+        selectDesktopCompleterItem(idx, "stay");
+      });
+    });
+
+    const activeDom = listEl.querySelector(".pyside-completer-item.is-active");
+    if (activeDom) {
+      activeDom.scrollIntoView({ block: "nearest" });
+    }
+  }
+
+  function positionPopupBelowAnchor(popupEl, anchorEl) {
+    if (!popupEl || !anchorEl) return;
+    popupEl.classList.remove("hidden");
+    const rect = anchorEl.getBoundingClientRect();
+    const popRect = popupEl.getBoundingClientRect();
+    const vw = window.innerWidth || document.documentElement.clientWidth;
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+
+    let left = rect.left;
+    if (left + popRect.width > vw - 8) {
+      left = Math.max(8, vw - popRect.width - 8);
+    }
+    if (left < 8) left = 8;
+
+    let top = rect.bottom + 2;
+    if (top + popRect.height > vh - 8 && rect.top - popRect.height - 2 >= 8) {
+      top = rect.top - popRect.height - 2;
+    }
+
+    popupEl.style.left = `${Math.round(left)}px`;
+    popupEl.style.top = `${Math.round(top)}px`;
+  }
+
+  function openDesktopModelCompleter(rowEl, { showAll = false, queryOverride = null } = {}) {
+    const popup = document.getElementById("pysideModelCompleterPopup");
+    if (!popup || !rowEl) return;
+    const itemId = rowEl.getAttribute("data-itemid");
+    const inputEl = itemId ? document.getElementById(`d-${itemId}-model-input`) : null;
+    const wrapEl = itemId ? document.getElementById(`d-${itemId}-model-wrap`) : null;
+    if (!inputEl || !wrapEl) return;
+
+    desktopCompleterState.rowEl = rowEl;
+    desktopCompleterState.itemId = itemId;
+    desktopCompleterState.inputEl = inputEl;
+    desktopCompleterState.isOpen = true;
+    desktopCompleterState.activeIdx = 0;
+
+    const queryText = showAll ? "" : (queryOverride !== null ? queryOverride : inputEl.value);
+    const renderNow = () => {
+      if (!desktopCompleterState.isOpen) return;
+      const res = filterAndSortDesktopProducts(queryText);
+      desktopCompleterState.results = res.list;
+      desktopCompleterState.totalCount = res.totalCount;
+      desktopCompleterState.activeIdx = res.list.length > 0 ? 0 : -1;
+      renderDesktopModelCompleterList();
+      positionPopupBelowAnchor(popup, wrapEl);
+    };
+
+    if (desktopFullProductsCache.length === 0 || desktopFullProductsCacheSales !== getActiveSalesName()) {
+      const listEl = document.getElementById("pysideModelCompleterList");
+      if (listEl) {
+        listEl.innerHTML = `<div style="padding:14px 12px; text-align:center; color:#64748b; font-size:13px;">正在載入產品資料庫...</div>`;
+      }
+      positionPopupBelowAnchor(popup, wrapEl);
+      ensureDesktopProductsCacheLoaded().then(renderNow);
+    } else {
+      renderNow();
+    }
+  }
+
+  function selectDesktopCompleterItem(idx, advanceMode = "down") {
+    const prod = (desktopCompleterState.results || [])[idx];
+    const rowEl = desktopCompleterState.rowEl;
+    const itemId = desktopCompleterState.itemId;
+    closeDesktopModelCompleter();
+    if (!prod || !itemId) return;
+
+    runWithExcelUndoCheckpoint("選擇型號產品", () => {
+      applyProductToItemRow(itemId, prod);
+    });
+
+    if (typeof excelFinishEditAfterSelection === "function" && rowEl) {
+      excelFinishEditAfterSelection(rowEl, advanceMode);
+    }
+  }
+
+  // Excel 報價單表格 2D 引擎狀態與核心控制器
+  const excelTableState = {
+    initialized: false,
+    anchor: { r: 0, c: 2 },
+    focus: { r: 0, c: 2 },
+    mode: "select", // "select" | "type-edit" | "edit"
+    preEditValue: "",
+    isSelectingCells: false,
+    isSelectingRows: false,
+    isFillingDrag: false,
+    fillTargetRow: -1,
+    copiedRange: null,
+    copiedMatrix: null,
+    copiedRowSnapshots: null,
+    copiedSourceCols: 0,
+    undoStack: [],
+    redoStack: []
+  };
+
+  function getExcelTableEl() {
+    return document.getElementById("quoteDesktopTable");
+  }
+
+  function getExcelTableBodyEl() {
+    return document.getElementById("quoteDesktopTableBody");
+  }
+
+  function getExcelRows() {
+    const tbody = getExcelTableBodyEl();
+    return tbody ? Array.from(tbody.querySelectorAll("tr")) : [];
+  }
+
+  function getExcelColCount() {
+    const table = getExcelTableEl();
+    if (!table || !table.tHead || !table.tHead.rows[0]) return 11;
+    return table.tHead.rows[0].cells.length;
+  }
+
+  function getExcelRoleByColIndex(colIdx) {
+    const table = getExcelTableEl();
+    const th = table?.tHead?.rows[0]?.cells[colIdx];
+    const dataCol = th ? th.getAttribute("data-col") : "";
+    const map = {
+      "index": "row_header",
+      "9": "stock",
+      "0": "model",
+      "6": "qty",
+      "1": "spec",
+      "2": "dealer_price",
+      "3": "discount",
+      "4": "est_price",
+      "5": "final_price",
+      "7": "subtotal",
+      "8": "delivery"
+    };
+    return map[String(dataCol)] || "unknown";
+  }
+
+  function getExcelCellInput(tr, td) {
+    if (!tr || !td) return null;
+    return td.querySelector("input:not([type='hidden'])");
+  }
+
+  function getExcelCellRole(tr, colIdx) {
+    const role = getExcelRoleByColIndex(colIdx);
+    if (tr && tr.classList.contains("subtotal-divider-row")) {
+      if (role === "spec" || role === "delivery") return role;
+      return "readonly";
+    }
+    return role;
+  }
+
+  function isExcelRoleEditable(tr, colIdx) {
+    const role = getExcelCellRole(tr, colIdx);
+    return ["model", "qty", "spec", "dealer_price", "discount", "est_price", "delivery"].includes(role);
+  }
+
+  function getExcelCellText(tr, td, colIdx) {
+    if (!tr || !td) return "";
+    const inp = getExcelCellInput(tr, td);
+    if (inp) return String(inp.value ?? "");
+    const role = getExcelRoleByColIndex(colIdx);
+    if (role === "final_price") {
+      const span = td.querySelector(".pyside-cell-readonly");
+      return span ? span.textContent.trim() : "";
+    }
+    return td.textContent.trim();
+  }
+
+  function getExcelActiveRowEl() {
+    const rows = getExcelRows();
+    if (rows.length === 0) return null;
+    const r = Math.max(0, Math.min(rows.length - 1, excelTableState.focus.r));
+    return rows[r] || null;
+  }
+
+  function getNormalizedExcelRange() {
+    const rows = getExcelRows();
+    const maxR = Math.max(0, rows.length - 1);
+    const maxC = Math.max(1, getExcelColCount() - 1);
+    const r1 = Math.max(0, Math.min(maxR, excelTableState.anchor.r));
+    const r2 = Math.max(0, Math.min(maxR, excelTableState.focus.r));
+    const c1 = Math.max(1, Math.min(maxC, excelTableState.anchor.c));
+    const c2 = Math.max(1, Math.min(maxC, excelTableState.focus.c));
+    return {
+      top: Math.min(r1, r2),
+      bottom: Math.max(r1, r2),
+      left: Math.min(c1, c2),
+      right: Math.max(c1, c2)
+    };
+  }
+
+  function serializeSingleDesktopRow(tr) {
+    if (!tr) return null;
+    if (tr.classList.contains("subtotal-divider-row")) {
+      return {
+        type: "subtotal",
+        title: tr.querySelector(".subtotal-title-input")?.value || "--- 方案小計 ---",
+        note: tr.querySelector(".subtotal-note-input")?.value || ""
+      };
+    }
+    const itemId = tr.getAttribute("data-itemid");
+    if (!itemId) return null;
+    const mRow = document.getElementById(itemId);
+    const model = (document.getElementById(`d-${itemId}-model-input`)?.value || document.getElementById(`${itemId}-code`)?.value || "").trim();
+    const sku = document.getElementById(`${itemId}-sku`)?.value || "";
+    const spec = getCellVal(document.getElementById(`d-${itemId}-spec`)).trim();
+    const stockRaw = document.getElementById(`d-${itemId}-stock`)?.textContent?.replace(/[^0-9-]/g, "") || mRow?.dataset?.stock || "";
+    const dpRaw = getCellVal(document.getElementById(`d-${itemId}-dealer-price`)).replace(/[^0-9.]/g, "");
+    const discountRaw = document.getElementById(`d-${itemId}-discount`)?.value ?? "";
+    const estPriceRaw = document.getElementById(`d-${itemId}-est-price`)?.value ?? "";
+    const unitPriceRaw = document.getElementById(`d-${itemId}-price`)?.value ?? "";
+    const qtyRaw = document.getElementById(`d-${itemId}-qty`)?.value ?? "";
+    const note = document.getElementById(`d-${itemId}-delivery`)?.value || "";
+    const isOrder = mRow ? !document.getElementById(`${itemId}-order-badge`)?.classList.contains("hidden") : false;
+    const isSpecial = mRow ? !document.getElementById(`${itemId}-special-badge`)?.classList.contains("hidden") : false;
+
+    return {
+      type: "item",
+      data: {
+        model_no: model,
+        sku: sku,
+        spec: spec,
+        stock_qty: stockRaw !== "" ? Number(stockRaw) : null,
+        is_order_item: isOrder,
+        is_special: isSpecial,
+        dealer_price: dpRaw !== "" ? parseFloat(dpRaw) : 0,
+        discount_pct: discountRaw,
+        raw_est_price: estPriceRaw,
+        final_unit_price: unitPriceRaw !== "" ? parseFloat(unitPriceRaw) : 0,
+        quantity: qtyRaw,
+        note_lead_time: note
+      }
+    };
+  }
+
+  function captureExcelTableSnapshot() {
+    const rows = getExcelRows();
+    const serialized = rows.map(serializeSingleDesktopRow).filter(Boolean);
+    return {
+      rowsJson: JSON.stringify(serialized),
+      rows: serialized,
+      anchor: { ...excelTableState.anchor },
+      focus: { ...excelTableState.focus }
+    };
+  }
+
+  function restoreExcelTableSnapshot(snap) {
+    if (!snap || !Array.isArray(snap.rows)) return;
+    const desktopTableBody = document.getElementById("quoteDesktopTableBody");
+    const itemsContainer = document.getElementById("itemsContainer");
+    if (!desktopTableBody || !itemsContainer) return;
+
+    closeDesktopModelCompleter();
+    desktopTableBody.innerHTML = "";
+    itemsContainer.innerHTML = "";
+    quoteItemCount = 0;
+
+    if (snap.rows.length === 0) {
+      addBlankItem(null, { skipRecalc: true });
+    } else {
+      snap.rows.forEach(entry => {
+        if (entry.type === "subtotal") {
+          insertSubtotalRow(entry.title, { note: entry.note, skipRecalc: true });
+        } else {
+          addBlankItem(entry.data, { skipRecalc: true });
+        }
+      });
+    }
+
+    refreshItemIndices();
+    calculateTotal();
+
+    const rowsNow = getExcelRows();
+    const maxR = Math.max(0, rowsNow.length - 1);
+    const maxC = Math.max(1, getExcelColCount() - 1);
+    excelTableState.anchor = {
+      r: Math.max(0, Math.min(maxR, snap.anchor?.r ?? 0)),
+      c: Math.max(1, Math.min(maxC, snap.anchor?.c ?? 2))
+    };
+    excelTableState.focus = {
+      r: Math.max(0, Math.min(maxR, snap.focus?.r ?? 0)),
+      c: Math.max(1, Math.min(maxC, snap.focus?.c ?? 2))
+    };
+    excelTableState.mode = "select";
+    renderExcelSelectionUI();
+    focusExcelProxyInput();
+  }
+
+  function runWithExcelUndoCheckpoint(label, actionFn) {
+    const before = captureExcelTableSnapshot();
+    const ret = actionFn();
+    const after = captureExcelTableSnapshot();
+    if (after.rowsJson !== before.rowsJson) {
+      excelTableState.undoStack.push(before);
+      if (excelTableState.undoStack.length > 40) {
+        excelTableState.undoStack.shift();
+      }
+      excelTableState.redoStack = [];
+    }
+    return ret;
+  }
+
+  function pushExcelUndoSnapshotIfChanged(beforeSnap) {
+    if (!beforeSnap) return;
+    const after = captureExcelTableSnapshot();
+    if (after.rowsJson !== beforeSnap.rowsJson) {
+      excelTableState.undoStack.push(beforeSnap);
+      if (excelTableState.undoStack.length > 40) {
+        excelTableState.undoStack.shift();
+      }
+      excelTableState.redoStack = [];
+    }
+  }
+
+  function excelUndo() {
+    if (excelTableState.undoStack.length === 0) return;
+    commitExcelActiveEdit();
+    const current = captureExcelTableSnapshot();
+    const prev = excelTableState.undoStack.pop();
+    excelTableState.redoStack.push(current);
+    restoreExcelTableSnapshot(prev);
+  }
+
+  function excelRedo() {
+    if (excelTableState.redoStack.length === 0) return;
+    commitExcelActiveEdit();
+    const current = captureExcelTableSnapshot();
+    const nextSnap = excelTableState.redoStack.pop();
+    excelTableState.undoStack.push(current);
+    restoreExcelTableSnapshot(nextSnap);
+  }
+
+  function resetExcelTableEngineState() {
+    excelTableState.anchor = { r: 0, c: 2 };
+    excelTableState.focus = { r: 0, c: 2 };
+    excelTableState.mode = "select";
+    excelTableState.undoStack = [];
+    excelTableState.redoStack = [];
+    excelTableState.copiedRange = null;
+    excelTableState.copiedMatrix = null;
+    excelTableState.copiedRowSnapshots = null;
+    closeDesktopModelCompleter();
+    closeExcelContextMenu();
+    renderExcelSelectionUI();
+  }
+
+  function getOrCreateExcelProxyInput() {
+    const container = document.getElementById("quoteDesktopTableContainer");
+    if (!container) return null;
+    let proxy = document.getElementById("excelGridProxyInput");
+    if (!proxy) {
+      proxy = document.createElement("input");
+      proxy.type = "text";
+      proxy.id = "excelGridProxyInput";
+      proxy.setAttribute("aria-hidden", "true");
+      proxy.setAttribute("autocomplete", "off");
+      proxy.style.cssText = "position:fixed; left:-9999px; top:0px; width:2px; height:20px; opacity:0; pointer-events:none; border:none; padding:0;";
+      container.appendChild(proxy);
+    }
+    return proxy;
+  }
+
+  function focusExcelProxyInput() {
+    const proxy = getOrCreateExcelProxyInput();
+    if (!proxy) return;
+    const rows = getExcelRows();
+    const tr = rows[excelTableState.focus.r];
+    const td = tr?.cells[excelTableState.focus.c];
+    if (td) {
+      const rect = td.getBoundingClientRect();
+      proxy.style.left = `${Math.max(0, Math.round(rect.left + 4))}px`;
+      proxy.style.top = `${Math.max(0, Math.round(rect.top + 4))}px`;
+    }
+    proxy.value = "";
+    try {
+      proxy.focus({ preventScroll: true });
+    } catch (e) {
+      proxy.focus();
+    }
+  }
+
+  function renderExcelSelectionUI() {
+    const table = getExcelTableEl();
+    if (!table) return;
+    const rows = getExcelRows();
+    if (rows.length === 0) return;
+
+    table.querySelectorAll(".excel-cell-active, .excel-cell-editing, .excel-cell-in-range, .excel-cell-fill-preview, .excel-header-highlight, .excel-cell-copied").forEach(el => {
+      el.classList.remove("excel-cell-active", "excel-cell-editing", "excel-cell-in-range", "excel-cell-fill-preview", "excel-header-highlight", "excel-cell-copied");
+    });
+    table.querySelectorAll(".excel-fill-handle").forEach(h => h.remove());
+
+    const { top, bottom, left, right } = getNormalizedExcelRange();
+    const focusR = Math.max(0, Math.min(rows.length - 1, excelTableState.focus.r));
+    const maxC = Math.max(1, getExcelColCount() - 1);
+    const focusC = Math.max(1, Math.min(maxC, excelTableState.focus.c));
+    excelTableState.focus.r = focusR;
+    excelTableState.focus.c = focusC;
+
+    const headCells = table.tHead?.rows[0]?.cells;
+    if (headCells) {
+      for (let c = left; c <= right; c++) {
+        if (headCells[c]) headCells[c].classList.add("excel-header-highlight");
+      }
+    }
+
+    const hasMulti = (bottom > top || right > left);
+    for (let r = top; r <= bottom; r++) {
+      const tr = rows[r];
+      if (!tr) continue;
+      const idxCell = tr.cells[0];
+      if (idxCell) idxCell.classList.add("excel-header-highlight");
+      if (hasMulti) {
+        for (let c = left; c <= right; c++) {
+          const td = tr.cells[c];
+          if (td) td.classList.add("excel-cell-in-range");
+        }
+      }
+    }
+
+    if (excelTableState.copiedRange) {
+      const cr = excelTableState.copiedRange;
+      for (let r = cr.top; r <= Math.min(rows.length - 1, cr.bottom); r++) {
+        for (let c = cr.left; c <= Math.min(maxC, cr.right); c++) {
+          const td = rows[r]?.cells[c];
+          if (td) td.classList.add("excel-cell-copied");
+        }
+      }
+    }
+
+    if (excelTableState.isFillingDrag && excelTableState.fillTargetRow >= 0) {
+      const fr1 = Math.min(top, excelTableState.fillTargetRow);
+      const fr2 = Math.max(bottom, excelTableState.fillTargetRow);
+      for (let r = fr1; r <= fr2; r++) {
+        if (r >= top && r <= bottom) continue;
+        for (let c = left; c <= right; c++) {
+          const td = rows[r]?.cells[c];
+          if (td) td.classList.add("excel-cell-fill-preview");
+        }
+      }
+    }
+
+    const activeTr = rows[focusR];
+    const activeTd = activeTr?.cells[focusC];
+    if (activeTd) {
+      activeTd.classList.add("excel-cell-active");
+      if (excelTableState.mode === "edit" || excelTableState.mode === "type-edit") {
+        activeTd.classList.add("excel-cell-editing");
+      }
+    }
+
+    const handleTr = rows[bottom];
+    const handleTd = handleTr?.cells[right];
+    if (handleTd && excelTableState.mode === "select") {
+      const handle = document.createElement("div");
+      handle.className = "excel-fill-handle";
+      handle.title = "拖曳向下複製填滿";
+      handleTd.appendChild(handle);
+    }
+
+    if (activeTr) {
+      updateDesktopBannerForRow(activeTr);
+    }
+  }
+
+  function applyCellValueByRole(tr, td, colIdx, rawVal, options = {}) {
+    if (!tr || !td || !isExcelRoleEditable(tr, colIdx)) return;
+    const role = getExcelCellRole(tr, colIdx);
+    const inp = getExcelCellInput(tr, td);
+    if (!inp) return;
+
+    if (tr.classList.contains("subtotal-divider-row")) {
+      inp.value = String(rawVal ?? "");
+      if (role === "spec" && tr.classList.contains("active-row")) {
+        updateDesktopBannerForRow(tr);
+      }
+      return;
+    }
+
+    const itemId = tr.getAttribute("data-itemid");
+    if (!itemId) return;
+
+    const cleanVal = String(rawVal ?? "").trim();
+    if (role === "model") {
+      inp.value = cleanVal;
+      const mCode = document.getElementById(`${itemId}-code`);
+      const dCode = document.getElementById(`d-${itemId}-code`);
+      const mTitleBtn = document.getElementById(`${itemId}-title`);
+      if (mCode) mCode.value = cleanVal;
+      if (dCode) dCode.value = cleanVal;
+      if (mTitleBtn) {
+        mTitleBtn.textContent = cleanVal || "點擊選擇產品...";
+        mTitleBtn.classList.toggle("selected", Boolean(cleanVal));
+      }
+      if (!options.skipModelLookup) {
+        if (!cleanVal) {
+          const dSpec = document.getElementById(`d-${itemId}-spec`);
+          const dDP = document.getElementById(`d-${itemId}-dealer-price`);
+          const dStock = document.getElementById(`d-${itemId}-stock`);
+          if (dSpec) setCellVal(dSpec, "");
+          if (dDP) setCellVal(dDP, "");
+          if (dStock) dStock.textContent = "";
+          const dDisc = document.getElementById(`d-${itemId}-discount`);
+          if (dDisc) {
+            dDisc.value = "";
+            dDisc.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+        } else {
+          const kwUpper = cleanVal.toUpperCase();
+          const hit = (desktopFullProductsCache || []).find(p => String(p.model_no || "").trim().toUpperCase() === kwUpper);
+          if (hit) {
+            applyProductToItemRow(itemId, hit);
+          } else {
+            inp.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        }
+      }
+    } else if (role === "qty") {
+      const cleanedNum = cleanVal === "" ? "" : cleanVal.replace(/[^0-9]/g, "");
+      inp.value = cleanedNum;
+      inp.dispatchEvent(new Event("input", { bubbles: true }));
+    } else if (role === "dealer_price") {
+      const numStr = cleanVal === "" ? "" : cleanVal.replace(/[^0-9.]/g, "");
+      const numVal = parseFloat(numStr);
+      inp.value = (!isNaN(numVal) && numVal > 0) ? numVal.toLocaleString() : "";
+      inp.dispatchEvent(new Event("input", { bubbles: true }));
+    } else if (role === "discount" || role === "est_price") {
+      const numStr = cleanVal === "" ? "" : cleanVal.replace(/[^0-9.]/g, "");
+      inp.value = numStr;
+      inp.dispatchEvent(new Event("input", { bubbles: true }));
+    } else if (role === "spec" || role === "delivery") {
+      inp.value = String(rawVal ?? "");
+      inp.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  }
+
+  let activeEditUndoBaseline = null;
+
+  function commitExcelActiveEdit() {
+    if (excelTableState.mode === "select") return;
+    const rows = getExcelRows();
+    const tr = rows[excelTableState.focus.r];
+    const td = tr?.cells[excelTableState.focus.c];
+    const inp = getExcelCellInput(tr, td);
+    const role = getExcelCellRole(tr, excelTableState.focus.c);
+
+    if (inp) {
+      const curVal = inp.value;
+      if (curVal !== excelTableState.preEditValue) {
+        if (role === "model") {
+          inp.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        pushExcelUndoSnapshotIfChanged(activeEditUndoBaseline);
+      }
+      inp.blur();
+    }
+    activeEditUndoBaseline = null;
+    excelTableState.mode = "select";
+    closeDesktopModelCompleter();
+    renderExcelSelectionUI();
+  }
+
+  function cancelExcelActiveEdit() {
+    if (excelTableState.mode === "select") return;
+    const rows = getExcelRows();
+    const tr = rows[excelTableState.focus.r];
+    const td = tr?.cells[excelTableState.focus.c];
+    const inp = getExcelCellInput(tr, td);
+    if (inp) {
+      inp.value = excelTableState.preEditValue;
+      inp.dispatchEvent(new Event("input", { bubbles: true }));
+      inp.blur();
+    }
+    activeEditUndoBaseline = null;
+    excelTableState.mode = "select";
+    closeDesktopModelCompleter();
+    renderExcelSelectionUI();
+    focusExcelProxyInput();
+  }
+
+  function enterExcelEditMode(mode = "edit", initialChar = null) {
+    const rows = getExcelRows();
+    const tr = rows[excelTableState.focus.r];
+    const colIdx = excelTableState.focus.c;
+    const td = tr?.cells[colIdx];
+    const inp = getExcelCellInput(tr, td);
+    if (!tr || !td || !inp || !isExcelRoleEditable(tr, colIdx)) return;
+
+    activeEditUndoBaseline = captureExcelTableSnapshot();
+    excelTableState.preEditValue = inp.value;
+    excelTableState.mode = mode;
+
+    if (initialChar !== null) {
+      inp.value = initialChar;
+      inp.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    renderExcelSelectionUI();
+    inp.focus();
+    const len = inp.value.length;
+    try {
+      inp.setSelectionRange(len, len);
+    } catch (e) {}
+
+    if (getExcelCellRole(tr, colIdx) === "model") {
+      openDesktopModelCompleter(tr, { showAll: false, queryOverride: inp.value });
+    }
+  }
+
+  function moveExcelFocus(dr, dc, { extendShift = false, wrapOnTab = false, autoAddRowOnDown = false } = {}) {
+    commitExcelActiveEdit();
+    let rows = getExcelRows();
+    if (rows.length === 0) return;
+
+    const maxC = Math.max(1, getExcelColCount() - 1);
+    let nextR = excelTableState.focus.r + dr;
+    let nextC = excelTableState.focus.c + dc;
+
+    if (wrapOnTab) {
+      if (nextC > maxC) {
+        nextC = 1;
+        nextR += 1;
+      } else if (nextC < 1) {
+        nextC = maxC;
+        nextR -= 1;
+      }
+    }
+
+    if (autoAddRowOnDown && nextR >= rows.length) {
+      runWithExcelUndoCheckpoint("Enter 自動新增列", () => addBlankItem());
+      rows = getExcelRows();
+    }
+
+    nextR = Math.max(0, Math.min(rows.length - 1, nextR));
+    nextC = Math.max(1, Math.min(maxC, nextC));
+
+    excelTableState.focus = { r: nextR, c: nextC };
+    if (!extendShift) {
+      excelTableState.anchor = { r: nextR, c: nextC };
+    }
+    excelTableState.mode = "select";
+    renderExcelSelectionUI();
+    focusExcelProxyInput();
+
+    const targetTd = rows[nextR]?.cells[nextC];
+    if (targetTd) {
+      targetTd.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+  }
+
+  function excelFinishEditAfterSelection(rowEl, advanceMode = "down") {
+    const rows = getExcelRows();
+    const rIdx = rows.indexOf(rowEl);
+    if (rIdx >= 0) {
+      excelTableState.focus.r = rIdx;
+      excelTableState.anchor.r = rIdx;
+    }
+    const curInp = getExcelCellInput(rowEl, rowEl?.cells[excelTableState.focus.c]);
+    if (curInp) curInp.blur();
+    activeEditUndoBaseline = null;
+    excelTableState.mode = "select";
+
+    if (advanceMode === "down") {
+      moveExcelFocus(1, 0, { autoAddRowOnDown: true });
+    } else if (advanceMode === "right") {
+      moveExcelFocus(0, 1, { wrapOnTab: true });
+    } else {
+      renderExcelSelectionUI();
+      focusExcelProxyInput();
+    }
+  }
+
+  function excelClearSelectedCells() {
+    commitExcelActiveEdit();
+    const rows = getExcelRows();
+    const { top, bottom, left, right } = getNormalizedExcelRange();
+    runWithExcelUndoCheckpoint("清除儲存格", () => {
+      for (let r = top; r <= bottom; r++) {
+        const tr = rows[r];
+        if (!tr) continue;
+        for (let c = left; c <= right; c++) {
+          const td = tr.cells[c];
+          if (td && isExcelRoleEditable(tr, c)) {
+            applyCellValueByRole(tr, td, c, "");
+          }
+        }
+      }
+      calculateTotal();
+    });
+    renderExcelSelectionUI();
+  }
+
+  function buildExcelSelectionTsv() {
+    const rows = getExcelRows();
+    const { top, bottom, left, right } = getNormalizedExcelRange();
+    const matrix = [];
+    const lines = [];
+    const maxC = Math.max(1, getExcelColCount() - 1);
+    const isFullWidth = (left === 1 && right === maxC);
+    const rowSnaps = [];
+
+    for (let r = top; r <= bottom; r++) {
+      const tr = rows[r];
+      if (!tr) continue;
+      const rowVals = [];
+      for (let c = left; c <= right; c++) {
+        const td = tr.cells[c];
+        rowVals.push(getExcelCellText(tr, td, c));
+      }
+      matrix.push(rowVals);
+      lines.push(rowVals.map(v => {
+        if (v.includes("\t") || v.includes("\n") || v.includes('"')) {
+          return `"${v.replace(/"/g, '""')}"`;
+        }
+        return v;
+      }).join("\t"));
+
+      if (isFullWidth) {
+        const snap = serializeSingleDesktopRow(tr);
+        if (snap) rowSnaps.push(snap);
+      }
+    }
+
+    excelTableState.copiedRange = { top, bottom, left, right };
+    excelTableState.copiedMatrix = matrix;
+    excelTableState.copiedRowSnapshots = isFullWidth ? rowSnaps : null;
+    renderExcelSelectionUI();
+    return lines.join("\r\n");
+  }
+
+  function parseExcelClipboardTsv(rawText) {
+    const normalized = String(rawText || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    if (!normalized) return [];
+    const trimmedTrailing = normalized.endsWith("\n") ? normalized.slice(0, -1) : normalized;
+    if (!trimmedTrailing && normalized !== "") return [[""]];
+
+    const matrix = [];
+    let row = [];
+    let cell = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < trimmedTrailing.length; i++) {
+      const ch = trimmedTrailing[i];
+      if (inQuotes) {
+        if (ch === '"' && trimmedTrailing[i + 1] === '"') {
+          cell += '"';
+          i++;
+        } else if (ch === '"') {
+          inQuotes = false;
+        } else {
+          cell += ch;
+        }
+      } else {
+        if (ch === '"' && cell === "") {
+          inQuotes = true;
+        } else if (ch === "\t") {
+          row.push(cell);
+          cell = "";
+        } else if (ch === "\n") {
+          row.push(cell);
+          matrix.push(row);
+          row = [];
+          cell = "";
+        } else {
+          cell += ch;
+        }
+      }
+    }
+    row.push(cell);
+    matrix.push(row);
+    return matrix;
+  }
+
+  async function excelPasteMatrix(matrix) {
+    if (!matrix || matrix.length === 0) return;
+    commitExcelActiveEdit();
+    await ensureDesktopProductsCacheLoaded();
+
+    const { top, bottom, left, right } = getNormalizedExcelRange();
+    const maxC = Math.max(1, getExcelColCount() - 1);
+    const before = captureExcelTableSnapshot();
+
+    // 1. 若只複製 1 格且目前框選範圍大於 1 格 -> 正宗 Excel 廣播填滿貼上
+    if (matrix.length === 1 && matrix[0].length === 1 && (bottom > top || right > left)) {
+      const singleVal = matrix[0][0];
+      const rows = getExcelRows();
+      for (let r = top; r <= bottom; r++) {
+        const tr = rows[r];
+        if (!tr) continue;
+        for (let c = left; c <= right; c++) {
+          const td = tr.cells[c];
+          if (td && isExcelRoleEditable(tr, c)) {
+            applyCellValueByRole(tr, td, c, singleVal);
+          }
+        }
+      }
+      refreshItemIndices();
+      calculateTotal();
+      pushExcelUndoSnapshotIfChanged(before);
+      renderExcelSelectionUI();
+      return;
+    }
+
+    // 2. 多行多列矩陣貼上（若超過表格總列數，自動於末端新增空白列）
+    let rows = getExcelRows();
+    const neededRows = (top + matrix.length) - rows.length;
+    if (neededRows > 0) {
+      for (let i = 0; i < neededRows; i++) {
+        addBlankItem(null, { skipRecalc: true });
+      }
+      rows = getExcelRows();
+    }
+
+    let maxTargetCol = left;
+    for (let rOff = 0; rOff < matrix.length; rOff++) {
+      const tr = rows[top + rOff];
+      if (!tr) continue;
+      const srcRow = matrix[rOff];
+
+      // 第一階段：優先處理型號欄查價（防止右側貼入之數量/折數/特價被預設值覆蓋）
+      for (let cOff = 0; cOff < srcRow.length; cOff++) {
+        const targetC = left + cOff;
+        if (targetC > maxC) continue;
+        if (targetC > maxTargetCol) maxTargetCol = targetC;
+        if (getExcelCellRole(tr, targetC) === "model" && isExcelRoleEditable(tr, targetC)) {
+          applyCellValueByRole(tr, tr.cells[targetC], targetC, srcRow[cOff]);
+        }
+      }
+
+      // 第二階段：套用其餘各欄（數量、規格、經銷價、折數、預計金額、備註等）
+      for (let cOff = 0; cOff < srcRow.length; cOff++) {
+        const targetC = left + cOff;
+        if (targetC > maxC) continue;
+        if (getExcelCellRole(tr, targetC) !== "model" && isExcelRoleEditable(tr, targetC)) {
+          applyCellValueByRole(tr, tr.cells[targetC], targetC, srcRow[cOff]);
+        }
+      }
+    }
+
+    refreshItemIndices();
+    calculateTotal();
+    excelTableState.anchor = { r: top, c: left };
+    excelTableState.focus = { r: Math.min(rows.length - 1, top + matrix.length - 1), c: Math.min(maxC, maxTargetCol) };
+    pushExcelUndoSnapshotIfChanged(before);
+    renderExcelSelectionUI();
+    focusExcelProxyInput();
+  }
+
+  async function excelInsertCopiedRows(position = "above") {
+    if (!excelTableState.copiedMatrix || excelTableState.copiedMatrix.length === 0) return;
+    commitExcelActiveEdit();
+    await ensureDesktopProductsCacheLoaded();
+
+    const rows = getExcelRows();
+    const { top, bottom, left } = getNormalizedExcelRange();
+    const insertRefRow = position === "above" ? rows[top] : rows[bottom];
+    const insertOpt = position === "above"
+      ? { insertBeforeRowEl: insertRefRow, skipRecalc: true }
+      : { insertAfterRowEl: insertRefRow, skipRecalc: true };
+    const before = captureExcelTableSnapshot();
+    const insertedRows = [];
+
+    if (Array.isArray(excelTableState.copiedRowSnapshots) && excelTableState.copiedRowSnapshots.length > 0) {
+      const snaps = position === "below"
+        ? [...excelTableState.copiedRowSnapshots].reverse()
+        : excelTableState.copiedRowSnapshots;
+      snaps.forEach(s => {
+        const newTr = s.type === "subtotal"
+          ? insertSubtotalRow(s.title, { ...insertOpt, note: s.note })
+          : addBlankItem(s.data, insertOpt);
+        if (newTr) insertedRows.push(newTr);
+      });
+    } else {
+      const startCol = excelTableState.copiedRange ? excelTableState.copiedRange.left : left;
+      const matrix = excelTableState.copiedMatrix;
+      const maxC = Math.max(1, getExcelColCount() - 1);
+      const listToInsert = position === "below" ? [...matrix].reverse() : matrix;
+
+      listToInsert.forEach(srcRow => {
+        const newTr = addBlankItem(null, insertOpt);
+        if (!newTr) return;
+        insertedRows.push(newTr);
+        for (let cOff = 0; cOff < srcRow.length; cOff++) {
+          const tc = startCol + cOff;
+          if (tc <= maxC && getExcelCellRole(newTr, tc) === "model") {
+            applyCellValueByRole(newTr, newTr.cells[tc], tc, srcRow[cOff]);
+          }
+        }
+        for (let cOff = 0; cOff < srcRow.length; cOff++) {
+          const tc = startCol + cOff;
+          if (tc <= maxC && getExcelCellRole(newTr, tc) !== "model") {
+            applyCellValueByRole(newTr, newTr.cells[tc], tc, srcRow[cOff]);
+          }
+        }
+      });
+    }
+
+    refreshItemIndices();
+    calculateTotal();
+    const rowsAfter = getExcelRows();
+    const firstNewIdx = insertedRows.length > 0 ? Math.max(0, rowsAfter.indexOf(insertedRows[0])) : top;
+    excelTableState.anchor = { r: firstNewIdx, c: 1 };
+    excelTableState.focus = { r: Math.min(rowsAfter.length - 1, firstNewIdx + excelTableState.copiedMatrix.length - 1), c: getExcelColCount() - 1 };
+    pushExcelUndoSnapshotIfChanged(before);
+    renderExcelSelectionUI();
+    focusExcelProxyInput();
+  }
+
+  function excelInsertBlankRows(position = "above") {
+    commitExcelActiveEdit();
+    const rows = getExcelRows();
+    if (rows.length === 0) {
+      runWithExcelUndoCheckpoint("新增空白列", () => addBlankItem());
+      return;
+    }
+    const { top, bottom } = getNormalizedExcelRange();
+    const count = Math.max(1, bottom - top + 1);
+    const refRow = position === "above" ? rows[top] : rows[bottom];
+
+    const before = captureExcelTableSnapshot();
+    const created = [];
+    for (let i = 0; i < count; i++) {
+      const tr = addBlankItem(null, position === "above"
+        ? { insertBeforeRowEl: refRow, skipRecalc: true }
+        : { insertAfterRowEl: refRow, skipRecalc: true });
+      if (tr) created.push(tr);
+    }
+    refreshItemIndices();
+    calculateTotal();
+
+    const rowsAfter = getExcelRows();
+    const startR = created.length > 0 ? Math.max(0, rowsAfter.indexOf(created[0])) : top;
+    excelTableState.anchor = { r: startR, c: excelTableState.anchor.c };
+    excelTableState.focus = { r: Math.min(rowsAfter.length - 1, startR + count - 1), c: excelTableState.focus.c };
+    pushExcelUndoSnapshotIfChanged(before);
+    renderExcelSelectionUI();
+    focusExcelProxyInput();
+  }
+
+  function excelInsertSubtotalAtSelection(position = "below") {
+    commitExcelActiveEdit();
+    const rows = getExcelRows();
+    const { top, bottom } = getNormalizedExcelRange();
+    const refRow = position === "above" ? rows[top] : rows[bottom];
+    runWithExcelUndoCheckpoint("插入方案小計列", () => {
+      insertSubtotalRow("", position === "above"
+        ? { insertBeforeRowEl: refRow }
+        : { insertAfterRowEl: refRow });
+    });
+    renderExcelSelectionUI();
+    focusExcelProxyInput();
+  }
+
+  function excelDeleteSelectedRows() {
+    commitExcelActiveEdit();
+    const rows = getExcelRows();
+    if (rows.length === 0) return;
+    const { top, bottom } = getNormalizedExcelRange();
+
+    runWithExcelUndoCheckpoint("刪除選取列", () => {
+      for (let r = bottom; r >= top; r--) {
+        const tr = rows[r];
+        if (!tr) continue;
+        const itemId = tr.getAttribute("data-itemid");
+        if (itemId) {
+          document.getElementById(itemId)?.remove();
+        }
+        tr.remove();
+      }
+      const remainingDesktopItems = getExcelTableBodyEl()?.querySelectorAll("tr.desktop-item-row").length || 0;
+      if (remainingDesktopItems === 0) {
+        addBlankItem(null, { skipRecalc: true });
+      }
+      refreshItemIndices();
+      calculateTotal();
+    });
+
+    const rowsAfter = getExcelRows();
+    const nextR = Math.max(0, Math.min(rowsAfter.length - 1, top));
+    excelTableState.anchor = { r: nextR, c: excelTableState.anchor.c };
+    excelTableState.focus = { r: nextR, c: excelTableState.focus.c };
+    renderExcelSelectionUI();
+    focusExcelProxyInput();
+  }
+
+  function excelApplyFillFromSourceRows(srcTop, srcBottom, fillStartR, fillEndR, leftCol, rightCol) {
+    const rows = getExcelRows();
+    const srcLen = Math.max(1, srcBottom - srcTop + 1);
+    runWithExcelUndoCheckpoint("向下/向上填滿", () => {
+      for (let r = fillStartR; r <= fillEndR; r++) {
+        if (r >= srcTop && r <= srcBottom) continue;
+        const targetTr = rows[r];
+        if (!targetTr) continue;
+        const offset = ((r - srcTop) % srcLen + srcLen) % srcLen;
+        const srcTr = rows[srcTop + offset];
+        if (!srcTr) continue;
+
+        for (let c = leftCol; c <= rightCol; c++) {
+          if (getExcelCellRole(targetTr, c) === "model" && isExcelRoleEditable(targetTr, c)) {
+            const val = getExcelCellText(srcTr, srcTr.cells[c], c);
+            applyCellValueByRole(targetTr, targetTr.cells[c], c, val);
+          }
+        }
+        for (let c = leftCol; c <= rightCol; c++) {
+          if (getExcelCellRole(targetTr, c) !== "model" && isExcelRoleEditable(targetTr, c)) {
+            const val = getExcelCellText(srcTr, srcTr.cells[c], c);
+            applyCellValueByRole(targetTr, targetTr.cells[c], c, val);
+          }
+        }
+      }
+      calculateTotal();
+    });
+    renderExcelSelectionUI();
+    focusExcelProxyInput();
+  }
+
+  function excelFillDown(toBottom = false) {
+    commitExcelActiveEdit();
+    const rows = getExcelRows();
+    if (rows.length === 0) return;
+    const { top, bottom, left, right } = getNormalizedExcelRange();
+
+    if (toBottom) {
+      if (bottom < rows.length - 1) {
+        excelApplyFillFromSourceRows(top, bottom, bottom + 1, rows.length - 1, left, right);
+        excelTableState.focus.r = rows.length - 1;
+        renderExcelSelectionUI();
+      }
+      return;
+    }
+
+    if (bottom > top) {
+      // 多列框選按 Ctrl+D：以第一列向下填滿選取範圍（標準 Excel 行為）
+      excelApplyFillFromSourceRows(top, top, top + 1, bottom, left, right);
+    } else if (top > 0) {
+      // 單列按 Ctrl+D：把正上方一列複製下來（標準 Excel 行為）
+      excelApplyFillFromSourceRows(top - 1, top - 1, top, top, left, right);
+    }
+  }
+
+  function closeExcelContextMenu() {
+    const menu = document.getElementById("pysideQuoteTableContextMenu");
+    if (menu) menu.classList.add("hidden");
+  }
+
+  function openExcelContextMenu(clientX, clientY) {
+    const menu = document.getElementById("pysideQuoteTableContextMenu");
+    if (!menu) return;
+
+    const { top, bottom, left, right } = getNormalizedExcelRange();
+    const rowCount = Math.max(1, bottom - top + 1);
+    const hasCopied = Array.isArray(excelTableState.copiedMatrix) && excelTableState.copiedMatrix.length > 0;
+
+    const btnInsertAbove = document.getElementById("ctxMenuInsertAboveBtn");
+    const btnInsertBelow = document.getElementById("ctxMenuInsertBelowBtn");
+    const btnDeleteRows = document.getElementById("ctxMenuDeleteRowsBtn");
+    const btnInsertCopied = document.getElementById("ctxMenuInsertCopiedBtn");
+    const btnFillDown = document.getElementById("ctxMenuFillDownBtn");
+
+    if (btnInsertAbove) btnInsertAbove.textContent = `在此上方插入 ${rowCount} 列空白列`;
+    if (btnInsertBelow) btnInsertBelow.textContent = `在此下方插入 ${rowCount} 列空白列`;
+    if (btnDeleteRows) btnDeleteRows.textContent = `刪除選取列 (${rowCount} 列)`;
+    if (btnInsertCopied) btnInsertCopied.disabled = !hasCopied;
+    if (btnFillDown) {
+      btnFillDown.textContent = bottom > top ? "向下填滿選取範圍 (Ctrl+D)" : "向下複製上一列 (Ctrl+D)";
+      btnFillDown.disabled = (bottom === top && top === 0);
+    }
+
+    menu.classList.remove("hidden");
+    const rect = menu.getBoundingClientRect();
+    const vw = window.innerWidth || document.documentElement.clientWidth;
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    let x = clientX;
+    let y = clientY;
+    if (x + rect.width > vw - 8) x = Math.max(8, vw - rect.width - 8);
+    if (y + rect.height > vh - 8) y = Math.max(8, vh - rect.height - 8);
+    menu.style.left = `${Math.round(x)}px`;
+    menu.style.top = `${Math.round(y)}px`;
+  }
+
+  function excelSetCustomRowHeight() {
+    const rows = getExcelRows();
+    const { top, bottom } = getNormalizedExcelRange();
+    const firstRow = rows[top];
+    const currentH = firstRow ? Math.round(firstRow.getBoundingClientRect().height) : 38;
+    const input = prompt("請輸入選取列之列高（像素，建議 32 ～ 120）：", String(currentH));
+    if (input === null) return;
+    const h = Math.max(24, Math.min(300, parseInt(input, 10) || currentH));
+    for (let r = top; r <= bottom; r++) {
+      const tr = rows[r];
+      if (!tr) continue;
+      tr.style.height = `${h}px`;
+      Array.from(tr.cells).forEach(td => { td.style.height = `${h}px`; });
+    }
+  }
+
+  function isPointInsideNormalizedRange(r, c) {
+    const { top, bottom, left, right } = getNormalizedExcelRange();
+    return r >= top && r <= bottom && c >= left && c <= right;
+  }
+
+  function isExcelGridFocused() {
+    const active = document.activeElement;
+    const container = document.getElementById("quoteDesktopTableContainer");
+    const draftSec = document.getElementById("quoteDraftSection");
+    if (!container || !draftSec || draftSec.classList.contains("hidden")) return false;
+    return Boolean(active && container.contains(active));
+  }
+
+  function initExcelQuoteTableEngine() {
+    const table = getExcelTableEl();
+    const tbody = getExcelTableBodyEl();
+    if (!table || !tbody || excelTableState.initialized) return;
+    excelTableState.initialized = true;
+    table.setAttribute("tabindex", "0");
+    getOrCreateExcelProxyInput();
+
+    // 1. 滑鼠按下：選取整列 / 拖曳填滿 / 選取儲存格（或雙擊進入編輯模式）
+    tbody.addEventListener("mousedown", (e) => {
+      if (e.button === 2) return; // 右鍵交給 contextmenu 處理，保留既有多選框
+      closeExcelContextMenu();
+
+      // 拖曳右下角十字填滿控點
+      if (e.target.classList.contains("excel-fill-handle")) {
+        e.preventDefault();
+        e.stopPropagation();
+        excelTableState.isFillingDrag = true;
+        excelTableState.fillTargetRow = getNormalizedExcelRange().bottom;
+        renderExcelSelectionUI();
+        return;
+      }
+
+      // 點擊型號下拉箭頭 ▼ 時直接開智慧選單
+      const arrowBtn = e.target.closest("button.pyside-model-combo-arrow");
+      const tr = e.target.closest("tr");
+      const td = e.target.closest("td");
+      if (!tr || !td) return;
+
+      const rows = getExcelRows();
+      const rIdx = rows.indexOf(tr);
+      const cIdx = Array.from(tr.cells).indexOf(td);
+      if (rIdx < 0 || cIdx < 0) return;
+
+      if (arrowBtn) {
+        commitExcelActiveEdit();
+        excelTableState.anchor = { r: rIdx, c: cIdx };
+        excelTableState.focus = { r: rIdx, c: cIdx };
+        excelTableState.mode = "select";
+        renderExcelSelectionUI();
+        openDesktopModelCompleter(tr, { showAll: true });
+        return;
+      }
+
+      // 點擊左側項次格（Alt+拖曳留給舊列序對調；一般點擊或上下拖曳為 Excel 整列多選）
+      if (cIdx === 0) {
+        if (e.altKey) return;
+        e.preventDefault();
+        commitExcelActiveEdit();
+        const maxC = Math.max(1, getExcelColCount() - 1);
+        if (e.shiftKey) {
+          excelTableState.anchor = { r: excelTableState.anchor.r, c: 1 };
+          excelTableState.focus = { r: rIdx, c: maxC };
+        } else {
+          excelTableState.anchor = { r: rIdx, c: 1 };
+          excelTableState.focus = { r: rIdx, c: maxC };
+        }
+        excelTableState.isSelectingRows = true;
+        excelTableState.mode = "select";
+        renderExcelSelectionUI();
+        focusExcelProxyInput();
+        return;
+      }
+
+      // 若目前此格已處於編輯模式，允許在輸入框內正常點擊定位游標
+      if (
+        (excelTableState.mode === "edit" || excelTableState.mode === "type-edit") &&
+        excelTableState.focus.r === rIdx &&
+        excelTableState.focus.c === cIdx &&
+        e.target.tagName === "INPUT"
+      ) {
+        return;
+      }
+
+      e.preventDefault();
+      commitExcelActiveEdit();
+
+      if (e.shiftKey) {
+        excelTableState.focus = { r: rIdx, c: cIdx };
+      } else {
+        excelTableState.anchor = { r: rIdx, c: cIdx };
+        excelTableState.focus = { r: rIdx, c: cIdx };
+      }
+      excelTableState.isSelectingCells = true;
+      excelTableState.mode = "select";
+      renderExcelSelectionUI();
+      focusExcelProxyInput();
+    });
+
+    // 2. 滑鼠拖曳擴展多行多列範圍 / 十字填滿控點預覽
+    window.addEventListener("mousemove", (e) => {
+      if (!excelTableState.isSelectingCells && !excelTableState.isSelectingRows && !excelTableState.isFillingDrag) {
+        return;
+      }
+      const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+      const tr = elUnder?.closest?.("#quoteDesktopTableBody tr");
+      const rows = getExcelRows();
+      if (!tr) return;
+      const rIdx = rows.indexOf(tr);
+      if (rIdx < 0) return;
+
+      if (excelTableState.isFillingDrag) {
+        if (excelTableState.fillTargetRow !== rIdx) {
+          excelTableState.fillTargetRow = rIdx;
+          renderExcelSelectionUI();
+        }
+        return;
+      }
+
+      if (excelTableState.isSelectingRows) {
+        const maxC = Math.max(1, getExcelColCount() - 1);
+        if (excelTableState.focus.r !== rIdx || excelTableState.focus.c !== maxC) {
+          excelTableState.focus = { r: rIdx, c: maxC };
+          renderExcelSelectionUI();
+        }
+        return;
+      }
+
+      const td = elUnder?.closest?.("#quoteDesktopTableBody td");
+      if (!td) return;
+      const cIdx = Math.max(1, Array.from(tr.cells).indexOf(td));
+      if (excelTableState.focus.r !== rIdx || excelTableState.focus.c !== cIdx) {
+        excelTableState.focus = { r: rIdx, c: cIdx };
+        renderExcelSelectionUI();
+      }
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (excelTableState.isFillingDrag) {
+        excelTableState.isFillingDrag = false;
+        const { top, bottom, left, right } = getNormalizedExcelRange();
+        const targetR = excelTableState.fillTargetRow;
+        excelTableState.fillTargetRow = -1;
+        if (targetR > bottom) {
+          excelApplyFillFromSourceRows(top, bottom, bottom + 1, targetR, left, right);
+          excelTableState.focus.r = targetR;
+        } else if (targetR >= 0 && targetR < top) {
+          excelApplyFillFromSourceRows(top, bottom, targetR, top - 1, left, right);
+          excelTableState.anchor.r = targetR;
+        }
+        renderExcelSelectionUI();
+      }
+      excelTableState.isSelectingCells = false;
+      excelTableState.isSelectingRows = false;
+    });
+
+    // 3. 雙擊儲存格進入「編輯模式（游標留在文字中）」
+    tbody.addEventListener("dblclick", (e) => {
+      const tr = e.target.closest("tr");
+      const td = e.target.closest("td");
+      if (!tr || !td) return;
+      const rows = getExcelRows();
+      const rIdx = rows.indexOf(tr);
+      const cIdx = Array.from(tr.cells).indexOf(td);
+      if (rIdx < 0 || cIdx <= 0) return;
+      excelTableState.anchor = { r: rIdx, c: cIdx };
+      excelTableState.focus = { r: rIdx, c: cIdx };
+      enterExcelEditMode("edit", null);
+    });
+
+    // 4. 滑鼠右鍵：若右鍵點在既有多選範圍內則保留多選；點在範圍外則移至該格
+    tbody.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      commitExcelActiveEdit();
+      const tr = e.target.closest("tr");
+      const td = e.target.closest("td");
+      if (tr && td) {
+        const rows = getExcelRows();
+        const rIdx = rows.indexOf(tr);
+        const cIdx = Array.from(tr.cells).indexOf(td);
+        if (rIdx >= 0) {
+          if (cIdx === 0) {
+            const { top, bottom } = getNormalizedExcelRange();
+            if (rIdx < top || rIdx > bottom) {
+              const maxC = Math.max(1, getExcelColCount() - 1);
+              excelTableState.anchor = { r: rIdx, c: 1 };
+              excelTableState.focus = { r: rIdx, c: maxC };
+            }
+          } else if (!isPointInsideNormalizedRange(rIdx, cIdx)) {
+            excelTableState.anchor = { r: rIdx, c: cIdx };
+            excelTableState.focus = { r: rIdx, c: cIdx };
+          }
+          renderExcelSelectionUI();
+        }
+      }
+      openExcelContextMenu(e.clientX, e.clientY);
+    });
+
+    // 5. 右鍵選單動作點擊
+    const ctxMenu = document.getElementById("pysideQuoteTableContextMenu");
+    if (ctxMenu) {
+      ctxMenu.addEventListener("click", async (e) => {
+        const btn = e.target.closest(".excel-ctx-item");
+        if (!btn || btn.disabled) return;
+        const action = btn.getAttribute("data-action");
+        closeExcelContextMenu();
+
+        if (action === "copy") {
+          const tsv = buildExcelSelectionTsv();
+          try { await navigator.clipboard.writeText(tsv); } catch (err) {}
+          focusExcelProxyInput();
+        } else if (action === "cut") {
+          const tsv = buildExcelSelectionTsv();
+          try { await navigator.clipboard.writeText(tsv); } catch (err) {}
+          excelClearSelectedCells();
+          focusExcelProxyInput();
+        } else if (action === "paste") {
+          let clipText = "";
+          try {
+            clipText = await navigator.clipboard.readText();
+          } catch (err) {}
+          if (clipText) {
+            await excelPasteMatrix(parseExcelClipboardTsv(clipText));
+          } else if (excelTableState.copiedMatrix) {
+            await excelPasteMatrix(excelTableState.copiedMatrix);
+          } else {
+            alert("[貼上提醒] 瀏覽器限制按鈕直接讀取系統剪貼簿，請直接按下鍵盤 Ctrl + V 即可將 Excel 資料貼入表格！");
+          }
+        } else if (action === "insert-copied") {
+          await excelInsertCopiedRows("above");
+        } else if (action === "insert-above") {
+          excelInsertBlankRows("above");
+        } else if (action === "insert-below") {
+          excelInsertBlankRows("below");
+        } else if (action === "insert-subtotal-above") {
+          excelInsertSubtotalAtSelection("above");
+        } else if (action === "insert-subtotal-below") {
+          excelInsertSubtotalAtSelection("below");
+        } else if (action === "fill-down-range") {
+          excelFillDown(false);
+        } else if (action === "fill-down-bottom") {
+          excelFillDown(true);
+        } else if (action === "clear-cells") {
+          excelClearSelectedCells();
+        } else if (action === "set-row-height") {
+          excelSetCustomRowHeight();
+        } else if (action === "delete-rows") {
+          excelDeleteSelectedRows();
+        }
+      });
+    }
+
+    // 6. Select Mode 主鍵盤引擎（接聽 invisible proxy input 並支援中文 IME 與 Excel 全快捷鍵）
+    const proxyInput = getOrCreateExcelProxyInput();
+    if (proxyInput) {
+      let proxyComposing = false;
+
+      proxyInput.addEventListener("compositionstart", () => {
+        proxyComposing = true;
+      });
+
+      proxyInput.addEventListener("compositionend", () => {
+        proxyComposing = false;
+        const val = proxyInput.value;
+        proxyInput.value = "";
+        if (val) {
+          enterExcelEditMode("type-edit", val);
+        }
+      });
+
+      proxyInput.addEventListener("input", () => {
+        if (proxyComposing) return;
+        const val = proxyInput.value;
+        if (val) {
+          proxyInput.value = "";
+          enterExcelEditMode("type-edit", val);
+        }
+      });
+
+      proxyInput.addEventListener("keydown", (e) => {
+        if (e.isComposing || e.key === "Process" || e.keyCode === 229) {
+          return;
+        }
+        const ctrl = e.ctrlKey || e.metaKey;
+
+        if (ctrl && (e.key === "z" || e.key === "Z") && !e.shiftKey) {
+          e.preventDefault();
+          excelUndo();
+          return;
+        }
+        if (ctrl && (e.key === "y" || e.key === "Y" || ((e.key === "z" || e.key === "Z") && e.shiftKey))) {
+          e.preventDefault();
+          excelRedo();
+          return;
+        }
+        if (ctrl && (e.key === "d" || e.key === "D")) {
+          e.preventDefault();
+          excelFillDown(false);
+          return;
+        }
+        if (ctrl && e.shiftKey && (e.key === "+" || e.key === "=")) {
+          e.preventDefault();
+          excelInsertBlankRows("above");
+          return;
+        }
+        if (ctrl && e.key === "-") {
+          e.preventDefault();
+          excelDeleteSelectedRows();
+          return;
+        }
+        if (ctrl) return; // Ctrl+C / Ctrl+X / Ctrl+V 交給原生 copy/cut/paste 事件零權限限制處理
+
+        if (e.key === "F2") {
+          e.preventDefault();
+          enterExcelEditMode("edit", null);
+          return;
+        }
+        if (e.key === "Delete" || e.key === "Backspace") {
+          e.preventDefault();
+          excelClearSelectedCells();
+          return;
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          excelTableState.copiedRange = null;
+          closeDesktopModelCompleter();
+          closeExcelContextMenu();
+          renderExcelSelectionUI();
+          return;
+        }
+        if (e.key === "Enter") {
+          e.preventDefault();
+          moveExcelFocus(e.shiftKey ? -1 : 1, 0, { autoAddRowOnDown: !e.shiftKey });
+          return;
+        }
+        if (e.key === "Tab") {
+          e.preventDefault();
+          moveExcelFocus(0, e.shiftKey ? -1 : 1, { wrapOnTab: true });
+          return;
+        }
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          moveExcelFocus(-1, 0, { extendShift: e.shiftKey });
+          return;
+        }
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          moveExcelFocus(1, 0, { extendShift: e.shiftKey });
+          return;
+        }
+        if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          moveExcelFocus(0, -1, { extendShift: e.shiftKey });
+          return;
+        }
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          moveExcelFocus(0, 1, { extendShift: e.shiftKey });
+          return;
+        }
+
+        // 一般可列印字元 -> 立即清空舊值並轉入直接輸入模式
+        if (e.key.length === 1 && !e.altKey) {
+          const rows = getExcelRows();
+          const tr = rows[excelTableState.focus.r];
+          if (tr && isExcelRoleEditable(tr, excelTableState.focus.c)) {
+            e.preventDefault();
+            enterExcelEditMode("type-edit", e.key);
+          }
+        }
+      });
+    }
+
+    // 7. 編輯模式下的鍵盤控制（委派監聽所有儲存格 input）
+    tbody.addEventListener("input", (e) => {
+      const inp = e.target;
+      if (inp && inp.classList.contains("cell-model-input")) {
+        const tr = inp.closest("tr");
+        if (tr) {
+          openDesktopModelCompleter(tr, { showAll: false, queryOverride: inp.value });
+        }
+      }
+    });
+
+    tbody.addEventListener("keydown", (e) => {
+      const inp = e.target;
+      if (!inp || inp.tagName !== "INPUT") return;
+      if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
+
+      const isModelInput = inp.classList.contains("cell-model-input");
+
+      // 若型號智慧下拉清單開啟中，上下鍵與 Enter/Tab/Esc 優先控制清單挑選
+      if (isModelInput && desktopCompleterState.isOpen) {
+        const len = (desktopCompleterState.results || []).length;
+        if (e.key === "ArrowDown" && len > 0) {
+          e.preventDefault();
+          desktopCompleterState.activeIdx = (desktopCompleterState.activeIdx + 1) % len;
+          renderDesktopModelCompleterList();
+          return;
+        }
+        if (e.key === "ArrowUp" && len > 0) {
+          e.preventDefault();
+          desktopCompleterState.activeIdx = (desktopCompleterState.activeIdx - 1 + len) % len;
+          renderDesktopModelCompleterList();
+          return;
+        }
+        if (e.key === "Enter" && len > 0 && desktopCompleterState.activeIdx >= 0) {
+          e.preventDefault();
+          selectDesktopCompleterItem(desktopCompleterState.activeIdx, e.shiftKey ? "stay" : "down");
+          return;
+        }
+        if (e.key === "Tab" && len > 0 && desktopCompleterState.activeIdx >= 0) {
+          e.preventDefault();
+          selectDesktopCompleterItem(desktopCompleterState.activeIdx, "right");
+          return;
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          closeDesktopModelCompleter();
+          return;
+        }
+      }
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        cancelExcelActiveEdit();
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        moveExcelFocus(e.shiftKey ? -1 : 1, 0, { autoAddRowOnDown: !e.shiftKey });
+        return;
+      }
+      if (e.key === "Tab") {
+        e.preventDefault();
+        moveExcelFocus(0, e.shiftKey ? -1 : 1, { wrapOnTab: true });
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        moveExcelFocus(-1, 0);
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        moveExcelFocus(1, 0);
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        if (excelTableState.mode === "type-edit") {
+          e.preventDefault();
+          moveExcelFocus(0, -1);
+          return;
+        }
+        // F2/雙擊進入游標編輯模式時：僅當游標已到最左側才跳往左格
+        if (inp.selectionStart === 0 && inp.selectionEnd === 0) {
+          e.preventDefault();
+          moveExcelFocus(0, -1);
+        }
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        if (excelTableState.mode === "type-edit") {
+          e.preventDefault();
+          moveExcelFocus(0, 1);
+          return;
+        }
+        const len = inp.value.length;
+        if (inp.selectionStart === len && inp.selectionEnd === len) {
+          e.preventDefault();
+          moveExcelFocus(0, 1);
+        }
+      }
+    });
+
+    tbody.addEventListener("focusout", (e) => {
+      const inp = e.target;
+      if (!inp || inp.tagName !== "INPUT") return;
+      setTimeout(() => {
+        const ae = document.activeElement;
+        if (ae && tbody.contains(ae)) return;
+        const completerEl = document.getElementById("pysideModelCompleterPopup");
+        if (completerEl && completerEl.contains(ae)) return;
+        if (excelTableState.mode !== "select") {
+          if (inp.value !== excelTableState.preEditValue) {
+            pushExcelUndoSnapshotIfChanged(activeEditUndoBaseline);
+          }
+          activeEditUndoBaseline = null;
+          excelTableState.mode = "select";
+          closeDesktopModelCompleter();
+          renderExcelSelectionUI();
+        }
+      }, 60);
+    });
+
+    // 8. 原生剪貼簿 copy / cut / paste（支援從真實 Microsoft Excel 無權限提示多行列雙向互貼）
+    document.addEventListener("copy", (e) => {
+      if (!isExcelGridFocused() || excelTableState.mode !== "select") return;
+      e.preventDefault();
+      const tsv = buildExcelSelectionTsv();
+      if (e.clipboardData) {
+        e.clipboardData.setData("text/plain", tsv);
+      }
+    });
+
+    document.addEventListener("cut", (e) => {
+      if (!isExcelGridFocused() || excelTableState.mode !== "select") return;
+      e.preventDefault();
+      const tsv = buildExcelSelectionTsv();
+      if (e.clipboardData) {
+        e.clipboardData.setData("text/plain", tsv);
+      }
+      excelClearSelectedCells();
+    });
+
+    document.addEventListener("paste", (e) => {
+      if (!isExcelGridFocused() || excelTableState.mode !== "select") return;
+      const rawText = (e.clipboardData || window.clipboardData)?.getData("text/plain") || "";
+      if (!rawText && !excelTableState.copiedMatrix) return;
+      e.preventDefault();
+      const matrix = rawText ? parseExcelClipboardTsv(rawText) : excelTableState.copiedMatrix;
+      excelPasteMatrix(matrix);
+    });
+
+    // 9. 全域點擊關閉型號選單與右鍵選單
+    document.addEventListener("mousedown", (e) => {
+      const ctxMenuEl = document.getElementById("pysideQuoteTableContextMenu");
+      if (ctxMenuEl && !ctxMenuEl.classList.contains("hidden") && !ctxMenuEl.contains(e.target)) {
+        closeExcelContextMenu();
+      }
+      const compEl = document.getElementById("pysideModelCompleterPopup");
+      if (
+        compEl &&
+        !compEl.classList.contains("hidden") &&
+        !compEl.contains(e.target) &&
+        !e.target.closest?.(".pyside-model-combo-wrap")
+      ) {
+        closeDesktopModelCompleter();
+      }
+    });
+
+    renderExcelSelectionUI();
   }
 
   initDesktopCalendarPickers();

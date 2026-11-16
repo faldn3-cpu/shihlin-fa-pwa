@@ -15,6 +15,9 @@ __pycache__/
 *.env
 *.local
 
+# 管理員本機專用加密檢視工具（僅留本機，不上傳 GitHub）
+json_vault_viewer.py
+
 # IDE 與編輯器暫存
 .vscode/
 .idea/

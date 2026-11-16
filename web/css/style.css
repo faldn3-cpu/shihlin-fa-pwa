@@ -8542,25 +8542,26 @@ html[data-theme="dark"] .pyside-excel-table td.excel-cell-in-range:not(.cell-ver
 .excel-plain-cell-input {
   width: 100%;
   height: 28px;
-  border: 1px solid transparent;
+  border: 1px solid var(--border-card);
   border-radius: 4px;
-  background: transparent;
+  background-color: var(--bg-input);
   color: var(--text-primary);
   font-size: 13.5px;
-  padding: 2px 5px;
+  padding: 2px 6px;
   box-sizing: border-box;
   outline: none;
   text-overflow: ellipsis;
 }
 
 .excel-plain-cell-input:hover {
-  border-color: var(--border-card);
+  border-color: var(--color-accent);
   background-color: var(--bg-input);
 }
 
 .excel-plain-cell-input:focus {
   border-color: var(--border-focus);
   background-color: var(--bg-input);
+  box-shadow: 0 0 0 1px var(--border-focus);
 }
 
 .excel-plain-cell-input.align-right {
@@ -8748,31 +8749,69 @@ html[data-theme="dark"] .excel-ctx-item:hover:not(:disabled) {
 }
 
 /* ============================================================================
-   最終報價金額 / 小計欄位醒目強化 & 金錢變動瞬間閃光提示 (v1.0.58)
+   統一報價單表格完整格線與內框 / 最終報價金額與小計欄位醒目強化 (v1.0.62)
    ============================================================================ */
+.pyside-excel-table th,
+.pyside-excel-table td {
+  border: 1px solid #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .pyside-excel-table th,
+html[data-theme="dark"] .pyside-excel-table td {
+  border: 1px solid #334155 !important;
+}
+
+.pyside-excel-table tbody tr.desktop-item-row td .pyside-cell-readonly {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 28px;
+  padding: 2px 6px;
+  border: 1px solid var(--border-card);
+  border-radius: 4px;
+  background-color: var(--bg-input);
+  box-sizing: border-box;
+}
+
+.pyside-excel-table tbody tr.desktop-item-row td .pyside-cell-readonly.align-right {
+  justify-content: flex-end;
+}
+
+.pyside-excel-table tbody tr.desktop-item-row td .pyside-cell-readonly.align-center {
+  justify-content: center;
+}
+
 .pyside-excel-table th.th-final-price-col {
   background-color: #fef3c7 !important;
   color: #92400e !important;
-  border-bottom: 2px solid #d97706 !important;
+  border: 1px solid #cbd5e1 !important;
   font-weight: 800;
 }
 
 html[data-theme="dark"] .pyside-excel-table th.th-final-price-col {
   background-color: #451a03 !important;
   color: #fbbf24 !important;
-  border-bottom: 2px solid #f59e0b !important;
+  border: 1px solid #334155 !important;
 }
 
 .pyside-excel-table tbody tr.desktop-item-row td.cell-final-price-td {
   background-color: #fffbeb !important;
-  border-left: 2px solid #f59e0b !important;
-  border-right: 1px solid #fcd34d !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.pyside-excel-table tbody tr.desktop-item-row td.cell-final-price-td .pyside-cell-readonly {
+  background-color: #fef3c7;
+  border-color: #f59e0b;
 }
 
 html[data-theme="dark"] .pyside-excel-table tbody tr.desktop-item-row td.cell-final-price-td {
   background-color: rgba(245, 158, 11, 0.14) !important;
-  border-left: 2px solid #d97706 !important;
-  border-right: 1px solid rgba(245, 158, 11, 0.45) !important;
+  border: 1px solid #334155 !important;
+}
+
+html[data-theme="dark"] .pyside-excel-table tbody tr.desktop-item-row td.cell-final-price-td .pyside-cell-readonly {
+  background-color: rgba(245, 158, 11, 0.2);
+  border-color: #d97706;
 }
 
 .cell-final-price-val {
@@ -8789,22 +8828,34 @@ html[data-theme="dark"] .cell-final-price-val {
 .pyside-excel-table th.th-subtotal-col {
   background-color: #e0f2fe !important;
   color: #075985 !important;
-  border-bottom: 2px solid #0284c7 !important;
+  border: 1px solid #cbd5e1 !important;
   font-weight: 800;
 }
 
 html[data-theme="dark"] .pyside-excel-table th.th-subtotal-col {
   background-color: #0c4a6e !important;
   color: #7dd3fc !important;
-  border-bottom: 2px solid #38bdf8 !important;
+  border: 1px solid #334155 !important;
 }
 
 .pyside-excel-table tbody tr.desktop-item-row td.cell-subtotal-td {
   background-color: #f0f9ff !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.pyside-excel-table tbody tr.desktop-item-row td.cell-subtotal-td .pyside-cell-readonly {
+  background-color: #e0f2fe;
+  border-color: #38bdf8;
 }
 
 html[data-theme="dark"] .pyside-excel-table tbody tr.desktop-item-row td.cell-subtotal-td {
   background-color: rgba(14, 165, 233, 0.14) !important;
+  border: 1px solid #334155 !important;
+}
+
+html[data-theme="dark"] .pyside-excel-table tbody tr.desktop-item-row td.cell-subtotal-td .pyside-cell-readonly {
+  background-color: rgba(14, 165, 233, 0.2);
+  border-color: #0284c7;
 }
 
 .cell-subtotal-val {

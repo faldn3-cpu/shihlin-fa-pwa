@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.61";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 14:20:00";
-  const SYSTEM_APP_RELEASE_NOTES = "網頁端改為自動解鎖加密資料包（業務免輸入密碼直接 Google 登入），後台雲端檔案維持管理員專屬密碼獨立保護";
+  const SYSTEM_APP_VERSION = "v1.0.62";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 14:35:00";
+  const SYSTEM_APP_RELEASE_NOTES = "統一報價單表格所有欄位四邊格線與內框顯示，並將管理員檢視工具改為僅留本機不公開";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -309,7 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchEncryptedSeedEnvelope() {
       if (rawEncryptedEnvelopeCache) return rawEncryptedEnvelopeCache;
-      const resp = await origFetch(`./data/encrypted_seed_db.json?v=20261116_v1_0_61`);
+      const resp = await origFetch(`./data/encrypted_seed_db.json?v=20261116_v1_0_62`);
       if (!resp || !resp.ok) throw new Error("無法下載網頁加密資料包");
       rawEncryptedEnvelopeCache = await resp.json();
       return rawEncryptedEnvelopeCache;

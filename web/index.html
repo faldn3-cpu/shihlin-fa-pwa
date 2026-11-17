@@ -1247,7 +1247,9 @@
             <table class="pyside-excel-table" id="quoteHistoryTable">
               <thead>
                 <tr>
-                  <th class="col-corner-header" style="width:42px;"></th>
+                  <th class="col-corner-header" style="width:48px; text-align:center;"><input type="checkbox"
+                      id="chkAllQuotesP3" title="全選 / 取消全選本頁"
+                      style="cursor:pointer; width:15px; height:15px; vertical-align:middle;" /></th>
                   <th class="resizable-th" style="width:150px;">單號<span class="col-resizer"></span></th>
                   <th class="resizable-th" style="width:60px;">版次<span class="col-resizer"></span></th>
                   <th class="resizable-th" style="width:190px;">公司名稱<span class="col-resizer"></span></th>
@@ -1444,7 +1446,7 @@
             </button>
             <button type="button" id="btnTogglePersonalSpecialDrawer" class="btn-pyside-outline"
               style="font-size:12px; padding:3px 10px;">
-              <span>展開/收合個人特殊品與方案A封存區</span>
+              <span>展開/收合個人特殊品專區</span>
             </button>
           </div>
 
@@ -1564,9 +1566,9 @@
           <!-- 業務個人特殊品與方案 A 自動轉正封存區 (點擊上方按鈕可展開操作，完整保留所有既有 ID) -->
           <div id="personalSpecialProductsSubPanel" class="hidden" style="margin-top:12px;">
             <fieldset class="pyside-groupbox pyside-full-groupbox">
-              <legend class="pyside-groupbox-legend">個人特殊品經銷牌價表（業務個人專屬 + 方案 A 自動轉正封存紀錄）</legend>
+              <legend class="pyside-groupbox-legend">個人特殊品經銷牌價表</legend>
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <span style="font-size:12px; color:#64748b;">當特殊品型號正式發行至「公司共通標準牌價表」時，系統自動以標準品取代並轉入封存紀錄。</span>
+                <span style="font-size:12px; color:#64748b;">當特殊品型號更新發行至「共通標準牌價表」時，系統自動以標準品取代並轉入封存紀錄。</span>
                 <span id="specialProductOwnerBadge" class="traffic-light-badge"
                   style="font-size:12px; padding:3px 8px;">所屬業務：曾維崧</span>
               </div>
@@ -1601,7 +1603,7 @@
               </div>
               <div style="font-weight:700; font-size:13px; margin:6px 0;">目前生效中之個人特殊品</div>
               <div id="specialProductsActiveList" style="overflow-x:auto; margin-bottom:10px;"></div>
-              <div style="font-weight:700; font-size:13px; margin:6px 0;">【方案 A 封存歷史紀錄】已轉為公司共通標準品之項目</div>
+              <div style="font-weight:700; font-size:13px; margin:6px 0;">【封存歷史紀錄】已轉為公司共通標準品之項目</div>
               <div id="specialProductsArchivedList" style="overflow-x:auto;"></div>
             </fieldset>
             <div class="hidden">
@@ -3856,13 +3858,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261116_v1_0_68"></script>
+  <script src="js/app.js?v=20261116_v1_0_69"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261116_v1_0_68')
+        navigator.serviceWorker.register('./sw.js?v=20261116_v1_0_69')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

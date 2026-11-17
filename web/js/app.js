@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.68";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 18:00:00";
-  const SYSTEM_APP_RELEASE_NOTES = "實作本機異動層 (Delta) 差異化儲存與 IndexedDB 雙重保護，修復頁面重新整理後新報價單遺失問題";
+  const SYSTEM_APP_VERSION = "v1.0.69";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 18:30:00";
+  const SYSTEM_APP_RELEASE_NOTES = "支援報價單管理多筆勾選與批次移至垃圾桶/批次復原，更名為「更新標準品統一售價」並強化主管權限保護";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -1283,7 +1283,7 @@ document.addEventListener("DOMContentLoaded", () => {
             item.is_archived = 1;
             item.archived_standard_price = stdPrice;
             item.archived_at = new Date().toISOString().slice(0, 19).replace("T", " ");
-            item.archived_note = "已發行成為公司共通標準品 (方案A)";
+            item.archived_note = "已更新發行成為全公司共通標準牌價";
           }
         });
         persistLocalDelta(store);
@@ -6021,6 +6021,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let isTrashViewActive = false;
   let currentActiveQuoteTab = 'create';
   let pendingDeleteQuoteNo = null;
+  let pendingDeleteQuoteNos = [];
+  let p3SelectedQuoteNos = new Set();
   let currentBaseQuoteNo = null;
   let currentLoadedDraftId = null;
 
@@ -7821,16 +7823,43 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
+    const chkAllP3 = document.getElementById("chkAllQuotesP3");
+    if (chkAllP3) {
+      chkAllP3.addEventListener("change", () => {
+        const isChecked = chkAllP3.checked;
+        const startIdx = (p3HistoryPage - 1) * P3_PAGE_SIZE;
+        const pageRows = p3FilteredQuotesCache.slice(startIdx, startIdx + P3_PAGE_SIZE);
+        pageRows.forEach(q => {
+          if (q && q.quote_no) {
+            if (isChecked) {
+              p3SelectedQuoteNos.add(q.quote_no);
+            } else {
+              p3SelectedQuoteNos.delete(q.quote_no);
+            }
+          }
+        });
+        syncP3SelectionUI(isTrashViewActive);
+      });
+    }
+
     const btnDelSelectedP3 = document.getElementById("btnDeleteSelectedQuoteP3");
     if (btnDelSelectedP3) {
       btnDelSelectedP3.addEventListener("click", () => {
-        if (!p3SelectedQuoteObj) {
-          alert("請先點選要移至垃圾桶的報價單！");
+        if (p3SelectedQuoteNos.size === 0) {
+          alert("請先勾選要移至垃圾桶的報價單！");
           return;
         }
-        pendingDeleteQuoteNo = p3SelectedQuoteObj.quote_no;
+        pendingDeleteQuoteNos = Array.from(p3SelectedQuoteNos);
         const targetEl = document.getElementById("deleteConfirmQuoteNo");
-        if (targetEl) targetEl.textContent = pendingDeleteQuoteNo;
+        if (targetEl) {
+          if (pendingDeleteQuoteNos.length === 1) {
+            targetEl.textContent = pendingDeleteQuoteNos[0];
+          } else {
+            const preview = pendingDeleteQuoteNos.slice(0, 3).join("、");
+            const moreStr = pendingDeleteQuoteNos.length > 3 ? ` ...等共 ${pendingDeleteQuoteNos.length} 筆` : `（共 ${pendingDeleteQuoteNos.length} 筆）`;
+            targetEl.textContent = `${preview}${moreStr}`;
+          }
+        }
         const delModal = document.getElementById("deleteConfirmModal");
         if (delModal) delModal.classList.remove("hidden");
       });
@@ -11426,24 +11455,36 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (btnConfirmDel && delModal) {
       btnConfirmDel.addEventListener("click", async () => {
-        if (!pendingDeleteQuoteNo) {
+        const targetList = (pendingDeleteQuoteNos && pendingDeleteQuoteNos.length > 0)
+          ? [...pendingDeleteQuoteNos]
+          : (pendingDeleteQuoteNo ? [pendingDeleteQuoteNo] : []);
+
+        if (targetList.length === 0) {
           delModal.classList.add("hidden");
           return;
         }
         btnConfirmDel.disabled = true;
         btnConfirmDel.textContent = "處理中...";
         try {
-          const resp = await fetch(`/api/quotations/${encodeURIComponent(pendingDeleteQuoteNo)}`, {
-            method: "DELETE"
-          });
-          if (!resp.ok) {
-            const err = await resp.json().catch(() => ({}));
-            throw new Error(err.detail || "伺服器刪除失敗");
+          for (const qNo of targetList) {
+            const resp = await fetch(`/api/quotations/${encodeURIComponent(qNo)}`, {
+              method: "DELETE"
+            });
+            if (!resp.ok) {
+              const err = await resp.json().catch(() => ({}));
+              throw new Error(err.detail || `單號【${qNo}】刪除失敗`);
+            }
           }
           delModal.classList.add("hidden");
-          alert(`[已移至垃圾桶] 報價單【${pendingDeleteQuoteNo}】已安全移至垃圾桶！\n若需還原，可點擊「檢視垃圾桶」隨時一鍵復原。`);
+          if (targetList.length === 1) {
+            alert(`[已移至垃圾桶] 報價單【${targetList[0]}】已安全移至垃圾桶！\n若需還原，可點擊「垃圾桶」隨時一鍵復原。`);
+          } else {
+            alert(`[已移至垃圾桶] 已成功將 ${targetList.length} 筆報價單移至垃圾桶！\n若需還原，可點擊「垃圾桶」隨時一鍵復原。`);
+          }
           pendingDeleteQuoteNo = null;
-          loadQuotationHistory("", false);
+          pendingDeleteQuoteNos = [];
+          p3SelectedQuoteNos.clear();
+          loadQuotationHistory("", isTrashViewActive);
         } catch (err) {
           alert("[軟刪除失敗] " + err.message);
         } finally {
@@ -11948,6 +11989,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return true;
       });
 
+      p3SelectedQuoteNos.clear();
       p3SelectedQuoteObj = null;
       updateP3SelectedBanner(null, isTrash);
       renderQuotationHistoryPage(isTrash, keyword);
@@ -11960,6 +12002,90 @@ document.addEventListener("DOMContentLoaded", () => {
       if (tbody) {
         tbody.innerHTML = `<tr><td colspan="11" style="padding:20px; text-align:center; color:#e74c3c;">載入失敗：${escapeHtml(err.message)}</td></tr>`;
       }
+    }
+  }
+
+  function updateP3MultiSelectedBanner(count, isTrash = false) {
+    const badge = document.getElementById("historyCurrentEditBadge");
+    const actBox = document.getElementById("historyRowActionsContainer");
+    if (!badge) return;
+
+    badge.innerHTML = `<span class="p3-edit-icon">[已勾選 ${count} 筆]</span><span style="color:#1e293b; font-weight:700;">共勾選 ${count} 筆報價單，可點擊下方「刪除選取項目」批次移至垃圾桶</span>`;
+
+    if (actBox) {
+      actBox.classList.remove("hidden");
+      if (isTrash) {
+        actBox.innerHTML = `
+          <button type="button" class="pyside-flat-btn" id="btnP3ActBatchRestore" style="background:#10b981; color:#fff; border:none; padding:4px 12px; font-weight:600;">批次復原已勾選單據 (${count} 筆)</button>
+        `;
+        const bRes = document.getElementById("btnP3ActBatchRestore");
+        if (bRes) {
+          bRes.addEventListener("click", async () => {
+            if (!confirm(`【二次確認】確定要將已勾選的 ${count} 筆報價單自垃圾桶批次復原嗎？`)) return;
+            bRes.disabled = true;
+            bRes.textContent = "復原中...";
+            try {
+              const list = Array.from(p3SelectedQuoteNos);
+              for (const qNo of list) {
+                await fetch(`/api/quotations/${encodeURIComponent(qNo)}/restore`, { method: "POST" });
+              }
+              alert(`[批次復原成功] 已成功復原 ${list.length} 筆報價單！`);
+              p3SelectedQuoteNos.clear();
+              loadQuotationHistory(document.getElementById("inputSearchQuoteHistory")?.value.trim() || "", true);
+            } catch (err) {
+              alert("[復原失敗] " + err.message);
+            }
+          });
+        }
+      } else {
+        actBox.innerHTML = `
+          <span style="font-size:0.8rem; color:var(--text-muted);">已勾選 ${count} 筆，可點擊下方紅色「刪除選取項目」批次移至垃圾桶</span>
+        `;
+      }
+    }
+  }
+
+  function syncP3HeaderCheckbox() {
+    const chkAll = document.getElementById("chkAllQuotesP3");
+    if (!chkAll) return;
+    const startIdx = (p3HistoryPage - 1) * P3_PAGE_SIZE;
+    const pageRows = p3FilteredQuotesCache.slice(startIdx, startIdx + P3_PAGE_SIZE);
+    if (pageRows.length > 0 && pageRows.every(q => p3SelectedQuoteNos.has(q.quote_no))) {
+      chkAll.checked = true;
+      chkAll.indeterminate = false;
+    } else if (pageRows.some(q => p3SelectedQuoteNos.has(q.quote_no))) {
+      chkAll.checked = false;
+      chkAll.indeterminate = true;
+    } else {
+      chkAll.checked = false;
+      chkAll.indeterminate = false;
+    }
+  }
+
+  function syncP3SelectionUI(isTrash = isTrashViewActive) {
+    const tbody = document.getElementById("quoteHistoryTableBody");
+    if (tbody) {
+      tbody.querySelectorAll(".p3-hist-row").forEach(tr => {
+        const qNo = tr.getAttribute("data-quoteno");
+        const isChecked = p3SelectedQuoteNos.has(qNo);
+        tr.classList.toggle("selected-row", isChecked);
+        const chk = tr.querySelector(".p3-quote-chk");
+        if (chk) chk.checked = isChecked;
+      });
+    }
+
+    syncP3HeaderCheckbox();
+
+    if (p3SelectedQuoteNos.size === 1) {
+      const singleNo = Array.from(p3SelectedQuoteNos)[0];
+      p3SelectedQuoteObj = p3FilteredQuotesCache.find(x => x.quote_no === singleNo) || null;
+      updateP3SelectedBanner(p3SelectedQuoteObj, isTrash);
+    } else if (p3SelectedQuoteNos.size > 1) {
+      p3SelectedQuoteObj = null;
+      updateP3MultiSelectedBanner(p3SelectedQuoteNos.size, isTrash);
+    } else {
+      p3SelectedQuoteObj = null;
+      updateP3SelectedBanner(null, isTrash);
     }
   }
 
@@ -11994,6 +12120,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const resp = await fetch(`/api/quotations/${encodeURIComponent(qObj.quote_no)}/restore`, { method: "POST" });
             if (resp.ok) {
               alert(`[復原成功] 報價單【${qObj.quote_no}】已成功復原！`);
+              p3SelectedQuoteNos.clear();
               loadQuotationHistory(document.getElementById("inputSearchQuoteHistory")?.value.trim() || "", true);
             }
           });
@@ -12057,6 +12184,7 @@ document.addEventListener("DOMContentLoaded", () => {
           </td>
         </tr>
       `;
+      syncP3HeaderCheckbox();
       return;
     }
 
@@ -12066,15 +12194,18 @@ document.addEventListener("DOMContentLoaded", () => {
     tbody.innerHTML = pageRows.map((q, idx) => {
       const rowNum = startIdx + idx + 1;
       const { baseNo, revStr } = splitQuoteNoAndRev(q.quote_no, q.revision);
-      const isSel = p3SelectedQuoteObj && p3SelectedQuoteObj.quote_no === q.quote_no;
+      const isChecked = p3SelectedQuoteNos.has(q.quote_no);
       const wonAmtText = (q.status === "已成交" && Number(q.won_amount || q.subtotal || 0) > 0)
         ? Number(q.won_amount || q.subtotal || 0).toLocaleString()
         : "";
       const wonDateText = q.won_date || (q.status === "已成交" ? (q.quote_date || "") : "");
 
       return `
-        <tr class="p3-hist-row ${isSel ? 'selected-row' : ''}" data-quoteno="${escapeHtml(q.quote_no)}" title="單擊選取並顯示狀態操作鈕；雙擊直接載入至「新建報價單」編輯區">
-          <td class="col-idx">${rowNum}</td>
+        <tr class="p3-hist-row ${isChecked ? 'selected-row' : ''}" data-quoteno="${escapeHtml(q.quote_no)}" title="單擊選取並顯示狀態操作鈕；雙擊直接載入至「新建報價單」編輯區">
+          <td class="col-idx" style="text-align:center; padding:4px 6px;">
+            <input type="checkbox" class="p3-quote-chk" data-quoteno="${escapeHtml(q.quote_no)}" style="cursor:pointer; vertical-align:middle; width:15px; height:15px; margin-right:4px;" ${isChecked ? 'checked' : ''} />
+            <span style="font-size:0.75rem; color:var(--text-muted);">${rowNum}</span>
+          </td>
           <td style="text-align:center; font-weight:600; color:#2c3e50;">${escapeHtml(baseNo)}</td>
           <td style="text-align:center;">${escapeHtml(revStr)}</td>
           <td style="max-width:170px; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(q.customer_name || "")}</td>
@@ -12090,18 +12221,47 @@ document.addEventListener("DOMContentLoaded", () => {
     }).join("");
 
     tbody.querySelectorAll(".p3-hist-row").forEach(tr => {
-      tr.addEventListener("click", () => {
-        const qNo = tr.getAttribute("data-quoteno");
-        const found = p3FilteredQuotesCache.find(x => x.quote_no === qNo);
-        p3SelectedQuoteObj = found || null;
-        tbody.querySelectorAll(".p3-hist-row").forEach(r => r.classList.toggle("selected-row", r === tr));
-        updateP3SelectedBanner(p3SelectedQuoteObj, isTrash);
+      const qNo = tr.getAttribute("data-quoteno");
+      const chk = tr.querySelector(".p3-quote-chk");
+
+      if (chk) {
+        chk.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (chk.checked) {
+            p3SelectedQuoteNos.add(qNo);
+          } else {
+            p3SelectedQuoteNos.delete(qNo);
+          }
+          syncP3SelectionUI(isTrash);
+        });
+      }
+
+      tr.addEventListener("click", (e) => {
+        if (e.target && e.target.classList.contains("p3-quote-chk")) return;
+
+        if (e.ctrlKey || e.metaKey) {
+          if (p3SelectedQuoteNos.has(qNo)) {
+            p3SelectedQuoteNos.delete(qNo);
+          } else {
+            p3SelectedQuoteNos.add(qNo);
+          }
+        } else {
+          if (p3SelectedQuoteNos.has(qNo) && p3SelectedQuoteNos.size === 1) {
+            p3SelectedQuoteNos.clear();
+          } else {
+            p3SelectedQuoteNos.clear();
+            p3SelectedQuoteNos.add(qNo);
+          }
+        }
+        syncP3SelectionUI(isTrash);
       });
+
       tr.addEventListener("dblclick", () => {
-        const qNo = tr.getAttribute("data-quoteno");
         if (qNo) loadQuotationToForm(qNo);
       });
     });
+
+    syncP3HeaderCheckbox();
   }
 
   function exportCrmMonthlyReportCsv() {
@@ -12731,7 +12891,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   <td style="padding:8px 10px; color:var(--text-muted); font-size:0.82rem;">${escapeHtml(item.note || item.notes || '-')}</td>
                   <td style="padding:8px 10px; text-align:center; white-space:nowrap;">
                     <button type="button" class="btn-use-special-prod fluent-btn secondary" data-model="${escapeHtml(item.model_no)}" data-spec="${escapeHtml(item.spec || '')}" data-price="${item.dealer_price || 0}" data-stock="${item.stock_qty || 0}" style="font-size:0.78rem; padding:3px 8px; margin-right:4px;">帶入報價單</button>
-                    <button type="button" class="btn-promote-special-prod fluent-btn primary" data-id="${item.id}" data-model="${escapeHtml(item.model_no)}" data-spec="${escapeHtml(item.spec || '')}" data-price="${item.dealer_price || 0}" data-stock="${item.stock_qty || 0}" style="font-size:0.78rem; padding:3px 8px; margin-right:4px;" title="模擬或執行公司正式發行此型號為共通標準品（方案A自動取代並封存）">轉標準品發行(方案A)</button>
+                    ${activeSales === "曾維崧" ? `<button type="button" class="btn-promote-special-prod fluent-btn primary" data-id="${item.id}" data-model="${escapeHtml(item.model_no)}" data-spec="${escapeHtml(item.spec || '')}" data-price="${item.dealer_price || 0}" data-stock="${item.stock_qty || 0}" style="font-size:0.78rem; padding:3px 8px; margin-right:4px;" title="將此型號更新發行為全公司共通標準品">更新標準品統一售價</button>` : ''}
                     <button type="button" class="btn-del-special-prod fluent-btn danger" data-id="${item.id}" data-model="${escapeHtml(item.model_no)}" style="font-size:0.78rem; padding:3px 8px;">刪除</button>
                   </td>
                 </tr>
@@ -12759,16 +12919,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
         activeContainer.querySelectorAll(".btn-promote-special-prod").forEach(btn => {
           btn.addEventListener("click", async () => {
+            if (getActiveSalesName() !== "曾維崧") {
+              alert("[權限限制] 「更新標準品統一售價」涉及全公司共通標準牌價之正式發行，需由主管（曾維崧）審核並執行。");
+              return;
+            }
             const modelNo = btn.dataset.model;
             const origPrice = parseFloat(btn.dataset.price) || 0;
-            const inputStdPrice = prompt(`【方案 A：特殊品轉公司共通標準品發行確認】\n\n即將把型號【${modelNo}】正式發行至「公司共通標準牌價表」。\n發行後系統將自動以公司標準品取代，並將各業務個人特殊品封存留紀錄。\n\n請輸入公司正式發行之「標準經銷牌價(未稅)」：`, String(origPrice));
+            const inputStdPrice = prompt(`【更新標準品統一售價確認】\n\n即將把型號【${modelNo}】正式發行至全公司「共通標準牌價表」。\n發行後系統將以公司標準售價為準，並自動將原特殊品封存保留歷史紀錄。\n\n請輸入公司正式發行之「標準經銷牌價(未稅)」：`, String(origPrice));
             if (inputStdPrice === null) return;
             const stdPrice = parseFloat(inputStdPrice);
             if (isNaN(stdPrice) || stdPrice <= 0) {
               alert("請輸入有效的標準經銷牌價數字！");
               return;
             }
-            if (!confirm(`【二次確認】確定要將【${modelNo}】以標準牌價 $${stdPrice.toLocaleString()} 正式發行至共通標準牌價表，並自動封存個人特殊品嗎？`)) {
+            if (!confirm(`【二次確認】確定要將【${modelNo}】以標準牌價 $${stdPrice.toLocaleString()} 更新為全公司共通標準牌價，並自動封存個人特殊品嗎？`)) {
               return;
             }
             try {
@@ -12781,10 +12945,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 })
               });
               const resData = await r.json();
-              if (!r.ok) throw new Error(resData.detail || "轉正發行失敗");
+              if (!r.ok) throw new Error(resData.detail || "更新發行失敗");
               quoteProductsCache = [];
               if (typeof invalidateDesktopProductsCache === "function") invalidateDesktopProductsCache();
-              alert(`[方案 A 執行成功] ${resData.message}`);
+              alert(`[更新成功] ${resData.message}`);
               loadSpecialProductsManager();
             } catch (e) {
               alert("[執行失敗] " + e.message);
@@ -12824,7 +12988,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <th style="padding:8px 10px; text-align:right;">原個人特殊價</th>
                 <th style="padding:8px 10px; text-align:right;">轉正時公司標準牌價</th>
                 <th style="padding:8px 10px; text-align:center;">封存時間</th>
-                <th style="padding:8px 10px; text-align:left;">方案 A 封存備註</th>
+                <th style="padding:8px 10px; text-align:left;">封存備註</th>
               </tr>
             </thead>
             <tbody>
@@ -12888,7 +13052,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("inputSpecialStockQty").value = "0";
       document.getElementById("inputSpecialNotes").value = "";
 
-      alert(`[${resData.status === 'archived_by_standard' ? '方案 A 自動轉正提醒' : '儲存成功'}] ${resData.message}`);
+      alert(`[${resData.status === 'archived_by_standard' ? '標準品轉正提醒' : '儲存成功'}] ${resData.message}`);
       loadSpecialProductsManager();
     } catch (err) {
       alert("[儲存失敗] " + err.message);
@@ -13713,6 +13877,47 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function applyProductManagementPermissions() {
+    const isMgr = (getActiveSalesName() === "曾維崧");
+    const inputs = [
+      document.getElementById("p7InputModel"),
+      document.getElementById("p7InputListPrice"),
+      document.getElementById("p7InputDealerPrice"),
+      document.getElementById("p7InputSpec"),
+      document.getElementById("p7ChkIsMto")
+    ];
+    const btnSave = document.getElementById("btnP7SaveProduct");
+    const btnDel = document.getElementById("btnProdMgmtDeleteSelected");
+    const btnClear = document.getElementById("btnProdMgmtClearAll");
+
+    inputs.forEach(inp => {
+      if (inp) {
+        inp.disabled = !isMgr;
+        inp.style.backgroundColor = isMgr ? "" : "#f1f5f9";
+        inp.style.cursor = isMgr ? "" : "not-allowed";
+      }
+    });
+
+    if (btnSave) {
+      btnSave.disabled = !isMgr;
+      btnSave.title = isMgr ? "儲存產品" : "[權限限制] 僅主管（曾維崧）具備修改標準牌價權限，業務員僅供唯讀查閱";
+      btnSave.style.opacity = isMgr ? "1" : "0.5";
+      btnSave.style.cursor = isMgr ? "pointer" : "not-allowed";
+    }
+    if (btnDel) {
+      btnDel.disabled = !isMgr;
+      btnDel.title = isMgr ? "刪除選取產品" : "[權限限制] 僅主管（曾維崧）可刪除共通標準品";
+      btnDel.style.opacity = isMgr ? "1" : "0.5";
+      btnDel.style.cursor = isMgr ? "pointer" : "not-allowed";
+    }
+    if (btnClear) {
+      btnClear.disabled = !isMgr;
+      btnClear.title = isMgr ? "清空所有產品" : "[權限限制] 僅主管（曾維崧）可清空共通標準品";
+      btnClear.style.opacity = isMgr ? "1" : "0.5";
+      btnClear.style.cursor = isMgr ? "pointer" : "not-allowed";
+    }
+  }
+
   function renderStandardProductsPage() {
     const tbody = document.getElementById("quoteProdMgmtTableBody");
     const pageInfo = document.getElementById("lblProdMgmtPageInfo");
@@ -13728,6 +13933,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (totalCount === 0) {
       tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:#7f8c8d;">查無相符的產品型號</td></tr>`;
+      applyProductManagementPermissions();
       return;
     }
 
@@ -13779,6 +13985,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (calcDisp && dealerP > 0) calcDisp.value = String(dealerP);
       });
     });
+
+    applyProductManagementPermissions();
   }
 
   function clearP7ProductForm() {
@@ -13794,6 +14002,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function saveP7ProductFromForm() {
+    if (getActiveSalesName() !== "曾維崧") {
+      alert("[權限限制] 共通標準牌價表攸關全公司合約與毛利，僅主管（曾維崧）具備修改與儲存權限。業務人員請唯讀查閱。");
+      return;
+    }
     const modelNo = document.getElementById("p7InputModel")?.value.trim() || "";
     const dealerPrice = parseFloat(document.getElementById("p7InputDealerPrice")?.value || "0") || 0;
     const specRaw = document.getElementById("p7InputSpec")?.value.trim() || "";
@@ -13821,15 +14033,19 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function deleteSelectedP7Product() {
+    if (getActiveSalesName() !== "曾維崧") {
+      alert("[權限限制] 共通標準牌價表攸關全公司合約與毛利，僅主管（曾維崧）具備刪除權限。業務人員請唯讀查閱。");
+      return;
+    }
     if (!p7SelectedProductObj) {
       alert("請先從左側產品列表點選一筆產品！");
       return;
     }
     if (!p7SelectedProductObj.is_special) {
-      alert("此品項為公司共通標準牌價品項，受系統保護無法直接刪除；若為個人特殊品請展開下方「個人特殊品與方案 A 自動轉正專區」刪除。");
+      alert("此品項為公司共通標準牌價品項，受系統保護無法直接刪除；若為個人特殊品請展開下方「個人特殊品專區」刪除。");
       return;
     }
-    alert(`請展開下方「個人特殊品與方案 A 自動轉正專區」刪除【${p7SelectedProductObj.model_no}】。`);
+    alert(`請展開下方「個人特殊品專區」刪除【${p7SelectedProductObj.model_no}】。`);
   }
 
   function setupP7CalculatorEvents() {
@@ -14535,7 +14751,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <p>管理全系列標準品牌價、經銷價、訂購品標記與業務個人特殊品：</p>
       <div class="help-section-title">[1] 標準產品檢索與小算盤</div>
       <p>・點選左側產品列，即可將牌價與經銷價帶入右側編輯區與下方<strong>「4x5 獨立小算盤」</strong>，方便即時試算特殊折數。<br>
-      ・點擊右上角「個人特殊品與方案 A 轉正」按鈕，可管理各業務專屬的專案特價品；當公司正式發行標準牌價時，支援方案 A 一鍵轉正並封存歷史紀錄。</p>
+      ・點擊右上角「個人特殊品專區」按鈕，可管理各業務專屬的專案特價品；主管亦可點擊「更新標準品統一售價」轉為全公司標準品並封存歷史紀錄。</p>
     `,
     `
       <h2 class="help-h2">[設定] 系統設定與交貨驗收條款</h2>

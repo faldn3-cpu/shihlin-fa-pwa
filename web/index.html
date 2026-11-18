@@ -3858,13 +3858,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261116_v1_0_69"></script>
+  <script src="js/app.js?v=20261118_v1_0_70"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261116_v1_0_69')
+        navigator.serviceWorker.register('./sw.js?v=20261118_v1_0_70')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

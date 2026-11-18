@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.69";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-16 18:30:00";
-  const SYSTEM_APP_RELEASE_NOTES = "支援報價單管理多筆勾選與批次移至垃圾桶/批次復原，更名為「更新標準品統一售價」並強化主管權限保護";
+  const SYSTEM_APP_VERSION = "v1.0.70";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-18 10:55:00";
+  const SYSTEM_APP_RELEASE_NOTES = "手機版報價預設品項改為 1 項（不受新建預設行數設定影響），並強化切換業務身分時自動清空報價畫面與本機行數防竄改資安保護";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -6198,17 +6198,40 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 當業務人員身份切換時，重新載入該業務專屬客戶、產品牌價(含個人特殊品)、歷史報價與草稿
+  // 判斷目前是否為手機版或窄螢幕報價介面（寬度 < 1100px 或行動裝置）
+  function isMobileQuotationView() {
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || "");
+    const vw = window.innerWidth || document.documentElement.clientWidth || 0;
+    return isMobileUA || (vw > 0 && vw < 1100);
+  }
+
+  // 資安防護：取得安全的預設品項行數（手機版固定為 1 項不受設定影響；電腦版強制限制於 1~50 行安全範圍防竄改當機）
+  function getSafeDefaultQuoteRows() {
+    if (isMobileQuotationView()) {
+      return 1;
+    }
+    const rawVal = parseInt(localStorage.getItem("shihlin_quote_default_rows") || "5", 10);
+    if (isNaN(rawVal) || rawVal < 1) return 5;
+    return Math.min(50, Math.max(1, rawVal));
+  }
+
+  // 當業務人員身份切換時，重新載入該業務專屬客戶、產品牌價(含個人特殊品)、歷史報價與草稿，並強制清空報價編輯畫面防機密外洩
   async function onQuotationSalespersonChanged(salesName) {
     quoteProductsCache = [];
     if (typeof invalidateDesktopProductsCache === "function") {
       invalidateDesktopProductsCache();
     }
-    currentSelectedCustomer = null;
-    const dCustReset = document.getElementById("quoteCustomerInput");
-    if (dCustReset) dCustReset.value = "";
-    if (typeof window.__closeDesktopCustomerCompleter === "function") {
-      window.__closeDesktopCustomerCompleter();
+    if (typeof resetQuotationEditor === "function" && isQuotationModuleInitialized) {
+      resetQuotationEditor();
+    } else {
+      currentSelectedCustomer = null;
+      const dCustReset = document.getElementById("quoteCustomerInput");
+      if (dCustReset) dCustReset.value = "";
+      const mCustReset = document.getElementById("customerName");
+      if (mCustReset) mCustReset.value = "";
+      if (typeof window.__closeDesktopCustomerCompleter === "function") {
+        window.__closeDesktopCustomerCompleter();
+      }
     }
     const spBadge = document.getElementById("specialProductOwnerBadge");
     if (spBadge) spBadge.textContent = `所屬業務：${salesName}`;
@@ -6285,7 +6308,7 @@ document.addEventListener("DOMContentLoaded", () => {
     await populateCustomerSelectDropdown(false);
     const itemsContainer = document.getElementById("itemsContainer");
     if (itemsContainer && itemsContainer.children.length === 0) {
-      const defRows = parseInt(localStorage.getItem("shihlin_quote_default_rows") || "5", 10) || 5;
+      const defRows = getSafeDefaultQuoteRows();
       for (let i = 0; i < defRows; i++) {
         addBlankItem();
       }
@@ -8130,7 +8153,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (detailCard) detailCard.classList.add("hidden");
 
     updateDesktopBannerForRow(null);
-    const defRows = parseInt(localStorage.getItem("shihlin_quote_default_rows") || "5", 10) || 5;
+    const defRows = getSafeDefaultQuoteRows();
     for (let i = 0; i < defRows; i++) {
       addBlankItem(null, { skipRecalc: true });
     }

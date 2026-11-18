@@ -277,11 +277,17 @@ def api_save_quotation_customer(req: QuotationCustomerSaveRequest):
 
 
 @app.delete("/api/quotation-customers/{customer_id}")
-def api_delete_quotation_customer(customer_id: int, sales_name: Optional[str] = None):
-    """報價管理系統：刪除指定客戶及其聯絡人清單"""
-    ok = data_access.delete_quotation_customer(customer_id, sales_name=sales_name)
+def api_delete_quotation_customer(
+    customer_id: int,
+    sales_name: Optional[str] = None,
+    contact_index: Optional[int] = None,
+):
+    """報價管理系統：刪除指定客戶或單一聯絡人清單"""
+    ok = data_access.delete_quotation_customer(
+        customer_id, sales_name=sales_name, contact_index=contact_index
+    )
     if not ok:
-        raise HTTPException(status_code=404, detail="找不到指定的客戶或無權限刪除")
+        raise HTTPException(status_code=404, detail="找不到指定的客戶或聯絡人，或無權限刪除")
     return {"status": "success", "message": "客戶資料已成功刪除"}
 
 

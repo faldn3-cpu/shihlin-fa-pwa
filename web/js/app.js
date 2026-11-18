@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.71";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-18 11:15:00";
-  const SYSTEM_APP_RELEASE_NOTES = "修正客戶管理點選聯絡人時同公司多列同時反藍問題，並強化編輯指定聯絡人列與跨業務切換時自動清空客戶編輯表單之資安防護";
+  const SYSTEM_APP_VERSION = "v1.0.72";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-18 12:00:00";
+  const SYSTEM_APP_RELEASE_NOTES = "修正客戶管理刪除功能支援僅刪除單一選取聯絡人（保留同公司其他聯絡人），並自動恢復先前誤刪之多聯絡人公司資料";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -554,6 +554,13 @@ document.addEventListener("DOMContentLoaded", () => {
           }
 
           // 3. 客戶主檔差異合併 (種子客戶與增量客戶融合，並過濾已刪除客戶)
+          let needsRestorePersist = false;
+          if (!delta.settings || delta.settings._restored_multi_contact_del_v1072 !== "1") {
+            // 升級 v1.0.72 一次性自動復原先前因刪除單一聯絡人而整家被移除的客戶資料
+            delta.deleted_customer_ids = [];
+            baseStore.settings._restored_multi_contact_del_v1072 = "1";
+            needsRestorePersist = true;
+          }
           if (Array.isArray(delta.deleted_customer_ids)) {
             delta.deleted_customer_ids.forEach(cid => baseStore._deletedCustIds.add(Number(cid)));
           }
@@ -577,7 +584,16 @@ document.addEventListener("DOMContentLoaded", () => {
                   }
                 }
               });
-              baseStore.customers_by_sales[sales] = Array.from(map.values()).filter(c => !baseStore._deletedCustIds.has(Number(c.id)));
+              baseStore.customers_by_sales[sales] = Array.from(map.values());
+            });
+          }
+          if (baseStore._deletedCustIds.size > 0 && baseStore.customers_by_sales && typeof baseStore.customers_by_sales === "object") {
+            Object.keys(baseStore.customers_by_sales).forEach(sales => {
+              if (Array.isArray(baseStore.customers_by_sales[sales])) {
+                baseStore.customers_by_sales[sales] = baseStore.customers_by_sales[sales].filter(
+                  c => !baseStore._deletedCustIds.has(Number(c.id))
+                );
+              }
             });
           }
 
@@ -615,6 +631,12 @@ document.addEventListener("DOMContentLoaded", () => {
               baseStore[bucket] = { ...baseStore[bucket], ...delta[bucket] };
             }
           });
+
+          if (needsRestorePersist) {
+            persistLocalDelta(baseStore);
+          }
+        } else {
+          baseStore.settings._restored_multi_contact_del_v1072 = "1";
         }
 
         storeMem = baseStore;
@@ -829,20 +851,63 @@ document.addEventListener("DOMContentLoaded", () => {
       if (pathname.startsWith("/api/quotation-customers/") && upperMethod === "DELETE") {
         const cid = parseInt(pathname.split("/").pop(), 10);
         const rawSales = (params.get("sales_name") || "").trim();
-        let removed = false;
+        const rawContactIdx = params.get("contact_index");
+        let parsedContactIdx = null;
+        if (rawContactIdx !== null && rawContactIdx !== "") {
+          const n = Number(rawContactIdx);
+          if (!Number.isInteger(n) || n < 0) {
+            return jsonResponse({ detail: "聯絡人序號參數不正確" }, 400);
+          }
+          parsedContactIdx = n;
+        }
+
         const targetBuckets = rawSales ? [ensureCustomerBucket(store, rawSales)] : Object.values(store.customers_by_sales);
-        targetBuckets.forEach(bucket => {
+        let deletedType = null;
+        let deletedContactName = "";
+        let targetCustName = "";
+        let outOfRange = false;
+
+        for (const bucket of targetBuckets) {
           const idx = bucket.findIndex(c => Number(c.id) === cid);
           if (idx >= 0) {
-            bucket.splice(idx, 1);
-            removed = true;
+            const custObj = bucket[idx];
+            targetCustName = custObj.name || "";
+            const contactsLen = Array.isArray(custObj.contacts) ? custObj.contacts.length : 0;
+            if (contactsLen > 1 && parsedContactIdx !== null) {
+              if (parsedContactIdx >= contactsLen) {
+                outOfRange = true;
+                break;
+              }
+              // 同公司有多位聯絡人時，僅移除指定列之聯絡人，保留公司與其餘聯絡人
+              const removedContacts = custObj.contacts.splice(parsedContactIdx, 1);
+              deletedContactName = (removedContacts[0] && removedContacts[0].name) || "";
+              custObj.default_contact = (custObj.contacts[0] && custObj.contacts[0].name) || "";
+              custObj._modified = true;
+              deletedType = "contact";
+            } else if (parsedContactIdx !== null && contactsLen === 1 && parsedContactIdx >= 1) {
+              outOfRange = true;
+              break;
+            } else {
+              bucket.splice(idx, 1);
+              if (!store._deletedCustIds) store._deletedCustIds = new Set();
+              store._deletedCustIds.add(cid);
+              deletedType = "company";
+            }
+            break;
           }
-        });
-        if (!removed) return jsonResponse({ detail: "找不到指定的客戶或無權限刪除" }, 404);
-        if (!store._deletedCustIds) store._deletedCustIds = new Set();
-        store._deletedCustIds.add(cid);
+        }
+
+        if (outOfRange) return jsonResponse({ detail: "聯絡人序號超出有效範圍" }, 400);
+        if (!deletedType) return jsonResponse({ detail: "找不到指定的客戶或無權限刪除" }, 404);
         persistLocalDelta(store);
-        return jsonResponse({ status: "success", message: "客戶資料已成功刪除" });
+        if (deletedType === "contact") {
+          return jsonResponse({
+            status: "success",
+            deleted_type: "contact",
+            message: `已刪除「${targetCustName}」的聯絡人「${deletedContactName || "未命名"}」（公司與其餘聯絡人已保留）`
+          });
+        }
+        return jsonResponse({ status: "success", deleted_type: "company", message: "客戶資料已成功刪除" });
       }
 
       // 3. 供應商與系統財務/條款設定
@@ -13863,27 +13928,50 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function deleteSelectedQuotationCustomer() {
     if (!selectedMgmtCustomerId) {
-      alert("請先從左側列表點選要刪除的客戶公司！");
+      alert("請先從左側列表點選要刪除的客戶或聯絡人！");
       return;
     }
     const cust = (customersCache || []).find(c => Number(c.id) === Number(selectedMgmtCustomerId));
     const custName = cust ? cust.name : `ID ${selectedMgmtCustomerId}`;
-    if (!confirm(`【二次確認】確定要刪除客戶「${custName}」及其聯絡人資料嗎？此動作無法復原。`)) {
+    const contacts = cust && Array.isArray(cust.contacts) && cust.contacts.length > 0
+      ? cust.contacts
+      : [{ name: cust?.default_contact || "", email: "", mobile: "" }];
+    const safeIdx = Number.isInteger(selectedMgmtContactIdx) && selectedMgmtContactIdx >= 0 && selectedMgmtContactIdx < contacts.length
+      ? selectedMgmtContactIdx
+      : 0;
+    const isMultiContact = contacts.length > 1;
+    const targetContactName = (contacts[safeIdx] && contacts[safeIdx].name) || cust?.default_contact || "";
+
+    const confirmMsg = isMultiContact
+      ? `【二次確認】確定要刪除客戶「${custName}」的聯絡人「${targetContactName || "（空白聯絡人）"}」嗎？（該公司與其餘 ${contacts.length - 1} 位聯絡人將保留）`
+      : `【二次確認】「${custName}」目前僅有此筆資料，確定要刪除整家客戶「${custName}」嗎？此動作無法復原。`;
+
+    if (!confirm(confirmMsg)) {
       return;
     }
     try {
       const activeSales = getActiveSalesName();
-      const r = await fetch(`/api/quotation-customers/${selectedMgmtCustomerId}?sales_name=${encodeURIComponent(activeSales)}`, {
+      const targetCid = selectedMgmtCustomerId;
+      const r = await fetch(`/api/quotation-customers/${targetCid}?sales_name=${encodeURIComponent(activeSales)}&contact_index=${safeIdx}`, {
         method: "DELETE"
       });
+      const resData = await r.json().catch(() => ({}));
       if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
-        throw new Error(err.detail || "刪除失敗");
+        throw new Error(resData.detail || "刪除失敗");
       }
-      clearQuotationCustomerForm();
       await populateCustomerSelectDropdown(true);
-      renderQuotationCustomersTable();
-      alert(`[已刪除] 客戶「${custName}」已成功刪除。`);
+      const stillExists = (customersCache || []).find(c => Number(c.id) === Number(targetCid));
+      if (stillExists) {
+        const remContacts = Array.isArray(stillExists.contacts) && stillExists.contacts.length > 0
+          ? stillExists.contacts
+          : [{ name: stillExists.default_contact || "", email: "", mobile: "" }];
+        const nextIdx = Math.min(safeIdx, remContacts.length - 1);
+        selectCustomerInMgmtForm(stillExists, nextIdx);
+      } else {
+        clearQuotationCustomerForm();
+        renderQuotationCustomersTable();
+      }
+      alert(`[已刪除] ${resData.message || `客戶「${custName}」已成功刪除。`}`);
     } catch (err) {
       alert("[刪除失敗] " + err.message);
     }

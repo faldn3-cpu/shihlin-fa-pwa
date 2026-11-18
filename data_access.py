@@ -1008,8 +1008,23 @@ def save_quotation_customer(data: Dict[str, Any]) -> Tuple[bool, str, int]:
         conn.close()
 
 
-def delete_quotation_customer(customer_id: int, sales_name: Optional[str] = None) -> bool:
-    """刪除指定客戶及其聯絡人清單 (依業務員隔離防呆)"""
+def delete_quotation_customer(
+    customer_id: int,
+    sales_name: Optional[str] = None,
+    contact_index: Optional[int] = None,
+) -> bool:
+    """刪除指定客戶或該客戶之單一聯絡人 (依業務員隔離防呆)"""
+    safe_contact_idx: Optional[int] = None
+    if contact_index is not None:
+        if isinstance(contact_index, bool):
+            return False
+        try:
+            safe_contact_idx = int(contact_index)
+        except (TypeError, ValueError):
+            return False
+        if safe_contact_idx < 0:
+            return False
+
     conn = get_connection()
     try:
         cursor = conn.cursor()
@@ -1020,6 +1035,32 @@ def delete_quotation_customer(customer_id: int, sales_name: Optional[str] = None
             ).fetchone()
             if not row:
                 return False
+
+        if safe_contact_idx is not None:
+            ct_rows = cursor.execute(
+                "SELECT id, name FROM contact_master WHERE customer_id = ? ORDER BY id ASC",
+                (customer_id,)
+            ).fetchall()
+            # 當同公司有 2 位以上聯絡人時，只刪除指定序號的那 1 筆聯絡人並保留公司
+            if len(ct_rows) > 1:
+                if safe_contact_idx >= len(ct_rows):
+                    return False
+                target_ct_id = ct_rows[safe_contact_idx]["id"]
+                res = cursor.execute("DELETE FROM contact_master WHERE id = ?", (target_ct_id,))
+                first_ct = cursor.execute(
+                    "SELECT name FROM contact_master WHERE customer_id = ? ORDER BY id ASC LIMIT 1",
+                    (customer_id,)
+                ).fetchone()
+                next_default = first_ct["name"] if (first_ct and first_ct["name"]) else ""
+                cursor.execute(
+                    "UPDATE customer_master SET default_contact = ? WHERE id = ?",
+                    (next_default, customer_id)
+                )
+                conn.commit()
+                return res.rowcount > 0
+            if safe_contact_idx != 0:
+                return False
+
         cursor.execute("DELETE FROM contact_master WHERE customer_id = ?", (customer_id,))
         res = cursor.execute("DELETE FROM customer_master WHERE id = ?", (customer_id,))
         conn.commit()

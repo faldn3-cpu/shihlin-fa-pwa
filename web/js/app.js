@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.75";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-18 15:00:00";
-  const SYSTEM_APP_RELEASE_NOTES = "產品管理改為100%滿版上下分區表格（個人特殊品在上、共通標準品在下）、移除小算盤與無效按鈕、支援同型號不同價並存及差異匯入個人牌價，並新增客戶與個人特殊品30天停用區還原機制";
+  const SYSTEM_APP_VERSION = "v1.0.76";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-18 15:30:00";
+  const SYSTEM_APP_RELEASE_NOTES = "客戶與產品管理左欄改為多選核取方塊並支援Shift連續區間選取、產品管理拆分個人與公眾雙可調長度表格，且單列高度隨系統字級等比例自動調整";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -41,6 +41,9 @@ document.addEventListener("DOMContentLoaded", () => {
   let isP6DeactivatedView = false;
   let p6DeactivatedListCache = [];
   let selectedDeactivatedCustId = null;
+  let p6CheckedKeys = new Set();
+  let p6LastShiftIdx = null;
+  let p6CurrentRenderedRows = [];
 
   let p7ProductsListCache = [];
   let p7PersonalListCache = [];
@@ -50,6 +53,10 @@ document.addEventListener("DOMContentLoaded", () => {
   let isP7DeactivatedView = false;
   let p7DeactivatedListCache = [];
   let selectedDeactivatedProdId = null;
+  let p7CheckedPersonalIds = new Set();
+  let p7LastPersonalShiftIdx = null;
+  let p7CheckedStdModels = new Set();
+  let p7LastStdShiftIdx = null;
   syncSystemVersionUI();
 
   // ============================================================================
@@ -6644,17 +6651,24 @@ document.addEventListener("DOMContentLoaded", () => {
     if (typeof invalidateDesktopProductsCache === "function") {
       invalidateDesktopProductsCache();
     }
-    // 切換業務身分時強制重置停用區檢視狀態回一般列表並清空所有選取狀態，嚴防跨帳號資料殘留
+    // 切換業務身分時強制重置停用區檢視狀態回一般列表並清空所有選取與多選狀態，嚴防跨帳號資料殘留
     isP6DeactivatedView = false;
     isP7DeactivatedView = false;
     selectedMgmtCustomerId = null;
     selectedMgmtContactIdx = null;
     selectedDeactivatedCustId = null;
     p6DeactivatedListCache = [];
+    p6CheckedKeys.clear();
+    p6LastShiftIdx = null;
+    p6CurrentRenderedRows = [];
     p7SelectedProductObj = null;
     selectedDeactivatedProdId = null;
     p7PersonalListCache = [];
     p7DeactivatedListCache = [];
+    p7CheckedPersonalIds.clear();
+    p7LastPersonalShiftIdx = null;
+    p7CheckedStdModels.clear();
+    p7LastStdShiftIdx = null;
 
     if (typeof resetQuotationEditor === "function" && isQuotationModuleInitialized) {
       resetQuotationEditor();
@@ -7422,25 +7436,29 @@ document.addEventListener("DOMContentLoaded", () => {
       const tableId = innerTable?.id || `quote_wrap_${idx}`;
       const hStorageKey = `shihlin_quote_wrap_height_${tableId}`;
 
-      // 去除會撐破整個視窗的 flex:1 與過大 min-height，改為固定內部捲動高度，讓表頭 sticky 永遠固定在上方
+      // 去除會撐破整個視窗的 flex:1 與過大 min-height，改為可依需求拉長的獨立捲動高度（範圍限制於 120~2400px）
       wrap.style.flex = "none";
-      wrap.style.minHeight = "160px";
+      wrap.style.minHeight = "120px";
+      wrap.style.maxHeight = "none";
 
       if (!wrap.hasAttribute("data-default-height")) {
         let defH = 380;
         if (tableId === "quoteHistoryTable") defH = Math.max(280, Math.min(520, window.innerHeight - 230));
         else if (tableId === "quoteDraftsTable") defH = Math.max(300, Math.min(540, window.innerHeight - 210));
         else if (tableId === "quoteAnalysisTable") defH = 240;
-        else if (tableId === "quoteCustMgmtTable" || tableId === "quoteProdMgmtTable") defH = Math.max(280, Math.min(480, window.innerHeight - 250));
+        else if (tableId === "quotePersonalProdMgmtTable") defH = 220;
+        else if (tableId === "quoteProdMgmtTable") defH = 340;
+        else if (tableId === "quoteCustMgmtTable") defH = Math.max(280, Math.min(480, window.innerHeight - 250));
         else defH = parseInt(wrap.style.height, 10) || 220;
         wrap.setAttribute("data-default-height", String(Math.round(defH)));
       }
 
-      const savedH = parseInt(localStorage.getItem(hStorageKey) || "0", 10);
-      if (savedH >= 150) {
-        wrap.style.height = `${savedH}px`;
+      const rawSavedH = parseInt(localStorage.getItem(hStorageKey) || "0", 10);
+      if (Number.isFinite(rawSavedH) && rawSavedH >= 120) {
+        const clampedH = Math.max(120, Math.min(2400, rawSavedH));
+        wrap.style.height = `${clampedH}px`;
       } else {
-        const defH = parseInt(wrap.getAttribute("data-default-height") || "360", 10);
+        const defH = parseInt(wrap.getAttribute("data-default-height") || "340", 10);
         wrap.style.height = `${defH}px`;
       }
 
@@ -7449,16 +7467,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const hHandle = document.createElement("div");
       hHandle.className = "pyside-universal-height-handle";
-      hHandle.title = "上下拖曳可調整表格高度（雙擊自動貼合螢幕高度，讓頂部表頭與底部橫向捲軸同時可見）";
+      hHandle.title = "上下拖曳可自由調整表格顯示筆數與高度（雙擊回復建議高度）";
       hHandle.innerHTML = `<div class="drag-handle-grip"></div>`;
       wrap.insertAdjacentElement("afterend", hHandle);
 
       let startY = 0;
-      let startH = 360;
+      let startH = 340;
 
       const onMoveH = (e) => {
         const dy = e.clientY - startY;
-        const newH = Math.max(150, startH + dy);
+        const newH = Math.max(120, Math.min(2400, startH + dy));
         wrap.style.height = `${newH}px`;
       };
 
@@ -7466,24 +7484,22 @@ document.addEventListener("DOMContentLoaded", () => {
         document.body.style.cursor = "";
         document.removeEventListener("mousemove", onMoveH);
         document.removeEventListener("mouseup", onUpH);
-        const finalH = wrap.offsetHeight;
-        if (finalH >= 150) {
-          localStorage.setItem(hStorageKey, String(finalH));
-        }
+        const finalH = Math.max(120, Math.min(2400, wrap.offsetHeight || 340));
+        localStorage.setItem(hStorageKey, String(finalH));
       };
 
       hHandle.addEventListener("mousedown", (e) => {
         e.preventDefault();
         startY = e.clientY;
-        startH = wrap.offsetHeight || parseInt(wrap.style.height, 10) || 360;
+        startH = wrap.offsetHeight || parseInt(wrap.style.height, 10) || 340;
         document.body.style.cursor = "ns-resize";
         document.addEventListener("mousemove", onMoveH);
         document.addEventListener("mouseup", onUpH);
       });
 
       hHandle.addEventListener("dblclick", () => {
-        const rect = wrap.getBoundingClientRect();
-        const bestH = Math.max(180, Math.min(650, window.innerHeight - rect.top - 95));
+        const defH = parseInt(wrap.getAttribute("data-default-height") || "340", 10);
+        const bestH = Math.max(180, Math.min(800, defH));
         wrap.style.height = `${Math.round(bestH)}px`;
         localStorage.setItem(hStorageKey, String(Math.round(bestH)));
       });
@@ -8497,6 +8513,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (inputCustSearch) {
       inputCustSearch.addEventListener("input", () => {
         p6CustPage = 1;
+        p6CheckedKeys.clear();
+        p6LastShiftIdx = null;
         renderQuotationCustomersTable();
       });
     }
@@ -8505,6 +8523,8 @@ document.addEventListener("DOMContentLoaded", () => {
       btnCustPrev.addEventListener("click", () => {
         if (p6CustPage > 1) {
           p6CustPage--;
+          p6CheckedKeys.clear();
+          p6LastShiftIdx = null;
           renderQuotationCustomersTable();
         }
       });
@@ -8513,12 +8533,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnCustNext) {
       btnCustNext.addEventListener("click", () => {
         p6CustPage++;
+        p6CheckedKeys.clear();
+        p6LastShiftIdx = null;
         renderQuotationCustomersTable();
       });
     }
     const btnSyncCloudCust = document.getElementById("btnSyncCloudCustomers");
     if (btnSyncCloudCust) {
       btnSyncCloudCust.addEventListener("click", async () => {
+        p6CheckedKeys.clear();
+        p6LastShiftIdx = null;
         await populateCustomerSelectDropdown(true);
         renderQuotationCustomersTable();
         showAuthToast("已同步最新客戶資料");
@@ -8548,6 +8572,8 @@ document.addEventListener("DOMContentLoaded", () => {
         selectedMgmtCustomerId = null;
         selectedMgmtContactIdx = null;
         selectedDeactivatedCustId = null;
+        p6CheckedKeys.clear();
+        p6LastShiftIdx = null;
         p6CustPage = 1;
         renderQuotationCustomersTable();
       });
@@ -8567,13 +8593,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnSupSave = document.getElementById("btnQuoteSupplierSave");
     if (btnSupSave) btnSupSave.addEventListener("click", saveQuotationSupplierFromUI);
 
-    // 18. 產品管理 (Page 7)：統一搜尋個人與共通標準品、上方新增個人特殊品、停用區還原
+    // 18. 產品管理 (Page 7)：統一搜尋個人與共通標準品雙表格、Shift 多選、獨立拉桿與停用區還原
     const btnProdSearch = document.getElementById("btnQuoteProdMgmtSearch");
-    if (btnProdSearch) btnProdSearch.addEventListener("click", () => { p7ProdPage = 1; searchStandardProductsInMgmt(); });
+    if (btnProdSearch) btnProdSearch.addEventListener("click", () => {
+      p7ProdPage = 1;
+      p7CheckedPersonalIds.clear();
+      p7LastPersonalShiftIdx = null;
+      p7CheckedStdModels.clear();
+      p7LastStdShiftIdx = null;
+      searchStandardProductsInMgmt();
+    });
     const inputProdSearch = document.getElementById("inputQuoteProdMgmtSearch");
     if (inputProdSearch) {
       inputProdSearch.addEventListener("input", () => {
         p7ProdPage = 1;
+        p7CheckedPersonalIds.clear();
+        p7LastPersonalShiftIdx = null;
+        p7CheckedStdModels.clear();
+        p7LastStdShiftIdx = null;
         searchStandardProductsInMgmt();
       });
     }
@@ -8582,6 +8619,8 @@ document.addEventListener("DOMContentLoaded", () => {
       btnProdPrev.addEventListener("click", () => {
         if (p7ProdPage > 1) {
           p7ProdPage--;
+          p7CheckedStdModels.clear();
+          p7LastStdShiftIdx = null;
           renderStandardProductsPage();
         }
       });
@@ -8589,10 +8628,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnProdNext = document.getElementById("btnProdMgmtNextPage");
     if (btnProdNext) {
       btnProdNext.addEventListener("click", () => {
-        const listLen = isP7DeactivatedView ? p7DeactivatedListCache.length : p7ProductsListCache.length;
-        const totalPages = Math.max(1, Math.ceil(listLen / P7_PAGE_SIZE));
+        const totalPages = Math.max(1, Math.ceil(p7ProductsListCache.length / P7_PAGE_SIZE));
         if (p7ProdPage < totalPages) {
           p7ProdPage++;
+          p7CheckedStdModels.clear();
+          p7LastStdShiftIdx = null;
           renderStandardProductsPage();
         }
       });
@@ -8611,8 +8651,9 @@ document.addEventListener("DOMContentLoaded", () => {
         isP7DeactivatedView = !isP7DeactivatedView;
         p7SelectedProductObj = null;
         selectedDeactivatedProdId = null;
-        p7ProdPage = 1;
-        renderStandardProductsPage();
+        p7CheckedPersonalIds.clear();
+        p7LastPersonalShiftIdx = null;
+        renderPersonalProductsTable();
       });
     }
     const btnRestoreProd = document.getElementById("btnRestoreDeactivatedProd");
@@ -14198,6 +14239,166 @@ document.addEventListener("DOMContentLoaded", () => {
     await loadQuotationSupplierInfo();
   }
 
+  // 共用批次序向 API 請求與結果提示（客戶管理與產品管理批次移至停用區／還原／永久刪除共用）
+  async function runSequentialBatchRequests(items, requestFn) {
+    let successCount = 0;
+    let firstError = "";
+    let lastResMessage = "";
+    for (const item of items) {
+      try {
+        const resData = await requestFn(item);
+        successCount++;
+        if (resData && resData.message) lastResMessage = resData.message;
+      } catch (err) {
+        if (!firstError) firstError = err.message || "操作失敗";
+      }
+    }
+    return { successCount, firstError, lastResMessage };
+  }
+
+  function showBatchOperationToast({
+    successCount,
+    firstError,
+    lastResMessage,
+    total,
+    singleSuccessMsg,
+    batchSuccessMsg,
+    failPrefix = "操作失敗",
+    partialPrefix = "已完成"
+  }) {
+    if (successCount === 0) {
+      showAuthToast(`${failPrefix}：${firstError || "無法完成操作"}`);
+    } else if (firstError) {
+      showAuthToast(`${partialPrefix} ${successCount} 筆，另有部分失敗：${firstError}`);
+    } else if (total === 1) {
+      showAuthToast(lastResMessage || singleSuccessMsg);
+    } else {
+      showAuthToast(batchSuccessMsg);
+    }
+  }
+
+  // 共用表格選取格 ＋ Shift 連選機制（客戶管理、個人特殊品、公司共通標準品共用）
+  function wireTableShiftCheckboxSelection({
+    tbody,
+    checkboxSelector,
+    selectAllId,
+    checkedSet,
+    getLastShiftIdx,
+    setLastShiftIdx,
+    syncRowHighlight
+  }) {
+    if (!tbody) return;
+    const chks = Array.from(tbody.querySelectorAll(checkboxSelector));
+    const selectAllEl = selectAllId ? document.getElementById(selectAllId) : null;
+
+    const syncSelectAllState = () => {
+      if (!selectAllEl) return;
+      if (chks.length === 0) {
+        selectAllEl.checked = false;
+        selectAllEl.indeterminate = false;
+        selectAllEl.disabled = true;
+        return;
+      }
+      selectAllEl.disabled = false;
+      let checkedCount = 0;
+      chks.forEach(c => {
+        if (checkedSet.has(c.getAttribute("data-key") || "")) checkedCount++;
+      });
+      selectAllEl.checked = checkedCount === chks.length;
+      selectAllEl.indeterminate = checkedCount > 0 && checkedCount < chks.length;
+    };
+
+    if (selectAllEl) {
+      selectAllEl.onchange = () => {
+        const checkAll = Boolean(selectAllEl.checked);
+        chks.forEach(c => {
+          const k = c.getAttribute("data-key") || "";
+          c.checked = checkAll;
+          if (checkAll) checkedSet.add(k);
+          else checkedSet.delete(k);
+        });
+        setLastShiftIdx(null);
+        if (syncRowHighlight) syncRowHighlight();
+        syncSelectAllState();
+      };
+    }
+
+    syncSelectAllState();
+    if (chks.length === 0) return;
+
+    const applyCheckRange = (idx, targetChecked, isShift) => {
+      if (!Number.isInteger(idx) || idx < 0 || idx >= chks.length) return;
+      const lastIdx = getLastShiftIdx();
+      if (isShift && lastIdx !== null && lastIdx >= 0 && lastIdx < chks.length) {
+        const minIdx = Math.min(lastIdx, idx);
+        const maxIdx = Math.max(lastIdx, idx);
+        for (let i = minIdx; i <= maxIdx; i++) {
+          const c = chks[i];
+          const k = c.getAttribute("data-key") || "";
+          c.checked = targetChecked;
+          if (targetChecked) checkedSet.add(k);
+          else checkedSet.delete(k);
+        }
+        if (window.getSelection) {
+          window.getSelection().removeAllRanges();
+        }
+      } else {
+        const c = chks[idx];
+        const k = c.getAttribute("data-key") || "";
+        c.checked = targetChecked;
+        if (targetChecked) checkedSet.add(k);
+        else checkedSet.delete(k);
+      }
+      setLastShiftIdx(idx);
+      if (syncRowHighlight) syncRowHighlight();
+      syncSelectAllState();
+    };
+
+    chks.forEach(chk => {
+      chk.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const idx = parseInt(chk.getAttribute("data-idx"), 10);
+        applyCheckRange(idx, Boolean(chk.checked), Boolean(e.shiftKey));
+      });
+    });
+
+    tbody.querySelectorAll("td.col-check-cell").forEach(td => {
+      td.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (e.target.closest("input[type='checkbox']")) return;
+        const chk = td.querySelector(checkboxSelector);
+        if (!chk) return;
+        const nextChecked = !chk.checked;
+        const idx = parseInt(chk.getAttribute("data-idx"), 10);
+        applyCheckRange(idx, nextChecked, Boolean(e.shiftKey));
+      });
+    });
+  }
+
+  function syncP6ActiveRowHighlights() {
+    const tbody = document.getElementById("quoteCustMgmtTableBody");
+    if (!tbody) return;
+    if (isP6DeactivatedView) {
+      tbody.querySelectorAll(".quote-cust-deact-row").forEach(tr => {
+        const k = tr.getAttribute("data-key") || "";
+        const cid = parseInt(tr.getAttribute("data-deact-cid"), 10);
+        const isFormSel = selectedDeactivatedCustId !== null && cid === Number(selectedDeactivatedCustId);
+        tr.classList.toggle("selected-row", p6CheckedKeys.has(k) || isFormSel);
+      });
+      return;
+    }
+    tbody.querySelectorAll(".quote-cust-row").forEach(tr => {
+      const k = tr.getAttribute("data-key") || "";
+      const cid = parseInt(tr.getAttribute("data-cid"), 10);
+      const cidx = parseInt(tr.getAttribute("data-cidx") || "0", 10);
+      const isFormSel =
+        selectedMgmtCustomerId !== null &&
+        cid === Number(selectedMgmtCustomerId) &&
+        cidx === Number(selectedMgmtContactIdx ?? 0);
+      tr.classList.toggle("selected-row", p6CheckedKeys.has(k) || isFormSel);
+    });
+  }
+
   function renderQuotationCustomersTable() {
     updateCustDeactivatedUIState();
     const tbody = document.getElementById("quoteCustMgmtTableBody");
@@ -14205,6 +14406,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const pageInfo = document.getElementById("lblCustMgmtPageInfo");
     const kw = (document.getElementById("inputQuoteCustSearch")?.value || "").trim().toLowerCase();
     if (!tbody) return;
+
+    const resetP6SelectionUi = () => {
+      wireTableShiftCheckboxSelection({
+        tbody,
+        checkboxSelector: ".p6-row-chk",
+        selectAllId: "chkAllCustP6",
+        checkedSet: p6CheckedKeys,
+        getLastShiftIdx: () => p6LastShiftIdx,
+        setLastShiftIdx: (v) => { p6LastShiftIdx = v; },
+        syncRowHighlight: syncP6ActiveRowHighlights
+      });
+    };
 
     if (isP6DeactivatedView) {
       const filtered = (p6DeactivatedListCache || []).filter(item => {
@@ -14219,18 +14432,25 @@ document.addEventListener("DOMContentLoaded", () => {
       if (pageInfo) pageInfo.textContent = `第 ${p6CustPage} / ${totalPages} 頁 (共 ${totalCount} 筆)`;
 
       if (totalCount === 0) {
+        p6CurrentRenderedRows = [];
         tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:24px; color:#7f8c8d;">停用區目前沒有客戶資料</td></tr>`;
+        resetP6SelectionUi();
         return;
       }
 
       const startIdx = (p6CustPage - 1) * P6_PAGE_SIZE;
       const pageList = filtered.slice(startIdx, startIdx + P6_PAGE_SIZE);
+      p6CurrentRenderedRows = pageList;
       tbody.innerHTML = pageList.map((item, idx) => {
-        const isSel = selectedDeactivatedCustId !== null && Number(item.id) === Number(selectedDeactivatedCustId);
+        const key = String(item.id);
+        const isChecked = p6CheckedKeys.has(key);
+        const isSel = isChecked || (selectedDeactivatedCustId !== null && Number(item.id) === Number(selectedDeactivatedCustId));
         const remDays = Number(item.remaining_days || 30);
         return `
-          <tr class="quote-cust-deact-row ${isSel ? 'selected-row' : ''}" data-deact-cid="${item.id}">
-            <td class="col-idx">${startIdx + idx + 1}</td>
+          <tr class="quote-cust-deact-row ${isSel ? 'selected-row' : ''}" data-key="${escapeHtml(key)}" data-deact-cid="${item.id}">
+            <td class="col-check-cell">
+              <input type="checkbox" class="row-select-chk p6-row-chk" data-key="${escapeHtml(key)}" data-idx="${idx}" ${isChecked ? "checked" : ""} aria-label="選取客戶" />
+            </td>
             <td style="text-align:center;">-</td>
             <td>${escapeHtml(item.contact_name || "")}</td>
             <td style="font-family:Consolas, monospace;">${escapeHtml(item.tax_id || "")}</td>
@@ -14246,16 +14466,18 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
       }).join("");
 
+      resetP6SelectionUi();
       tbody.querySelectorAll(".quote-cust-deact-row").forEach(tr => {
-        tr.addEventListener("click", () => {
+        tr.addEventListener("click", (e) => {
+          if (e.target.closest(".col-check-cell")) return;
           selectedDeactivatedCustId = parseInt(tr.getAttribute("data-deact-cid"), 10);
-          tbody.querySelectorAll(".quote-cust-deact-row").forEach(r => r.classList.toggle("selected-row", r === tr));
+          syncP6ActiveRowHighlights();
         });
       });
       return;
     }
 
-    // 將每位聯絡人展開成獨立列顯示 (對應截圖 8 同一家公司多位聯絡人分列)
+    // 將每位聯絡人展開成獨立列顯示 (同一家公司多位聯絡人分列)
     const flatRows = [];
     (customersCache || []).forEach(c => {
       const contacts = Array.isArray(c.contacts) && c.contacts.length > 0
@@ -14292,27 +14514,34 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (totalCount === 0) {
+      p6CurrentRenderedRows = [];
       tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:24px; color:#7f8c8d;">查無相符的客戶資料</td></tr>`;
+      resetP6SelectionUi();
       return;
     }
 
     const startIdx = (p6CustPage - 1) * P6_PAGE_SIZE;
     const pageList = flatRows.slice(startIdx, startIdx + P6_PAGE_SIZE);
+    p6CurrentRenderedRows = pageList;
 
     tbody.innerHTML = pageList.map((row, idx) => {
       const c = row.cust;
       const ct = row.contact || {};
       const isFav = Number(c.is_favorite || 0) > 0;
+      const key = `${c.id}:${row.contactIdx}`;
+      const isChecked = p6CheckedKeys.has(key);
       // 必須同時比對「公司編號」與「聯絡人列序號」，確保同一公司多位聯絡人只會亮起被點選的單一列
-      const isSel =
+      const isFormSel =
         selectedMgmtCustomerId !== null &&
         Number(c.id) === Number(selectedMgmtCustomerId) &&
         Number(row.contactIdx) === Number(selectedMgmtContactIdx ?? 0);
-      const rowNum = startIdx + idx + 1;
+      const isSel = isChecked || isFormSel;
 
       return `
-        <tr class="quote-cust-row ${isSel ? 'selected-row' : ''}" data-cid="${c.id}" data-cidx="${row.contactIdx}">
-          <td class="col-idx">${rowNum}</td>
+        <tr class="quote-cust-row ${isSel ? 'selected-row' : ''}" data-key="${escapeHtml(key)}" data-cid="${c.id}" data-cidx="${row.contactIdx}">
+          <td class="col-check-cell">
+            <input type="checkbox" class="row-select-chk p6-row-chk" data-key="${escapeHtml(key)}" data-idx="${idx}" ${isChecked ? "checked" : ""} aria-label="選取客戶" />
+          </td>
           <td class="p6-star-cell ${isFav ? '' : 'inactive'}" data-star-cid="${c.id}" title="點擊切換常用客戶星號">${isFav ? '★' : '☆'}</td>
           <td>${escapeHtml(row.contactName || "")}</td>
           <td style="font-family:Consolas, monospace;">${escapeHtml(c.tax_id || "")}</td>
@@ -14327,6 +14556,8 @@ document.addEventListener("DOMContentLoaded", () => {
         </tr>
       `;
     }).join("");
+
+    resetP6SelectionUi();
 
     tbody.querySelectorAll(".p6-star-cell").forEach(starTd => {
       starTd.addEventListener("click", async (e) => {
@@ -14362,7 +14593,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     tbody.querySelectorAll(".quote-cust-row").forEach(tr => {
-      tr.addEventListener("click", () => {
+      tr.addEventListener("click", (e) => {
+        if (e.target.closest(".col-check-cell, .p6-star-cell")) return;
         const cid = parseInt(tr.getAttribute("data-cid"), 10);
         const cidx = parseInt(tr.getAttribute("data-cidx") || "0", 10);
         const cust = (customersCache || []).find(x => Number(x.id) === cid);
@@ -14616,121 +14848,202 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function deleteSelectedQuotationCustomer() {
-    if (!selectedMgmtCustomerId) {
-      showAuthToast("請先從左側列表點選要移至停用區的客戶或聯絡人");
+    let targets = [];
+    if (p6CheckedKeys.size > 0) {
+      targets = Array.from(p6CheckedKeys)
+        .map(k => {
+          const [cidStr, cidxStr] = String(k).split(":");
+          return { cid: parseInt(cidStr, 10), contactIdx: parseInt(cidxStr || "0", 10) };
+        })
+        .filter(item => Number.isFinite(item.cid) && Number.isFinite(item.contactIdx) && item.contactIdx >= 0);
+      // 同一家公司若同時勾選多位聯絡人，必須由大到小刪除索引，避免先刪前面造成後續聯絡人序號位移
+      targets.sort((a, b) => (b.cid - a.cid) || (b.contactIdx - a.contactIdx));
+    } else if (selectedMgmtCustomerId) {
+      const cust = (customersCache || []).find(c => Number(c.id) === Number(selectedMgmtCustomerId));
+      const contacts = cust && Array.isArray(cust.contacts) && cust.contacts.length > 0
+        ? cust.contacts
+        : [{ name: cust?.default_contact || "", email: "", mobile: "" }];
+      const safeIdx = Number.isInteger(selectedMgmtContactIdx) && selectedMgmtContactIdx >= 0 && selectedMgmtContactIdx < contacts.length
+        ? selectedMgmtContactIdx
+        : 0;
+      targets = [{ cid: Number(selectedMgmtCustomerId), contactIdx: safeIdx }];
+    }
+
+    if (targets.length === 0) {
+      showAuthToast("請先從左側列表勾選或點選要移至停用區的客戶或聯絡人");
       return;
     }
-    const cust = (customersCache || []).find(c => Number(c.id) === Number(selectedMgmtCustomerId));
-    const custName = cust ? cust.name : `ID ${selectedMgmtCustomerId}`;
-    const contacts = cust && Array.isArray(cust.contacts) && cust.contacts.length > 0
-      ? cust.contacts
-      : [{ name: cust?.default_contact || "", email: "", mobile: "" }];
-    const safeIdx = Number.isInteger(selectedMgmtContactIdx) && selectedMgmtContactIdx >= 0 && selectedMgmtContactIdx < contacts.length
-      ? selectedMgmtContactIdx
-      : 0;
-    const isMultiContact = contacts.length > 1;
-    const targetContactName = (contacts[safeIdx] && contacts[safeIdx].name) || cust?.default_contact || "";
 
-    const dialogTitle = isMultiContact ? "移至停用區" : "移至停用區";
-    const dialogMessage = isMultiContact
-      ? `確定將「${custName}」聯絡人「${targetContactName || "未命名"}」移至停用區？\n停用區資料將保留 30 天後自動刪除。`
-      : `確定將客戶「${custName}」移至停用區？\n停用區資料將保留 30 天後自動刪除。`;
+    let dialogMessage = "";
+    let singleLabel = "";
+    if (targets.length === 1) {
+      const only = targets[0];
+      const cust = (customersCache || []).find(c => Number(c.id) === Number(only.cid));
+      const custName = cust ? cust.name : `ID ${only.cid}`;
+      const contacts = cust && Array.isArray(cust.contacts) && cust.contacts.length > 0
+        ? cust.contacts
+        : [{ name: cust?.default_contact || "", email: "", mobile: "" }];
+      const isMultiContact = contacts.length > 1;
+      const targetContactName = (contacts[only.contactIdx] && contacts[only.contactIdx].name) || cust?.default_contact || "";
+      singleLabel = isMultiContact
+        ? `「${custName}」聯絡人「${targetContactName || "未命名"}」`
+        : `客戶「${custName}」`;
+      dialogMessage = `確定將${singleLabel}移至停用區？\n停用區資料將保留 30 天後自動刪除。`;
+    } else {
+      dialogMessage = `確定將已勾選的 ${targets.length} 筆客戶／聯絡人移至停用區？\n停用區資料將保留 30 天後自動刪除。`;
+    }
 
     const confirmed = await promptConfirmDeleteCustomer({
-      title: dialogTitle,
+      title: "移至停用區",
       message: dialogMessage,
       confirmText: "移至停用區",
       danger: true
     });
+    if (!confirmed) return;
 
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      const activeSales = getActiveSalesName();
-      const targetCid = selectedMgmtCustomerId;
-      const r = await fetch(`/api/quotation-customers/${targetCid}?sales_name=${encodeURIComponent(activeSales)}&contact_index=${safeIdx}&mode=deactivate`, {
+    const activeSales = getActiveSalesName();
+    const { successCount, firstError, lastResMessage } = await runSequentialBatchRequests(targets, async (item) => {
+      const r = await fetch(`/api/quotation-customers/${item.cid}?sales_name=${encodeURIComponent(activeSales)}&contact_index=${item.contactIdx}&mode=deactivate`, {
         method: "DELETE"
       });
       const resData = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        throw new Error(resData.detail || "移至停用區失敗");
-      }
-      await populateCustomerSelectDropdown(true);
-      await refreshDeactivatedCustomersCache({ notifyDeactivated: false });
-      const stillExists = (customersCache || []).find(c => Number(c.id) === Number(targetCid));
+      if (!r.ok) throw new Error(resData.detail || "移至停用區失敗");
+      return resData;
+    });
+
+    p6CheckedKeys.clear();
+    p6LastShiftIdx = null;
+    await populateCustomerSelectDropdown(true);
+    await refreshDeactivatedCustomersCache({ notifyDeactivated: false });
+
+    if (targets.length === 1) {
+      const only = targets[0];
+      const stillExists = (customersCache || []).find(c => Number(c.id) === Number(only.cid));
       if (stillExists) {
         const remContacts = Array.isArray(stillExists.contacts) && stillExists.contacts.length > 0
           ? stillExists.contacts
           : [{ name: stillExists.default_contact || "", email: "", mobile: "" }];
-        const nextIdx = Math.min(safeIdx, remContacts.length - 1);
+        const nextIdx = Math.min(only.contactIdx, remContacts.length - 1);
         selectCustomerInMgmtForm(stillExists, nextIdx);
       } else {
         clearQuotationCustomerForm();
-        renderQuotationCustomersTable();
       }
-      const successNotice = resData.message || (isMultiContact
-        ? `已將「${custName}」聯絡人「${targetContactName || "未命名"}」移至停用區`
-        : `已將客戶「${custName}」移至停用區`);
-      showAuthToast(successNotice);
-    } catch (err) {
-      showAuthToast(`操作失敗：${err.message}`);
+    } else {
+      clearQuotationCustomerForm();
     }
+
+    showBatchOperationToast({
+      successCount,
+      firstError,
+      lastResMessage,
+      total: targets.length,
+      singleSuccessMsg: `已將${singleLabel}移至停用區`,
+      batchSuccessMsg: `已將 ${successCount} 筆客戶資料移至停用區`,
+      failPrefix: "操作失敗",
+      partialPrefix: "已將"
+    });
   }
 
   async function restoreSelectedDeactivatedCustomer() {
-    if (!selectedDeactivatedCustId) {
-      showAuthToast("請先點選要還原的客戶紀錄");
+    let ids = [];
+    if (p6CheckedKeys.size > 0) {
+      ids = Array.from(p6CheckedKeys).map(k => parseInt(k, 10)).filter(Number.isFinite);
+    } else if (selectedDeactivatedCustId) {
+      ids = [Number(selectedDeactivatedCustId)];
+    }
+
+    if (ids.length === 0) {
+      showAuthToast("請先勾選或點選要還原的客戶紀錄");
       return;
     }
-    try {
-      const activeSales = getActiveSalesName();
+
+    const activeSales = getActiveSalesName();
+    const { successCount, firstError, lastResMessage } = await runSequentialBatchRequests(ids, async (id) => {
       const r = await fetch("/api/deactivated-customers/restore", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: selectedDeactivatedCustId, sales_name: activeSales })
+        body: JSON.stringify({ id, sales_name: activeSales })
       });
       const resData = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(resData.detail || "還原失敗");
-      selectedDeactivatedCustId = null;
-      await populateCustomerSelectDropdown(true);
-      await refreshDeactivatedCustomersCache({ notifyDeactivated: false });
-      renderQuotationCustomersTable();
-      showAuthToast(resData.message || "已還原客戶資料");
-    } catch (err) {
-      showAuthToast(`還原失敗：${err.message}`);
-    }
+      return resData;
+    });
+
+    p6CheckedKeys.clear();
+    p6LastShiftIdx = null;
+    selectedDeactivatedCustId = null;
+    await populateCustomerSelectDropdown(true);
+    await refreshDeactivatedCustomersCache({ notifyDeactivated: false });
+    renderQuotationCustomersTable();
+
+    showBatchOperationToast({
+      successCount,
+      firstError,
+      lastResMessage,
+      total: ids.length,
+      singleSuccessMsg: "已還原客戶資料",
+      batchSuccessMsg: `已批次還原 ${successCount} 筆客戶資料`,
+      failPrefix: "還原失敗",
+      partialPrefix: "已還原"
+    });
   }
 
   async function permDeleteSelectedDeactivatedCustomer() {
-    if (!selectedDeactivatedCustId) {
-      showAuthToast("請先點選要永久刪除的紀錄");
+    let ids = [];
+    if (p6CheckedKeys.size > 0) {
+      ids = Array.from(p6CheckedKeys).map(k => parseInt(k, 10)).filter(Number.isFinite);
+    } else if (selectedDeactivatedCustId) {
+      ids = [Number(selectedDeactivatedCustId)];
+    }
+
+    if (ids.length === 0) {
+      showAuthToast("請先勾選或點選要永久刪除的紀錄");
       return;
     }
-    const target = (p6DeactivatedListCache || []).find(x => Number(x.id) === Number(selectedDeactivatedCustId));
-    const label = target ? `${target.cust_name}${target.contact_name ? " - " + target.contact_name : ""}` : `ID ${selectedDeactivatedCustId}`;
+
+    let dialogMessage = "";
+    if (ids.length === 1) {
+      const target = (p6DeactivatedListCache || []).find(x => Number(x.id) === Number(ids[0]));
+      const label = target ? `${target.cust_name}${target.contact_name ? " - " + target.contact_name : ""}` : `ID ${ids[0]}`;
+      dialogMessage = `確定從停用區永久刪除「${label}」？此動作無法復原。`;
+    } else {
+      dialogMessage = `確定從停用區永久刪除已勾選的 ${ids.length} 筆客戶紀錄？此動作無法復原。`;
+    }
+
     const ok = await promptConfirmDeleteCustomer({
       title: "永久刪除客戶",
-      message: `確定從停用區永久刪除「${label}」？此動作無法復原。`,
+      message: dialogMessage,
       confirmText: "永久刪除",
       danger: true
     });
     if (!ok) return;
-    try {
-      const activeSales = getActiveSalesName();
-      const r = await fetch(`/api/deactivated-customers/${selectedDeactivatedCustId}?sales_name=${encodeURIComponent(activeSales)}`, {
+
+    const activeSales = getActiveSalesName();
+    const { successCount, firstError, lastResMessage } = await runSequentialBatchRequests(ids, async (id) => {
+      const r = await fetch(`/api/deactivated-customers/${id}?sales_name=${encodeURIComponent(activeSales)}`, {
         method: "DELETE"
       });
       const resData = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(resData.detail || "永久刪除失敗");
-      selectedDeactivatedCustId = null;
-      await refreshDeactivatedCustomersCache({ notifyDeactivated: false });
-      renderQuotationCustomersTable();
-      showAuthToast(resData.message || "已永久刪除客戶紀錄");
-    } catch (err) {
-      showAuthToast(`刪除失敗：${err.message}`);
-    }
+      return resData;
+    });
+
+    p6CheckedKeys.clear();
+    p6LastShiftIdx = null;
+    selectedDeactivatedCustId = null;
+    await refreshDeactivatedCustomersCache({ notifyDeactivated: false });
+    renderQuotationCustomersTable();
+
+    showBatchOperationToast({
+      successCount,
+      firstError,
+      lastResMessage,
+      total: ids.length,
+      singleSuccessMsg: "已永久刪除客戶紀錄",
+      batchSuccessMsg: `已永久刪除 ${successCount} 筆客戶紀錄`,
+      failPrefix: "刪除失敗",
+      partialPrefix: "已永久刪除"
+    });
   }
 
   async function loadQuotationSupplierInfo() {
@@ -14781,21 +15094,34 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ============================================================================
-  // 第 7 頁：產品管理 100% 滿版（上方個人特殊品 ＋ 分隔線 ＋ 下方公司共通標準品 ＋ 30 天停用區）
+  // 第 7 頁：產品管理 100% 滿版（上方個人特殊品獨立表格 ＋ 下方公司共通標準品獨立表格 ＋ 30 天停用區）
   // ============================================================================
+  function getPersonalProdRowKey(p, fallbackIdx = 0) {
+    if (p && p.id !== undefined && p.id !== null && String(p.id) !== "") {
+      return String(p.id);
+    }
+    return `sp_${String(p?.model_no || "")}@@${fallbackIdx}`;
+  }
+
+  function getStdProdRowKey(p, globalIdx = 0) {
+    if (p && p.id !== undefined && p.id !== null && String(p.id) !== "") {
+      return `id:${String(p.id)}`;
+    }
+    return `${String(p?.model_no || "")}@@${globalIdx}`;
+  }
+
   function updateProdDeactivatedUIState() {
-    const titleEl = document.getElementById("lblProdMgmtSectionTitle");
+    const titleEl = document.getElementById("lblPersonalProdSectionTitle");
     const bannerEl = document.getElementById("p7DeactivatedBanner");
     const thSpecOrDate = document.getElementById("thProdMgmtSpecOrDate");
     const thMtoOrDays = document.getElementById("thProdMgmtMtoOrDays");
-    const btnBring = document.getElementById("btnP7BringToQuote");
     const btnDel = document.getElementById("btnProdMgmtDeleteSelected");
     const btnRestore = document.getElementById("btnRestoreDeactivatedProd");
     const btnPermDel = document.getElementById("btnPermDeleteDeactivatedProd");
     const btnToggle = document.getElementById("btnToggleProdDeactivatedView");
 
     if (titleEl) {
-      titleEl.textContent = isP7DeactivatedView ? "產品停用區（滿 30 天自動刪除）" : "產品資料列表";
+      titleEl.textContent = isP7DeactivatedView ? "個人特殊品停用區（滿 30 天自動刪除）" : "個人特殊品經銷牌價表";
     }
     if (bannerEl) bannerEl.classList.toggle("hidden", !isP7DeactivatedView);
     if (thSpecOrDate) {
@@ -14808,22 +15134,27 @@ document.addEventListener("DOMContentLoaded", () => {
         ? `剩餘天數<span class="col-resizer"></span>`
         : `訂購品<span class="col-resizer"></span>`;
     }
-    if (btnBring) btnBring.classList.toggle("hidden", isP7DeactivatedView);
     if (btnDel) btnDel.classList.toggle("hidden", isP7DeactivatedView);
     if (btnRestore) btnRestore.classList.toggle("hidden", !isP7DeactivatedView);
     if (btnPermDel) btnPermDel.classList.toggle("hidden", !isP7DeactivatedView);
     if (btnToggle) {
       const cnt = (p7DeactivatedListCache || []).length;
-      btnToggle.textContent = isP7DeactivatedView ? "返回產品列表" : `停用區 (${cnt})`;
+      btnToggle.textContent = isP7DeactivatedView ? "返回個人特殊品" : `停用區 (${cnt})`;
     }
   }
 
   async function searchStandardProductsInMgmt({ notifyDeactivated = false } = {}) {
-    const tbody = document.getElementById("quoteProdMgmtTableBody");
-    if (!tbody) return;
+    const personalTbody = document.getElementById("quotePersonalProdMgmtTableBody");
+    const stdTbody = document.getElementById("quoteProdMgmtTableBody");
+    if (!personalTbody && !stdTbody) return;
     const q = document.getElementById("inputQuoteProdMgmtSearch")?.value.trim() || "";
     const activeSales = getActiveSalesName();
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:#7f8c8d;">載入產品資料中...</td></tr>`;
+    if (personalTbody) {
+      personalTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:18px; color:#7f8c8d;">載入個人特殊品中...</td></tr>`;
+    }
+    if (stdTbody) {
+      stdTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:#7f8c8d;">載入公司共通標準品中...</td></tr>`;
+    }
     try {
       const [rProds, rSpecial, rDeact] = await Promise.all([
         fetch(`/api/products?q=${encodeURIComponent(q)}&limit=500&sales_name=${encodeURIComponent(activeSales)}`),
@@ -14842,6 +15173,7 @@ document.addEventListener("DOMContentLoaded", () => {
       p7ProductsListCache = (Array.isArray(allProds) ? allProds : []).filter(p => !p.is_special);
       p7DeactivatedListCache = Array.isArray(deactRaw) ? deactRaw : [];
 
+      renderPersonalProductsTable();
       renderStandardProductsPage();
       if (notifyDeactivated && p7DeactivatedListCache.length > 0) {
         const minDays = p7DeactivatedListCache.reduce(
@@ -14854,7 +15186,12 @@ document.addEventListener("DOMContentLoaded", () => {
         );
       }
     } catch (err) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:#e74c3c;">${escapeHtml(err.message)}</td></tr>`;
+      if (personalTbody) {
+        personalTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:18px; color:#e74c3c;">${escapeHtml(err.message)}</td></tr>`;
+      }
+      if (stdTbody) {
+        stdTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:#e74c3c;">${escapeHtml(err.message)}</td></tr>`;
+      }
     }
   }
 
@@ -14889,21 +15226,79 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function buildP7RowHtml(p, rowNum, section, idxInArr) {
+  function fillP7FormFromProduct(prod) {
+    if (!prod) return;
+    const dealerP = Number(prod.dealer_price || 0);
+    const listP = Number(prod.list_price || (dealerP > 0 ? Math.round(dealerP * 2) : 0));
+    const mIn = document.getElementById("p7InputModel");
+    const lIn = document.getElementById("p7InputListPrice");
+    const dIn = document.getElementById("p7InputDealerPrice");
+    const sIn = document.getElementById("p7InputSpec");
+    const cIn = document.getElementById("p7ChkIsMto");
+    if (mIn) mIn.value = prod.model_no || "";
+    if (lIn) lIn.value = String(listP);
+    if (dIn) dIn.value = String(dealerP);
+    if (sIn) sIn.value = prod.spec || "";
+    if (cIn) cIn.checked = String(prod.spec || "").includes("訂購品") || Number(prod.is_order_item || prod.is_mto || 0) > 0;
+  }
+
+  function syncP7ActiveRowHighlights() {
+    const personalTbody = document.getElementById("quotePersonalProdMgmtTableBody");
+    if (personalTbody) {
+      if (isP7DeactivatedView) {
+        personalTbody.querySelectorAll(".p7-deact-row").forEach(tr => {
+          const k = tr.getAttribute("data-key") || "";
+          const pid = parseInt(tr.getAttribute("data-deact-pid"), 10);
+          const isFormSel = selectedDeactivatedProdId !== null && pid === Number(selectedDeactivatedProdId);
+          tr.classList.toggle("selected-row", p7CheckedPersonalIds.has(k) || isFormSel);
+        });
+      } else {
+        personalTbody.querySelectorAll(".p7-personal-row").forEach(tr => {
+          const k = tr.getAttribute("data-key") || "";
+          const isFormSel = Boolean(
+            p7SelectedProductObj &&
+            Boolean(p7SelectedProductObj.is_special) &&
+            String(p7SelectedProductObj._rowKey || "") === k
+          );
+          tr.classList.toggle("selected-row", p7CheckedPersonalIds.has(k) || isFormSel);
+        });
+      }
+    }
+
+    const stdTbody = document.getElementById("quoteProdMgmtTableBody");
+    if (stdTbody) {
+      stdTbody.querySelectorAll(".p7-std-row").forEach(tr => {
+        const k = tr.getAttribute("data-key") || "";
+        const isFormSel = Boolean(
+          p7SelectedProductObj &&
+          !p7SelectedProductObj.is_special &&
+          String(p7SelectedProductObj._rowKey || "") === k
+        );
+        tr.classList.toggle("selected-row", p7CheckedStdModels.has(k) || isFormSel);
+      });
+    }
+  }
+
+  function buildP7RowHtml(p, section, cacheIdx, pageIdx, checkedSet) {
     const dealerP = Number(p.dealer_price || 0);
     const listP = Number(p.list_price || (dealerP > 0 ? Math.round(dealerP * 2) : 0));
     const isMto = String(p.spec || "").includes("訂購品") || Number(p.is_mto || 0) > 0 || Number(p.is_order_item || 0) > 0;
     const isPersonal = section === "personal";
-    const isSel = Boolean(
+    const rowKey = isPersonal ? getPersonalProdRowKey(p, cacheIdx) : getStdProdRowKey(p, cacheIdx);
+    const isChecked = checkedSet.has(rowKey);
+    const isFormSel = Boolean(
       p7SelectedProductObj &&
-      String(p7SelectedProductObj.model_no || "") === String(p.model_no || "") &&
-      Boolean(p7SelectedProductObj.is_special) === isPersonal
+      Boolean(p7SelectedProductObj.is_special) === isPersonal &&
+      String(p7SelectedProductObj._rowKey || "") === rowKey
     );
+    const isSel = isChecked || isFormSel;
     const badgeHtml = isPersonal ? `<span class="p7-personal-tag">個人特殊品</span>` : "";
 
     return `
-      <tr class="p7-prod-row ${isPersonal ? 'p7-personal-row' : ''} ${isSel ? 'selected-row' : ''}" data-section="${section}" data-idx="${idxInArr}">
-        <td class="col-idx">${rowNum}</td>
+      <tr class="p7-prod-row ${isPersonal ? 'p7-personal-row' : 'p7-std-row'} ${isSel ? 'selected-row' : ''}" data-section="${section}" data-key="${escapeHtml(rowKey)}" data-cache-idx="${cacheIdx}">
+        <td class="col-check-cell">
+          <input type="checkbox" class="row-select-chk ${isPersonal ? 'p7-personal-row-chk' : 'p7-std-row-chk'}" data-key="${escapeHtml(rowKey)}" data-idx="${pageIdx}" ${isChecked ? "checked" : ""} aria-label="選取產品" />
+        </td>
         <td style="font-weight:600; color:var(--text-primary);">${escapeHtml(p.model_no || "")}${badgeHtml}</td>
         <td style="text-align:right; font-family:Consolas, monospace;">${listP.toLocaleString()}</td>
         <td style="text-align:right; font-family:Consolas, monospace;">${dealerP.toLocaleString()}</td>
@@ -14913,39 +15308,52 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
-  function renderStandardProductsPage() {
+  function renderPersonalProductsTable() {
     updateProdDeactivatedUIState();
-    const tbody = document.getElementById("quoteProdMgmtTableBody");
-    const pageInfo = document.getElementById("lblProdMgmtPageInfo");
+    const tbody = document.getElementById("quotePersonalProdMgmtTableBody");
+    const countBadge = document.getElementById("lblPersonalProdCountBadge");
     if (!tbody) return;
     const kw = (document.getElementById("inputQuoteProdMgmtSearch")?.value || "").trim().toLowerCase();
+
+    const wirePersonalCheckboxes = (checkboxSelector) => {
+      wireTableShiftCheckboxSelection({
+        tbody,
+        checkboxSelector,
+        selectAllId: "chkAllPersonalProdP7",
+        checkedSet: p7CheckedPersonalIds,
+        getLastShiftIdx: () => p7LastPersonalShiftIdx,
+        setLastShiftIdx: (v) => { p7LastPersonalShiftIdx = v; },
+        syncRowHighlight: syncP7ActiveRowHighlights
+      });
+    };
 
     if (isP7DeactivatedView) {
       const filteredDeact = (p7DeactivatedListCache || []).filter(p => {
         if (!kw) return true;
         return [p.model_no, p.spec, p.note].some(v => String(v || "").toLowerCase().includes(kw));
       });
-      const totalPages = Math.max(1, Math.ceil(filteredDeact.length / P7_PAGE_SIZE));
-      if (p7ProdPage > totalPages) p7ProdPage = totalPages;
-      if (pageInfo) pageInfo.textContent = `第 ${p7ProdPage} / ${totalPages} 頁`;
+      if (countBadge) countBadge.textContent = `停用區 共 ${filteredDeact.length} 筆`;
 
       if (filteredDeact.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:#7f8c8d;">停用區目前沒有個人特殊品</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:22px; color:#7f8c8d;">停用區目前沒有個人特殊品</td></tr>`;
+        wirePersonalCheckboxes(".p7-personal-deact-chk");
         applyProductManagementPermissions();
         return;
       }
 
-      const startIdx = (p7ProdPage - 1) * P7_PAGE_SIZE;
-      const pageDeact = filteredDeact.slice(startIdx, startIdx + P7_PAGE_SIZE);
-      tbody.innerHTML = pageDeact.map((p, idx) => {
+      tbody.innerHTML = filteredDeact.map((p, idx) => {
         const dealerP = Number(p.dealer_price || 0);
         const listP = Number(p.list_price || (dealerP > 0 ? Math.round(dealerP * 2) : 0));
-        const isSel = selectedDeactivatedProdId !== null && Number(selectedDeactivatedProdId) === Number(p.id);
+        const key = String(p.id);
+        const isChecked = p7CheckedPersonalIds.has(key);
+        const isSel = isChecked || (selectedDeactivatedProdId !== null && Number(selectedDeactivatedProdId) === Number(p.id));
         const datePrefix = p.deactivated_date_str ? `停用 ${p.deactivated_date_str}｜` : "";
         const remDays = Number(p.remaining_days || 30);
         return `
-          <tr class="p7-deact-row ${isSel ? 'selected-row' : ''}" data-deact-pid="${p.id}">
-            <td class="col-idx">${startIdx + idx + 1}</td>
+          <tr class="p7-deact-row ${isSel ? 'selected-row' : ''}" data-key="${escapeHtml(key)}" data-deact-pid="${p.id}">
+            <td class="col-check-cell">
+              <input type="checkbox" class="row-select-chk p7-personal-deact-chk" data-key="${escapeHtml(key)}" data-idx="${idx}" ${isChecked ? "checked" : ""} aria-label="選取產品" />
+            </td>
             <td style="font-weight:600;">${escapeHtml(p.model_no || "")}<span class="p7-personal-tag">個人特殊品</span></td>
             <td style="text-align:right; font-family:Consolas, monospace;">${listP.toLocaleString()}</td>
             <td style="text-align:right; font-family:Consolas, monospace;">${dealerP.toLocaleString()}</td>
@@ -14955,68 +15363,101 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
       }).join("");
 
+      wirePersonalCheckboxes(".p7-personal-deact-chk");
       tbody.querySelectorAll(".p7-deact-row").forEach(tr => {
-        tr.addEventListener("click", () => {
+        tr.addEventListener("click", (e) => {
+          if (e.target.closest(".col-check-cell")) return;
           selectedDeactivatedProdId = parseInt(tr.getAttribute("data-deact-pid"), 10);
-          tbody.querySelectorAll(".p7-deact-row").forEach(r => r.classList.toggle("selected-row", r === tr));
+          syncP7ActiveRowHighlights();
         });
       });
       applyProductManagementPermissions();
       return;
     }
 
-    // 一般模式：統一搜尋同時篩選上半部個人特殊品與下半部公司共通標準品
     const filteredPersonal = (p7PersonalListCache || []).filter(p => {
       if (!kw) return true;
       return [p.model_no, p.spec, p.note].some(v => String(v || "").toLowerCase().includes(kw));
     });
+    if (countBadge) countBadge.textContent = `共 ${filteredPersonal.length} 筆`;
+
+    if (filteredPersonal.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:18px; color:#64748b; font-size:13px;">尚無符合的個人特殊品（可於上方新增至個人特殊品經銷牌價表）</td></tr>`;
+      wirePersonalCheckboxes(".p7-personal-row-chk");
+      applyProductManagementPermissions();
+      return;
+    }
+
+    tbody.innerHTML = filteredPersonal
+      .map((p, idx) => buildP7RowHtml(p, "personal", idx, idx, p7CheckedPersonalIds))
+      .join("");
+
+    wirePersonalCheckboxes(".p7-personal-row-chk");
+    tbody.querySelectorAll(".p7-personal-row").forEach(tr => {
+      tr.addEventListener("click", (e) => {
+        if (e.target.closest(".col-check-cell")) return;
+        const idx = parseInt(tr.getAttribute("data-cache-idx"), 10);
+        const prod = filteredPersonal[idx];
+        if (!prod) return;
+        const rowKey = tr.getAttribute("data-key") || getPersonalProdRowKey(prod, idx);
+        p7SelectedProductObj = { ...prod, is_special: 1, _rowKey: rowKey };
+        fillP7FormFromProduct(prod);
+        syncP7ActiveRowHighlights();
+      });
+    });
+
+    applyProductManagementPermissions();
+  }
+
+  function renderStandardProductsPage() {
+    updateProdDeactivatedUIState();
+    const tbody = document.getElementById("quoteProdMgmtTableBody");
+    const pageInfo = document.getElementById("lblProdMgmtPageInfo");
+    const countBadge = document.getElementById("lblStdProdCountBadge");
+    if (!tbody) return;
 
     const totalStdCount = p7ProductsListCache.length;
     const totalPages = Math.max(1, Math.ceil(totalStdCount / P7_PAGE_SIZE));
     if (p7ProdPage > totalPages) p7ProdPage = totalPages;
-    if (pageInfo) {
-      pageInfo.textContent = `第 ${p7ProdPage} / ${totalPages} 頁`;
+    if (countBadge) countBadge.textContent = `共 ${totalStdCount} 筆`;
+    if (pageInfo) pageInfo.textContent = `第 ${p7ProdPage} / ${totalPages} 頁`;
+
+    const wireStdCheckboxes = () => {
+      wireTableShiftCheckboxSelection({
+        tbody,
+        checkboxSelector: ".p7-std-row-chk",
+        selectAllId: "chkAllStdProdP7",
+        checkedSet: p7CheckedStdModels,
+        getLastShiftIdx: () => p7LastStdShiftIdx,
+        setLastShiftIdx: (v) => { p7LastStdShiftIdx = v; },
+        syncRowHighlight: syncP7ActiveRowHighlights
+      });
+    };
+
+    if (totalStdCount === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:#7f8c8d;">查無相符的公司共通標準品</td></tr>`;
+      wireStdCheckboxes();
+      applyProductManagementPermissions();
+      return;
     }
-
-    const personalRowsHtml = filteredPersonal.length > 0
-      ? filteredPersonal.map((p, idx) => buildP7RowHtml(p, idx + 1, "personal", idx)).join("")
-      : `<tr><td colspan="6" style="text-align:center; padding:10px; color:#64748b; font-size:12px;">尚無符合的個人特殊品（可於上方新增至個人特殊品經銷牌價表）</td></tr>`;
-
-    const dividerHtml = `
-      <tr class="p7-section-divider-row">
-        <td colspan="6">公司共通標準品（全體共用標準牌價）</td>
-      </tr>
-    `;
 
     const startIdx = (p7ProdPage - 1) * P7_PAGE_SIZE;
     const pageRows = p7ProductsListCache.slice(startIdx, startIdx + P7_PAGE_SIZE);
-    const stdRowsHtml = totalStdCount === 0
-      ? `<tr><td colspan="6" style="text-align:center; padding:24px; color:#7f8c8d;">查無相符的公司共通標準品</td></tr>`
-      : pageRows.map((p, idx) => buildP7RowHtml(p, startIdx + idx + 1, "standard", startIdx + idx)).join("");
+    tbody.innerHTML = pageRows
+      .map((p, idx) => buildP7RowHtml(p, "standard", startIdx + idx, idx, p7CheckedStdModels))
+      .join("");
 
-    tbody.innerHTML = personalRowsHtml + dividerHtml + stdRowsHtml;
-
-    tbody.querySelectorAll(".p7-prod-row").forEach(tr => {
-      tr.addEventListener("click", () => {
-        const sec = tr.getAttribute("data-section");
-        const idx = parseInt(tr.getAttribute("data-idx"), 10);
-        const prod = sec === "personal" ? filteredPersonal[idx] : p7ProductsListCache[idx];
+    wireStdCheckboxes();
+    tbody.querySelectorAll(".p7-std-row").forEach(tr => {
+      tr.addEventListener("click", (e) => {
+        if (e.target.closest(".col-check-cell")) return;
+        const cacheIdx = parseInt(tr.getAttribute("data-cache-idx"), 10);
+        const prod = p7ProductsListCache[cacheIdx];
         if (!prod) return;
-        p7SelectedProductObj = { ...prod, is_special: sec === "personal" ? 1 : 0 };
-        tbody.querySelectorAll(".p7-prod-row").forEach(r => r.classList.toggle("selected-row", r === tr));
-
-        const dealerP = Number(prod.dealer_price || 0);
-        const listP = Number(prod.list_price || (dealerP > 0 ? Math.round(dealerP * 2) : 0));
-        const mIn = document.getElementById("p7InputModel");
-        const lIn = document.getElementById("p7InputListPrice");
-        const dIn = document.getElementById("p7InputDealerPrice");
-        const sIn = document.getElementById("p7InputSpec");
-        const cIn = document.getElementById("p7ChkIsMto");
-        if (mIn) mIn.value = prod.model_no || "";
-        if (lIn) lIn.value = String(listP);
-        if (dIn) dIn.value = String(dealerP);
-        if (sIn) sIn.value = prod.spec || "";
-        if (cIn) cIn.checked = String(prod.spec || "").includes("訂購品") || Number(prod.is_order_item || 0) > 0;
+        const rowKey = tr.getAttribute("data-key") || getStdProdRowKey(prod, cacheIdx);
+        p7SelectedProductObj = { ...prod, is_special: 0, _rowKey: rowKey };
+        fillP7FormFromProduct(prod);
+        syncP7ActiveRowHighlights();
       });
     });
 
@@ -15033,7 +15474,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const chk = document.getElementById("p7ChkIsMto");
     if (chk) chk.checked = false;
     if (!skipRender) {
-      renderStandardProductsPage();
+      syncP7ActiveRowHighlights();
     }
   }
 
@@ -15086,113 +15527,224 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function bringSelectedP7ProductToQuote() {
-    if (!p7SelectedProductObj) {
-      showAuthToast("請先點選要帶入報價的產品");
+    const batchItems = [];
+    if (!isP7DeactivatedView && p7CheckedPersonalIds.size > 0) {
+      (p7PersonalListCache || []).forEach((p, idx) => {
+        if (p7CheckedPersonalIds.has(getPersonalProdRowKey(p, idx))) {
+          batchItems.push({ ...p, is_special: true });
+        }
+      });
+    }
+    if (p7CheckedStdModels.size > 0) {
+      (p7ProductsListCache || []).forEach((p, idx) => {
+        if (p7CheckedStdModels.has(getStdProdRowKey(p, idx))) {
+          batchItems.push({ ...p, is_special: false });
+        }
+      });
+    }
+    if (batchItems.length === 0 && p7SelectedProductObj) {
+      batchItems.push({ ...p7SelectedProductObj, is_special: Boolean(p7SelectedProductObj.is_special) });
+    }
+    if (batchItems.length === 0) {
+      showAuthToast("請先勾選或點選要帶入報價的產品");
       return;
     }
-    const p = p7SelectedProductObj;
-    const dealerP = Number(p.dealer_price || 0);
-    addBlankItem({
-      model_no: p.model_no || "",
-      spec: p.spec || "",
-      dealer_price: dealerP,
-      stock_qty: p.stock_qty ?? 0,
-      is_special: Boolean(p.is_special),
-      is_order_item: Number(p.is_order_item || p.is_mto || 0) > 0 || String(p.spec || "").includes("訂購品"),
-      discount_pct: 100,
-      final_unit_price: dealerP,
-      quantity: 1
+
+    batchItems.forEach(p => {
+      const dealerP = Number(p.dealer_price || 0);
+      addBlankItem({
+        model_no: p.model_no || "",
+        spec: p.spec || "",
+        dealer_price: dealerP,
+        stock_qty: p.stock_qty ?? 0,
+        is_special: Boolean(p.is_special),
+        is_order_item: Number(p.is_order_item || p.is_mto || 0) > 0 || String(p.spec || "").includes("訂購品"),
+        discount_pct: 100,
+        final_unit_price: dealerP,
+        quantity: 1
+      });
     });
+
+    p7CheckedPersonalIds.clear();
+    p7LastPersonalShiftIdx = null;
+    p7CheckedStdModels.clear();
+    p7LastStdShiftIdx = null;
+    renderPersonalProductsTable();
+    renderStandardProductsPage();
     switchQuoteSubTab("create");
-    showAuthToast(`已帶入「${p.model_no}」`);
+
+    if (batchItems.length === 1) {
+      showAuthToast(`已帶入「${batchItems[0].model_no}」`);
+    } else {
+      showAuthToast(`已批次帶入 ${batchItems.length} 項產品至新建報價`);
+    }
   }
 
   async function deleteSelectedP7Product() {
-    if (!p7SelectedProductObj) {
-      showAuthToast("請先點選一筆個人特殊品");
+    let targets = [];
+    if (!isP7DeactivatedView && p7CheckedPersonalIds.size > 0) {
+      (p7PersonalListCache || []).forEach((p, idx) => {
+        if (p7CheckedPersonalIds.has(getPersonalProdRowKey(p, idx))) {
+          targets.push(p);
+        }
+      });
+    }
+
+    if (targets.length === 0) {
+      if (p7CheckedStdModels.size > 0 || (p7SelectedProductObj && !p7SelectedProductObj.is_special)) {
+        showAuthToast("公司共通標準品受系統保護，僅可將上方個人特殊品移至停用區");
+        return;
+      }
+      if (p7SelectedProductObj && p7SelectedProductObj.is_special) {
+        targets = [p7SelectedProductObj];
+      }
+    }
+
+    if (targets.length === 0) {
+      showAuthToast("請先勾選或點選上方個人特殊品");
       return;
     }
-    if (!p7SelectedProductObj.is_special) {
-      showAuthToast("公司共通標準品受系統保護，僅可將上方個人特殊品移至停用區");
-      return;
-    }
-    const modelNo = p7SelectedProductObj.model_no || "";
+
+    const dialogMessage = targets.length === 1
+      ? `確定將個人特殊品「${targets[0].model_no || ""}」移至停用區？\n停用區資料將保留 30 天後自動刪除。`
+      : `確定將已勾選的 ${targets.length} 筆個人特殊品移至停用區？\n停用區資料將保留 30 天後自動刪除。`;
+
     const ok = await promptConfirmDeleteCustomer({
       title: "移至停用區",
-      message: `確定將個人特殊品「${modelNo}」移至停用區？\n停用區資料將保留 30 天後自動刪除。`,
+      message: dialogMessage,
       confirmText: "移至停用區",
       danger: true
     });
     if (!ok) return;
-    try {
-      const activeSales = getActiveSalesName();
-      const spId = p7SelectedProductObj.id;
-      const r = await fetch(`/api/special-products/${spId}?sales_name=${encodeURIComponent(activeSales)}&mode=deactivate`, {
+
+    const activeSales = getActiveSalesName();
+    const { successCount, firstError, lastResMessage } = await runSequentialBatchRequests(targets, async (sp) => {
+      const r = await fetch(`/api/special-products/${sp.id}?sales_name=${encodeURIComponent(activeSales)}&mode=deactivate`, {
         method: "DELETE"
       });
       const resData = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(resData.detail || "移至停用區失敗");
-      p7SelectedProductObj = null;
-      quoteProductsCache = [];
-      if (typeof invalidateDesktopProductsCache === "function") invalidateDesktopProductsCache();
-      await searchStandardProductsInMgmt({ notifyDeactivated: false });
-      showAuthToast(resData.message || `已將「${modelNo}」移至停用區`);
-    } catch (err) {
-      showAuthToast(`操作失敗：${err.message}`);
-    }
+      return resData;
+    });
+
+    p7SelectedProductObj = null;
+    p7CheckedPersonalIds.clear();
+    p7LastPersonalShiftIdx = null;
+    quoteProductsCache = [];
+    if (typeof invalidateDesktopProductsCache === "function") invalidateDesktopProductsCache();
+    await searchStandardProductsInMgmt({ notifyDeactivated: false });
+
+    showBatchOperationToast({
+      successCount,
+      firstError,
+      lastResMessage,
+      total: targets.length,
+      singleSuccessMsg: `已將「${targets[0].model_no}」移至停用區`,
+      batchSuccessMsg: `已將 ${successCount} 筆個人特殊品移至停用區`,
+      failPrefix: "操作失敗",
+      partialPrefix: "已將"
+    });
   }
 
   async function restoreSelectedDeactivatedProduct() {
-    if (!selectedDeactivatedProdId) {
-      showAuthToast("請先點選要還原的個人特殊品");
+    let ids = [];
+    if (p7CheckedPersonalIds.size > 0) {
+      ids = Array.from(p7CheckedPersonalIds).map(k => parseInt(k, 10)).filter(Number.isFinite);
+    } else if (selectedDeactivatedProdId) {
+      ids = [Number(selectedDeactivatedProdId)];
+    }
+
+    if (ids.length === 0) {
+      showAuthToast("請先勾選或點選要還原的個人特殊品");
       return;
     }
-    try {
-      const activeSales = getActiveSalesName();
+
+    const activeSales = getActiveSalesName();
+    const { successCount, firstError, lastResMessage } = await runSequentialBatchRequests(ids, async (id) => {
       const r = await fetch("/api/deactivated-special-products/restore", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: selectedDeactivatedProdId, sales_name: activeSales })
+        body: JSON.stringify({ id, sales_name: activeSales })
       });
       const resData = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(resData.detail || "還原失敗");
-      selectedDeactivatedProdId = null;
-      quoteProductsCache = [];
-      if (typeof invalidateDesktopProductsCache === "function") invalidateDesktopProductsCache();
-      await searchStandardProductsInMgmt({ notifyDeactivated: false });
-      showAuthToast(resData.message || "已還原個人特殊品");
-    } catch (err) {
-      showAuthToast(`還原失敗：${err.message}`);
-    }
+      return resData;
+    });
+
+    selectedDeactivatedProdId = null;
+    p7CheckedPersonalIds.clear();
+    p7LastPersonalShiftIdx = null;
+    quoteProductsCache = [];
+    if (typeof invalidateDesktopProductsCache === "function") invalidateDesktopProductsCache();
+    await searchStandardProductsInMgmt({ notifyDeactivated: false });
+
+    showBatchOperationToast({
+      successCount,
+      firstError,
+      lastResMessage,
+      total: ids.length,
+      singleSuccessMsg: "已還原個人特殊品",
+      batchSuccessMsg: `已批次還原 ${successCount} 筆個人特殊品`,
+      failPrefix: "還原失敗",
+      partialPrefix: "已還原"
+    });
   }
 
   async function permDeleteSelectedDeactivatedProduct() {
-    if (!selectedDeactivatedProdId) {
-      showAuthToast("請先點選要永久刪除的紀錄");
+    let ids = [];
+    if (p7CheckedPersonalIds.size > 0) {
+      ids = Array.from(p7CheckedPersonalIds).map(k => parseInt(k, 10)).filter(Number.isFinite);
+    } else if (selectedDeactivatedProdId) {
+      ids = [Number(selectedDeactivatedProdId)];
+    }
+
+    if (ids.length === 0) {
+      showAuthToast("請先勾選或點選要永久刪除的紀錄");
       return;
     }
-    const target = (p7DeactivatedListCache || []).find(x => Number(x.id) === Number(selectedDeactivatedProdId));
-    const modelNo = target ? target.model_no : `ID ${selectedDeactivatedProdId}`;
+
+    let dialogMessage = "";
+    if (ids.length === 1) {
+      const target = (p7DeactivatedListCache || []).find(x => Number(x.id) === Number(ids[0]));
+      const modelNo = target ? target.model_no : `ID ${ids[0]}`;
+      dialogMessage = `確定從停用區永久刪除「${modelNo}」？此動作無法復原。`;
+    } else {
+      dialogMessage = `確定從停用區永久刪除已勾選的 ${ids.length} 筆個人特殊品？此動作無法復原。`;
+    }
+
     const ok = await promptConfirmDeleteCustomer({
       title: "永久刪除個人特殊品",
-      message: `確定從停用區永久刪除「${modelNo}」？此動作無法復原。`,
+      message: dialogMessage,
       confirmText: "永久刪除",
       danger: true
     });
     if (!ok) return;
-    try {
-      const activeSales = getActiveSalesName();
-      const r = await fetch(`/api/deactivated-special-products/${selectedDeactivatedProdId}?sales_name=${encodeURIComponent(activeSales)}`, {
+
+    const activeSales = getActiveSalesName();
+    const { successCount, firstError, lastResMessage } = await runSequentialBatchRequests(ids, async (id) => {
+      const r = await fetch(`/api/deactivated-special-products/${id}?sales_name=${encodeURIComponent(activeSales)}`, {
         method: "DELETE"
       });
       const resData = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(resData.detail || "永久刪除失敗");
-      selectedDeactivatedProdId = null;
-      await searchStandardProductsInMgmt({ notifyDeactivated: false });
-      showAuthToast(resData.message || "已永久刪除個人特殊品");
-    } catch (err) {
-      showAuthToast(`刪除失敗：${err.message}`);
-    }
+      return resData;
+    });
+
+    selectedDeactivatedProdId = null;
+    p7CheckedPersonalIds.clear();
+    p7LastPersonalShiftIdx = null;
+    await searchStandardProductsInMgmt({ notifyDeactivated: false });
+
+    showBatchOperationToast({
+      successCount,
+      firstError,
+      lastResMessage,
+      total: ids.length,
+      singleSuccessMsg: "已永久刪除個人特殊品",
+      batchSuccessMsg: `已永久刪除 ${successCount} 筆個人特殊品`,
+      failPrefix: "刪除失敗",
+      partialPrefix: "已永久刪除"
+    });
   }
 
   // ============================================================================
@@ -18971,6 +19523,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   initDesktopCalendarPickers();
+  initQuoteWorkspaceBoundaryResizers();
   setupAuthAndImpersonationEvents();
 
 });

@@ -1480,56 +1480,100 @@
             </div>
           </fieldset>
 
-          <div class="pyside-p7-left-pane" style="flex:1;">
-            <div class="pyside-pane-section-title" id="lblProdMgmtSectionTitle">產品資料列表</div>
+          <div class="pyside-p7-left-pane" style="flex:1; gap:10px;">
             <div class="pyside-p7-search-row">
               <label for="inputQuoteProdMgmtSearch" class="pyside-p3-label">搜尋:</label>
               <input type="text" id="inputQuoteProdMgmtSearch" class="pyside-input"
                 placeholder="搜尋個人特殊品與公司共通標準品（型號或規格）..." style="flex:1;">
               <button type="button" id="btnQuoteProdMgmtSearch" class="btn-pyside-outline hidden">搜尋</button>
             </div>
-            <div id="p7DeactivatedBanner" class="deactivated-zone-banner hidden">
-              停用區提醒：停用滿 30 天之個人特殊品將由系統自動永久刪除，如需保留請先點選並按「還原選取產品」。
+
+            <!-- 上方獨立表格區塊：個人特殊品經銷牌價表（含停用區與獨立高度拉桿） -->
+            <div class="p7-personal-table-section">
+              <div class="p7-table-section-header">
+                <div class="pyside-pane-section-title" id="lblPersonalProdSectionTitle" style="color:#047857;">
+                  個人特殊品經銷牌價表</div>
+                <span id="lblPersonalProdCountBadge" class="p7-table-count-badge">共 0 筆</span>
+              </div>
+              <div id="p7DeactivatedBanner" class="deactivated-zone-banner hidden">
+                停用區提醒：停用滿 30 天之個人特殊品將由系統自動永久刪除，如需保留請先勾選並按「還原選取產品」。
+              </div>
+              <div class="pyside-full-table-wrap" id="personalProdTableWrap" style="height:220px;">
+                <table class="pyside-excel-table" id="quotePersonalProdMgmtTable">
+                  <thead>
+                    <tr>
+                      <th class="col-corner-header" style="width:45px; text-align:center;">
+                        <input type="checkbox" id="chkAllPersonalProdP7" class="header-select-all-chk"
+                          title="全選 / 取消全選" />
+                      </th>
+                      <th class="resizable-th" style="width:220px;">產品型號<span class="col-resizer"></span></th>
+                      <th class="resizable-th" style="width:105px;">牌價<span class="col-resizer"></span></th>
+                      <th class="resizable-th" style="width:105px;">經銷價<span class="col-resizer"></span></th>
+                      <th class="resizable-th" id="thProdMgmtSpecOrDate" style="width:300px;">規格<span
+                          class="col-resizer"></span></th>
+                      <th class="resizable-th" id="thProdMgmtMtoOrDays" style="width:105px;">訂購品<span
+                          class="col-resizer"></span></th>
+                    </tr>
+                  </thead>
+                  <tbody id="quotePersonalProdMgmtTableBody">
+                    <tr>
+                      <td colspan="6" style="text-align:center; padding:18px; color:#7f8c8d;">載入中...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="pyside-p7-personal-btns">
+                <button type="button" id="btnProdMgmtDeleteSelected" class="btn-pyside-red"
+                  style="flex:1; height:36px;">移至停用區</button>
+                <button type="button" id="btnRestoreDeactivatedProd" class="btn-pyside-green hidden"
+                  style="flex:1; height:36px;">還原選取產品</button>
+                <button type="button" id="btnPermDeleteDeactivatedProd" class="btn-pyside-darkred hidden"
+                  style="flex:1; height:36px;">永久刪除</button>
+                <button type="button" id="btnToggleProdDeactivatedView" class="btn-pyside-outline"
+                  style="flex:1; height:36px;">停用區 (0)</button>
+              </div>
             </div>
-            <div class="pyside-full-table-wrap" style="flex:1; min-height:420px;">
-              <table class="pyside-excel-table" id="quoteProdMgmtTable">
-                <thead>
-                  <tr>
-                    <th class="col-corner-header" style="width:45px;"></th>
-                    <th class="resizable-th" style="width:220px;">產品型號<span class="col-resizer"></span></th>
-                    <th class="resizable-th" style="width:105px;">牌價<span class="col-resizer"></span></th>
-                    <th class="resizable-th" style="width:105px;">經銷價<span class="col-resizer"></span></th>
-                    <th class="resizable-th" id="thProdMgmtSpecOrDate" style="width:300px;">規格<span
-                        class="col-resizer"></span></th>
-                    <th class="resizable-th" id="thProdMgmtMtoOrDays" style="width:105px;">訂購品<span
-                        class="col-resizer"></span></th>
-                  </tr>
-                </thead>
-                <tbody id="quoteProdMgmtTableBody">
-                  <tr>
-                    <td colspan="6" style="text-align:center; padding:24px; color:#7f8c8d;">載入中...</td>
-                  </tr>
-                </tbody>
-              </table>
+
+            <!-- 下方獨立表格區塊：公司共通標準品列表（獨立分頁與獨立高度拉桿） -->
+            <div class="p7-standard-table-section">
+              <div class="p7-table-section-header">
+                <div class="pyside-pane-section-title" id="lblProdMgmtSectionTitle">公司共通標準品列表</div>
+                <span id="lblStdProdCountBadge" class="p7-table-count-badge">共 0 筆</span>
+              </div>
+              <div class="pyside-full-table-wrap" id="standardProdTableWrap" style="height:340px;">
+                <table class="pyside-excel-table" id="quoteProdMgmtTable">
+                  <thead>
+                    <tr>
+                      <th class="col-corner-header" style="width:45px; text-align:center;">
+                        <input type="checkbox" id="chkAllStdProdP7" class="header-select-all-chk"
+                          title="全選 / 取消全選本頁" />
+                      </th>
+                      <th class="resizable-th" style="width:220px;">產品型號<span class="col-resizer"></span></th>
+                      <th class="resizable-th" style="width:105px;">牌價<span class="col-resizer"></span></th>
+                      <th class="resizable-th" style="width:105px;">經銷價<span class="col-resizer"></span></th>
+                      <th class="resizable-th" style="width:300px;">規格<span class="col-resizer"></span></th>
+                      <th class="resizable-th" style="width:105px;">訂購品<span class="col-resizer"></span></th>
+                    </tr>
+                  </thead>
+                  <tbody id="quoteProdMgmtTableBody">
+                    <tr>
+                      <td colspan="6" style="text-align:center; padding:24px; color:#7f8c8d;">載入中...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="pyside-pagination-bar" style="justify-content:center; padding:4px 0;">
+                <button type="button" id="btnProdMgmtPrevPage" class="btn-pyside-page" style="width:100px;">&lt;
+                  上一頁</button>
+                <span id="lblProdMgmtPageInfo" class="pyside-page-label">第 1 / 1 頁</span>
+                <button type="button" id="btnProdMgmtNextPage" class="btn-pyside-page" style="width:100px;">下一頁
+                  &gt;</button>
+              </div>
             </div>
-            <div class="pyside-pagination-bar" style="justify-content:center; padding:6px 0;">
-              <button type="button" id="btnProdMgmtPrevPage" class="btn-pyside-page" style="width:100px;">&lt;
-                上一頁</button>
-              <span id="lblProdMgmtPageInfo" class="pyside-page-label">第 1 / 1 頁</span>
-              <button type="button" id="btnProdMgmtNextPage" class="btn-pyside-page" style="width:100px;">下一頁
-                &gt;</button>
-            </div>
+
             <div class="pyside-p7-bottom-btns">
               <button type="button" id="btnP7BringToQuote" class="btn-pyside-green"
-                style="flex:1; height:36px;">帶入新建報價</button>
-              <button type="button" id="btnProdMgmtDeleteSelected" class="btn-pyside-red"
-                style="flex:1; height:36px;">移至停用區</button>
-              <button type="button" id="btnRestoreDeactivatedProd" class="btn-pyside-green hidden"
-                style="flex:1; height:36px;">還原選取產品</button>
-              <button type="button" id="btnPermDeleteDeactivatedProd" class="btn-pyside-darkred hidden"
-                style="flex:1; height:36px;">永久刪除</button>
-              <button type="button" id="btnToggleProdDeactivatedView" class="btn-pyside-outline"
-                style="flex:1; height:36px;">停用區 (0)</button>
+                style="flex:1; height:38px;">帶入新建報價</button>
             </div>
           </div>
 
@@ -1812,7 +1856,10 @@
                 <table class="pyside-excel-table" id="quoteCustMgmtTable">
                   <thead>
                     <tr>
-                      <th class="col-corner-header" style="width:38px;"></th>
+                      <th class="col-corner-header" style="width:45px; text-align:center;">
+                        <input type="checkbox" id="chkAllCustP6" class="header-select-all-chk"
+                          title="全選 / 取消全選本頁" />
+                      </th>
                       <th style="width:38px; color:#f39c12;">★</th>
                       <th class="resizable-th" style="width:105px;">聯絡人<span class="col-resizer"></span></th>
                       <th class="resizable-th" style="width:90px;">統編<span class="col-resizer"></span></th>
@@ -3603,17 +3650,23 @@
       <div class="dialog-header"
         style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light); padding-bottom:10px;">
         <div style="display:flex; align-items:center; gap:8px;">
-          <svg id="svgFluentModalIcon" class="icon-svg" style="width:18px; height:18px; color:var(--color-danger, #ef4444);" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+          <svg id="svgFluentModalIcon" class="icon-svg"
+            style="width:18px; height:18px; color:var(--color-danger, #ef4444);" viewBox="0 0 24 24">
+            <path
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
           </svg>
-          <h3 id="lblDeleteCustomerTitle" style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">確認</h3>
+          <h3 id="lblDeleteCustomerTitle"
+            style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">確認</h3>
         </div>
         <button type="button" id="btnCloseDeleteCustModal"
           style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-secondary);">&times;</button>
       </div>
       <div class="dialog-body" style="padding:16px 0;">
-        <p id="lblDeleteCustomerPrompt" style="margin:0; font-size:0.95rem; line-height:1.5; color:var(--text-primary); font-weight:500; white-space:pre-line;"></p>
-        <input type="text" id="inputFluentModalValue" class="pyside-input hidden" style="margin-top:10px; width:100%;" />
+        <p id="lblDeleteCustomerPrompt"
+          style="margin:0; font-size:0.95rem; line-height:1.5; color:var(--text-primary); font-weight:500; white-space:pre-line;">
+        </p>
+        <input type="text" id="inputFluentModalValue" class="pyside-input hidden"
+          style="margin-top:10px; width:100%;" />
       </div>
       <div class="dialog-footer"
         style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border-light); padding-top:12px;">
@@ -3823,13 +3876,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261118_v1_0_75"></script>
+  <script src="js/app.js?v=20261118_v1_0_76"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261118_v1_0_75')
+        navigator.serviceWorker.register('./sw.js?v=20261118_v1_0_76')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

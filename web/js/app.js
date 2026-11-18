@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.76";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-18 15:30:00";
-  const SYSTEM_APP_RELEASE_NOTES = "客戶與產品管理左欄改為多選核取方塊並支援Shift連續區間選取、產品管理拆分個人與公眾雙可調長度表格，且單列高度隨系統字級等比例自動調整";
+  const SYSTEM_APP_VERSION = "v1.0.77";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-18 16:15:00";
+  const SYSTEM_APP_RELEASE_NOTES = "移除客戶與產品管理停用區切換分頁浮動提醒、修正帶入新建報價優先填入預設空白列、調整產品管理帶入新建報價按鈕至雙表中間與停用區按鈕同排";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -7693,11 +7693,11 @@ document.addEventListener("DOMContentLoaded", () => {
       runPriceAnalysis();
     } else if (normalizedTab === "customers") {
       if (custSec) custSec.classList.remove("hidden");
-      loadQuotationCustomersPage({ notifyDeactivated: true });
+      loadQuotationCustomersPage();
     } else if (normalizedTab === "products") {
       if (tabSpecial) tabSpecial.classList.add("active");
       if (specialSec) specialSec.classList.remove("hidden");
-      searchStandardProductsInMgmt({ notifyDeactivated: true });
+      searchStandardProductsInMgmt();
     } else if (normalizedTab === "settings") {
       if (setSec) setSec.classList.remove("hidden");
       loadQuotationSettingsPage();
@@ -9062,6 +9062,46 @@ document.addEventListener("DOMContentLoaded", () => {
     return createdDesktopRow;
   }
 
+  // 優先填入新建報價單第一個完全空白的明細列（型號、規格、經銷價皆空）；若皆已填寫才於最下方新增
+  function fillFirstBlankOrAddQuoteItem(initialData = null) {
+    const desktopTableBody = document.getElementById("quoteDesktopTableBody");
+    const itemsContainer = document.getElementById("itemsContainer");
+
+    if (desktopTableBody) {
+      const desktopRows = Array.from(desktopTableBody.querySelectorAll("tr.desktop-item-row"));
+      const blankTr = desktopRows.find(tr => {
+        const iid = tr.getAttribute("data-itemid");
+        if (!iid) return false;
+        const modelInputVal = (document.getElementById(`d-${iid}-model-input`)?.value || "").trim();
+        const codeVal = (document.getElementById(`${iid}-code`)?.value || "").trim();
+        const specVal = (document.getElementById(`d-${iid}-spec`)?.value || "").trim();
+        const dealerVal = (document.getElementById(`d-${iid}-dealer-price`)?.value || "").trim();
+        return !modelInputVal && !codeVal && !specVal && !dealerVal;
+      });
+      if (blankTr) {
+        const blankItemId = blankTr.getAttribute("data-itemid");
+        const insertedRow = addBlankItem(initialData, { insertBeforeRowEl: blankTr, skipRecalc: true });
+        blankTr.remove();
+        const blankMobileEl = blankItemId ? document.getElementById(blankItemId) : null;
+        if (blankMobileEl) blankMobileEl.remove();
+        syncMobileItemsOrderWithDesktop();
+        refreshItemIndices();
+        calculateTotal();
+        return insertedRow;
+      }
+    } else if (itemsContainer) {
+      const mobileRows = Array.from(itemsContainer.querySelectorAll(".item-row"));
+      const blankMobile = mobileRows.find(r => {
+        const codeVal = (document.getElementById(`${r.id}-code`)?.value || "").trim();
+        const dealerText = (document.getElementById(`${r.id}-dealer-price`)?.value || "").trim();
+        return !codeVal && (dealerText === "" || dealerText === "-");
+      });
+      if (blankMobile) blankMobile.remove();
+    }
+
+    return addBlankItem(initialData);
+  }
+
   // 插入方案小計列 (支援在任意列上方/下方插入，並自動依區段重算金額)
   function insertSubtotalRow(defaultTitle = "", options = {}) {
     const desktopTableBody = document.getElementById("quoteDesktopTableBody");
@@ -9581,7 +9621,7 @@ document.addEventListener("DOMContentLoaded", () => {
           } catch (e) {}
 
           if (matched) {
-            addBlankItem({
+            fillFirstBlankOrAddQuoteItem({
               model_no: matched.model_no,
               spec: matched.spec || matched.series || "",
               sku: matched.sku || "",
@@ -9596,7 +9636,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             imported++;
           } else {
-            addBlankItem({
+            fillFirstBlankOrAddQuoteItem({
               model_no: modelKeyword,
               spec: "自訂品項",
               dealer_price: 0,
@@ -13514,7 +13554,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         activeContainer.querySelectorAll(".btn-use-special-prod").forEach(btn => {
           btn.addEventListener("click", () => {
-            addBlankItem({
+            fillFirstBlankOrAddQuoteItem({
               model_no: btn.dataset.model,
               spec: btn.dataset.spec,
               dealer_price: parseFloat(btn.dataset.price) || 0,
@@ -14206,7 +14246,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function refreshDeactivatedCustomersCache({ notifyDeactivated = false } = {}) {
+  async function refreshDeactivatedCustomersCache() {
     try {
       const activeSales = getActiveSalesName();
       const r = await fetch(`/api/deactivated-customers?sales_name=${encodeURIComponent(activeSales)}`);
@@ -14220,21 +14260,11 @@ document.addEventListener("DOMContentLoaded", () => {
       p6DeactivatedListCache = [];
     }
     updateCustDeactivatedUIState();
-    if (notifyDeactivated && p6DeactivatedListCache.length > 0) {
-      const minDays = p6DeactivatedListCache.reduce(
-        (m, x) => Math.min(m, Number(x.remaining_days || 30)),
-        30
-      );
-      showAuthToast(
-        `提醒：客戶停用區目前有 ${p6DeactivatedListCache.length} 筆資料，將於停用滿 30 天後自動刪除（最早一筆剩餘 ${minDays} 天）`,
-        4500
-      );
-    }
   }
 
-  async function loadQuotationCustomersPage({ notifyDeactivated = false } = {}) {
+  async function loadQuotationCustomersPage() {
     await populateCustomerSelectDropdown(true);
-    await refreshDeactivatedCustomersCache({ notifyDeactivated });
+    await refreshDeactivatedCustomersCache();
     renderQuotationCustomersTable();
     await loadQuotationSupplierInfo();
   }
@@ -15115,6 +15145,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const bannerEl = document.getElementById("p7DeactivatedBanner");
     const thSpecOrDate = document.getElementById("thProdMgmtSpecOrDate");
     const thMtoOrDays = document.getElementById("thProdMgmtMtoOrDays");
+    const btnBring = document.getElementById("btnP7BringToQuote");
     const btnDel = document.getElementById("btnProdMgmtDeleteSelected");
     const btnRestore = document.getElementById("btnRestoreDeactivatedProd");
     const btnPermDel = document.getElementById("btnPermDeleteDeactivatedProd");
@@ -15134,6 +15165,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ? `剩餘天數<span class="col-resizer"></span>`
         : `訂購品<span class="col-resizer"></span>`;
     }
+    if (btnBring) btnBring.classList.toggle("hidden", isP7DeactivatedView);
     if (btnDel) btnDel.classList.toggle("hidden", isP7DeactivatedView);
     if (btnRestore) btnRestore.classList.toggle("hidden", !isP7DeactivatedView);
     if (btnPermDel) btnPermDel.classList.toggle("hidden", !isP7DeactivatedView);
@@ -15143,7 +15175,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function searchStandardProductsInMgmt({ notifyDeactivated = false } = {}) {
+  async function searchStandardProductsInMgmt() {
     const personalTbody = document.getElementById("quotePersonalProdMgmtTableBody");
     const stdTbody = document.getElementById("quoteProdMgmtTableBody");
     if (!personalTbody && !stdTbody) return;
@@ -15175,16 +15207,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       renderPersonalProductsTable();
       renderStandardProductsPage();
-      if (notifyDeactivated && p7DeactivatedListCache.length > 0) {
-        const minDays = p7DeactivatedListCache.reduce(
-          (m, x) => Math.min(m, Number(x.remaining_days || 30)),
-          30
-        );
-        showAuthToast(
-          `提醒：產品停用區目前有 ${p7DeactivatedListCache.length} 筆個人特殊品，將於停用滿 30 天後自動刪除（最早一筆剩餘 ${minDays} 天）`,
-          4500
-        );
-      }
     } catch (err) {
       if (personalTbody) {
         personalTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:18px; color:#e74c3c;">${escapeHtml(err.message)}</td></tr>`;
@@ -15552,7 +15574,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     batchItems.forEach(p => {
       const dealerP = Number(p.dealer_price || 0);
-      addBlankItem({
+      fillFirstBlankOrAddQuoteItem({
         model_no: p.model_no || "",
         spec: p.spec || "",
         dealer_price: dealerP,
@@ -15571,6 +15593,9 @@ document.addEventListener("DOMContentLoaded", () => {
     p7LastStdShiftIdx = null;
     renderPersonalProductsTable();
     renderStandardProductsPage();
+    if (typeof resetExcelTableEngineState === "function") {
+      resetExcelTableEngineState();
+    }
     switchQuoteSubTab("create");
 
     if (batchItems.length === 1) {

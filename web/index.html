@@ -1523,6 +1523,8 @@
                 </table>
               </div>
               <div class="pyside-p7-personal-btns">
+                <button type="button" id="btnP7BringToQuote" class="btn-pyside-green"
+                  style="flex:1; height:36px;">帶入新建報價</button>
                 <button type="button" id="btnProdMgmtDeleteSelected" class="btn-pyside-red"
                   style="flex:1; height:36px;">移至停用區</button>
                 <button type="button" id="btnRestoreDeactivatedProd" class="btn-pyside-green hidden"
@@ -1545,8 +1547,7 @@
                   <thead>
                     <tr>
                       <th class="col-corner-header" style="width:45px; text-align:center;">
-                        <input type="checkbox" id="chkAllStdProdP7" class="header-select-all-chk"
-                          title="全選 / 取消全選本頁" />
+                        <input type="checkbox" id="chkAllStdProdP7" class="header-select-all-chk" title="全選 / 取消全選本頁" />
                       </th>
                       <th class="resizable-th" style="width:220px;">產品型號<span class="col-resizer"></span></th>
                       <th class="resizable-th" style="width:105px;">牌價<span class="col-resizer"></span></th>
@@ -1569,11 +1570,6 @@
                 <button type="button" id="btnProdMgmtNextPage" class="btn-pyside-page" style="width:100px;">下一頁
                   &gt;</button>
               </div>
-            </div>
-
-            <div class="pyside-p7-bottom-btns">
-              <button type="button" id="btnP7BringToQuote" class="btn-pyside-green"
-                style="flex:1; height:38px;">帶入新建報價</button>
             </div>
           </div>
 
@@ -1857,8 +1853,7 @@
                   <thead>
                     <tr>
                       <th class="col-corner-header" style="width:45px; text-align:center;">
-                        <input type="checkbox" id="chkAllCustP6" class="header-select-all-chk"
-                          title="全選 / 取消全選本頁" />
+                        <input type="checkbox" id="chkAllCustP6" class="header-select-all-chk" title="全選 / 取消全選本頁" />
                       </th>
                       <th style="width:38px; color:#f39c12;">★</th>
                       <th class="resizable-th" style="width:105px;">聯絡人<span class="col-resizer"></span></th>
@@ -3876,13 +3871,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261118_v1_0_76"></script>
+  <script src="js/app.js?v=20261118_v1_0_77"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261118_v1_0_76')
+        navigator.serviceWorker.register('./sw.js?v=20261118_v1_0_77')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);
@@ -3890,8 +3885,7 @@
           .catch(function (err) {
             console.warn('[PWA] Service Worker 註冊失敗：', err);
           });
-      });
-    }
+     }
   </script>
 </body>
 

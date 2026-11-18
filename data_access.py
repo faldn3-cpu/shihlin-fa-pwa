@@ -15,6 +15,7 @@ import base64
 import hashlib
 import hmac
 import json
+import math
 import os
 import re
 import secrets
@@ -366,6 +367,27 @@ def init_database(db_path: Optional[Path] = None) -> None:
         );
         """)
 
+        # 7c. 客戶與聯絡人停用區資料表 (計時 30 天後自動永久移除，嚴格依 owner_sales 隔離)
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS deactivated_customer_archive (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_sales TEXT NOT NULL DEFAULT '曾維崧',
+            original_customer_id INTEGER,
+            cust_name TEXT NOT NULL,
+            tax_id TEXT DEFAULT '',
+            phone TEXT DEFAULT '',
+            fax TEXT DEFAULT '',
+            address TEXT DEFAULT '',
+            payment_terms TEXT DEFAULT '月結 30 天電匯',
+            is_favorite INTEGER DEFAULT 0,
+            contact_name TEXT DEFAULT '',
+            contact_mobile TEXT DEFAULT '',
+            contact_email TEXT DEFAULT '',
+            item_type TEXT NOT NULL DEFAULT 'contact',
+            deactivated_at TEXT NOT NULL
+        );
+        """)
+
         # 8. 共通標準牌價表 (全體業務共用之公開標準產品庫)
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS product_master (
@@ -401,10 +423,16 @@ def init_database(db_path: Optional[Path] = None) -> None:
             archived_at TEXT,
             archived_standard_price REAL,
             archived_note TEXT DEFAULT '',
+            is_order_item INTEGER NOT NULL DEFAULT 0,
+            is_deactivated INTEGER NOT NULL DEFAULT 0,
+            deactivated_at TEXT,
             created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
             UNIQUE(owner_sales, model_no)
         );
         """)
+        _ensure_column(cursor, "personal_special_product", "is_order_item", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(cursor, "personal_special_product", "is_deactivated", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(cursor, "personal_special_product", "deactivated_at", "TEXT")
 
         # 8c. 手機報價草稿資料表 (手機端送出直接入庫，不經雲端硬碟，回電腦桌直接載入)
         cursor.execute("""
@@ -526,6 +554,7 @@ def init_database(db_path: Optional[Path] = None) -> None:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_quote_status_del ON quotation_header (status, is_deleted);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_item_quote_no ON quotation_item (quote_no);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_cust_owner ON customer_master (owner_sales, name);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_deactivated_cust_owner ON deactivated_customer_archive (owner_sales);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_spec_prod_owner ON personal_special_product (owner_sales, is_archived);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_draft_sales ON quotation_draft (sales_name, status);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_daily_sales_date ON daily_report (sales_name, report_date);")
@@ -618,15 +647,15 @@ def init_database(db_path: Optional[Path] = None) -> None:
 # 方案 A：特殊品轉公司標準品自動取代與封存機制
 # ==============================================================================
 
-def sync_special_to_standard_archive(conn: Optional[sqlite3.Connection] = None) -> int:
+def sync_special_to_standard_archive(
+    conn: Optional[sqlite3.Connection] = None,
+    force_model: Optional[str] = None,
+) -> int:
     """
-    【方案 A 核心防呆機制】
-    檢查所有業務手頭上「生效中 (is_archived = 0)」的個人特殊品，
-    一旦發現該型號 (model_no) 已經正式存在於「共通標準牌價表 (product_master)」中：
-    1. 自動將該筆個人特殊品標記為 is_archived = 1（已轉標準品封存）
-    2. 記錄封存時間、轉標準品後之官方經銷價與完整價格對照說明
-    3. 確保業務搜尋型號時只會出現 1 筆最新的公司標準品，不會重複打架
-    回傳值：本次自動轉封存之筆數
+    【方案 A 特殊品與標準品並存／轉標準品檢查機制】
+    1. 若指定 force_model（從 promote_special_to_standard 呼叫），將該型號之個人特殊品正式轉入封存留紀錄。
+    2. 一般檢查時，僅針對「型號相同且經銷價完全一致」之冗餘個人特殊品進行封存；
+       若同型號但業務設定了「不同價格」，則兩筆並存（個人特殊品優先置頂並標示來源）。
     """
     own_conn = False
     if conn is None:
@@ -638,7 +667,7 @@ def sync_special_to_standard_archive(conn: Optional[sqlite3.Connection] = None) 
         active_specials = cursor.execute("""
         SELECT id, owner_sales, model_no, dealer_price
         FROM personal_special_product
-        WHERE is_archived = 0
+        WHERE is_archived = 0 AND COALESCE(is_deactivated, 0) = 0
         """).fetchall()
 
         if not active_specials:
@@ -647,9 +676,13 @@ def sync_special_to_standard_archive(conn: Optional[sqlite3.Connection] = None) 
         archived_count = 0
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         today_str = datetime.now().strftime("%Y/%m/%d")
+        force_clean = force_model.strip().upper() if force_model else None
 
         for sp in active_specials:
             sp_model = str(sp["model_no"]).strip()
+            if force_clean is not None and sp_model.upper() != force_clean:
+                continue
+
             std_row = cursor.execute("""
             SELECT model_no, dealer_price
             FROM product_master
@@ -658,8 +691,14 @@ def sync_special_to_standard_archive(conn: Optional[sqlite3.Connection] = None) 
             """, (sp_model,)).fetchone()
 
             if std_row:
-                old_p = int(round(float(sp["dealer_price"] or 0)))
-                std_p = int(round(float(std_row["dealer_price"] or 0)))
+                sp_price_f = float(sp["dealer_price"] or 0.0)
+                std_price_f = float(std_row["dealer_price"] or 0.0)
+                # 一般檢查模式下，同型號不同價格允許與標準品並存，不強制封存
+                if force_clean is None and abs(sp_price_f - std_price_f) >= 0.01:
+                    continue
+
+                old_p = int(round(sp_price_f))
+                std_p = int(round(std_price_f))
                 note_msg = (
                     f"此型號已於 {today_str} 正式發行於公司共通標準牌價表"
                     f"（原個人特殊價 ${old_p:,} -> 現公司標準價 ${std_p:,}），系統已自動改用標準品並封存此紀錄。"
@@ -671,7 +710,7 @@ def sync_special_to_standard_archive(conn: Optional[sqlite3.Connection] = None) 
                     archived_standard_price = ?,
                     archived_note = ?
                 WHERE id = ?
-                """, (now_str, float(std_row["dealer_price"] or 0.0), note_msg, sp["id"]))
+                """, (now_str, std_price_f, note_msg, sp["id"]))
                 archived_count += 1
 
         if archived_count > 0 and own_conn:
@@ -683,7 +722,7 @@ def sync_special_to_standard_archive(conn: Optional[sqlite3.Connection] = None) 
 
 
 def get_personal_special_products(sales_name: str, include_archived: bool = True) -> List[Dict[str, Any]]:
-    """取得特定業務員個人的特殊品經銷牌價表（嚴格依業務姓名隔離，他人不可見）"""
+    """取得特定業務員個人的特殊品經銷牌價表（嚴格依業務姓名隔離，排除停用區項目）"""
     conn = get_connection()
     try:
         sync_special_to_standard_archive(conn)
@@ -692,13 +731,13 @@ def get_personal_special_products(sales_name: str, include_archived: bool = True
         if include_archived:
             rows = conn.execute("""
             SELECT * FROM personal_special_product
-            WHERE owner_sales = ?
+            WHERE owner_sales = ? AND COALESCE(is_deactivated, 0) = 0
             ORDER BY is_archived ASC, id DESC
             """, (sales_clean,)).fetchall()
         else:
             rows = conn.execute("""
             SELECT * FROM personal_special_product
-            WHERE owner_sales = ? AND is_archived = 0
+            WHERE owner_sales = ? AND is_archived = 0 AND COALESCE(is_deactivated, 0) = 0
             ORDER BY id DESC
             """, (sales_clean,)).fetchall()
         return [dict(r) for r in rows]
@@ -709,7 +748,7 @@ def get_personal_special_products(sales_name: str, include_archived: bool = True
 def save_personal_special_product(data: Dict[str, Any]) -> Tuple[bool, str, int]:
     """
     新增或更新業務個人的特殊品經銷牌價
-    若該型號已經在公司共通標準牌價表中，則依據【方案 A】自動標記為已轉標準品封存並提示業務
+    支援同型號不同價格與公司共通標準品並存；若存在於標準品但價格不同時，保留個人特殊品供優先選用。
     """
     owner_sales = str(data.get("owner_sales") or "曾維崧").strip()
     model_no = str(data.get("model_no") or "").strip()
@@ -720,6 +759,7 @@ def save_personal_special_product(data: Dict[str, Any]) -> Tuple[bool, str, int]
     dealer_price = float(data.get("dealer_price") or 0.0)
     list_price = float(data.get("list_price") or dealer_price)
     stock_qty = int(data.get("stock_qty") or 0)
+    is_order_item = 1 if int(data.get("is_order_item") or 0) > 0 else 0
     note = str(data.get("note") or "").strip()
 
     conn = get_connection()
@@ -727,36 +767,39 @@ def save_personal_special_product(data: Dict[str, Any]) -> Tuple[bool, str, int]
         cursor = conn.cursor()
         cursor.execute("""
         INSERT INTO personal_special_product (
-            owner_sales, model_no, spec, list_price, dealer_price, stock_qty, note, is_archived
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+            owner_sales, model_no, spec, list_price, dealer_price, stock_qty, note,
+            is_order_item, is_archived, is_deactivated, deactivated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, NULL)
         ON CONFLICT(owner_sales, model_no) DO UPDATE SET
             spec = excluded.spec,
             list_price = excluded.list_price,
             dealer_price = excluded.dealer_price,
             stock_qty = excluded.stock_qty,
             note = excluded.note,
+            is_order_item = excluded.is_order_item,
             is_archived = 0,
             archived_at = NULL,
             archived_standard_price = NULL,
-            archived_note = ''
-        """, (owner_sales, model_no, spec, list_price, dealer_price, stock_qty, note))
+            archived_note = '',
+            is_deactivated = 0,
+            deactivated_at = NULL
+        """, (owner_sales, model_no, spec, list_price, dealer_price, stock_qty, note, is_order_item))
 
         row = cursor.execute("""
         SELECT id FROM personal_special_product WHERE owner_sales = ? AND model_no = ?
         """, (owner_sales, model_no)).fetchone()
         item_id = int(row["id"]) if row else 0
 
-        # 執行方案 A 自動檢查：若該型號已經在共通標準牌價表中，立即轉為標準品封存
         archived_cnt = sync_special_to_standard_archive(conn)
         conn.commit()
 
         if archived_cnt > 0:
             return (
                 True,
-                f"型號「{model_no}」目前已存在於公司共通標準牌價表中！依方案 A 規則，系統已自動以公司標準品取代，並將您的個人特殊品轉入封存紀錄。",
+                f"型號「{model_no}」與公司共通標準品價格相同，已自動以標準品取代。",
                 item_id,
             )
-        return True, f"個人特殊品「{model_no}」已成功儲存（僅 {owner_sales} 個人可見）！", item_id
+        return True, f"已儲存個人特殊品「{model_no}」", item_id
     finally:
         conn.close()
 
@@ -778,7 +821,7 @@ def promote_special_to_standard(item_id: int, standard_dealer_price: Optional[fl
     """
     【方案 A 特殊品正式轉為公司標準品發行】
     將指定的特殊品正式寫入共通標準牌價表 (product_master)，
-    並自動觸發 sync_special_to_standard_archive 將所有業務手上的同型號特殊品轉為封存留紀錄！
+    並將該型號之個人特殊品轉為封存留紀錄！
     """
     conn = get_connection()
     try:
@@ -803,11 +846,11 @@ def promote_special_to_standard(item_id: int, standard_dealer_price: Optional[fl
             stock_qty = excluded.stock_qty
         """, (model_no, spec, list_price, final_std_price, stock_qty))
 
-        archived_cnt = sync_special_to_standard_archive(conn)
+        archived_cnt = sync_special_to_standard_archive(conn, force_model=model_no)
         conn.commit()
         return (
             True,
-            f"型號「{model_no}」已正式升格發行至【公司共通標準牌價表】（標準經銷價 ${int(round(final_std_price)):,}），並自動將 {archived_cnt} 筆個人特殊品轉為封存留紀錄！",
+            f"型號「{model_no}」已正式轉為公司共通標準牌價（標準經銷價 ${int(round(final_std_price)):,}），並封存 {archived_cnt} 筆個人特殊品紀錄。",
         )
     finally:
         conn.close()
@@ -1069,6 +1112,316 @@ def delete_quotation_customer(
         conn.close()
 
 
+def _calc_deactivated_days_and_repair(raw_ts: Optional[str]) -> Tuple[bool, str, int, bool]:
+    """
+    檢驗停用區時間戳記並計算剩餘天數（計時 30 天自動刪除機制）。
+    若時間戳記缺失、格式異常或屬於未來時間，自動補正為當前時間並安全保留完整 30 天。
+    回傳：(是否需要寫回補正時間, 有效 ISO 時間字串, 剩餘天數, 是否已滿 30 天到期應清除)
+    """
+    now = datetime.now()
+    now_iso = now.isoformat(timespec="seconds")
+    ts_str = str(raw_ts or "").strip()
+    if not ts_str:
+        return True, now_iso, 30, False
+
+    parsed_dt: Optional[datetime] = None
+    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            parsed_dt = datetime.strptime(ts_str[:19], fmt)
+            break
+        except ValueError:
+            continue
+    if parsed_dt is None:
+        try:
+            parsed_dt = datetime.fromisoformat(ts_str.replace("Z", ""))
+        except ValueError:
+            parsed_dt = None
+
+    if parsed_dt is None:
+        return True, now_iso, 30, False
+
+    # 若為未來時間戳記（異常超過 1 天），自動補正為當前時間並保留 30 天防誤刪
+    if (parsed_dt - now).total_seconds() > 86400:
+        return True, now_iso, 30, False
+
+    elapsed_days = (now - parsed_dt).total_seconds() / 86400.0
+    if elapsed_days < 0:
+        elapsed_days = 0.0
+    if elapsed_days >= 30.0:
+        return False, parsed_dt.isoformat(timespec="seconds"), 0, True
+
+    remaining = max(1, int(math.ceil(30.0 - elapsed_days)))
+    return False, parsed_dt.isoformat(timespec="seconds"), remaining, False
+
+
+def get_deactivated_customers(sales_name: str, db_path: Optional[Path] = None) -> List[Dict[str, Any]]:
+    """取得特定業務員停用區內的客戶／聯絡人清單（自動清除滿 30 天項目與補正異常日期）"""
+    sales_clean = (sales_name or "曾維崧").strip()
+    conn = get_connection(db_path)
+    try:
+        rows = conn.execute(
+            "SELECT * FROM deactivated_customer_archive WHERE owner_sales = ? ORDER BY id DESC",
+            (sales_clean,)
+        ).fetchall()
+        results: List[Dict[str, Any]] = []
+        dirty = False
+        for r in rows:
+            item = dict(r)
+            repaired, safe_ts, rem_days, expired = _calc_deactivated_days_and_repair(item.get("deactivated_at"))
+            if expired:
+                conn.execute("DELETE FROM deactivated_customer_archive WHERE id = ? AND owner_sales = ?", (item["id"], sales_clean))
+                dirty = True
+                continue
+            if repaired:
+                conn.execute(
+                    "UPDATE deactivated_customer_archive SET deactivated_at = ? WHERE id = ? AND owner_sales = ?",
+                    (safe_ts, item["id"], sales_clean)
+                )
+                item["deactivated_at"] = safe_ts
+                dirty = True
+            item["remaining_days"] = rem_days
+            item["deactivated_date_str"] = safe_ts[:10]
+            results.append(item)
+        if dirty:
+            conn.commit()
+        return results
+    finally:
+        conn.close()
+
+
+def deactivate_quotation_customer(
+    customer_id: int,
+    sales_name: Optional[str] = None,
+    contact_index: Optional[int] = None,
+    db_path: Optional[Path] = None,
+) -> Tuple[bool, str]:
+    """將客戶或單一聯絡人移入停用區（依 owner_sales 隔離，計時 30 天自動刪除）"""
+    safe_contact_idx: Optional[int] = None
+    if contact_index is not None:
+        if isinstance(contact_index, bool):
+            return False, "聯絡人序號參數錯誤"
+        try:
+            safe_contact_idx = int(contact_index)
+        except (TypeError, ValueError):
+            return False, "聯絡人序號參數錯誤"
+        if safe_contact_idx < 0:
+            return False, "聯絡人序號參數錯誤"
+
+    sales_clean = (sales_name or "曾維崧").strip()
+    now_iso = datetime.now().isoformat(timespec="seconds")
+    conn = get_connection(db_path)
+    try:
+        cursor = conn.cursor()
+        cust = cursor.execute(
+            "SELECT * FROM customer_master WHERE id = ? AND owner_sales = ?",
+            (customer_id, sales_clean)
+        ).fetchone()
+        if not cust:
+            return False, "找不到指定的客戶或無權限操作"
+
+        ct_rows = cursor.execute(
+            "SELECT * FROM contact_master WHERE customer_id = ? ORDER BY id ASC",
+            (customer_id,)
+        ).fetchall()
+
+        if safe_contact_idx is not None and len(ct_rows) > 1:
+            if safe_contact_idx >= len(ct_rows):
+                return False, "聯絡人序號超出範圍"
+            target_ct = ct_rows[safe_contact_idx]
+            ct_name = str(target_ct["name"] or "")
+            cursor.execute("""
+            INSERT INTO deactivated_customer_archive (
+                owner_sales, original_customer_id, cust_name, tax_id, phone, fax, address,
+                payment_terms, is_favorite, contact_name, contact_mobile, contact_email,
+                item_type, deactivated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'contact', ?)
+            """, (
+                sales_clean, customer_id, cust["name"], cust["tax_id"] or "", cust["phone"] or "",
+                cust["fax"] or "", cust["address"] or "", cust["payment_terms"] or "月結 30 天電匯",
+                int(cust["is_favorite"] or 0), ct_name, target_ct["mobile"] or "", target_ct["email"] or "",
+                now_iso
+            ))
+            cursor.execute("DELETE FROM contact_master WHERE id = ?", (target_ct["id"],))
+            first_ct = cursor.execute(
+                "SELECT name FROM contact_master WHERE customer_id = ? ORDER BY id ASC LIMIT 1",
+                (customer_id,)
+            ).fetchone()
+            next_default = first_ct["name"] if (first_ct and first_ct["name"]) else ""
+            cursor.execute("UPDATE customer_master SET default_contact = ? WHERE id = ?", (next_default, customer_id))
+            conn.commit()
+            return True, f"已將「{cust['name']}」聯絡人「{ct_name or '未命名'}」移至停用區"
+
+        if safe_contact_idx is not None and len(ct_rows) == 1 and safe_contact_idx != 0:
+            return False, "聯絡人序號超出範圍"
+
+        target_ct = ct_rows[0] if ct_rows else None
+        cursor.execute("""
+        INSERT INTO deactivated_customer_archive (
+            owner_sales, original_customer_id, cust_name, tax_id, phone, fax, address,
+            payment_terms, is_favorite, contact_name, contact_mobile, contact_email,
+            item_type, deactivated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'company', ?)
+        """, (
+            sales_clean, customer_id, cust["name"], cust["tax_id"] or "", cust["phone"] or "",
+            cust["fax"] or "", cust["address"] or "", cust["payment_terms"] or "月結 30 天電匯",
+            int(cust["is_favorite"] or 0),
+            (target_ct["name"] if target_ct else (cust["default_contact"] or "")),
+            (target_ct["mobile"] if target_ct else ""),
+            (target_ct["email"] if target_ct else ""),
+            now_iso
+        ))
+        cursor.execute("DELETE FROM contact_master WHERE customer_id = ?", (customer_id,))
+        cursor.execute("DELETE FROM customer_master WHERE id = ?", (customer_id,))
+        conn.commit()
+        return True, f"已將客戶「{cust['name']}」移至停用區"
+    finally:
+        conn.close()
+
+
+def restore_deactivated_customer(archive_id: int, sales_name: str, db_path: Optional[Path] = None) -> Tuple[bool, str]:
+    """從停用區還原客戶或聯絡人至該業務名下"""
+    sales_clean = (sales_name or "曾維崧").strip()
+    conn = get_connection(db_path)
+    try:
+        item = conn.execute(
+            "SELECT * FROM deactivated_customer_archive WHERE id = ? AND owner_sales = ?",
+            (archive_id, sales_clean)
+        ).fetchone()
+        if not item:
+            return False, "停用區找不到此筆客戶紀錄"
+
+        ok, msg, _ = save_quotation_customer({
+            "owner_sales": sales_clean,
+            "name": item["cust_name"],
+            "tax_id": item["tax_id"] or "",
+            "phone": item["phone"] or "",
+            "fax": item["fax"] or "",
+            "address": item["address"] or "",
+            "payment_terms": item["payment_terms"] or "月結 30 天電匯",
+            "is_favorite": bool(item["is_favorite"]),
+            "contact_name": item["contact_name"] or "",
+            "contact_mobile": item["contact_mobile"] or "",
+            "contact_email": item["contact_email"] or "",
+            "copy_as_new_contact": True,
+        })
+        if not ok:
+            return False, msg
+
+        conn.execute("DELETE FROM deactivated_customer_archive WHERE id = ? AND owner_sales = ?", (archive_id, sales_clean))
+        conn.commit()
+        return True, f"已還原客戶「{item['cust_name']}」"
+    finally:
+        conn.close()
+
+
+def permanently_delete_deactivated_customer(archive_id: int, sales_name: str, db_path: Optional[Path] = None) -> bool:
+    """從停用區永久刪除客戶或聯絡人（依 owner_sales 驗證）"""
+    sales_clean = (sales_name or "曾維崧").strip()
+    conn = get_connection(db_path)
+    try:
+        res = conn.execute(
+            "DELETE FROM deactivated_customer_archive WHERE id = ? AND owner_sales = ?",
+            (archive_id, sales_clean)
+        )
+        conn.commit()
+        return res.rowcount > 0
+    finally:
+        conn.close()
+
+
+def get_deactivated_special_products(sales_name: str, db_path: Optional[Path] = None) -> List[Dict[str, Any]]:
+    """取得特定業務員停用區內的個人特殊品清單（自動清除滿 30 天項目與補正異常日期）"""
+    sales_clean = (sales_name or "曾維崧").strip()
+    conn = get_connection(db_path)
+    try:
+        rows = conn.execute(
+            "SELECT * FROM personal_special_product WHERE owner_sales = ? AND COALESCE(is_deactivated, 0) = 1 ORDER BY id DESC",
+            (sales_clean,)
+        ).fetchall()
+        results: List[Dict[str, Any]] = []
+        dirty = False
+        for r in rows:
+            item = dict(r)
+            repaired, safe_ts, rem_days, expired = _calc_deactivated_days_and_repair(item.get("deactivated_at"))
+            if expired:
+                conn.execute("DELETE FROM personal_special_product WHERE id = ? AND owner_sales = ?", (item["id"], sales_clean))
+                dirty = True
+                continue
+            if repaired:
+                conn.execute(
+                    "UPDATE personal_special_product SET deactivated_at = ? WHERE id = ? AND owner_sales = ?",
+                    (safe_ts, item["id"], sales_clean)
+                )
+                item["deactivated_at"] = safe_ts
+                dirty = True
+            item["remaining_days"] = rem_days
+            item["deactivated_date_str"] = safe_ts[:10]
+            results.append(item)
+        if dirty:
+            conn.commit()
+        return results
+    finally:
+        conn.close()
+
+
+def deactivate_personal_special_product(item_id: int, sales_name: str, db_path: Optional[Path] = None) -> Tuple[bool, str]:
+    """將個人特殊品移至停用區（依 owner_sales 隔離，計時 30 天自動刪除）"""
+    sales_clean = (sales_name or "曾維崧").strip()
+    now_iso = datetime.now().isoformat(timespec="seconds")
+    conn = get_connection(db_path)
+    try:
+        row = conn.execute(
+            "SELECT id, model_no FROM personal_special_product WHERE id = ? AND owner_sales = ?",
+            (item_id, sales_clean)
+        ).fetchone()
+        if not row:
+            return False, "找不到該筆個人特殊品或無權限操作"
+        conn.execute(
+            "UPDATE personal_special_product SET is_deactivated = 1, deactivated_at = ? WHERE id = ? AND owner_sales = ?",
+            (now_iso, item_id, sales_clean)
+        )
+        conn.commit()
+        return True, f"已將「{row['model_no']}」移至停用區"
+    finally:
+        conn.close()
+
+
+def restore_deactivated_special_product(item_id: int, sales_name: str, db_path: Optional[Path] = None) -> Tuple[bool, str]:
+    """從停用區還原個人特殊品"""
+    sales_clean = (sales_name or "曾維崧").strip()
+    conn = get_connection(db_path)
+    try:
+        row = conn.execute(
+            "SELECT id, model_no FROM personal_special_product WHERE id = ? AND owner_sales = ? AND COALESCE(is_deactivated, 0) = 1",
+            (item_id, sales_clean)
+        ).fetchone()
+        if not row:
+            return False, "停用區找不到此筆個人特殊品"
+        conn.execute(
+            "UPDATE personal_special_product SET is_deactivated = 0, deactivated_at = NULL WHERE id = ? AND owner_sales = ?",
+            (item_id, sales_clean)
+        )
+        conn.commit()
+        return True, f"已還原個人特殊品「{row['model_no']}」"
+    finally:
+        conn.close()
+
+
+def permanently_delete_deactivated_special_product(item_id: int, sales_name: str, db_path: Optional[Path] = None) -> bool:
+    """從停用區永久刪除個人特殊品（依 owner_sales 驗證）"""
+    sales_clean = (sales_name or "曾維崧").strip()
+    conn = get_connection(db_path)
+    try:
+        res = conn.execute(
+            "DELETE FROM personal_special_product WHERE id = ? AND owner_sales = ? AND COALESCE(is_deactivated, 0) = 1",
+            (item_id, sales_clean)
+        )
+        conn.commit()
+        return res.rowcount > 0
+    finally:
+        conn.close()
+
+
 def search_products(query: str = "", limit: int = 80, sales_name: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     搜尋產品牌價庫 (同時涵蓋：1. 該業務未封存之個人特殊品 + 2. 全公司共通標準牌價表)
@@ -1083,19 +1436,19 @@ def search_products(query: str = "", limit: int = 80, sales_name: Optional[str] 
         q_clean = (query or "").strip()
         like_q = f"%{q_clean}%"
 
-        # 1. 先查詢該業務員生效中的「個人特殊品」(若未指定 sales_name 則預設曾維崧)
+        # 1. 先查詢該業務員生效中的「個人特殊品」(排除停用區與封存，置頂優先)
         target_sales = (sales_name or "曾維崧").strip()
         if q_clean:
             sp_rows = conn.execute("""
             SELECT * FROM personal_special_product
-            WHERE owner_sales = ? AND is_archived = 0
+            WHERE owner_sales = ? AND is_archived = 0 AND COALESCE(is_deactivated, 0) = 0
               AND (model_no LIKE ? OR spec LIKE ? OR note LIKE ?)
             ORDER BY model_no ASC LIMIT ?
             """, (target_sales, like_q, like_q, like_q, limit)).fetchall()
         else:
             sp_rows = conn.execute("""
             SELECT * FROM personal_special_product
-            WHERE owner_sales = ? AND is_archived = 0
+            WHERE owner_sales = ? AND is_archived = 0 AND COALESCE(is_deactivated, 0) = 0
             ORDER BY model_no ASC LIMIT ?
             """, (target_sales, min(limit, 30))).fetchall()
 
@@ -1103,7 +1456,7 @@ def search_products(query: str = "", limit: int = 80, sales_name: Optional[str] 
             d = dict(sp)
             d["is_special"] = 1
             d["source_label"] = "個人特殊品"
-            d["is_order_item"] = 0
+            d["is_order_item"] = int(d.get("is_order_item") or 0)
             results.append(d)
 
         # 2. 再查詢全公司「共通標準牌價表」
@@ -3671,6 +4024,93 @@ def _normalize_product_import_rows(rows: List[Any]) -> List[Dict[str, Any]]:
     return normalized
 
 
+def batch_import_personal_diff_products(
+    sales_name: str,
+    rows: List[Any],
+    db_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """
+    比對公司共通標準產品牌價表後，僅將「新增型號」或「經銷價與標準品不同」之差異項目
+    新增／更新至當前業務員個人的特殊品牌價表，兼顧混合 Excel 匯入便利性與公眾資料保護。
+    """
+    sales_clean = (sales_name or "曾維崧").strip()
+    parsed_rows = _normalize_product_import_rows(rows)
+    seen_models = set()
+    error_logs: List[str] = []
+    new_count = 0
+    update_count = 0
+    skipped_standard_count = 0
+    duplicate_count = 0
+
+    conn = get_connection(db_path)
+    try:
+        cursor = conn.cursor()
+        std_rows = cursor.execute("SELECT model_no, dealer_price FROM product_master").fetchall()
+        std_price_map: Dict[str, float] = {
+            str(r["model_no"]).strip().upper(): float(r["dealer_price"] or 0.0)
+            for r in std_rows
+            if r["model_no"]
+        }
+
+        for item in parsed_rows:
+            model_no = item["model_no"]
+            key_upper = model_no.strip().upper()
+            if key_upper in seen_models:
+                duplicate_count += 1
+                error_logs.append(f"[第 {item['row_no']} 列] 重複型號: {model_no}")
+            else:
+                seen_models.add(key_upper)
+
+            dp_val = float(item["dealer_price"] or 0.0)
+            lp_val = float(item["list_price"] or (dp_val * 2 if dp_val > 0 else 0.0))
+            if key_upper in std_price_map and round(dp_val) == round(std_price_map[key_upper]):
+                skipped_standard_count += 1
+                continue
+
+            desc = item["desc"]
+            spec_str = desc if desc else model_no
+            if desc and not desc.startswith(model_no):
+                spec_str = f"{model_no} ({desc})"
+
+            existing_sp = cursor.execute(
+                "SELECT id FROM personal_special_product WHERE owner_sales = ? AND UPPER(model_no) = UPPER(?)",
+                (sales_clean, model_no)
+            ).fetchone()
+
+            if existing_sp:
+                cursor.execute("""
+                UPDATE personal_special_product
+                SET spec = ?, list_price = ?, dealer_price = ?, is_order_item = ?,
+                    is_archived = 0, is_deactivated = 0, deactivated_at = NULL
+                WHERE id = ?
+                """, (spec_str, lp_val, dp_val, item["is_order_item"], existing_sp["id"]))
+                update_count += 1
+            else:
+                cursor.execute("""
+                INSERT INTO personal_special_product (
+                    owner_sales, model_no, spec, list_price, dealer_price,
+                    stock_qty, note, is_order_item, is_archived, is_deactivated
+                ) VALUES (?, ?, ?, ?, ?, 0, '', ?, 0, 0)
+                """, (sales_clean, model_no, spec_str, lp_val, dp_val, item["is_order_item"]))
+                new_count += 1
+
+        conn.commit()
+    finally:
+        conn.close()
+
+    return {
+        "status": "success",
+        "mode": "personal_diff",
+        "sales_name": sales_clean,
+        "new_count": new_count,
+        "update_count": update_count,
+        "skipped_standard_count": skipped_standard_count,
+        "duplicate_count": duplicate_count,
+        "error_logs": error_logs,
+        "message": f"已比對公眾標準品：新增 {new_count} 筆、更新 {update_count} 筆至「{sales_clean}」個人特殊品（略過相同標準品 {skipped_standard_count} 筆）。"
+    }
+
+
 def batch_import_products_data(rows: List[Any], db_path: Optional[Path] = None) -> Dict[str, Any]:
     """批次新增或更新公司共通標準產品牌價庫，並觸發方案 A 自動封存檢查"""
     parsed_rows = _normalize_product_import_rows(rows)
@@ -3757,7 +4197,8 @@ def _normalize_legacy_quote_rows(rows: List[Any]) -> List[Dict[str, Any]]:
 def batch_import_legacy_three_stage(
     sales_name: str,
     payload: Dict[str, Any],
-    db_path: Optional[Path] = None
+    db_path: Optional[Path] = None,
+    use_personal_diff: bool = False,
 ) -> Dict[str, Any]:
     """
     對標桌面版 LegacyImporterDialog 的三階段智慧匯入：
@@ -3785,10 +4226,17 @@ def batch_import_legacy_three_stage(
     products_rows = payload.get("products_rows") or []
     if products_rows:
         logs.append("--- 階段二：開始匯入產品主檔 ---")
-        prod_res = batch_import_products_data(products_rows, db_path=db_path)
-        prod_new = int(prod_res.get("new_count", 0))
-        prod_upd = int(prod_res.get("update_count", 0))
-        logs.append(f"[成功] 產品主檔同步完成，新增 {prod_new} 筆、更新 {prod_upd} 筆。")
+        if use_personal_diff:
+            prod_res = batch_import_personal_diff_products(target_sales, products_rows, db_path=db_path)
+            prod_new = int(prod_res.get("new_count", 0))
+            prod_upd = int(prod_res.get("update_count", 0))
+            prod_skip = int(prod_res.get("skipped_standard_count", 0))
+            logs.append(f"[成功] 已比對標準品並匯入個人特殊品：新增 {prod_new} 筆、更新 {prod_upd} 筆（略過相同標準品 {prod_skip} 筆）。")
+        else:
+            prod_res = batch_import_products_data(products_rows, db_path=db_path)
+            prod_new = int(prod_res.get("new_count", 0))
+            prod_upd = int(prod_res.get("update_count", 0))
+            logs.append(f"[成功] 產品主檔同步完成，新增 {prod_new} 筆、更新 {prod_upd} 筆。")
     else:
         logs.append("--- 階段二：未偵測到 [經銷牌價表參考] 工作表資料，略過此階段 ---")
 

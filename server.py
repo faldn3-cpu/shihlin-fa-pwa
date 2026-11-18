@@ -112,7 +112,13 @@ class SpecialProductCreate(BaseModel):
     list_price: float = 0.0
     dealer_price: float = 0.0
     stock_qty: int = 0
+    is_order_item: int = 0
     note: Optional[str] = ""
+
+
+class DeactivatedRestoreRequest(BaseModel):
+    id: int
+    sales_name: str = "曾維崧"
 
 
 class SpecialProductPromoteRequest(BaseModel):
@@ -281,14 +287,47 @@ def api_delete_quotation_customer(
     customer_id: int,
     sales_name: Optional[str] = None,
     contact_index: Optional[int] = None,
+    mode: str = "delete",
 ):
-    """報價管理系統：刪除指定客戶或單一聯絡人清單"""
+    """報價管理系統：刪除指定客戶或單一聯絡人清單（支援 mode=deactivate 移至停用區）"""
+    if mode == "deactivate":
+        ok, msg = data_access.deactivate_quotation_customer(
+            customer_id, sales_name=sales_name, contact_index=contact_index
+        )
+        if not ok:
+            raise HTTPException(status_code=404, detail=msg)
+        return {"status": "success", "message": msg}
+
     ok = data_access.delete_quotation_customer(
         customer_id, sales_name=sales_name, contact_index=contact_index
     )
     if not ok:
         raise HTTPException(status_code=404, detail="找不到指定的客戶或聯絡人，或無權限刪除")
     return {"status": "success", "message": "客戶資料已成功刪除"}
+
+
+@app.get("/api/deactivated-customers")
+def api_get_deactivated_customers(sales_name: str = "曾維崧"):
+    """取得特定業務員停用區內的客戶與聯絡人（自動清理滿 30 天項目）"""
+    return data_access.get_deactivated_customers(sales_name=sales_name)
+
+
+@app.post("/api/deactivated-customers/restore")
+def api_restore_deactivated_customer(req: DeactivatedRestoreRequest):
+    """從停用區還原客戶或聯絡人"""
+    ok, msg = data_access.restore_deactivated_customer(req.id, sales_name=req.sales_name)
+    if not ok:
+        raise HTTPException(status_code=404, detail=msg)
+    return {"status": "success", "message": msg}
+
+
+@app.delete("/api/deactivated-customers/{archive_id}")
+def api_perm_delete_deactivated_customer(archive_id: int, sales_name: str = "曾維崧"):
+    """從停用區永久刪除客戶或聯絡人"""
+    ok = data_access.permanently_delete_deactivated_customer(archive_id, sales_name=sales_name)
+    if not ok:
+        raise HTTPException(status_code=404, detail="找不到指定的停用區項目或無權限刪除")
+    return {"status": "success", "message": "已永久刪除客戶紀錄"}
 
 
 @app.get("/api/quotation-supplier")
@@ -353,12 +392,42 @@ def api_save_special_product(sp_data: SpecialProductCreate):
 
 
 @app.delete("/api/special-products/{item_id}")
-def api_delete_special_product(item_id: int, sales_name: str = "曾維崧"):
-    """刪除業務個人的特殊品項目"""
+def api_delete_special_product(item_id: int, sales_name: str = "曾維崧", mode: str = "delete"):
+    """刪除或停用業務個人的特殊品項目（支援 mode=deactivate 移至停用區）"""
+    if mode == "deactivate":
+        ok, msg = data_access.deactivate_personal_special_product(item_id, sales_name=sales_name)
+        if not ok:
+            raise HTTPException(status_code=404, detail=msg)
+        return {"status": "success", "message": msg}
+
     ok = data_access.delete_personal_special_product(item_id, sales_name=sales_name)
     if not ok:
         raise HTTPException(status_code=404, detail="找不到指定的個人特殊品或無權限刪除")
     return {"status": "success", "message": "個人特殊品已刪除"}
+
+
+@app.get("/api/deactivated-special-products")
+def api_get_deactivated_special_products(sales_name: str = "曾維崧"):
+    """取得特定業務員停用區內的個人特殊品（自動清理滿 30 天項目）"""
+    return data_access.get_deactivated_special_products(sales_name=sales_name)
+
+
+@app.post("/api/deactivated-special-products/restore")
+def api_restore_deactivated_special_product(req: DeactivatedRestoreRequest):
+    """從停用區還原個人特殊品"""
+    ok, msg = data_access.restore_deactivated_special_product(req.id, sales_name=req.sales_name)
+    if not ok:
+        raise HTTPException(status_code=404, detail=msg)
+    return {"status": "success", "message": msg}
+
+
+@app.delete("/api/deactivated-special-products/{item_id}")
+def api_perm_delete_deactivated_special_product(item_id: int, sales_name: str = "曾維崧"):
+    """從停用區永久刪除個人特殊品"""
+    ok = data_access.permanently_delete_deactivated_special_product(item_id, sales_name=sales_name)
+    if not ok:
+        raise HTTPException(status_code=404, detail="找不到指定的停用區項目或無權限刪除")
+    return {"status": "success", "message": "已永久刪除個人特殊品"}
 
 
 @app.post("/api/special-products/{item_id}/promote")
@@ -687,11 +756,14 @@ class BatchCustomersImportRequest(BaseModel):
 
 
 class BatchProductsImportRequest(BaseModel):
+    sales_name: Optional[str] = None
+    mode: str = "personal_diff"
     rows: List[Any] = []
 
 
 class BatchLegacyImportRequest(BaseModel):
     sales_name: str = "曾維崧"
+    mode: str = "personal_diff"
     customers_rows: List[Any] = []
     products_rows: List[Any] = []
     quotations_rows: List[Any] = []
@@ -708,8 +780,10 @@ def api_batch_import_customers(req: BatchCustomersImportRequest):
 
 @app.post("/api/batch/import-products")
 def api_batch_import_products(req: BatchProductsImportRequest):
-    """批次資料管理：匯入標準產品牌價 Excel"""
+    """批次資料管理：比對差異匯入個人特殊品，或由管理員更新共通標準品"""
     try:
+        if req.sales_name and req.mode == "personal_diff":
+            return data_access.batch_import_personal_diff_products(req.sales_name, req.rows)
         return data_access.batch_import_products_data(req.rows)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"匯入產品失敗: {e}")
@@ -719,7 +793,11 @@ def api_batch_import_products(req: BatchProductsImportRequest):
 def api_batch_import_legacy(req: BatchLegacyImportRequest):
     """批次資料管理：三階段歷史報價單匯入精靈"""
     try:
-        return data_access.batch_import_legacy_three_stage(req.sales_name, req.model_dump())
+        return data_access.batch_import_legacy_three_stage(
+            req.sales_name,
+            req.model_dump(),
+            use_personal_diff=(req.mode == "personal_diff"),
+        )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"歷史報價單匯入失敗: {e}")
 

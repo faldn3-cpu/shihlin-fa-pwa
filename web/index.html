@@ -1437,183 +1437,118 @@
         </div>
 
         <!-- ====================================================================
-           子分頁 E：產品管理 (100% 還原 _QuotationApp gui_page5.py 與附圖 6 + 保留個人特殊品相容區塊)
+           子分頁 E：產品管理 (100% 滿版最大化：上方快速新增個人特殊品＋單一搜尋＋個人/標準品上下分區＋停用區)
            ==================================================================== -->
         <div id="quoteSpecialProductsSection" class="hidden pyside-page-wrapper">
           <div class="pyside-top-toggle-bar">
             <button type="button" class="btn-pyside-subtle btn-toggle-sidebar-any" title="展開或收合左側功能選單">
               <span>收合選單</span>
             </button>
-            <button type="button" id="btnTogglePersonalSpecialDrawer" class="btn-pyside-outline"
-              style="font-size:12px; padding:3px 10px;">
-              <span>展開/收合個人特殊品專區</span>
-            </button>
+            <span id="specialProductOwnerBadge" class="traffic-light-badge"
+              style="font-size:12px; padding:3px 10px;">所屬業務：曾維崧</span>
           </div>
 
-          <!-- 左右雙欄 Splitter (800 : 400 對標附圖 6) -->
-          <div class="pyside-p7-splitter">
-            <!-- 左側：產品資料列表 -->
-            <div class="pyside-p7-left-pane">
-              <div class="pyside-pane-section-title">產品資料列表</div>
-              <div class="pyside-p7-search-row">
-                <label for="inputQuoteProdMgmtSearch" class="pyside-p3-label">搜尋:</label>
-                <input type="text" id="inputQuoteProdMgmtSearch" class="pyside-input" placeholder="搜尋型號或規格..."
-                  style="flex:1;">
-                <button type="button" id="btnQuoteProdMgmtSearch" class="btn-pyside-outline hidden">搜尋</button>
+          <fieldset class="pyside-groupbox pyside-full-groupbox p7-top-edit-card">
+            <legend class="pyside-groupbox-legend">個人特殊品新增與修改</legend>
+            <div class="p7-top-edit-grid">
+              <div class="p7-top-edit-field">
+                <label for="p7InputModel">型號 *</label>
+                <input type="text" id="p7InputModel" class="pyside-input">
               </div>
-              <div class="pyside-full-table-wrap" style="flex:1; min-height:390px;">
-                <table class="pyside-excel-table" id="quoteProdMgmtTable">
-                  <thead>
-                    <tr>
-                      <th class="col-corner-header" style="width:45px;"></th>
-                      <th class="resizable-th" style="width:190px;">產品型號<span class="col-resizer"></span></th>
-                      <th class="resizable-th" style="width:95px;">牌價<span class="col-resizer"></span></th>
-                      <th class="resizable-th" style="width:95px;">經銷價<span class="col-resizer"></span></th>
-                      <th class="resizable-th" style="width:230px;">規格<span class="col-resizer"></span></th>
-                      <th class="resizable-th" style="width:75px;">訂購品<span class="col-resizer"></span></th>
-                    </tr>
-                  </thead>
-                  <tbody id="quoteProdMgmtTableBody">
-                    <tr>
-                      <td colspan="6" style="text-align:center; padding:24px; color:#7f8c8d;">載入中...</td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div class="p7-top-edit-field">
+                <label for="p7InputListPrice">牌價</label>
+                <input type="text" id="p7InputListPrice" class="pyside-input">
               </div>
-              <div class="pyside-pagination-bar" style="justify-content:center; padding:6px 0;">
-                <button type="button" id="btnProdMgmtPrevPage" class="btn-pyside-page" style="width:100px;">&lt;
-                  上一頁</button>
-                <span id="lblProdMgmtPageInfo" class="pyside-page-label">第 1 / 202 頁</span>
-                <button type="button" id="btnProdMgmtNextPage" class="btn-pyside-page" style="width:100px;">下一頁
-                  &gt;</button>
+              <div class="p7-top-edit-field">
+                <label for="p7InputDealerPrice">經銷價 *</label>
+                <input type="text" id="p7InputDealerPrice" class="pyside-input">
               </div>
-              <div class="pyside-p7-bottom-btns">
-                <button type="button" id="btnProdMgmtDeleteSelected" class="btn-pyside-red"
-                  style="flex:1; height:36px;">刪除選取產品</button>
-                <button type="button" id="btnProdMgmtClearAll" class="btn-pyside-darkred"
-                  style="flex:1; height:36px;">清空所有產品</button>
+              <div class="p7-top-edit-field">
+                <label for="p7InputSpec">規格</label>
+                <input type="text" id="p7InputSpec" class="pyside-input">
               </div>
+              <label class="pyside-mto-check-box" style="height:34px; box-sizing:border-box;">
+                <input type="checkbox" id="p7ChkIsMto">
+                <span>訂購品 (V)</span>
+              </label>
             </div>
+            <div class="p7-top-edit-actions">
+              <button type="button" id="btnP7ClearForm" class="btn-pyside-outline"
+                style="min-width:140px; height:36px;">清空 / 新增模式</button>
+              <button type="button" id="btnP7SaveProduct" class="btn-pyside-green"
+                style="flex:1; min-width:220px; height:36px;">新增個人特殊品經銷牌價表</button>
+            </div>
+          </fieldset>
 
-            <!-- 右側：產品資料編輯 (新增/修改) + 小算盤 (鍵盤支援) -->
-            <div class="pyside-p7-right-pane">
-              <fieldset class="pyside-groupbox pyside-full-groupbox">
-                <legend class="pyside-groupbox-legend">產品資料編輯 (新增/修改)</legend>
-                <div class="pyside-form-rows">
-                  <div class="pyside-form-row">
-                    <label>型號 *</label>
-                    <input type="text" id="p7InputModel" class="pyside-input">
-                  </div>
-                  <div class="pyside-form-row">
-                    <label>牌價</label>
-                    <input type="text" id="p7InputListPrice" class="pyside-input">
-                  </div>
-                  <div class="pyside-form-row">
-                    <label>經銷價</label>
-                    <input type="text" id="p7InputDealerPrice" class="pyside-input">
-                  </div>
-                  <div class="pyside-form-row">
-                    <label>規格</label>
-                    <input type="text" id="p7InputSpec" class="pyside-input">
-                  </div>
-                  <div class="pyside-form-row">
-                    <label></label>
-                    <label class="pyside-mto-check-box">
-                      <input type="checkbox" id="p7ChkIsMto">
-                      <span>訂購品 (V)</span>
-                    </label>
-                  </div>
-                  <div class="pyside-form-btn-pair">
-                    <button type="button" id="btnP7ClearForm" class="btn-pyside-outline" style="flex:1; height:36px;">清空
-                      / 新增模式</button>
-                    <button type="button" id="btnP7SaveProduct" class="btn-pyside-green"
-                      style="flex:1; height:36px;">儲存產品</button>
-                  </div>
-                </div>
-              </fieldset>
-
-              <fieldset class="pyside-groupbox pyside-full-groupbox" style="margin-top:8px;">
-                <legend class="pyside-groupbox-legend">小算盤 (鍵盤支援)</legend>
-                <input type="text" id="p7CalcDisplay" class="pyside-calc-display" value="" readonly>
-                <div class="pyside-calc-grid" id="p7CalcGrid">
-                  <button type="button" class="calc-btn calc-red" data-calc="C">C</button>
-                  <button type="button" class="calc-btn calc-blue" data-calc="/">/</button>
-                  <button type="button" class="calc-btn calc-blue" data-calc="*">*</button>
-                  <button type="button" class="calc-btn calc-red" data-calc="DEL">DEL</button>
-
-                  <button type="button" class="calc-btn" data-calc="7">7</button>
-                  <button type="button" class="calc-btn" data-calc="8">8</button>
-                  <button type="button" class="calc-btn" data-calc="9">9</button>
-                  <button type="button" class="calc-btn calc-blue" data-calc="-">-</button>
-
-                  <button type="button" class="calc-btn" data-calc="4">4</button>
-                  <button type="button" class="calc-btn" data-calc="5">5</button>
-                  <button type="button" class="calc-btn" data-calc="6">6</button>
-                  <button type="button" class="calc-btn calc-blue" data-calc="+">+</button>
-
-                  <button type="button" class="calc-btn" data-calc="1">1</button>
-                  <button type="button" class="calc-btn" data-calc="2">2</button>
-                  <button type="button" class="calc-btn" data-calc="3">3</button>
-                  <button type="button" class="calc-btn calc-blue calc-equal" data-calc="=">=</button>
-
-                  <button type="button" class="calc-btn calc-zero" data-calc="0">0</button>
-                  <button type="button" class="calc-btn" data-calc=".">.</button>
-                </div>
-              </fieldset>
+          <div class="pyside-p7-left-pane" style="flex:1;">
+            <div class="pyside-pane-section-title" id="lblProdMgmtSectionTitle">產品資料列表</div>
+            <div class="pyside-p7-search-row">
+              <label for="inputQuoteProdMgmtSearch" class="pyside-p3-label">搜尋:</label>
+              <input type="text" id="inputQuoteProdMgmtSearch" class="pyside-input"
+                placeholder="搜尋個人特殊品與公司共通標準品（型號或規格）..." style="flex:1;">
+              <button type="button" id="btnQuoteProdMgmtSearch" class="btn-pyside-outline hidden">搜尋</button>
+            </div>
+            <div id="p7DeactivatedBanner" class="deactivated-zone-banner hidden">
+              停用區提醒：停用滿 30 天之個人特殊品將由系統自動永久刪除，如需保留請先點選並按「還原選取產品」。
+            </div>
+            <div class="pyside-full-table-wrap" style="flex:1; min-height:420px;">
+              <table class="pyside-excel-table" id="quoteProdMgmtTable">
+                <thead>
+                  <tr>
+                    <th class="col-corner-header" style="width:45px;"></th>
+                    <th class="resizable-th" style="width:220px;">產品型號<span class="col-resizer"></span></th>
+                    <th class="resizable-th" style="width:105px;">牌價<span class="col-resizer"></span></th>
+                    <th class="resizable-th" style="width:105px;">經銷價<span class="col-resizer"></span></th>
+                    <th class="resizable-th" id="thProdMgmtSpecOrDate" style="width:300px;">規格<span
+                        class="col-resizer"></span></th>
+                    <th class="resizable-th" id="thProdMgmtMtoOrDays" style="width:105px;">訂購品<span
+                        class="col-resizer"></span></th>
+                  </tr>
+                </thead>
+                <tbody id="quoteProdMgmtTableBody">
+                  <tr>
+                    <td colspan="6" style="text-align:center; padding:24px; color:#7f8c8d;">載入中...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pyside-pagination-bar" style="justify-content:center; padding:6px 0;">
+              <button type="button" id="btnProdMgmtPrevPage" class="btn-pyside-page" style="width:100px;">&lt;
+                上一頁</button>
+              <span id="lblProdMgmtPageInfo" class="pyside-page-label">第 1 / 1 頁</span>
+              <button type="button" id="btnProdMgmtNextPage" class="btn-pyside-page" style="width:100px;">下一頁
+                &gt;</button>
+            </div>
+            <div class="pyside-p7-bottom-btns">
+              <button type="button" id="btnP7BringToQuote" class="btn-pyside-green"
+                style="flex:1; height:36px;">帶入新建報價</button>
+              <button type="button" id="btnProdMgmtDeleteSelected" class="btn-pyside-red"
+                style="flex:1; height:36px;">移至停用區</button>
+              <button type="button" id="btnRestoreDeactivatedProd" class="btn-pyside-green hidden"
+                style="flex:1; height:36px;">還原選取產品</button>
+              <button type="button" id="btnPermDeleteDeactivatedProd" class="btn-pyside-darkred hidden"
+                style="flex:1; height:36px;">永久刪除</button>
+              <button type="button" id="btnToggleProdDeactivatedView" class="btn-pyside-outline"
+                style="flex:1; height:36px;">停用區 (0)</button>
             </div>
           </div>
 
-          <!-- 業務個人特殊品與方案 A 自動轉正封存區 (點擊上方按鈕可展開操作，完整保留所有既有 ID) -->
-          <div id="personalSpecialProductsSubPanel" class="hidden" style="margin-top:12px;">
-            <fieldset class="pyside-groupbox pyside-full-groupbox">
-              <legend class="pyside-groupbox-legend">個人特殊品經銷牌價表</legend>
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <span style="font-size:12px; color:#64748b;">當特殊品型號更新發行至「共通標準牌價表」時，系統自動以標準品取代並轉入封存紀錄。</span>
-                <span id="specialProductOwnerBadge" class="traffic-light-badge"
-                  style="font-size:12px; padding:3px 8px;">所屬業務：曾維崧</span>
-              </div>
-              <div
-                style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px; align-items:flex-end; margin-bottom:10px;">
-                <div>
-                  <label for="inputSpecialModelNo" style="font-size:12px; display:block;">特殊品型號 *</label>
-                  <input type="text" id="inputSpecialModelNo" class="pyside-input" placeholder="例如：SP-AX5N-CUST"
-                    style="width:100%;">
-                </div>
-                <div>
-                  <label for="inputSpecialSpec" style="font-size:12px; display:block;">產品規格 / 說明</label>
-                  <input type="text" id="inputSpecialSpec" class="pyside-input" placeholder="客製韌體專用機"
-                    style="width:100%;">
-                </div>
-                <div>
-                  <label for="inputSpecialPrice" style="font-size:12px; display:block;">個人特殊經銷價 *</label>
-                  <input type="number" id="inputSpecialPrice" class="pyside-input" placeholder="18500"
-                    style="width:100%;">
-                </div>
-                <div>
-                  <label for="inputSpecialStockQty" style="font-size:12px; display:block;">可用庫存數量</label>
-                  <input type="number" id="inputSpecialStockQty" class="pyside-input" value="0" style="width:100%;">
-                </div>
-                <div>
-                  <label for="inputSpecialNotes" style="font-size:12px; display:block;">備註</label>
-                  <input type="text" id="inputSpecialNotes" class="pyside-input" placeholder="選填備註..."
-                    style="width:100%;">
-                </div>
-                <button type="button" id="btnSaveSpecialProduct" class="btn-pyside-blue" style="height:34px;">+ 新增 /
-                  更新特殊品</button>
-              </div>
-              <div style="font-weight:700; font-size:13px; margin:6px 0;">目前生效中之個人特殊品</div>
-              <div id="specialProductsActiveList" style="overflow-x:auto; margin-bottom:10px;"></div>
-              <div style="font-weight:700; font-size:13px; margin:6px 0;">【封存歷史紀錄】已轉為公司共通標準品之項目</div>
-              <div id="specialProductsArchivedList" style="overflow-x:auto;"></div>
-            </fieldset>
-            <div class="hidden">
-              <input type="text" id="inputQuickCalcExpr">
-              <button type="button" id="btnRunQuickCalc"></button>
-              <div id="quickCalcResultDisplay"></div>
-              <input type="number" id="inputCalcBasePrice">
-              <input type="number" id="inputCalcDiscountPct">
-              <div id="quickCalcDiscountSummary"></div>
-            </div>
+          <!-- 相容既有個人特殊品參考 DOM 節點（隱藏備用） -->
+          <div id="personalSpecialProductsSubPanel" class="hidden">
+            <input type="text" id="inputSpecialModelNo">
+            <input type="text" id="inputSpecialSpec">
+            <input type="number" id="inputSpecialPrice">
+            <input type="number" id="inputSpecialStockQty" value="0">
+            <input type="text" id="inputSpecialNotes">
+            <button type="button" id="btnSaveSpecialProduct"></button>
+            <div id="specialProductsActiveList"></div>
+            <div id="specialProductsArchivedList"></div>
+            <input type="text" id="inputQuickCalcExpr">
+            <button type="button" id="btnRunQuickCalc"></button>
+            <div id="quickCalcResultDisplay"></div>
+            <input type="number" id="inputCalcBasePrice">
+            <input type="number" id="inputCalcDiscountPct">
+            <div id="quickCalcDiscountSummary"></div>
           </div>
         </div>
 
@@ -1861,13 +1796,16 @@
             <!-- 左側：公司資料列表 (850 寬度比例) -->
             <div class="pyside-p6-left-pane">
               <div class="pyside-pane-section-title">
-                <span>公司資料列表</span>
+                <span id="lblCustMgmtSectionTitle">公司資料列表</span>
                 <span id="qCustCountBadge" class="hidden">0</span>
               </div>
               <div class="pyside-p7-search-row">
                 <label for="inputQuoteCustSearch" class="pyside-p3-label">搜尋:</label>
                 <input type="text" id="inputQuoteCustSearch" class="pyside-input" placeholder="搜尋聯絡人、公司名稱或統編..."
                   style="flex:1;">
+              </div>
+              <div id="p6DeactivatedBanner" class="deactivated-zone-banner hidden">
+                停用區提醒：停用滿 30 天之客戶或聯絡人將由系統自動永久刪除，如需保留請先點選並按「還原選取客戶」。
               </div>
 
               <div class="pyside-full-table-wrap" style="flex:1; min-height:400px;">
@@ -1885,7 +1823,8 @@
                       <th class="resizable-th" style="width:160px;">Email<span class="col-resizer"></span></th>
                       <th class="resizable-th" style="width:220px;">地址<span class="col-resizer"></span></th>
                       <th class="resizable-th" style="width:110px;">付款方式<span class="col-resizer"></span></th>
-                      <th class="resizable-th" style="width:100px;">狀態<span class="col-resizer"></span></th>
+                      <th class="resizable-th" id="thCustMgmtStatusOrDays" style="width:120px;">狀態<span
+                          class="col-resizer"></span></th>
                     </tr>
                   </thead>
                   <tbody id="quoteCustMgmtTableBody">
@@ -1910,9 +1849,13 @@
                 <button type="button" id="btnSyncCloudCustomers" class="btn-pyside-blue"
                   style="flex:1; height:36px;">同步雲端客戶</button>
                 <button type="button" id="btnQuoteCustDelete" class="btn-pyside-darkred"
-                  style="flex:1; height:36px;">刪除選取公司</button>
-                <button type="button" id="btnQuoteCustClearAll" class="btn-pyside-red"
-                  style="flex:1; height:36px;">清空所有公司</button>
+                  style="flex:1; height:36px;">移至停用區</button>
+                <button type="button" id="btnRestoreDeactivatedCust" class="btn-pyside-green hidden"
+                  style="flex:1; height:36px;">還原選取客戶</button>
+                <button type="button" id="btnPermDeleteDeactivatedCust" class="btn-pyside-darkred hidden"
+                  style="flex:1; height:36px;">永久刪除</button>
+                <button type="button" id="btnToggleCustDeactivatedView" class="btn-pyside-outline"
+                  style="flex:1; height:36px;">停用區 (0)</button>
               </div>
               <span id="qCustSelectedHint" class="hidden"></span>
               <div id="qCustContactsPills" class="hidden"></div>
@@ -2159,10 +2102,8 @@
               <fieldset class="pyside-groupbox pyside-full-groupbox">
                 <legend class="pyside-groupbox-legend">產品資料庫 (Product)</legend>
                 <div class="pyside-batch-btn-pair">
-                  <button type="button" id="btnBatchImportProducts" class="btn-pyside-outline-blue">批次匯入建檔
-                    (Excel)</button>
-                  <button type="button" id="btnBatchExportProducts" class="btn-pyside-outline-blue">批次匯出備份
-                    (Excel)</button>
+                  <button type="button" id="btnBatchImportProducts" class="btn-pyside-outline-blue">比對差異匯入個人牌價</button>
+                  <button type="button" id="btnBatchExportProducts" class="btn-pyside-outline-blue">匯出產品牌價表</button>
                 </div>
               </fieldset>
 
@@ -3882,13 +3823,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261118_v1_0_74"></script>
+  <script src="js/app.js?v=20261118_v1_0_75"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261118_v1_0_74')
+        navigator.serviceWorker.register('./sw.js?v=20261118_v1_0_75')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

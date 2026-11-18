@@ -4501,6 +4501,24 @@ input[type="checkbox"] {
   flex-wrap: wrap;
 }
 
+.btn-pyside-gray,
+.btn-pyside-green,
+.btn-pyside-line,
+.btn-pyside-blue,
+.btn-pyside-red,
+.btn-pyside-teal,
+.btn-pyside-purple,
+.btn-pyside-orange,
+.btn-pyside-dark,
+.btn-pyside-darkred,
+.btn-pyside-lightblue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 5px;
+}
+
 .btn-pyside-gray {
   background: #64748b;
   color: #ffffff;
@@ -4510,9 +4528,6 @@ input[type="checkbox"] {
   font-size: 0.85rem;
   padding: 6px 14px;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .btn-pyside-gray:hover {
@@ -4528,9 +4543,6 @@ input[type="checkbox"] {
   font-size: 0.85rem;
   padding: 6px 14px;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .btn-pyside-green:hover {
@@ -4546,9 +4558,6 @@ input[type="checkbox"] {
   font-size: 0.85rem;
   padding: 6px 14px;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .btn-pyside-line:hover {
@@ -4564,9 +4573,6 @@ input[type="checkbox"] {
   font-size: 0.85rem;
   padding: 6px 14px;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .btn-pyside-blue:hover {
@@ -4582,9 +4588,6 @@ input[type="checkbox"] {
   font-size: 0.85rem;
   padding: 6px 14px;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .btn-pyside-red:hover {
@@ -4600,9 +4603,6 @@ input[type="checkbox"] {
   font-size: 0.85rem;
   padding: 6px 14px;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .btn-pyside-teal:hover {
@@ -4618,9 +4618,6 @@ input[type="checkbox"] {
   font-size: 0.85rem;
   padding: 6px 14px;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .btn-pyside-purple:hover {
@@ -4636,9 +4633,6 @@ input[type="checkbox"] {
   font-size: 0.85rem;
   padding: 6px 14px;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .btn-pyside-orange:hover {
@@ -4654,9 +4648,6 @@ input[type="checkbox"] {
   font-size: 0.85rem;
   padding: 6px 14px;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .btn-pyside-dark:hover {
@@ -8665,6 +8656,105 @@ html[data-theme="dark"] .pyside-completer-item.is-active {
   color: #7c3aed;
   font-size: 11.5px;
   font-weight: 700;
+}
+
+.pyside-completer-std-tag {
+  color: #0284c7;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+/* 產品管理 100% 滿版編輯列與個人/公眾分區樣式 (v1.0.75) */
+.p7-top-edit-card {
+  margin-bottom: 4px;
+  padding: 10px 12px;
+}
+
+.p7-top-edit-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 0.8fr 0.8fr 1.8fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.p7-top-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.p7-top-edit-field label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.p7-top-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+@media (max-width: 960px) {
+  .p7-top-edit-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.p7-section-divider-row td {
+  background: var(--bg-surface-secondary, #eef2f7) !important;
+  color: var(--text-secondary, #475569) !important;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  padding: 6px 10px !important;
+  border-top: 2px solid var(--border-card, #cbd5e1);
+  border-bottom: 2px solid var(--border-card, #cbd5e1);
+  letter-spacing: 0.04em;
+  user-select: none;
+}
+
+.p7-personal-row td:first-child {
+  border-left: 3px solid #10b981;
+}
+
+.p7-personal-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.14);
+  color: #047857;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+html[data-theme="dark"] .p7-personal-tag {
+  background: rgba(16, 185, 129, 0.25);
+  color: #6ee7b7;
+}
+
+.deactivated-zone-banner {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.btn-pyside-outline-blue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 5px;
 }
 
 .pyside-completer-spec {

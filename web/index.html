@@ -817,7 +817,7 @@
               <path
                 d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
             </svg>
-            <span>個人特殊品牌價</span>
+            <span>個人牌價表</span>
           </button>
         </div>
 
@@ -1437,7 +1437,7 @@
         </div>
 
         <!-- ====================================================================
-           子分頁 E：產品管理 (100% 滿版最大化：上方快速新增個人特殊品＋單一搜尋＋個人/標準品上下分區＋停用區)
+           子分頁 E：產品管理 (100% 滿版最大化：上方快速新增個人牌價表＋單一搜尋＋個人/發行牌價表上下分區＋停用區)
            ==================================================================== -->
         <div id="quoteSpecialProductsSection" class="hidden pyside-page-wrapper">
           <div class="pyside-top-toggle-bar">
@@ -1449,7 +1449,7 @@
           </div>
 
           <fieldset class="pyside-groupbox pyside-full-groupbox p7-top-edit-card">
-            <legend class="pyside-groupbox-legend">個人特殊品新增與修改</legend>
+            <legend class="pyside-groupbox-legend">個人牌價表新增與修改</legend>
             <div class="p7-top-edit-grid">
               <div class="p7-top-edit-field">
                 <label for="p7InputModel">型號 *</label>
@@ -1476,7 +1476,7 @@
               <button type="button" id="btnP7ClearForm" class="btn-pyside-outline"
                 style="min-width:140px; height:36px;">清空 / 新增模式</button>
               <button type="button" id="btnP7SaveProduct" class="btn-pyside-green"
-                style="flex:1; min-width:220px; height:36px;">新增個人特殊品經銷牌價表</button>
+                style="flex:1; min-width:220px; height:36px;">新增個人牌價表</button>
             </div>
           </fieldset>
 
@@ -1484,19 +1484,19 @@
             <div class="pyside-p7-search-row">
               <label for="inputQuoteProdMgmtSearch" class="pyside-p3-label">搜尋:</label>
               <input type="text" id="inputQuoteProdMgmtSearch" class="pyside-input"
-                placeholder="搜尋個人特殊品與公司共通標準品（型號或規格）..." style="flex:1;">
+                placeholder="搜尋個人牌價表與公司發行牌價表（型號或規格）..." style="flex:1;">
               <button type="button" id="btnQuoteProdMgmtSearch" class="btn-pyside-outline hidden">搜尋</button>
             </div>
 
-            <!-- 上方獨立表格區塊：個人特殊品經銷牌價表（含停用區與獨立高度拉桿） -->
+            <!-- 上方獨立表格區塊：個人牌價表（含停用區與獨立高度拉桿） -->
             <div class="p7-personal-table-section">
               <div class="p7-table-section-header">
                 <div class="pyside-pane-section-title" id="lblPersonalProdSectionTitle" style="color:#047857;">
-                  個人特殊品經銷牌價表</div>
+                  個人牌價表</div>
                 <span id="lblPersonalProdCountBadge" class="p7-table-count-badge">共 0 筆</span>
               </div>
               <div id="p7DeactivatedBanner" class="deactivated-zone-banner hidden">
-                停用區提醒：停用滿 30 天之個人特殊品將由系統自動永久刪除，如需保留請先勾選並按「還原選取產品」。
+                停用區提醒：停用滿 30 天之個人牌價表項目將由系統自動永久刪除，如需保留請先勾選並按「還原選取產品」。
               </div>
               <div class="pyside-full-table-wrap" id="personalProdTableWrap" style="height:220px;">
                 <table class="pyside-excel-table" id="quotePersonalProdMgmtTable">
@@ -1536,10 +1536,10 @@
               </div>
             </div>
 
-            <!-- 下方獨立表格區塊：公司共通標準品列表（獨立分頁與獨立高度拉桿） -->
+            <!-- 下方獨立表格區塊：公司發行牌價表（獨立分頁與獨立高度拉桿） -->
             <div class="p7-standard-table-section">
               <div class="p7-table-section-header">
-                <div class="pyside-pane-section-title" id="lblProdMgmtSectionTitle">公司共通標準品列表</div>
+                <div class="pyside-pane-section-title" id="lblProdMgmtSectionTitle">公司發行牌價表</div>
                 <span id="lblStdProdCountBadge" class="p7-table-count-badge">共 0 筆</span>
               </div>
               <div class="pyside-full-table-wrap" id="standardProdTableWrap" style="height:340px;">
@@ -1573,7 +1573,7 @@
             </div>
           </div>
 
-          <!-- 相容既有個人特殊品參考 DOM 節點（隱藏備用） -->
+          <!-- 相容既有個人牌價表參考 DOM 節點（隱藏備用） -->
           <div id="personalSpecialProductsSubPanel" class="hidden">
             <input type="text" id="inputSpecialModelNo">
             <input type="text" id="inputSpecialSpec">
@@ -1668,27 +1668,32 @@
 
           <!-- 4. 五大 KPI 指標卡片列 (總報價、已成交、未成交/失注、追蹤中、報價轉換率) -->
           <div class="pyside-dash-kpi-row">
-            <div class="pyside-dash-kpi-card">
+            <div class="pyside-dash-kpi-card" id="dashKpiCardAll" data-kpi-filter="all" role="button" tabindex="0"
+              title="點擊查看全部報價單明細" style="cursor:pointer; border-left:5px solid #2980b9; transition:all 0.18s ease;">
               <div class="kpi-card-title">總報價</div>
               <div class="kpi-card-main" id="qDashKpiTotalCnt" style="color:#2980b9;">0 件</div>
               <div class="kpi-card-sub" id="qDashKpiTotalAmt">金額: 0 萬</div>
             </div>
-            <div class="pyside-dash-kpi-card">
+            <div class="pyside-dash-kpi-card" id="dashKpiCardWon" data-kpi-filter="won" role="button" tabindex="0"
+              title="點擊查看已成交報價單明細" style="cursor:pointer; border-left:5px solid #27ae60; transition:all 0.18s ease;">
               <div class="kpi-card-title">已成交</div>
               <div class="kpi-card-main" id="qDashKpiWonCnt" style="color:#27ae60;">0 件</div>
               <div class="kpi-card-sub" id="qDashKpiWonAmt">金額: 0 萬</div>
             </div>
-            <div class="pyside-dash-kpi-card">
+            <div class="pyside-dash-kpi-card" id="dashKpiCardLost" data-kpi-filter="lost" role="button" tabindex="0"
+              title="點擊查看未成交/失注報價單明細" style="cursor:pointer; border-left:5px solid #c0392b; transition:all 0.18s ease;">
               <div class="kpi-card-title">未成交/失注</div>
               <div class="kpi-card-main" id="qDashKpiLostCnt" style="color:#c0392b;">0 件</div>
               <div class="kpi-card-sub" id="qDashKpiLostAmt">金額: 0 萬</div>
             </div>
-            <div class="pyside-dash-kpi-card">
+            <div class="pyside-dash-kpi-card" id="dashKpiCardPending" data-kpi-filter="pending" role="button" tabindex="0"
+              title="點擊查看追蹤中報價單明細" style="cursor:pointer; border-left:5px solid #f39c12; transition:all 0.18s ease;">
               <div class="kpi-card-title">追蹤中</div>
               <div class="kpi-card-main" id="qDashKpiPendingCnt" style="color:#f39c12;">0 件</div>
               <div class="kpi-card-sub" id="qDashKpiPendingAmt">金額: 0 萬</div>
             </div>
-            <div class="pyside-dash-kpi-card">
+            <div class="pyside-dash-kpi-card" id="dashKpiCardRate" data-kpi-filter="all" role="button" tabindex="0"
+              title="點擊查看報價轉換明細" style="cursor:pointer; border-left:5px solid #8e44ad; transition:all 0.18s ease;">
               <div class="kpi-card-title">報價轉換率</div>
               <div class="kpi-card-main" id="qDashKpiRateVal" style="color:#8e44ad;">0.0%</div>
               <div class="kpi-card-sub" id="qDashKpiRateSub">0/0 件</div>
@@ -1819,6 +1824,55 @@
           </fieldset>
           <div class="pyside-dash-drag-handle" data-target-wrap="dashChurnTableWrap" title="上下拖曳調整表格高度">
             <div class="drag-handle-grip"></div>
+          </div>
+
+          <!-- 8. KPI 指標卡片點擊明細視窗 (對標電腦版 DetailListDialog 8 欄表格) -->
+          <div id="dashKpiDetailModal" class="modal-overlay hidden" style="z-index:10600;">
+            <div class="fluent-dialog"
+              style="max-width:1020px; width:94vw; max-height:86vh; display:flex; flex-direction:column; padding:18px;">
+              <div
+                style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; border-bottom:1px solid var(--border-card); padding-bottom:10px;">
+                <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;">
+                  <h3 id="dashKpiDetailTitle"
+                    style="margin:0; font-size:16px; font-weight:700; color:var(--text-primary);">全部報價單明細</h3>
+                  <span id="dashKpiDetailCount" style="font-size:13px; color:#7f8c8d; font-weight:600;">共 0 筆</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:14px;">
+                  <span id="dashKpiDetailTotalAmt" style="font-size:14px; color:#2980b9; font-weight:700;">總金額(未稅):
+                    $0</span>
+                  <button type="button" id="btnCloseDashKpiDetailTop" class="btn-pyside-outline"
+                    style="padding:4px 12px; height:30px;">關閉</button>
+                </div>
+              </div>
+              <div class="pyside-full-table-wrap" id="dashKpiDetailTableWrap"
+                style="flex:1; min-height:260px; max-height:62vh; overflow:auto;">
+                <table class="pyside-excel-table" id="dashKpiDetailTable">
+                  <thead>
+                    <tr>
+                      <th style="width:155px;">報價單號</th>
+                      <th style="width:105px;">報價日期</th>
+                      <th style="width:200px;">客戶名稱</th>
+                      <th style="width:105px;">聯絡人</th>
+                      <th style="width:110px;">專案屬性</th>
+                      <th style="width:115px;">金額(未稅)</th>
+                      <th style="width:95px;">狀態</th>
+                      <th style="width:115px;">取單金額</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashKpiDetailTableBody"></tbody>
+                </table>
+              </div>
+              <div
+                style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:12px; padding-top:8px; border-top:1px solid var(--border-card);">
+                <span style="font-size:12px; color:#7f8c8d;">提示：點選報價單後按右側按鈕，或雙擊任一筆報價單直接切換至新建報價單編輯</span>
+                <div style="display:flex; gap:8px;">
+                  <button type="button" id="btnOpenSelectedKpiQuote" class="btn-pyside-blue"
+                    style="height:34px; padding:0 16px;">開啟選取報價單</button>
+                  <button type="button" id="btnCloseDashKpiDetailBottom" class="btn-pyside-outline"
+                    style="height:34px; padding:0 18px;">關閉</button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -3687,7 +3741,7 @@
       </div>
 
       <p class="login-card-desc">
-        請使用您的 Google 帳號登入系統。驗證通過後將自動帶入您的業務身分，並獨立隔離您的客戶資料、歷史報價單、手機草稿與個人特殊品牌價表。
+        請使用您的 Google 帳號登入系統。驗證通過後將自動帶入您的業務身分，並獨立隔離您的客戶資料、歷史報價單、手機草稿與個人牌價表。
       </p>
 
       <div id="loginStatusMessage" class="login-status-msg hidden"></div>
@@ -3871,13 +3925,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261118_v1_0_77"></script>
+  <script src="js/app.js?v=20261118_v1_0_78"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261118_v1_0_77')
+        navigator.serviceWorker.register('./sw.js?v=20261118_v1_0_78')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);
@@ -3885,7 +3939,8 @@
           .catch(function (err) {
             console.warn('[PWA] Service Worker 註冊失敗：', err);
           });
-     }
+      });
+    }
   </script>
 </body>
 

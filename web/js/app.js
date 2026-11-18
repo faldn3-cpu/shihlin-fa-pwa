@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.77";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-18 16:15:00";
-  const SYSTEM_APP_RELEASE_NOTES = "移除客戶與產品管理停用區切換分頁浮動提醒、修正帶入新建報價優先填入預設空白列、調整產品管理帶入新建報價按鈕至雙表中間與停用區按鈕同排";
+  const SYSTEM_APP_VERSION = "v1.0.78";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-18 18:25:00";
+  const SYSTEM_APP_RELEASE_NOTES = "統一更名為個人牌價表與公司發行牌價表、移除沉睡預警表格重複拉桿並修復拉桿拖曳、新增大數據分析KPI卡片點擊明細彈窗與雙擊開啟報價單";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -911,7 +911,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const params = urlObj.searchParams;
       const upperMethod = (method || "GET").toUpperCase();
 
-      // 1. 產品搜尋（個人特殊品優先置頂；同型號不同價允許與公司共通標準品並存）
+      // 1. 產品搜尋（個人牌價表優先置頂；同型號不同價允許與公司發行牌價表並存）
       if (pathname === "/api/products" && upperMethod === "GET") {
         const qClean = (params.get("q") || "").trim().toLowerCase();
         const limit = parseInt(params.get("limit") || "80", 10) || 80;
@@ -938,7 +938,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ...sp,
             list_price: Number(sp.list_price) || (Number(sp.dealer_price || 0) * 2),
             is_special: 1,
-            source_label: "個人特殊品",
+            source_label: "個人牌價表",
             is_order_item: Number(sp.is_order_item) ? 1 : 0
           }));
 
@@ -958,7 +958,7 @@ document.addEventListener("DOMContentLoaded", () => {
           stdMatches = [...store.products].sort((a, b) => (Number(b.stock_qty) || 0) - (Number(a.stock_qty) || 0));
         }
         const remLimit = Math.max(10, limit - spList.length);
-        const stdRes = stdMatches.slice(0, remLimit).map(p => ({ ...p, is_special: 0, source_label: "共通標準品" }));
+        const stdRes = stdMatches.slice(0, remLimit).map(p => ({ ...p, is_special: 0, source_label: "公司發行牌價表" }));
         return jsonResponse([...spList, ...stdRes]);
       }
 
@@ -1535,7 +1535,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return jsonResponse({ status: "success", message: "手機草稿已刪除" });
       }
 
-      // 8. 個人特殊品與停用區（依 owner_sales 隔離，30 天自動刪除與還原）
+      // 8. 個人牌價表與停用區（依 owner_sales 隔離，30 天自動刪除與還原）
       if (pathname === "/api/special-products" && upperMethod === "GET") {
         const sName = normalizeSales(params.get("sales_name"));
         const includeArch = params.get("include_archived") !== "false";
@@ -1564,7 +1564,7 @@ document.addEventListener("DOMContentLoaded", () => {
           existing.is_deactivated = 0;
           existing.deactivated_at = null;
           persistLocalDelta(store);
-          return jsonResponse({ status: "success", id: existing.id, message: `已更新個人特殊品「${modelNo}」` });
+          return jsonResponse({ status: "success", id: existing.id, message: `已更新個人牌價表「${modelNo}」` });
         }
         const newSp = {
           id: computeNextId(allSp),
@@ -1582,7 +1582,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         bucket.push(newSp);
         persistLocalDelta(store);
-        return jsonResponse({ status: "success", id: newSp.id, message: `已新增個人特殊品「${modelNo}」` });
+        return jsonResponse({ status: "success", id: newSp.id, message: `已新增個人牌價表「${modelNo}」` });
       }
 
       if (pathname.startsWith("/api/special-products/") && pathname.endsWith("/promote") && upperMethod === "POST") {
@@ -1590,7 +1590,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const spId = parseInt(parts[3], 10);
         const allSp = Object.values(store.special_products_by_sales).flat();
         const sp = allSp.find(x => Number(x.id) === spId);
-        if (!sp) return jsonResponse({ detail: "找不到指定的個人特殊品" }, 404);
+        if (!sp) return jsonResponse({ detail: "找不到指定的個人牌價表" }, 404);
         const stdPrice = Number(bodyObj?.standard_dealer_price || sp.dealer_price || 0);
         const newStd = {
           model_no: sp.model_no,
@@ -1612,11 +1612,11 @@ document.addEventListener("DOMContentLoaded", () => {
             item.is_archived = 1;
             item.archived_standard_price = stdPrice;
             item.archived_at = new Date().toISOString().slice(0, 19).replace("T", " ");
-            item.archived_note = "已更新發行成為全公司共通標準牌價";
+            item.archived_note = "已更新發行成為公司發行牌價表";
           }
         });
         persistLocalDelta(store);
-        return jsonResponse({ status: "success", message: `已將「${sp.model_no}」轉為共通標準牌價` });
+        return jsonResponse({ status: "success", message: `已將「${sp.model_no}」轉為公司發行牌價表` });
       }
 
       if (pathname.startsWith("/api/special-products/") && upperMethod === "DELETE") {
@@ -1625,7 +1625,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const mode = (params.get("mode") || "delete").trim();
         const bucket = ensureSpecialBucket(store, sName);
         const idx = bucket.findIndex(sp => Number(sp.id) === spId);
-        if (idx < 0) return jsonResponse({ detail: "找不到指定的個人特殊品或無權限操作" }, 404);
+        if (idx < 0) return jsonResponse({ detail: "找不到指定的個人牌價表或無權限操作" }, 404);
         if (mode === "deactivate") {
           bucket[idx].is_deactivated = 1;
           bucket[idx].deactivated_at = new Date().toISOString();
@@ -1634,7 +1634,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         bucket.splice(idx, 1);
         persistLocalDelta(store);
-        return jsonResponse({ status: "success", message: "個人特殊品已刪除" });
+        return jsonResponse({ status: "success", message: "個人牌價表已刪除" });
       }
 
       if (pathname === "/api/deactivated-special-products" && upperMethod === "GET") {
@@ -1649,11 +1649,11 @@ document.addEventListener("DOMContentLoaded", () => {
         purgeAndGetDeactivatedSpecialList(store, sName);
         const bucket = ensureSpecialBucket(store, sName);
         const sp = bucket.find(x => Number(x.id) === spId && Number(x.is_deactivated) === 1);
-        if (!sp) return jsonResponse({ detail: "停用區找不到此筆個人特殊品" }, 404);
+        if (!sp) return jsonResponse({ detail: "停用區找不到此筆個人牌價表" }, 404);
         sp.is_deactivated = 0;
         sp.deactivated_at = null;
         persistLocalDelta(store);
-        return jsonResponse({ status: "success", message: `已還原個人特殊品「${sp.model_no}」` });
+        return jsonResponse({ status: "success", message: `已還原個人牌價表「${sp.model_no}」` });
       }
 
       if (pathname.startsWith("/api/deactivated-special-products/") && upperMethod === "DELETE") {
@@ -1664,7 +1664,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (idx < 0) return jsonResponse({ detail: "找不到指定的停用區項目或無權限刪除" }, 404);
         bucket.splice(idx, 1);
         persistLocalDelta(store);
-        return jsonResponse({ status: "success", message: "已永久刪除個人特殊品" });
+        return jsonResponse({ status: "success", message: "已永久刪除個人牌價表" });
       }
 
       // 9. 日報 / 案件 / 驅動指標 / 集中雲端狀態
@@ -1879,7 +1879,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const prevStd = prodMap.get(key);
 
           if (mode === "personal_diff") {
-            // 與公司共通標準品型號與經銷價皆相同時略過，僅將差異項目匯入個人特殊品
+            // 與公司發行牌價表型號與經銷價皆相同時略過，僅將差異項目匯入個人牌價表
             if (prevStd && Math.round(dp) === Math.round(Number(prevStd.dealer_price || 0))) {
               skippedStandardCount += 1;
               return;
@@ -1953,7 +1953,7 @@ document.addEventListener("DOMContentLoaded", () => {
           duplicate_count: duplicateCount,
           error_logs: errorLogs,
           message: mode === "personal_diff"
-            ? `已比對公眾標準品：新增 ${newCount} 筆、更新 ${updateCount} 筆至「${targetSales}」個人特殊品（略過相同標準品 ${skippedStandardCount} 筆）。`
+            ? `已比對公司發行牌價表：新增 ${newCount} 筆、更新 ${updateCount} 筆至「${targetSales}」個人牌價表（略過相同標準品 ${skippedStandardCount} 筆）。`
             : `產品匯入完成！新增 ${newCount} 筆、更新 ${updateCount} 筆、Excel 內重複合併 ${duplicateCount} 筆。`
         };
       }
@@ -1995,7 +1995,7 @@ document.addEventListener("DOMContentLoaded", () => {
           );
           prodNew = pr.new_count || 0;
           prodUpd = pr.update_count || 0;
-          logs.push(`[成功] 已比對標準品並匯入個人特殊品：新增 ${prodNew} 筆、更新 ${prodUpd} 筆（略過相同標準品 ${pr.skipped_standard_count || 0} 筆）。`);
+          logs.push(`[成功] 已比對標準品並匯入個人牌價表：新增 ${prodNew} 筆、更新 ${prodUpd} 筆（略過相同標準品 ${pr.skipped_standard_count || 0} 筆）。`);
         } else {
           logs.push("--- 階段二：未偵測到 [經銷牌價表參考] 工作表，略過此階段 ---");
         }
@@ -6492,7 +6492,7 @@ document.addEventListener("DOMContentLoaded", () => {
     "標準交期6個月以上，若有需求建議較早下單。"
   ];
 
-  // 取得目前檢視/登入之業務姓名 (用於客戶、歷史報價、手機草稿、個人特殊品完全隔離)
+  // 取得目前檢視/登入之業務姓名 (用於客戶、歷史報價、手機草稿、個人牌價表完全隔離)
   function getActiveSalesName() {
     return localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
   }
@@ -6645,7 +6645,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return Math.min(50, Math.max(1, rawVal));
   }
 
-  // 當業務人員身份切換時，重新載入該業務專屬客戶、產品牌價(含個人特殊品)、歷史報價與草稿，並強制清空報價編輯畫面防機密外洩
+  // 當業務人員身份切換時，重新載入該業務專屬客戶、產品牌價(含個人牌價表)、歷史報價與草稿，並強制清空報價編輯畫面防機密外洩
   async function onQuotationSalespersonChanged(salesName) {
     quoteProductsCache = [];
     if (typeof invalidateDesktopProductsCache === "function") {
@@ -6669,6 +6669,12 @@ document.addEventListener("DOMContentLoaded", () => {
     p7LastPersonalShiftIdx = null;
     p7CheckedStdModels.clear();
     p7LastStdShiftIdx = null;
+    p4DashDataCache = null;
+    p4DashQuotesCache = [];
+    selectedKpiDetailQuoteNo = "";
+    if (typeof closeDashboardKpiDetailModal === "function") {
+      closeDashboardKpiDetailModal();
+    }
 
     if (typeof resetQuotationEditor === "function" && isQuotationModuleInitialized) {
       resetQuotationEditor();
@@ -7431,7 +7437,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 為第 2~7 頁所有 .pyside-full-table-wrap 自動掛載「底部橫向高度調整拉桿」並將高度控制在螢幕可視範圍內（防止拉底部橫 bar 時上方表頭消失）
     const tableWraps = panelQuotes.querySelectorAll(".pyside-full-table-wrap");
     tableWraps.forEach((wrap, idx) => {
-      if (wrap.id === "dashFollowupTableWrap") return; // 第 4 頁待跟進區已有專屬拉桿
+      if (wrap.id === "dashFollowupTableWrap" || wrap.id === "dashChurnTableWrap" || wrap.id === "dashKpiDetailTableWrap") return; // 第 4 頁待跟進區、預警區已有專屬拉桿，彈窗表格不加通用拉桿
       const innerTable = wrap.querySelector("table");
       const tableId = innerTable?.id || `quote_wrap_${idx}`;
       const hStorageKey = `shihlin_quote_wrap_height_${tableId}`;
@@ -8441,7 +8447,7 @@ document.addEventListener("DOMContentLoaded", () => {
       chkAnalysisShowAll.addEventListener("change", () => runPriceAnalysis());
     }
 
-    // 13. 產品管理 (Page 7) 與個人特殊品新增/更新按鈕
+    // 13. 產品管理 (Page 7) 與個人牌價表新增/更新按鈕
     const btnSaveSpecial = document.getElementById("btnSaveSpecialProduct");
     if (btnSaveSpecial) {
       btnSaveSpecial.addEventListener("click", savePersonalSpecialProductFromUI);
@@ -8507,6 +8513,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnDashPdf = document.getElementById("btnDashExportPdf");
     if (btnDashPdf) btnDashPdf.addEventListener("click", () => window.print());
     setupDashboardDragHandles();
+    setupDashboardKpiCardEvents();
 
     // 17. 客戶管理頁面 (Page 6) 事件綁定
     const inputCustSearch = document.getElementById("inputQuoteCustSearch");
@@ -8593,7 +8600,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnSupSave = document.getElementById("btnQuoteSupplierSave");
     if (btnSupSave) btnSupSave.addEventListener("click", saveQuotationSupplierFromUI);
 
-    // 18. 產品管理 (Page 7)：統一搜尋個人與共通標準品雙表格、Shift 多選、獨立拉桿與停用區還原
+    // 18. 產品管理 (Page 7)：統一搜尋個人與公司發行牌價表雙表格、Shift 多選、獨立拉桿與停用區還原
     const btnProdSearch = document.getElementById("btnQuoteProdMgmtSearch");
     if (btnProdSearch) btnProdSearch.addEventListener("click", () => {
       p7ProdPage = 1;
@@ -8928,7 +8935,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ${escapeHtml(modelText)}
           </button>
           <span class="order-item-badge ${isOrderItem ? '' : 'hidden'}" id="${itemId}-order-badge">訂購品</span>
-          <span class="special-product-tag ${isSpecialProduct ? '' : 'hidden'}" id="${itemId}-special-badge">個人特殊品</span>
+          <span class="special-product-tag ${isSpecialProduct ? '' : 'hidden'}" id="${itemId}-special-badge">個人牌價表</span>
           <button type="button" class="item-copy-btn ${hasModel ? '' : 'hidden'}" id="${itemId}-copy-btn" title="複製型號">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <path d="M4 2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2z"/>
@@ -9512,7 +9519,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 重整經銷價 (自資料庫同步最新共通標準牌價與個人特殊品牌價，並觸發方案 A 自動轉正檢查)
+  // 重整經銷價 (自資料庫同步最新公司發行牌價表與個人牌價表，並觸發方案 A 自動轉正檢查)
   async function refreshDealerPrices() {
     try {
       const activeSales = getActiveSalesName();
@@ -11971,7 +11978,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // 2. 產品搜尋 Modal (即時向後端搜尋共通標準牌價 + 業務個人特殊品牌價)
+    // 2. 產品搜尋 Modal (即時向後端搜尋公司發行牌價表 + 業務個人牌價表)
     const prodModal = document.getElementById("productModal");
     const prodClose = document.getElementById("btnCloseModal");
     const prodSearch = document.getElementById("productSearch");
@@ -12148,7 +12155,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const filtered = quoteProductsCache || [];
     if (filtered.length === 0) {
-      listEl.innerHTML = '<div style="padding:16px; text-align:center; color:var(--text-muted); font-size:0.9rem;">查無符合的產品型號（可調整關鍵字或至「個人特殊品牌價」新增）</div>';
+      listEl.innerHTML = '<div style="padding:16px; text-align:center; color:var(--text-muted); font-size:0.9rem;">查無符合的產品型號（可調整關鍵字或至「個人牌價表」新增）</div>';
       return;
     }
 
@@ -12163,7 +12170,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <div style="min-width:0; flex:1;">
               <div class="product-item-name" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
                 <span>${escapeHtml(p.model_no)}</span>
-                ${isSpecial ? '<span class="special-product-tag">個人特殊品</span>' : '<span class="special-product-tag" style="background:rgba(2,132,199,0.12); color:#0284c7;">共通標準品</span>'}
+                ${isSpecial ? '<span class="special-product-tag">個人牌價表</span>' : '<span class="special-product-tag" style="background:rgba(2,132,199,0.12); color:#0284c7;">公司發行牌價表</span>'}
                 ${isOrder ? '<span class="order-item-badge">受訂生產</span>' : ''}
               </div>
               <div class="product-item-sub">
@@ -13496,7 +13503,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ============================================================================
-  // 子分頁 E：個人特殊品經銷牌價表管理 (業務個人獨立 + 方案 A 自動轉正封存留紀錄)
+  // 子分頁 E：個人牌價表管理 (業務個人獨立 + 方案 A 自動轉正封存留紀錄)
   // ============================================================================
   async function loadSpecialProductsManager() {
     const activeContainer = document.getElementById("specialProductsActiveList");
@@ -13512,14 +13519,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const resp = await fetch(`/api/special-products?sales_name=${encodeURIComponent(activeSales)}&include_archived=true`);
-      if (!resp.ok) throw new Error("讀取個人特殊品失敗");
+      if (!resp.ok) throw new Error("讀取個人牌價表失敗");
       const allItems = await resp.json();
 
       const activeItems = (allItems || []).filter(item => !item.is_archived);
       const archivedItems = (allItems || []).filter(item => item.is_archived === 1);
 
       if (activeItems.length === 0) {
-        activeContainer.innerHTML = `<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:0.88rem;">目前業務【${escapeHtml(activeSales)}】名下尚無生效中之個人特殊品。可於上方表單新增。</div>`;
+        activeContainer.innerHTML = `<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:0.88rem;">目前業務【${escapeHtml(activeSales)}】名下尚無生效中之個人牌價表。可於上方表單新增。</div>`;
       } else {
         activeContainer.innerHTML = `
           <table class="pyside-excel-table" style="width:100%; table-layout:auto; border-collapse:collapse; font-size:0.86rem;">
@@ -13527,7 +13534,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <tr style="background:var(--table-header-bg, #f1f5f9); border-bottom:1px solid var(--border-color);">
                 <th style="padding:8px 10px; text-align:left;">特殊品型號</th>
                 <th style="padding:8px 10px; text-align:left;">規格 / 說明</th>
-                <th style="padding:8px 10px; text-align:right;">個人特殊經銷價(未稅)</th>
+                <th style="padding:8px 10px; text-align:right;">個人經銷價(未稅)</th>
                 <th style="padding:8px 10px; text-align:right;">可用庫存</th>
                 <th style="padding:8px 10px; text-align:left;">備註</th>
                 <th style="padding:8px 10px; text-align:center;">操作</th>
@@ -13543,7 +13550,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   <td style="padding:8px 10px; color:var(--text-muted); font-size:0.82rem;">${escapeHtml(item.note || item.notes || '-')}</td>
                   <td style="padding:8px 10px; text-align:center; white-space:nowrap;">
                     <button type="button" class="btn-use-special-prod fluent-btn secondary" data-model="${escapeHtml(item.model_no)}" data-spec="${escapeHtml(item.spec || '')}" data-price="${item.dealer_price || 0}" data-stock="${item.stock_qty || 0}" style="font-size:0.78rem; padding:3px 8px; margin-right:4px;">帶入報價單</button>
-                    ${activeSales === "曾維崧" ? `<button type="button" class="btn-promote-special-prod fluent-btn primary" data-id="${item.id}" data-model="${escapeHtml(item.model_no)}" data-spec="${escapeHtml(item.spec || '')}" data-price="${item.dealer_price || 0}" data-stock="${item.stock_qty || 0}" style="font-size:0.78rem; padding:3px 8px; margin-right:4px;" title="將此型號更新發行為全公司共通標準品">更新標準品統一售價</button>` : ''}
+                    ${activeSales === "曾維崧" ? `<button type="button" class="btn-promote-special-prod fluent-btn primary" data-id="${item.id}" data-model="${escapeHtml(item.model_no)}" data-spec="${escapeHtml(item.spec || '')}" data-price="${item.dealer_price || 0}" data-stock="${item.stock_qty || 0}" style="font-size:0.78rem; padding:3px 8px; margin-right:4px;" title="將此型號更新發行為公司發行牌價表">更新標準品統一售價</button>` : ''}
                     <button type="button" class="btn-del-special-prod fluent-btn danger" data-id="${item.id}" data-model="${escapeHtml(item.model_no)}" style="font-size:0.78rem; padding:3px 8px;">刪除</button>
                   </td>
                 </tr>
@@ -13579,7 +13586,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const origPrice = parseFloat(btn.dataset.price) || 0;
             const inputStdPrice = await promptFluentInputDialog({
               title: "更新標準品售價",
-              message: `即將將「${modelNo}」發行至共通標準牌價表。\n請輸入標準經銷牌價（未稅）：`,
+              message: `即將將「${modelNo}」發行至公司發行牌價表。\n請輸入標準經銷牌價（未稅）：`,
               defaultValue: String(origPrice),
               confirmText: "下一步"
             });
@@ -13591,7 +13598,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             const ok = await promptConfirmDeleteCustomer({
               title: "發行標準牌價",
-              message: `確定將「${modelNo}」以 $${stdPrice.toLocaleString()} 更新為全公司共通標準牌價？`,
+              message: `確定將「${modelNo}」以 $${stdPrice.toLocaleString()} 更新為公司發行牌價表？`,
               confirmText: "確定發行",
               danger: false
             });
@@ -13611,7 +13618,7 @@ document.addEventListener("DOMContentLoaded", () => {
               if (!r.ok) throw new Error(resData.detail || "更新發行失敗");
               quoteProductsCache = [];
               if (typeof invalidateDesktopProductsCache === "function") invalidateDesktopProductsCache();
-              showAuthToast(resData.message || `已將「${modelNo}」轉為共通標準牌價`);
+              showAuthToast(resData.message || `已將「${modelNo}」轉為公司發行牌價表`);
               loadSpecialProductsManager();
             } catch (e) {
               showAuthToast(`執行失敗：${e.message}`);
@@ -13624,8 +13631,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const spId = btn.dataset.id;
             const modelNo = btn.dataset.model;
             const ok = await promptConfirmDeleteCustomer({
-              title: "刪除個人特殊品",
-              message: `確定刪除個人特殊品「${modelNo}」？`,
+              title: "刪除個人牌價表",
+              message: `確定刪除個人牌價表「${modelNo}」？`,
               confirmText: "確定刪除",
               danger: true
             });
@@ -13638,7 +13645,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 quoteProductsCache = [];
                 if (typeof invalidateDesktopProductsCache === "function") invalidateDesktopProductsCache();
                 loadSpecialProductsManager();
-                showAuthToast(`已刪除個人特殊品「${modelNo}」`);
+                showAuthToast(`已刪除個人牌價表「${modelNo}」`);
               }
             } catch (e) {
               showAuthToast(`刪除失敗：${e.message}`);
@@ -13655,7 +13662,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <thead>
               <tr style="background:var(--table-header-bg, #f1f5f9); border-bottom:1px solid var(--border-color);">
                 <th style="padding:8px 10px; text-align:left;">型號</th>
-                <th style="padding:8px 10px; text-align:right;">原個人特殊價</th>
+                <th style="padding:8px 10px; text-align:right;">原個人牌價</th>
                 <th style="padding:8px 10px; text-align:right;">轉正時公司標準牌價</th>
                 <th style="padding:8px 10px; text-align:center;">封存時間</th>
                 <th style="padding:8px 10px; text-align:left;">封存備註</th>
@@ -13760,6 +13767,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // 第 4 頁：大數據分析 (100% 對標電腦版 _QuotationApp gui_dashboard.py & 截圖 4、11)
   // ============================================================================
   let p4DashDataCache = null;
+  let p4DashQuotesCache = [];
+  let selectedKpiDetailQuoteNo = "";
 
   // 格式化本地日期為 YYYY-MM-DD（避免時區偏差）
   function formatYmdDashLocal(dateObj) {
@@ -13830,7 +13839,7 @@ document.addEventListener("DOMContentLoaded", () => {
       };
 
       handle.addEventListener("mousedown", (e) => {
-        const targetId = handle.getAttribute("data-resize-target");
+        const targetId = handle.getAttribute("data-resize-target") || handle.getAttribute("data-target-wrap");
         targetEl = targetId ? document.getElementById(targetId) : null;
         if (!targetEl) return;
         e.preventDefault();
@@ -13842,13 +13851,172 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function closeDashboardKpiDetailModal() {
+    const modal = document.getElementById("dashKpiDetailModal");
+    if (modal) modal.classList.add("hidden");
+    selectedKpiDetailQuoteNo = "";
+  }
+
+  // 點擊大數據 KPI 指標卡片時，顯示依登入業務隔離的 8 欄報價單明細視窗（支援雙擊直接開啟報價單）
+  function openDashboardKpiDetailModal(filterType) {
+    const modal = document.getElementById("dashKpiDetailModal");
+    const titleEl = document.getElementById("dashKpiDetailTitle");
+    const countEl = document.getElementById("dashKpiDetailCount");
+    const totalAmtEl = document.getElementById("dashKpiDetailTotalAmt");
+    const tbody = document.getElementById("dashKpiDetailTableBody");
+    if (!modal || !tbody) return;
+
+    // 資安隔離：嚴格僅顯示目前登入業務本人的報價單
+    const activeSales = getActiveSalesName();
+    const scopedQuotes = (p4DashQuotesCache || []).filter(q => {
+      return !q.sales_name || String(q.sales_name).trim() === activeSales;
+    });
+
+    const isWonQuote = (q) => Number(q.is_won) === 1 || String(q.status || "") === "已成交";
+    const isLostQuote = (q) => Number(q.is_lost) === 1 || String(q.status || "") === "已失注" || String(q.status || "") === "未成交";
+
+    let titleText = "全部報價單明細";
+    let filtered = scopedQuotes;
+    if (filterType === "won") {
+      titleText = "已成交報價單明細";
+      filtered = scopedQuotes.filter(isWonQuote);
+    } else if (filterType === "lost") {
+      titleText = "未成交/失注報價單明細";
+      filtered = scopedQuotes.filter(isLostQuote);
+    } else if (filterType === "pending") {
+      titleText = "追蹤中報價單明細";
+      filtered = scopedQuotes.filter(q => !isWonQuote(q) && !isLostQuote(q));
+    }
+
+    const totalAmt = filtered.reduce((acc, q) => acc + (Number(q.subtotal) || 0), 0);
+    if (titleEl) titleEl.textContent = titleText;
+    if (countEl) countEl.textContent = `共 ${filtered.length} 筆`;
+    if (totalAmtEl) totalAmtEl.textContent = `總金額(未稅): $${Math.round(totalAmt).toLocaleString()}`;
+
+    selectedKpiDetailQuoteNo = "";
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:#7f8c8d;">目前沒有符合條件的報價單紀錄</td></tr>`;
+    } else {
+      tbody.innerHTML = filtered.map((q) => {
+        const { baseNo, revStr } = splitQuoteNoAndRev(q.quote_no, q.revision);
+        const displayNo = `${baseNo} (v${revStr})`;
+        const matchedC = (customersCache || []).find(c => c.name === q.customer_name) || {};
+        const contactName = q.contact_name || matchedC.default_contact || "";
+        const projType = q.project_type || "一次性專案";
+        const subAmt = Math.round(Number(q.subtotal || 0));
+        const wonFlag = isWonQuote(q);
+        const lostFlag = isLostQuote(q);
+        const displayStatus = wonFlag ? "已成交" : (lostFlag ? "已失注" : (q.status || "追蹤中"));
+        const wonVal = wonFlag ? Math.round(Number(q.won_amount || q.subtotal || 0)) : 0;
+        const wonText = wonFlag && wonVal > 0 ? `$${wonVal.toLocaleString()}` : "";
+
+        return `
+          <tr class="p4-kpi-detail-row" data-quoteno="${escapeHtml(q.quote_no || "")}" style="cursor:pointer;" title="單擊選取、雙擊直接開啟此報價單">
+            <td style="text-align:center; font-weight:600; font-family:Consolas, monospace;">${escapeHtml(displayNo)}</td>
+            <td style="text-align:center; font-family:Consolas, monospace;">${escapeHtml(q.quote_date || "")}</td>
+            <td>${escapeHtml(q.customer_name || "")}</td>
+            <td style="text-align:center;">${escapeHtml(contactName)}</td>
+            <td style="text-align:center;">${escapeHtml(projType)}</td>
+            <td style="text-align:right; font-family:Consolas, monospace;">$${subAmt.toLocaleString()}</td>
+            <td style="text-align:center;">${formatStatusBadgeP3(displayStatus)}</td>
+            <td style="text-align:right; font-family:Consolas, monospace; color:#16a34a; font-weight:600;">${escapeHtml(wonText)}</td>
+          </tr>
+        `;
+      }).join("");
+
+      tbody.querySelectorAll(".p4-kpi-detail-row").forEach(tr => {
+        tr.addEventListener("click", () => {
+          tbody.querySelectorAll(".p4-kpi-detail-row").forEach(r => r.classList.remove("selected-row"));
+          tr.classList.add("selected-row");
+          selectedKpiDetailQuoteNo = tr.getAttribute("data-quoteno") || "";
+        });
+        tr.addEventListener("dblclick", () => {
+          const qNo = tr.getAttribute("data-quoteno") || "";
+          if (!qNo) return;
+          closeDashboardKpiDetailModal();
+          loadQuotationToForm(qNo);
+        });
+      });
+    }
+
+    modal.classList.remove("hidden");
+  }
+
+  function setupDashboardKpiCardEvents() {
+    const cards = document.querySelectorAll(".pyside-dash-kpi-card[data-kpi-filter]");
+    const colorMap = {
+      all: "#2980b9",
+      won: "#27ae60",
+      lost: "#c0392b",
+      pending: "#f39c12"
+    };
+
+    cards.forEach(card => {
+      if (card.getAttribute("data-kpi-bound") === "true") return;
+      card.setAttribute("data-kpi-bound", "true");
+      const filterType = card.getAttribute("data-kpi-filter") || "all";
+      const accent = card.id === "dashKpiCardRate" ? "#8e44ad" : (colorMap[filterType] || "#2980b9");
+
+      card.addEventListener("mouseenter", () => {
+        card.style.transform = "translateY(-2px)";
+        card.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.14)";
+        card.style.borderColor = accent;
+      });
+      card.addEventListener("mouseleave", () => {
+        card.style.transform = "";
+        card.style.boxShadow = "";
+        card.style.borderColor = "";
+        card.style.borderLeft = `5px solid ${accent}`;
+      });
+      card.addEventListener("click", () => {
+        openDashboardKpiDetailModal(filterType);
+      });
+      card.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openDashboardKpiDetailModal(filterType);
+        }
+      });
+    });
+
+    const modal = document.getElementById("dashKpiDetailModal");
+    if (modal && modal.getAttribute("data-kpi-modal-bound") !== "true") {
+      modal.setAttribute("data-kpi-modal-bound", "true");
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) closeDashboardKpiDetailModal();
+      });
+      const btnCloseTop = document.getElementById("btnCloseDashKpiDetailTop");
+      const btnCloseBottom = document.getElementById("btnCloseDashKpiDetailBottom");
+      if (btnCloseTop) btnCloseTop.addEventListener("click", closeDashboardKpiDetailModal);
+      if (btnCloseBottom) btnCloseBottom.addEventListener("click", closeDashboardKpiDetailModal);
+      const btnOpen = document.getElementById("btnOpenSelectedKpiQuote");
+      if (btnOpen) {
+        btnOpen.addEventListener("click", () => {
+          const targetNo = selectedKpiDetailQuoteNo ||
+            (document.querySelector("#dashKpiDetailTableBody tr[data-quoteno]")?.getAttribute("data-quoteno") || "");
+          if (!targetNo) {
+            showAuthToast("目前無可開啟的報價單");
+            return;
+          }
+          closeDashboardKpiDetailModal();
+          loadQuotationToForm(targetNo);
+        });
+      }
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && !modal.classList.contains("hidden")) {
+          closeDashboardKpiDetailModal();
+        }
+      });
+    }
+  }
+
   async function loadQuotationDashboard() {
     const activeSales = getActiveSalesName();
     const latestOnly = document.getElementById("chkQuoteDashLatestOnly")?.checked !== false;
     try {
       const [rDash, rQuotes, rAnalysis] = await Promise.all([
         fetch(`/api/quotation-dashboard?sales_name=${encodeURIComponent(activeSales)}&latest_only=${latestOnly}`),
-        fetch(`/api/quotations?sales_name=${encodeURIComponent(activeSales)}&include_deleted=false`),
+        fetch(`/api/quotations?sales_name=${encodeURIComponent(activeSales)}&include_deleted=false&limit=5000`),
         fetch(`/api/price-analysis?sales_name=${encodeURIComponent(activeSales)}`)
       ]);
       if (!rDash.ok) throw new Error("讀取大數據統計失敗");
@@ -13858,6 +14026,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const priceRecs = Array.isArray(priceRecsRaw) ? priceRecsRaw : (priceRecsRaw.records || []);
 
       p4DashDataCache = d;
+      p4DashQuotesCache = (allQuotes || []).filter(q => {
+        if (Number(q.is_deleted) === 1) return false;
+        if (latestOnly && Number(q.is_latest ?? 1) === 0) return false;
+        const st = String(q.status || "追蹤中");
+        const isIgn = Number(q.is_ignored) === 1 || st === "不跟進" || st === "不計入";
+        if (isIgn) return false;
+        return true;
+      });
 
       // 1. 保持舊隱藏相容節點更新
       const elTotalQuoted = document.getElementById("qDashTotalQuoted");
@@ -14307,7 +14483,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 共用表格選取格 ＋ Shift 連選機制（客戶管理、個人特殊品、公司共通標準品共用）
+  // 共用表格選取格 ＋ Shift 連選機制（客戶管理、個人牌價表、公司發行牌價表共用）
   function wireTableShiftCheckboxSelection({
     tbody,
     checkboxSelector,
@@ -15124,7 +15300,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ============================================================================
-  // 第 7 頁：產品管理 100% 滿版（上方個人特殊品獨立表格 ＋ 下方公司共通標準品獨立表格 ＋ 30 天停用區）
+  // 第 7 頁：產品管理 100% 滿版（上方個人牌價表獨立表格 ＋ 下方公司發行牌價表獨立表格 ＋ 30 天停用區）
   // ============================================================================
   function getPersonalProdRowKey(p, fallbackIdx = 0) {
     if (p && p.id !== undefined && p.id !== null && String(p.id) !== "") {
@@ -15152,7 +15328,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnToggle = document.getElementById("btnToggleProdDeactivatedView");
 
     if (titleEl) {
-      titleEl.textContent = isP7DeactivatedView ? "個人特殊品停用區（滿 30 天自動刪除）" : "個人特殊品經銷牌價表";
+      titleEl.textContent = isP7DeactivatedView ? "個人牌價表停用區（滿 30 天自動刪除）" : "個人牌價表";
     }
     if (bannerEl) bannerEl.classList.toggle("hidden", !isP7DeactivatedView);
     if (thSpecOrDate) {
@@ -15171,7 +15347,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnPermDel) btnPermDel.classList.toggle("hidden", !isP7DeactivatedView);
     if (btnToggle) {
       const cnt = (p7DeactivatedListCache || []).length;
-      btnToggle.textContent = isP7DeactivatedView ? "返回個人特殊品" : `停用區 (${cnt})`;
+      btnToggle.textContent = isP7DeactivatedView ? "返回個人牌價表" : `停用區 (${cnt})`;
     }
   }
 
@@ -15182,10 +15358,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const q = document.getElementById("inputQuoteProdMgmtSearch")?.value.trim() || "";
     const activeSales = getActiveSalesName();
     if (personalTbody) {
-      personalTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:18px; color:#7f8c8d;">載入個人特殊品中...</td></tr>`;
+      personalTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:18px; color:#7f8c8d;">載入個人牌價表中...</td></tr>`;
     }
     if (stdTbody) {
-      stdTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:#7f8c8d;">載入公司共通標準品中...</td></tr>`;
+      stdTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:#7f8c8d;">載入公司發行牌價表中...</td></tr>`;
     }
     try {
       const [rProds, rSpecial, rDeact] = await Promise.all([
@@ -15218,7 +15394,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function applyProductManagementPermissions() {
-    // 所有業務人員皆可自由在上方編輯與新增自己的個人特殊品經銷牌價表
+    // 所有業務人員皆可自由在上方編輯與新增自己的個人牌價表
     const inputs = [
       document.getElementById("p7InputModel"),
       document.getElementById("p7InputListPrice"),
@@ -15314,7 +15490,7 @@ document.addEventListener("DOMContentLoaded", () => {
       String(p7SelectedProductObj._rowKey || "") === rowKey
     );
     const isSel = isChecked || isFormSel;
-    const badgeHtml = isPersonal ? `<span class="p7-personal-tag">個人特殊品</span>` : "";
+    const badgeHtml = isPersonal ? `<span class="p7-personal-tag">個人牌價表</span>` : "";
 
     return `
       <tr class="p7-prod-row ${isPersonal ? 'p7-personal-row' : 'p7-std-row'} ${isSel ? 'selected-row' : ''}" data-section="${section}" data-key="${escapeHtml(rowKey)}" data-cache-idx="${cacheIdx}">
@@ -15357,7 +15533,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (countBadge) countBadge.textContent = `停用區 共 ${filteredDeact.length} 筆`;
 
       if (filteredDeact.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:22px; color:#7f8c8d;">停用區目前沒有個人特殊品</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:22px; color:#7f8c8d;">停用區目前沒有個人牌價表</td></tr>`;
         wirePersonalCheckboxes(".p7-personal-deact-chk");
         applyProductManagementPermissions();
         return;
@@ -15376,7 +15552,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <td class="col-check-cell">
               <input type="checkbox" class="row-select-chk p7-personal-deact-chk" data-key="${escapeHtml(key)}" data-idx="${idx}" ${isChecked ? "checked" : ""} aria-label="選取產品" />
             </td>
-            <td style="font-weight:600;">${escapeHtml(p.model_no || "")}<span class="p7-personal-tag">個人特殊品</span></td>
+            <td style="font-weight:600;">${escapeHtml(p.model_no || "")}<span class="p7-personal-tag">個人牌價表</span></td>
             <td style="text-align:right; font-family:Consolas, monospace;">${listP.toLocaleString()}</td>
             <td style="text-align:right; font-family:Consolas, monospace;">${dealerP.toLocaleString()}</td>
             <td style="max-width:300px; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(datePrefix + (p.spec || ""))}</td>
@@ -15404,7 +15580,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (countBadge) countBadge.textContent = `共 ${filteredPersonal.length} 筆`;
 
     if (filteredPersonal.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:18px; color:#64748b; font-size:13px;">尚無符合的個人特殊品（可於上方新增至個人特殊品經銷牌價表）</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:18px; color:#64748b; font-size:13px;">尚無符合的個人牌價表（可於上方新增至個人牌價表）</td></tr>`;
       wirePersonalCheckboxes(".p7-personal-row-chk");
       applyProductManagementPermissions();
       return;
@@ -15457,7 +15633,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     if (totalStdCount === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:#7f8c8d;">查無相符的公司共通標準品</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:#7f8c8d;">查無相符的公司發行牌價表</td></tr>`;
       wireStdCheckboxes();
       applyProductManagementPermissions();
       return;
@@ -15534,7 +15710,7 @@ document.addEventListener("DOMContentLoaded", () => {
         })
       });
       const resData = await resp.json().catch(() => ({}));
-      if (!resp.ok) throw new Error(resData.detail || "儲存個人特殊品失敗");
+      if (!resp.ok) throw new Error(resData.detail || "儲存個人牌價表失敗");
 
       quoteProductsCache = [];
       if (typeof invalidateDesktopProductsCache === "function") {
@@ -15542,7 +15718,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       clearP7ProductForm({ skipRender: true });
       await searchStandardProductsInMgmt({ notifyDeactivated: false });
-      showAuthToast(resData.message || `已儲存個人特殊品「${modelNo}」`);
+      showAuthToast(resData.message || `已儲存個人牌價表「${modelNo}」`);
     } catch (err) {
       showAuthToast(`儲存失敗：${err.message}`);
     }
@@ -15617,7 +15793,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (targets.length === 0) {
       if (p7CheckedStdModels.size > 0 || (p7SelectedProductObj && !p7SelectedProductObj.is_special)) {
-        showAuthToast("公司共通標準品受系統保護，僅可將上方個人特殊品移至停用區");
+        showAuthToast("公司發行牌價表受系統保護，僅可將上方個人牌價表移至停用區");
         return;
       }
       if (p7SelectedProductObj && p7SelectedProductObj.is_special) {
@@ -15626,13 +15802,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (targets.length === 0) {
-      showAuthToast("請先勾選或點選上方個人特殊品");
+      showAuthToast("請先勾選或點選上方個人牌價表");
       return;
     }
 
     const dialogMessage = targets.length === 1
-      ? `確定將個人特殊品「${targets[0].model_no || ""}」移至停用區？\n停用區資料將保留 30 天後自動刪除。`
-      : `確定將已勾選的 ${targets.length} 筆個人特殊品移至停用區？\n停用區資料將保留 30 天後自動刪除。`;
+      ? `確定將個人牌價表「${targets[0].model_no || ""}」移至停用區？\n停用區資料將保留 30 天後自動刪除。`
+      : `確定將已勾選的 ${targets.length} 筆個人牌價表移至停用區？\n停用區資料將保留 30 天後自動刪除。`;
 
     const ok = await promptConfirmDeleteCustomer({
       title: "移至停用區",
@@ -15665,7 +15841,7 @@ document.addEventListener("DOMContentLoaded", () => {
       lastResMessage,
       total: targets.length,
       singleSuccessMsg: `已將「${targets[0].model_no}」移至停用區`,
-      batchSuccessMsg: `已將 ${successCount} 筆個人特殊品移至停用區`,
+      batchSuccessMsg: `已將 ${successCount} 筆個人牌價表移至停用區`,
       failPrefix: "操作失敗",
       partialPrefix: "已將"
     });
@@ -15680,7 +15856,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (ids.length === 0) {
-      showAuthToast("請先勾選或點選要還原的個人特殊品");
+      showAuthToast("請先勾選或點選要還原的個人牌價表");
       return;
     }
 
@@ -15708,8 +15884,8 @@ document.addEventListener("DOMContentLoaded", () => {
       firstError,
       lastResMessage,
       total: ids.length,
-      singleSuccessMsg: "已還原個人特殊品",
-      batchSuccessMsg: `已批次還原 ${successCount} 筆個人特殊品`,
+      singleSuccessMsg: "已還原個人牌價表",
+      batchSuccessMsg: `已批次還原 ${successCount} 筆個人牌價表`,
       failPrefix: "還原失敗",
       partialPrefix: "已還原"
     });
@@ -15734,11 +15910,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const modelNo = target ? target.model_no : `ID ${ids[0]}`;
       dialogMessage = `確定從停用區永久刪除「${modelNo}」？此動作無法復原。`;
     } else {
-      dialogMessage = `確定從停用區永久刪除已勾選的 ${ids.length} 筆個人特殊品？此動作無法復原。`;
+      dialogMessage = `確定從停用區永久刪除已勾選的 ${ids.length} 筆個人牌價表？此動作無法復原。`;
     }
 
     const ok = await promptConfirmDeleteCustomer({
-      title: "永久刪除個人特殊品",
+      title: "永久刪除個人牌價表",
       message: dialogMessage,
       confirmText: "永久刪除",
       danger: true
@@ -15765,8 +15941,8 @@ document.addEventListener("DOMContentLoaded", () => {
       firstError,
       lastResMessage,
       total: ids.length,
-      singleSuccessMsg: "已永久刪除個人特殊品",
-      batchSuccessMsg: `已永久刪除 ${successCount} 筆個人特殊品`,
+      singleSuccessMsg: "已永久刪除個人牌價表",
+      batchSuccessMsg: `已永久刪除 ${successCount} 筆個人牌價表`,
       failPrefix: "刪除失敗",
       partialPrefix: "已永久刪除"
     });
@@ -16125,7 +16301,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const activeSales = getActiveSalesName();
           const ok = await promptConfirmDeleteCustomer({
             title: "比對差異匯入個人牌價",
-            message: `確定比對「${file.name}」（約 ${dataRowsEst} 筆）與標準牌價表，並將新增或不同價格項目匯入至「${activeSales}」個人特殊品？`,
+            message: `確定比對「${file.name}」（約 ${dataRowsEst} 筆）與標準牌價表，並將新增或不同價格項目匯入至「${activeSales}」個人牌價表？`,
             confirmText: "開始匯入",
             danger: false
           });
@@ -16463,10 +16639,10 @@ document.addEventListener("DOMContentLoaded", () => {
     `,
     `
       <h2 class="help-h2">[產品] 產品資料庫与內建小算盤</h2>
-      <p>管理全系列標準品牌價、經銷價、訂購品標記與業務個人特殊品：</p>
+      <p>管理全系列標準品牌價、經銷價、訂購品標記與業務個人牌價表：</p>
       <div class="help-section-title">[1] 標準產品檢索與小算盤</div>
       <p>・點選左側產品列，即可將牌價與經銷價帶入右側編輯區與下方<strong>「4x5 獨立小算盤」</strong>，方便即時試算特殊折數。<br>
-      ・點擊右上角「個人特殊品專區」按鈕，可管理各業務專屬的專案特價品；主管亦可點擊「更新標準品統一售價」轉為全公司標準品並封存歷史紀錄。</p>
+      ・點擊右上角「個人牌價表」按鈕，可管理各業務專屬的專案特價品；主管亦可點擊「更新標準品統一售價」轉為全公司標準品並封存歷史紀錄。</p>
     `,
     `
       <h2 class="help-h2">[設定] 系統設定與交貨驗收條款</h2>
@@ -16710,7 +16886,7 @@ document.addEventListener("DOMContentLoaded", () => {
       sidebarAdminSelect.value = targetSales;
     }
 
-    // 1. 更新頂部頭像、首頁戰情計分板、業績預測與個人特殊品徽章
+    // 1. 更新頂部頭像、首頁戰情計分板、業績預測與個人牌價表徽章
     updateActiveSalesUI(targetSales);
     // 2. 依被模擬業務的主管權限動態顯示/隱藏「業績數據資料庫」與「領先指標審核中心」
     updateManagerUIVisibility(targetSales);
@@ -16724,7 +16900,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadCustomers();
     loadDailyReports();
     loadDeals();
-    // 5. 重新載入報價單模組（獨立客戶、個人特殊品、歷史報價單、手機草稿匣）
+    // 5. 重新載入報價單模組（獨立客戶、個人牌價表、歷史報價單、手機草稿匣）
     if (typeof onQuotationSalespersonChanged === "function") {
       onQuotationSalespersonChanged(targetSales);
     }
@@ -17653,7 +17829,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return hit;
   }
 
-  // 對標電腦版 RelevanceProxyModel：個人特殊品置頂優先，其餘依前綴符合 A-Z、內文包含 A-Z
+  // 對標電腦版 RelevanceProxyModel：個人牌價表置頂優先，其餘依前綴符合 A-Z、內文包含 A-Z
   function filterAndSortDesktopProducts(keyword) {
     const kw = String(keyword || "").trim().toUpperCase();
     const list = desktopFullProductsCache || [];
@@ -17849,8 +18025,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const isActive = idx === desktopCompleterState.activeIdx;
       const orderTag = p.is_order_item ? `<span class="pyside-completer-order-tag">[訂購品]</span>` : "";
       const specialTag = p.is_special
-        ? `<span class="pyside-completer-special-tag">[個人特殊品]</span>`
-        : `<span class="pyside-completer-std-tag">[共通標準品]</span>`;
+        ? `<span class="pyside-completer-special-tag">[個人牌價表]</span>`
+        : `<span class="pyside-completer-std-tag">[公司發行牌價表]</span>`;
       return `
         <div class="pyside-completer-item ${isActive ? "is-active" : ""}" data-comp-idx="${idx}" role="option">
           <div class="pyside-completer-left">

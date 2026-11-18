@@ -700,8 +700,8 @@ def sync_special_to_standard_archive(
                 old_p = int(round(sp_price_f))
                 std_p = int(round(std_price_f))
                 note_msg = (
-                    f"此型號已於 {today_str} 正式發行於公司共通標準牌價表"
-                    f"（原個人特殊價 ${old_p:,} -> 現公司標準價 ${std_p:,}），系統已自動改用標準品並封存此紀錄。"
+                    f"此型號已於 {today_str} 正式發行於公司發行牌價表"
+                    f"（原個人牌價 ${old_p:,} -> 現公司標準價 ${std_p:,}），系統已自動改用標準品並封存此紀錄。"
                 )
                 cursor.execute("""
                 UPDATE personal_special_product
@@ -796,10 +796,10 @@ def save_personal_special_product(data: Dict[str, Any]) -> Tuple[bool, str, int]
         if archived_cnt > 0:
             return (
                 True,
-                f"型號「{model_no}」與公司共通標準品價格相同，已自動以標準品取代。",
+                f"型號「{model_no}」與公司發行牌價表價格相同，已自動以標準品取代。",
                 item_id,
             )
-        return True, f"已儲存個人特殊品「{model_no}」", item_id
+        return True, f"已儲存個人牌價表「{model_no}」", item_id
     finally:
         conn.close()
 
@@ -828,7 +828,7 @@ def promote_special_to_standard(item_id: int, standard_dealer_price: Optional[fl
         cursor = conn.cursor()
         sp = cursor.execute("SELECT * FROM personal_special_product WHERE id = ?", (item_id,)).fetchone()
         if not sp:
-            return False, "找不到該筆個人特殊品紀錄"
+            return False, "找不到該筆個人牌價表紀錄"
 
         model_no = str(sp["model_no"]).strip()
         spec = str(sp["spec"] or model_no).strip()
@@ -850,7 +850,7 @@ def promote_special_to_standard(item_id: int, standard_dealer_price: Optional[fl
         conn.commit()
         return (
             True,
-            f"型號「{model_no}」已正式轉為公司共通標準牌價（標準經銷價 ${int(round(final_std_price)):,}），並封存 {archived_cnt} 筆個人特殊品紀錄。",
+            f"型號「{model_no}」已正式轉為公司發行牌價表（標準經銷價 ${int(round(final_std_price)):,}），並封存 {archived_cnt} 筆個人牌價表紀錄。",
         )
     finally:
         conn.close()
@@ -1375,7 +1375,7 @@ def deactivate_personal_special_product(item_id: int, sales_name: str, db_path: 
             (item_id, sales_clean)
         ).fetchone()
         if not row:
-            return False, "找不到該筆個人特殊品或無權限操作"
+            return False, "找不到該筆個人牌價表項目或無權限操作"
         conn.execute(
             "UPDATE personal_special_product SET is_deactivated = 1, deactivated_at = ? WHERE id = ? AND owner_sales = ?",
             (now_iso, item_id, sales_clean)
@@ -1387,7 +1387,7 @@ def deactivate_personal_special_product(item_id: int, sales_name: str, db_path: 
 
 
 def restore_deactivated_special_product(item_id: int, sales_name: str, db_path: Optional[Path] = None) -> Tuple[bool, str]:
-    """從停用區還原個人特殊品"""
+    """從停用區還原個人牌價表"""
     sales_clean = (sales_name or "曾維崧").strip()
     conn = get_connection(db_path)
     try:
@@ -1396,13 +1396,13 @@ def restore_deactivated_special_product(item_id: int, sales_name: str, db_path: 
             (item_id, sales_clean)
         ).fetchone()
         if not row:
-            return False, "停用區找不到此筆個人特殊品"
+            return False, "停用區找不到此筆個人牌價表項目"
         conn.execute(
             "UPDATE personal_special_product SET is_deactivated = 0, deactivated_at = NULL WHERE id = ? AND owner_sales = ?",
             (item_id, sales_clean)
         )
         conn.commit()
-        return True, f"已還原個人特殊品「{row['model_no']}」"
+        return True, f"已還原個人牌價表「{row['model_no']}」"
     finally:
         conn.close()
 
@@ -1455,11 +1455,11 @@ def search_products(query: str = "", limit: int = 80, sales_name: Optional[str] 
         for sp in sp_rows:
             d = dict(sp)
             d["is_special"] = 1
-            d["source_label"] = "個人特殊品"
+            d["source_label"] = "個人牌價表"
             d["is_order_item"] = int(d.get("is_order_item") or 0)
             results.append(d)
 
-        # 2. 再查詢全公司「共通標準牌價表」
+        # 2. 再查詢全公司「公司發行牌價表」
         rem_limit = max(10, limit - len(results))
         if q_clean:
             std_rows = conn.execute("""
@@ -1481,7 +1481,7 @@ def search_products(query: str = "", limit: int = 80, sales_name: Optional[str] 
         for st in std_rows:
             d = dict(st)
             d["is_special"] = 0
-            d["source_label"] = "共通標準品"
+            d["source_label"] = "公司發行牌價表"
             results.append(d)
 
         return results
@@ -4107,7 +4107,7 @@ def batch_import_personal_diff_products(
         "skipped_standard_count": skipped_standard_count,
         "duplicate_count": duplicate_count,
         "error_logs": error_logs,
-        "message": f"已比對公眾標準品：新增 {new_count} 筆、更新 {update_count} 筆至「{sales_clean}」個人特殊品（略過相同標準品 {skipped_standard_count} 筆）。"
+        "message": f"已比對公司發行牌價表：新增 {new_count} 筆、更新 {update_count} 筆至「{sales_clean}」個人牌價表（略過相同標準品 {skipped_standard_count} 筆）。"
     }
 
 
@@ -4231,7 +4231,7 @@ def batch_import_legacy_three_stage(
             prod_new = int(prod_res.get("new_count", 0))
             prod_upd = int(prod_res.get("update_count", 0))
             prod_skip = int(prod_res.get("skipped_standard_count", 0))
-            logs.append(f"[成功] 已比對標準品並匯入個人特殊品：新增 {prod_new} 筆、更新 {prod_upd} 筆（略過相同標準品 {prod_skip} 筆）。")
+            logs.append(f"[成功] 已比對公司發行牌價表並匯入個人牌價表：新增 {prod_new} 筆、更新 {prod_upd} 筆（略過相同標準品 {prod_skip} 筆）。")
         else:
             prod_res = batch_import_products_data(products_rows, db_path=db_path)
             prod_new = int(prod_res.get("new_count", 0))

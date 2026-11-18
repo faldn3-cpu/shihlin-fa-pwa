@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.72";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-18 12:00:00";
-  const SYSTEM_APP_RELEASE_NOTES = "修正客戶管理刪除功能支援僅刪除單一選取聯絡人（保留同公司其他聯絡人），並自動恢復先前誤刪之多聯絡人公司資料";
+  const SYSTEM_APP_VERSION = "v1.0.73";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-18 12:10:00";
+  const SYSTEM_APP_RELEASE_NOTES = "改用微軟 Fluent 現代化對話盒取代原生刪除警示框，精簡去除贅詞，並優化刪除完成提示";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -13926,9 +13926,44 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function promptConfirmDeleteCustomer({ title, message }) {
+    return new Promise((resolve) => {
+      const modal = document.getElementById("modalConfirmDeleteCustomer");
+      const titleEl = document.getElementById("lblDeleteCustomerTitle");
+      const msgEl = document.getElementById("lblDeleteCustomerPrompt");
+      const btnClose = document.getElementById("btnCloseDeleteCustModal");
+      const btnCancel = document.getElementById("btnCancelDeleteCustModal");
+      const btnConfirm = document.getElementById("btnConfirmDeleteCustModal");
+
+      if (!modal || !btnConfirm) {
+        return resolve(false);
+      }
+
+      if (titleEl) titleEl.textContent = title || "刪除確認";
+      if (msgEl) msgEl.textContent = message || "確定要刪除？";
+
+      const cleanup = (confirmed) => {
+        modal.classList.add("hidden");
+        if (btnClose) btnClose.removeEventListener("click", onCancel);
+        if (btnCancel) btnCancel.removeEventListener("click", onCancel);
+        if (btnConfirm) btnConfirm.removeEventListener("click", onConfirm);
+        resolve(confirmed);
+      };
+
+      const onCancel = () => cleanup(false);
+      const onConfirm = () => cleanup(true);
+
+      if (btnClose) btnClose.addEventListener("click", onCancel, { once: true });
+      if (btnCancel) btnCancel.addEventListener("click", onCancel, { once: true });
+      if (btnConfirm) btnConfirm.addEventListener("click", onConfirm, { once: true });
+
+      modal.classList.remove("hidden");
+    });
+  }
+
   async function deleteSelectedQuotationCustomer() {
     if (!selectedMgmtCustomerId) {
-      alert("請先從左側列表點選要刪除的客戶或聯絡人！");
+      showAuthToast("請先從左側列表點選要刪除的客戶或聯絡人");
       return;
     }
     const cust = (customersCache || []).find(c => Number(c.id) === Number(selectedMgmtCustomerId));
@@ -13942,13 +13977,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const isMultiContact = contacts.length > 1;
     const targetContactName = (contacts[safeIdx] && contacts[safeIdx].name) || cust?.default_contact || "";
 
-    const confirmMsg = isMultiContact
-      ? `【二次確認】確定要刪除客戶「${custName}」的聯絡人「${targetContactName || "（空白聯絡人）"}」嗎？（該公司與其餘 ${contacts.length - 1} 位聯絡人將保留）`
-      : `【二次確認】「${custName}」目前僅有此筆資料，確定要刪除整家客戶「${custName}」嗎？此動作無法復原。`;
+    const dialogTitle = isMultiContact ? "刪除聯絡人" : "刪除客戶";
+    const dialogMessage = isMultiContact
+      ? `確定刪除「${custName}」的聯絡人「${targetContactName || "未命名"}」？`
+      : `確定刪除客戶「${custName}」？`;
 
-    if (!confirm(confirmMsg)) {
+    const confirmed = await promptConfirmDeleteCustomer({
+      title: dialogTitle,
+      message: dialogMessage
+    });
+
+    if (!confirmed) {
       return;
     }
+
     try {
       const activeSales = getActiveSalesName();
       const targetCid = selectedMgmtCustomerId;
@@ -13971,9 +14013,12 @@ document.addEventListener("DOMContentLoaded", () => {
         clearQuotationCustomerForm();
         renderQuotationCustomersTable();
       }
-      alert(`[已刪除] ${resData.message || `客戶「${custName}」已成功刪除。`}`);
+      const successNotice = isMultiContact
+        ? `已刪除「${custName}」的聯絡人「${targetContactName || "未命名"}」`
+        : `已刪除客戶「${custName}」`;
+      showAuthToast(successNotice);
     } catch (err) {
-      alert("[刪除失敗] " + err.message);
+      showAuthToast(`[刪除失敗] ${err.message}`);
     }
   }
 

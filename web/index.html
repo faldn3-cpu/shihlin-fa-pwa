@@ -3658,6 +3658,31 @@
     </div>
   </div>
 
+  <!-- 客戶/聯絡人刪除確認對話框 (微軟 Fluent 風格，取代原生 confirm) -->
+  <div id="modalConfirmDeleteCustomer" class="modal-overlay hidden">
+    <div class="fluent-dialog" style="max-width: 400px;">
+      <div class="dialog-header"
+        style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light); padding-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <svg class="icon-svg" style="width:18px; height:18px; color:var(--color-danger, #ef4444);" viewBox="0 0 24 24">
+            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+          </svg>
+          <h3 id="lblDeleteCustomerTitle" style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">刪除確認</h3>
+        </div>
+        <button type="button" id="btnCloseDeleteCustModal"
+          style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-secondary);">&times;</button>
+      </div>
+      <div class="dialog-body" style="padding:16px 0;">
+        <p id="lblDeleteCustomerPrompt" style="margin:0; font-size:0.95rem; line-height:1.5; color:var(--text-primary); font-weight:500;"></p>
+      </div>
+      <div class="dialog-footer"
+        style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border-light); padding-top:12px;">
+        <button type="button" id="btnCancelDeleteCustModal" class="fluent-btn secondary">取消</button>
+        <button type="button" id="btnConfirmDeleteCustModal" class="fluent-btn danger">確定刪除</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 10. Google 身分驗證登入全螢幕畫面 (Login Overlay) -->
   <div id="loginOverlaySection" class="login-overlay-section hidden">
     <div class="login-card">
@@ -3858,13 +3883,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261118_v1_0_72"></script>
+  <script src="js/app.js?v=20261118_v1_0_73"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261118_v1_0_72')
+        navigator.serviceWorker.register('./sw.js?v=20261118_v1_0_73')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

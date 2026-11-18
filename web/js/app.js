@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.73";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-18 12:10:00";
-  const SYSTEM_APP_RELEASE_NOTES = "改用微軟 Fluent 現代化對話盒取代原生刪除警示框，精簡去除贅詞，並優化刪除完成提示";
+  const SYSTEM_APP_VERSION = "v1.0.74";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-18 12:25:00";
+  const SYSTEM_APP_RELEASE_NOTES = "客戶管理新增一鍵帶入新建報價按鈕並優化按鈕排列，同時全面統一全系統對話框為微軟 Fluent 風格並精簡提示文字";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -762,7 +762,10 @@ document.addEventListener("DOMContentLoaded", () => {
           existing.default_contact = existing.contacts[0]?.name || contactName;
         }
         persistLocalDelta(store);
-        return { ok: true, id: existing.id, message: `客戶「${compName}」已更新於【${ownerSales}】個人客戶庫！` };
+        const saveMsg = (payload.copy_as_new_contact && contactName)
+          ? `已新增「${compName}」聯絡人「${contactName}」`
+          : `已儲存客戶「${compName}」`;
+        return { ok: true, id: existing.id, message: saveMsg };
       }
 
       const allCustIds = Object.values(store.customers_by_sales).flat();
@@ -783,7 +786,7 @@ document.addEventListener("DOMContentLoaded", () => {
       };
       bucket.push(newCust);
       persistLocalDelta(store);
-      return { ok: true, id: newCust.id, message: `已於【${ownerSales}】名下建立客戶「${compName}」！` };
+      return { ok: true, id: newCust.id, message: `已新增客戶「${compName}」` };
     }
 
     async function handleBuiltinApiRequest(urlObj, method, bodyObj) {
@@ -944,7 +947,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const merged = { ...prev, ...bodyObj };
         store.settings[key] = JSON.stringify(merged);
         persistLocalDelta(store);
-        return jsonResponse({ status: "success", supplier: merged, message: "供應商與業務簽名檔資訊已儲存" });
+        return jsonResponse({ status: "success", supplier: merged, message: "已儲存供應商資料" });
       }
 
       if (pathname === "/api/quotation-settings" && upperMethod === "GET") {
@@ -960,7 +963,7 @@ document.addEventListener("DOMContentLoaded", () => {
           });
           persistLocalDelta(store);
         }
-        return jsonResponse({ status: "success", settings: getFinanceSettingsPayload(store), message: "報價系統設定已成功儲存" });
+        return jsonResponse({ status: "success", settings: getFinanceSettingsPayload(store), message: "已儲存系統設定" });
       }
 
       if (pathname === "/api/quotation-terms" && upperMethod === "GET") {
@@ -970,7 +973,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (pathname === "/api/quotation-terms" && upperMethod === "POST") {
         store.settings.quote_terms = String(bodyObj?.quote_terms || "");
         persistLocalDelta(store);
-        return jsonResponse({ status: "success", quote_terms: store.settings.quote_terms, message: "交貨與驗收條款已成功儲存" });
+        return jsonResponse({ status: "success", quote_terms: store.settings.quote_terms, message: "已儲存交貨與驗收條款" });
       }
 
       // 4. 報價單查詢 / 新建 / 狀態 / 軟刪除 / 復原
@@ -1335,7 +1338,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         bucket.push(newSp);
         persistLocalDelta(store);
-        return jsonResponse({ status: "success", id: newSp.id, message: `已建立【${sName}】個人特殊品「${modelNo}」` });
+        return jsonResponse({ status: "success", id: newSp.id, message: `已新增個人特殊品「${modelNo}」` });
       }
 
       if (pathname.startsWith("/api/special-products/") && pathname.endsWith("/promote") && upperMethod === "POST") {
@@ -1369,7 +1372,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         });
         persistLocalDelta(store);
-        return jsonResponse({ status: "success", message: `【${sp.model_no}】已正式發行至共通標準牌價表並自動封存個人特殊品！` });
+        return jsonResponse({ status: "success", message: `已將「${sp.model_no}」轉為共通標準牌價` });
       }
 
       if (pathname.startsWith("/api/special-products/") && upperMethod === "DELETE") {
@@ -2414,7 +2417,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function promptDeleteSalesperson(name) {
     if (!currentSalespersonsDraft) initSalespersonsDraft();
     if (currentSalespersonsDraft.length <= 1) {
-      alert("系統名冊至少需保留一名業務人員，無法刪除！");
+      showAuthToast("系統名冊至少需保留一名業務人員");
       return;
     }
     pendingDeleteSalesName = name;
@@ -2861,7 +2864,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (targetIdx !== -1) {
           currentSalespersonsDraft.splice(targetIdx, 1);
           renderSalespersonOrderTable();
-          alert(`已將業務人員【${targetName}】自編輯名冊移除，請點擊右上角「保存」按鈕確認生效！`);
+          showAuthToast(`已從名冊移除「${targetName}」，請記得點擊「保存」`);
         }
       });
     }
@@ -2870,13 +2873,13 @@ document.addEventListener("DOMContentLoaded", () => {
       btnConfirmAddSales.addEventListener("click", () => {
         const nameVal = inputNewSalesName ? inputNewSalesName.value.trim() : "";
         if (!nameVal) {
-          alert("請輸入業務人員姓名！");
+          showAuthToast("請輸入業務人員姓名");
           if (inputNewSalesName) inputNewSalesName.focus();
           return;
         }
         if (!currentSalespersonsDraft) initSalespersonsDraft();
         if (currentSalespersonsDraft.some(s => s.name === nameVal)) {
-          alert(`業務人員【${nameVal}】已在名冊中，無法重複新增！`);
+          showAuthToast(`「${nameVal}」已在名冊中`);
           return;
         }
 
@@ -2892,7 +2895,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         hideAddModal();
         renderSalespersonOrderTable();
-        alert(`已將【${nameVal}】加入名冊編輯清單，請點擊右上角「保存」按鈕確認生效！`);
+        showAuthToast(`已加入「${nameVal}」，請記得點擊「保存」`);
       });
     }
 
@@ -2916,13 +2919,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnSaveSalespersonSettings) {
       btnSaveSalespersonSettings.addEventListener("click", () => {
         if (!currentSalespersonsDraft || currentSalespersonsDraft.length === 0) {
-          alert("名冊人員不能為空！");
+          showAuthToast("名冊人員不能為空");
           return;
         }
 
         const mgrList = currentSalespersonsDraft.filter(s => s.isManager).map(s => s.name);
         if (mgrList.length === 0) {
-          alert("請至少勾選一位具備數據管理權限之人員！");
+          showAuthToast("請至少勾選一位具備數據管理權限之人員");
           return;
         }
 
@@ -2974,7 +2977,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderManagerReviewPanel(finalActive);
         renderHomeDashboard(finalActive);
 
-        alert("[保存成功] 業務人員名冊與數據管理權限已同步更新生效！");
+        showAuthToast("已儲存人員名冊與權限設定");
       });
     }
   }
@@ -4700,7 +4703,7 @@ document.addEventListener("DOMContentLoaded", () => {
       renderExcelGrid(tablePastedShipments, shipmentsGrid, 28, 5, badgeShipmentCount);
       localStorage.setItem("shihlin_pasted_targets_raw", JSON.stringify(targetsGrid));
       localStorage.setItem("shihlin_pasted_shipments_raw", JSON.stringify(shipmentsGrid));
-      alert("已成功載入最新 10 月範例數據！\n可點擊最下方「資料確認」同步更新首頁戰情看板。");
+      showAuthToast("已載入範例數據");
     });
   }
 
@@ -4714,7 +4717,7 @@ document.addEventListener("DOMContentLoaded", () => {
       clearRangeSelection();
       clearRowColSelection(tablePastedTargets);
       clearRowColSelection(tablePastedShipments);
-      alert("已成功全部清空！兩張表格已重設為乾淨的空白試算表格子。");
+      showAuthToast("已清空表格");
     });
   }
 
@@ -4727,9 +4730,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const metrics = parseTargetsGridToMetrics(currentGrid, currentShipments, activeSales);
       if (metrics) {
         applyScoreboardMetrics(metrics);
-        alert("資料確認完成！\n首頁戰情總覽之四大核心大數字與紅綠燈狀態已成功同步連動！");
+        showAuthToast("資料確認完成，已同步更新看板");
       } else {
-        alert("資料已確認！");
+        showAuthToast("資料已確認");
       }
     });
   }
@@ -4882,12 +4885,18 @@ document.addEventListener("DOMContentLoaded", () => {
           <td style="font-family:monospace;">${d.est_deal_date || "-"}</td>
           <td><span class="status-pill success">${escapeHtml(d.stage)}</span></td>
           <td style="text-align:center;">
-            <button class="fluent-btn" style="height:26px; padding:0 8px; font-size:11px;" onclick="window.alert('即將帶入案件【${escapeHtml(d.project_name)}】進入報價單（里程碑 3 連動啟用！）')">
+            <button class="fluent-btn btn-deal-launch-quote" data-proj="${escapeHtml(d.project_name || '')}" style="height:26px; padding:0 8px; font-size:11px;">
               發起報價
             </button>
           </td>
         </tr>
       `).join("");
+      dealsTableBody.querySelectorAll(".btn-deal-launch-quote").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const pName = btn.getAttribute("data-proj") || "";
+          showAuthToast(`即將帶入案件「${pName}」進入報價單`);
+        });
+      });
     } catch (err) {
       dealsTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--color-danger); padding:16px;">載入案件失敗：${escapeHtml(err.message)}</td></tr>`;
     }
@@ -4924,7 +4933,7 @@ document.addEventListener("DOMContentLoaded", () => {
       };
 
       if (payload.create_deal && !payload.project_name) {
-        alert("請填寫專案案場名稱！");
+        showAuthToast("請填寫專案案場名稱");
         return;
       }
 
@@ -4940,7 +4949,7 @@ document.addEventListener("DOMContentLoaded", () => {
           throw new Error(res.detail || res.message || "儲存失敗");
         }
 
-        alert("日報與連動案件儲存成功！");
+        showAuthToast("已儲存日報與連動案件");
         
         const summaryEl = document.getElementById("textContentSummary");
         if (summaryEl) summaryEl.value = "";
@@ -4952,7 +4961,7 @@ document.addEventListener("DOMContentLoaded", () => {
         loadDailyReports();
         loadDeals();
       } catch (err) {
-        alert(`儲存失敗: ${err.message}`);
+        showAuthToast(`儲存失敗：${err.message}`);
       }
     });
   }
@@ -5645,7 +5654,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (success) {
-      alert(`[審核成功] ${message}`);
+      showAuthToast(message);
       const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
       loadAndRenderDriverMetrics(activeSales);
       renderManagerReviewPanel(activeSales);
@@ -5653,7 +5662,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderDriverManagementPage(currentViewingDriverSales);
       }
     } else {
-      alert(`[審核失敗] ${message}`);
+      showAuthToast(`審核失敗：${message}`);
     }
   }
 
@@ -5867,7 +5876,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
 
         if (isNaN(actualVal) || actualVal < 0) {
-          alert("實績數值不得為負數！");
+          showAuthToast("實績數值不得為負數");
           return;
         }
 
@@ -5894,18 +5903,18 @@ document.addEventListener("DOMContentLoaded", () => {
           // 離線備援
           updateLocalDriverActual(driverId, actualVal);
           success = true;
-          message = "實績已登記至本地快取！";
+          message = "已登記實績";
         }
 
         if (success) {
-          alert(message);
+          showAuthToast(message);
           closeDriverReportActualModal();
           loadAndRenderDriverMetrics(activeSales);
           if (currentViewingDriverSales) {
             renderDriverManagementPage(currentViewingDriverSales);
           }
         } else {
-          alert(message);
+          showAuthToast(message);
         }
       });
     }
@@ -5935,7 +5944,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
 
         if (!driverName || isNaN(targetVal) || targetVal <= 0) {
-          alert("請輸入有效的指標名稱與目標數值（須大於 0）！");
+          showAuthToast("請輸入有效的指標名稱與大於 0 的目標數值");
           return;
         }
 
@@ -5965,18 +5974,18 @@ document.addEventListener("DOMContentLoaded", () => {
           // 離線備援
           updateLocalDriverSettings(driverId, driverName, targetVal, unit, periodType);
           success = true;
-          message = "指標設定已更新至本地快取！";
+          message = "已更新指標設定";
         }
 
         if (success) {
-          alert(message);
+          showAuthToast(message);
           closeDriverEditSettingsModal();
           loadAndRenderDriverMetrics(activeSales);
           if (currentViewingDriverSales) {
             renderDriverManagementPage(currentViewingDriverSales);
           }
         } else {
-          alert(message);
+          showAuthToast(message);
         }
       });
     }
@@ -6004,7 +6013,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const activeSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
 
         if (!newName || !newVal || !reason) {
-          alert("請完整填寫所有必填欄位！");
+          showAuthToast("請完整填寫所有必填欄位");
           return;
         }
 
@@ -6056,7 +6065,7 @@ document.addEventListener("DOMContentLoaded", () => {
           reqs.unshift(newReq);
           saveLocalDriverRequests(reqs);
           success = true;
-          message = "更換申請已成功送出，請靜候主管審核！";
+          message = "已送出申請，待主管審核";
         } finally {
           if (btnSubmit) {
             btnSubmit.disabled = false;
@@ -6065,7 +6074,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (success) {
-          alert(`[申請成功] ${message}`);
+          showAuthToast(message);
           closeDriverApplyModal();
           loadAndRenderDriverMetrics(activeSales);
           renderManagerReviewPanel(activeSales);
@@ -6073,7 +6082,7 @@ document.addEventListener("DOMContentLoaded", () => {
             renderDriverManagementPage(currentViewingDriverSales);
           }
         } else {
-          alert(`[無法申請] ${message}`);
+          showAuthToast(`無法申請：${message}`);
         }
       });
     }
@@ -7161,7 +7170,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // 統一套用所選客戶至電腦端表頭與手機端詳細資料卡
-  function applySelectedCustomerToQuoteUI(cust) {
+  function applySelectedCustomerToQuoteUI(cust, preferredContactIdx = 0) {
     if (!cust) return;
     currentSelectedCustomer = cust;
 
@@ -7182,7 +7191,10 @@ document.addEventListener("DOMContentLoaded", () => {
           fax: cust.fax || "",
           address: cust.address || cust.delivery_address || ""
         }];
-    const primaryContact = contacts[0] || {};
+    const safeContactIdx = Number.isInteger(Number(preferredContactIdx))
+      ? Math.max(0, Math.min(Number(preferredContactIdx), contacts.length - 1))
+      : 0;
+    const primaryContact = contacts[safeContactIdx] || contacts[0] || {};
 
     // 1. 電腦端雙欄表頭連動
     const taxInput = document.getElementById("quoteTaxId");
@@ -7201,6 +7213,7 @@ document.addEventListener("DOMContentLoaded", () => {
       contactSel.innerHTML = contacts.map((ct, idx) =>
         `<option value="${escapeHtml(ct.name || '主要窗口')}" data-idx="${idx}">${escapeHtml(ct.name || '主要窗口')}${ct.department ? ' (' + escapeHtml(ct.department) + ')' : ''}</option>`
       ).join("");
+      contactSel.selectedIndex = safeContactIdx;
       contactSel.onchange = () => {
         const selOpt = contactSel.options[contactSel.selectedIndex];
         const cIdx = selOpt ? parseInt(selOpt.getAttribute("data-idx"), 10) : 0;
@@ -7247,6 +7260,7 @@ document.addEventListener("DOMContentLoaded", () => {
         cdContactSelect.innerHTML = contacts.map((ct, idx) =>
           `<option value="${idx}">${escapeHtml(ct.name || '窗口')}</option>`
         ).join("");
+        cdContactSelect.value = String(safeContactIdx);
         cdContactSelect.onchange = () => {
           const chosen = contacts[parseInt(cdContactSelect.value, 10)] || primaryContact;
           if (cont) cont.textContent = chosen.name || "-";
@@ -7451,9 +7465,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // 手機端網頁報價模式頂部重設與離開按鈕
     const btnMobileReset = document.getElementById("btnMobileResetQuote");
     if (btnMobileReset) {
-      btnMobileReset.addEventListener("click", () => {
-        if (confirm("確定要重設並清空目前報價單嗎？")) {
+      btnMobileReset.addEventListener("click", async () => {
+        const ok = await promptConfirmDeleteCustomer({
+          title: "重設報價單",
+          message: "確定重設並清空目前報價單？",
+          confirmText: "確定重設",
+          danger: true
+        });
+        if (ok) {
           resetQuotationEditor();
+          showAuthToast("已重設報價單");
         }
       });
     }
@@ -7731,10 +7752,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // 5. 電腦端與手機端關聯 CRM 商機按鈕
     const btnLinkCrm = document.getElementById("btnLinkCrmCase");
     if (btnLinkCrm) {
-      btnLinkCrm.addEventListener("click", () => {
+      btnLinkCrm.addEventListener("click", async () => {
         if (dealsCache && dealsCache.length > 0) {
           const names = dealsCache.slice(0, 8).map((d, i) => `${i + 1}. ${d.project_name || d.name} (${d.customer_name})`).join("\n");
-          const choice = prompt(`請輸入要關聯的商機編號 (1~${Math.min(dealsCache.length, 8)}):\n${names}`);
+          const choice = await promptFluentInputDialog({
+            title: "關聯商機案件",
+            message: `請輸入商機編號 (1~${Math.min(dealsCache.length, 8)})：\n${names}`,
+            defaultValue: "1",
+            confirmText: "確定關聯"
+          });
+          if (choice === null) return;
           const idx = parseInt(choice, 10) - 1;
           if (dealsCache[idx]) {
             const selectedDeal = dealsCache[idx];
@@ -7747,9 +7774,12 @@ document.addEventListener("DOMContentLoaded", () => {
             if (projInput && !projInput.value) {
               projInput.value = selectedDeal.project_name || selectedDeal.name || "";
             }
+            showAuthToast(`已關聯案件「${selectedDeal.project_name || selectedDeal.name}」`);
+          } else {
+            showAuthToast("商機編號不正確");
           }
         } else {
-          alert("[商機清單空] 目前無可關聯的 Deal 商機。");
+          showAuthToast("目前無可關聯的商機案件");
         }
       });
     }
@@ -7779,9 +7809,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // 6. 電腦端表格上方動作按鈕 (新建報價單、儲存報價、複製 LINE 報價、匯出至Excel、列印 PDF)
     const btnNewTop = document.getElementById("btnNewQuoteTop");
     if (btnNewTop) {
-      btnNewTop.addEventListener("click", () => {
-        if (confirm("確定要開立新的空白報價單嗎？未儲存的內容將會重設。")) {
+      btnNewTop.addEventListener("click", async () => {
+        const ok = await promptConfirmDeleteCustomer({
+          title: "新建空白報價單",
+          message: "確定要開立新的空白報價單？未儲存的內容將會重設。",
+          confirmText: "確定新建",
+          danger: false
+        });
+        if (ok) {
           resetQuotationEditor();
+          showAuthToast("已建立空白報價單");
         }
       });
     }
@@ -7900,10 +7937,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnCompareRev) {
       btnCompareRev.addEventListener("click", () => {
         if (!p3SelectedQuoteObj) {
-          alert("請先在下方報價單列表點選一筆報價單，再進行版次比對！");
+          showAuthToast("請先在列表點選一筆報價單");
           return;
         }
-        alert(`[版次比對] 單號【${p3SelectedQuoteObj.quote_no}】目前金額為 $${Number(p3SelectedQuoteObj.subtotal || 0).toLocaleString()} (未稅)。\n若同案號有多個版次，可雙擊單號載入主畫面逐項檢視差異。`);
+        showAuthToast(`單號「${p3SelectedQuoteObj.quote_no}」未稅金額 $${Number(p3SelectedQuoteObj.subtotal || 0).toLocaleString()}，雙擊單號可載入編輯檢視`);
       });
     }
 
@@ -7955,7 +7992,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnDelSelectedP3) {
       btnDelSelectedP3.addEventListener("click", () => {
         if (p3SelectedQuoteNos.size === 0) {
-          alert("請先勾選要移至垃圾桶的報價單！");
+          showAuthToast("請先勾選要移至垃圾桶的報價單");
           return;
         }
         pendingDeleteQuoteNos = Array.from(p3SelectedQuoteNos);
@@ -7977,7 +8014,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnClearAllP3 = document.getElementById("btnClearAllQuotesP3");
     if (btnClearAllP3) {
       btnClearAllP3.addEventListener("click", () => {
-        alert("[企業防呆保護] 為確保歷史報價單與稽核軌跡安全，系統已鎖定單鍵清空全部正式報價單功能。請使用單筆「刪除選取項目（移至垃圾桶）」。");
+        showAuthToast("為避免誤刪歷史報價單，請使用單筆「刪除選取項目」");
       });
     }
 
@@ -7996,7 +8033,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnClearDrafts) {
       btnClearDrafts.addEventListener("click", async () => {
         const activeSales = getActiveSalesName();
-        if (!confirm(`【二次確認】確定要清空業務【${activeSales}】名下所有的手機暫存草稿嗎？此動作無法復原。`)) {
+        const ok = await promptConfirmDeleteCustomer({
+          title: "清空手機草稿",
+          message: `確定清空「${activeSales}」的所有手機草稿？`,
+          confirmText: "確定清空",
+          danger: true
+        });
+        if (!ok) {
           return;
         }
         try {
@@ -8004,8 +8047,9 @@ document.addEventListener("DOMContentLoaded", () => {
           localStorage.removeItem("shihlin_mobile_quote_drafts");
           loadQuotationDraftsInbox();
           updateQuoteDraftsBadge();
+          showAuthToast("已清空手機草稿");
         } catch (err) {
-          alert("[清空草稿失敗] " + err.message);
+          showAuthToast(`清空失敗：${err.message}`);
         }
       });
     }
@@ -8132,15 +8176,30 @@ document.addEventListener("DOMContentLoaded", () => {
       btnSyncCloudCust.addEventListener("click", async () => {
         await populateCustomerSelectDropdown(true);
         renderQuotationCustomersTable();
-        alert("[同步完成] 已從資料庫重新同步最新客戶主檔與常用星號設定！");
+        showAuthToast("已同步最新客戶資料");
       });
     }
-    const btnExportCrmP6 = document.getElementById("btnExportCrmReportP6");
-    if (btnExportCrmP6) btnExportCrmP6.addEventListener("click", exportCrmMonthlyReportCsv);
+    const btnBringCustToQuote = document.getElementById("btnExportCrmReportP6");
+    if (btnBringCustToQuote) {
+      btnBringCustToQuote.addEventListener("click", () => {
+        if (!selectedMgmtCustomerId) {
+          showAuthToast("請先點選要帶入報價的客戶");
+          return;
+        }
+        const cust = (customersCache || []).find(c => Number(c.id) === Number(selectedMgmtCustomerId));
+        if (!cust) {
+          showAuthToast("找不到選取的客戶資料");
+          return;
+        }
+        switchQuoteSubTab("create");
+        applySelectedCustomerToQuoteUI(cust, selectedMgmtContactIdx ?? 0);
+        showAuthToast(`已帶入客戶「${cust.name}」`);
+      });
+    }
     const btnCustClearAll = document.getElementById("btnQuoteCustClearAll");
     if (btnCustClearAll) {
       btnCustClearAll.addEventListener("click", () => {
-        alert("[企業防呆保護] 為防止誤刪全公司客戶資料庫，系統已鎖定單鍵清空所有公司功能。請使用單筆「刪除選取公司」。");
+        showAuthToast("為避免誤刪全部客戶，請使用單筆刪除功能");
       });
     }
     const btnCustClear = document.getElementById("btnQuoteCustClear");
@@ -8192,7 +8251,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnProdClearAll = document.getElementById("btnProdMgmtClearAll");
     if (btnProdClearAll) {
       btnProdClearAll.addEventListener("click", () => {
-        alert("[企業防呆保護] 標準產品資料庫包含上千筆牌價，為防止手滑誤刪，系統已鎖定單鍵清空所有產品功能。");
+        showAuthToast("標準產品資料庫已鎖定，無法整批清空");
       });
     }
     setupP7CalculatorEvents();
@@ -8812,7 +8871,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const itemsContainer = document.getElementById("itemsContainer");
       const allMobileRows = itemsContainer ? itemsContainer.querySelectorAll('.item-row') : [];
       if (allMobileRows.length <= 1) {
-        alert("報價單至少需保留一項產品欄位！");
+        showAuthToast("報價單至少需保留一項產品");
         return;
       }
       const mRow = document.getElementById(itemId);
@@ -9054,9 +9113,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
       calculateTotal();
-      alert(`[經銷價重整完成] 已成功校對並同步 ${updatedCount} 項產品之最新經銷牌價！`);
+      showAuthToast(`已更新 ${updatedCount} 項產品經銷牌價`);
     } catch (err) {
-      alert("[牌價更新失敗] " + err.message);
+      showAuthToast(`更新失敗：${err.message}`);
     }
   }
 
@@ -9094,7 +9153,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const text = textarea?.value || "";
         const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
         if (lines.length === 0) {
-          alert("[請輸入 BOM 清單] 請貼入產品型號與數量！");
+          showAuthToast("請貼入產品型號與數量");
           return;
         }
 
@@ -9145,7 +9204,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         closeModal();
         calculateTotal();
-        alert(`[BOM 匯入成功] 已成功批次匯入 ${imported} 項產品！`);
+        showAuthToast(`已匯入 ${imported} 項產品`);
       };
     }
   }
@@ -10837,7 +10896,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function applyOldImportPreviewToQuotation(mode = "replace") {
     const selectedItems = (oldImportPreviewState.items || []).filter(it => it.checked !== false && (it.model_no || it.spec));
     if (selectedItems.length === 0) {
-      alert("[無勾選品項] 請至少勾選一筆明細後再匯入。");
+      showAuthToast("請至少勾選一筆明細後再匯入");
       return;
     }
 
@@ -10848,8 +10907,16 @@ document.addEventListener("DOMContentLoaded", () => {
         return c.trim() !== "";
       });
       const existingCust = (document.getElementById("quoteCustomerInput")?.value || "").trim();
-      if ((existingModels || existingCust) && !confirm("確定要以預覽內容覆蓋目前報價單的客戶與品項明細嗎？未儲存的修改將會被取代。")) {
-        return;
+      if (existingModels || existingCust) {
+        const ok = await promptConfirmDeleteCustomer({
+          title: "覆蓋目前報價單",
+          message: "確定要以匯入內容取代目前的客戶與品項明細？",
+          confirmText: "確定覆蓋",
+          danger: true
+        });
+        if (!ok) {
+          return;
+        }
       }
 
       resetQuotationEditor();
@@ -10943,7 +11010,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const modal = document.getElementById("importOldQuoteModal");
     if (modal) modal.classList.add("hidden");
-    alert(`[匯入完成] 已成功匯入 ${selectedItems.length} 筆報價明細。`);
+    showAuthToast(`已匯入 ${selectedItems.length} 筆報價明細`);
   }
 
   async function processOldImportUploadedFile(file) {
@@ -11031,7 +11098,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ocr_original: ""
           }));
           if (items.length === 0) {
-            alert("[該單據無品項] 此報價單無任何產品明細。");
+            showAuthToast("此報價單無任何產品明細");
             return;
           }
           populateOldImportPreviewSection({
@@ -11053,7 +11120,7 @@ document.addEventListener("DOMContentLoaded", () => {
             warnings: []
           });
         } catch (e) {
-          alert("[讀取失敗] " + e.message);
+          showAuthToast(`讀取失敗：${e.message}`);
         }
       });
     });
@@ -11117,7 +11184,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btnParseText.addEventListener("click", async () => {
         const rawText = (document.getElementById("oldImportRawTextInput")?.value || "").trim();
         if (!rawText) {
-          alert("[請貼上文字] 請先於上方輸入框貼上舊報價單文字內容。");
+          showAuthToast("請先貼上舊報價單文字內容");
           return;
         }
         oldImportProductMaps = await buildImportProductLookupMaps();
@@ -11301,7 +11368,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const mRows = itemsContainer ? itemsContainer.querySelectorAll('.item-row') : [];
 
     if (mRows.length === 0) {
-      alert("[無品項可匯出] 報價單中目前無品項！");
+      showAuthToast("報價單目前無品項可匯出");
       return;
     }
 
@@ -11538,10 +11605,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const textarea = document.getElementById("lineQuoteText");
         if (textarea && textarea.value) {
           navigator.clipboard.writeText(textarea.value).then(() => {
-            alert("[一鍵複製成功] 報價文字已存入剪貼簿，可直接貼到 LINE 聊天室發送！");
+            showAuthToast("已複製 LINE 報價文字");
             if (lineModal) lineModal.classList.add("hidden");
           }).catch(err => {
-            alert("[複製失敗] 請手動全選複製：" + err.message);
+            showAuthToast(`複製失敗：${err.message}`);
           });
         }
       });
@@ -11586,16 +11653,16 @@ document.addEventListener("DOMContentLoaded", () => {
           }
           delModal.classList.add("hidden");
           if (targetList.length === 1) {
-            alert(`[已移至垃圾桶] 報價單【${targetList[0]}】已安全移至垃圾桶！\n若需還原，可點擊「垃圾桶」隨時一鍵復原。`);
+            showAuthToast(`已將報價單「${targetList[0]}」移至垃圾桶`);
           } else {
-            alert(`[已移至垃圾桶] 已成功將 ${targetList.length} 筆報價單移至垃圾桶！\n若需還原，可點擊「垃圾桶」隨時一鍵復原。`);
+            showAuthToast(`已將 ${targetList.length} 筆報價單移至垃圾桶`);
           }
           pendingDeleteQuoteNo = null;
           pendingDeleteQuoteNos = [];
           p3SelectedQuoteNos.clear();
           loadQuotationHistory("", isTrashViewActive);
         } catch (err) {
-          alert("[軟刪除失敗] " + err.message);
+          showAuthToast(`刪除失敗：${err.message}`);
         } finally {
           btnConfirmDel.disabled = false;
           btnConfirmDel.textContent = "移至垃圾桶";
@@ -11854,14 +11921,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const custSel = document.getElementById("customerSelect");
     const custName = document.getElementById("quoteCustomerInput")?.value.trim() || document.getElementById("customerName")?.value.trim() || (custSel && custSel.selectedIndex > 0 ? custSel.options[custSel.selectedIndex].text : "");
     if (!custName) {
-      alert("[請填寫客戶名稱] 請先點擊選擇客戶名稱！");
+      showAuthToast("請先選擇或輸入客戶名稱");
       return null;
     }
 
     const itemsContainer = document.getElementById("itemsContainer");
     const rows = itemsContainer ? itemsContainer.querySelectorAll('.item-row') : [];
     if (rows.length === 0) {
-      alert("[無品項] 報價單必須包含至少一項產品！");
+      showAuthToast("報價單至少需包含一項產品");
       return null;
     }
 
@@ -11901,7 +11968,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (itemsData.length === 0) {
-      alert("[無有效品項] 請至少填寫一筆產品型號！");
+      showAuthToast("請至少填寫一筆產品型號");
       return null;
     }
 
@@ -11968,11 +12035,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const err = await resp.json().catch(() => ({}));
         throw new Error(err.detail || "草稿寫入伺服器失敗");
       }
-      alert(`[草稿已送出] 已直接將報價草稿傳送至資料庫「手機報價草稿匣」！\n客戶：${payload.customer_name}\n品項數：${payload.items.length} 項\n回到電腦桌前即可從「手機報價草稿匣」分頁一鍵載入並正式建立報價單。`);
+      showAuthToast(`已送出草稿：${payload.customer_name}（共 ${payload.items.length} 項）`);
       switchQuoteSubTab("drafts");
     } catch (err) {
       console.error("送出手機草稿失敗:", err);
-      alert("[草稿傳送失敗] " + err.message);
+      showAuthToast(`送出失敗：${err.message}`);
     } finally {
       if (btnSubmit) {
         btnSubmit.disabled = false;
@@ -12016,11 +12083,11 @@ document.addEventListener("DOMContentLoaded", () => {
         currentLoadedDraftId = null;
       }
 
-      alert(`[儲存成功] 正式報價單已寫入資料庫！\n指派單號：【${result.quote_no}】\n所屬業務：${payload.sales_name}`);
+      showAuthToast(`已儲存報價單「${result.quote_no}」`);
       switchQuoteSubTab("history");
     } catch (err) {
       console.error("儲存報價單失敗:", err);
-      alert("[儲存失敗] " + err.message);
+      showAuthToast(`儲存失敗：${err.message}`);
     } finally {
       if (btnSaveTop) {
         btnSaveTop.disabled = false;
@@ -12130,7 +12197,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const bRes = document.getElementById("btnP3ActBatchRestore");
         if (bRes) {
           bRes.addEventListener("click", async () => {
-            if (!confirm(`【二次確認】確定要將已勾選的 ${count} 筆報價單自垃圾桶批次復原嗎？`)) return;
+            const ok = await promptConfirmDeleteCustomer({
+              title: "批次復原報價單",
+              message: `確定復原已勾選的 ${count} 筆報價單？`,
+              confirmText: "確定復原",
+              danger: false
+            });
+            if (!ok) return;
             bRes.disabled = true;
             bRes.textContent = "復原中...";
             try {
@@ -12138,11 +12211,11 @@ document.addEventListener("DOMContentLoaded", () => {
               for (const qNo of list) {
                 await fetch(`/api/quotations/${encodeURIComponent(qNo)}/restore`, { method: "POST" });
               }
-              alert(`[批次復原成功] 已成功復原 ${list.length} 筆報價單！`);
+              showAuthToast(`已復原 ${list.length} 筆報價單`);
               p3SelectedQuoteNos.clear();
               loadQuotationHistory(document.getElementById("inputSearchQuoteHistory")?.value.trim() || "", true);
             } catch (err) {
-              alert("[復原失敗] " + err.message);
+              showAuthToast(`復原失敗：${err.message}`);
             }
           });
         }
@@ -12225,10 +12298,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const bRes = document.getElementById("btnP3ActRestore");
         if (bRes) {
           bRes.addEventListener("click", async () => {
-            if (!confirm(`確定要將報價單【${qObj.quote_no}】從回收站復原嗎？`)) return;
+            const ok = await promptConfirmDeleteCustomer({
+              title: "復原報價單",
+              message: `確定復原報價單「${qObj.quote_no}」？`,
+              confirmText: "確定復原",
+              danger: false
+            });
+            if (!ok) return;
             const resp = await fetch(`/api/quotations/${encodeURIComponent(qObj.quote_no)}/restore`, { method: "POST" });
             if (resp.ok) {
-              alert(`[復原成功] 報價單【${qObj.quote_no}】已成功復原！`);
+              showAuthToast(`已復原報價單「${qObj.quote_no}」`);
               p3SelectedQuoteNos.clear();
               loadQuotationHistory(document.getElementById("inputSearchQuoteHistory")?.value.trim() || "", true);
             }
@@ -12250,9 +12329,19 @@ document.addEventListener("DOMContentLoaded", () => {
             const newSt = btn.getAttribute("data-st");
             let wonAmt = Number(qObj.subtotal || 0);
             if (newSt === "已成交") {
-              const pVal = prompt(`請確認【${qObj.quote_no}】最終成交金額 (未稅)：`, String(wonAmt));
+              const pVal = await promptFluentInputDialog({
+                title: "確認成交金額",
+                message: `請確認「${qObj.quote_no}」最終成交金額（未稅）：`,
+                defaultValue: String(wonAmt),
+                confirmText: "確定"
+              });
               if (pVal === null) return;
-              wonAmt = parseFloat(pVal) || wonAmt;
+              const parsedWon = parseFloat(String(pVal).replace(/,/g, "").trim());
+              if (isNaN(parsedWon) || parsedWon < 0) {
+                showAuthToast("請輸入有效的成交金額");
+                return;
+              }
+              wonAmt = parsedWon;
             }
             const r = await fetch(`/api/quotations/${encodeURIComponent(qObj.quote_no)}/status`, {
               method: "POST",
@@ -12494,9 +12583,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       switchQuoteSubTab("create");
 
-      alert(`[已載入報價單] 已成功載入單號【${header.quote_no}】！\n若於電腦端修改後點擊「儲存報價」，系統將遵循 Append-Only 規則自動生成新版次。`);
+      showAuthToast(`已載入報價單「${header.quote_no}」`);
     } catch (err) {
-      alert("[載入失敗] " + err.message);
+      showAuthToast(`載入失敗：${err.message}`);
     }
   }
 
@@ -12592,16 +12681,23 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.addEventListener("click", async (e) => {
           e.stopPropagation();
           const draftId = btn.getAttribute("data-id");
-          if (!confirm("【二次確認】確定要刪除這筆手機報價草稿嗎？")) return;
+          const ok = await promptConfirmDeleteCustomer({
+            title: "刪除手機草稿",
+            message: "確定刪除此筆手機報價草稿？",
+            confirmText: "確定刪除",
+            danger: true
+          });
+          if (!ok) return;
           try {
             const resp = await fetch(`/api/quotation-drafts/${draftId}?sales_name=${encodeURIComponent(activeSales)}`, {
               method: "DELETE"
             });
             if (resp.ok) {
               loadQuotationDraftsInbox();
+              showAuthToast("已刪除手機草稿");
             }
           } catch (err) {
-            alert("[刪除草稿失敗] " + err.message);
+            showAuthToast(`刪除草稿失敗：${err.message}`);
           }
         });
       });
@@ -12663,7 +12759,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function convertSelectedMobileDraftToFormal() {
     const draft = p2DraftsCache[p2SelectedDraftIdx];
     if (!draft) {
-      alert("請先從左側列表點選一筆手機草稿！");
+      showAuthToast("請先點選一筆手機草稿");
       return;
     }
 
@@ -12708,7 +12804,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     calculateTotal();
     switchQuoteSubTab("create");
-    alert(`[已載入草稿] 手機草稿【${draft.customer_name}】已成功轉入「新建報價單」編輯區！\n確認無誤後即可點擊「儲存報價」正式產出報價單。`);
+    showAuthToast(`已載入草稿「${draft.customer_name}」`);
   }
 
   // ============================================================================
@@ -13022,26 +13118,37 @@ document.addEventListener("DOMContentLoaded", () => {
               quantity: 1
             });
             switchQuoteSubTab("create");
-            alert(`[已帶入報價單] 個人特殊品【${btn.dataset.model}】已加入目前報價單明細！`);
+            showAuthToast(`已帶入「${btn.dataset.model}」`);
           });
         });
 
         activeContainer.querySelectorAll(".btn-promote-special-prod").forEach(btn => {
           btn.addEventListener("click", async () => {
             if (getActiveSalesName() !== "曾維崧") {
-              alert("[權限限制] 「更新標準品統一售價」涉及全公司共通標準牌價之正式發行，需由主管（曾維崧）審核並執行。");
+              showAuthToast("僅主管（曾維崧）可更新標準品統一售價");
               return;
             }
             const modelNo = btn.dataset.model;
             const origPrice = parseFloat(btn.dataset.price) || 0;
-            const inputStdPrice = prompt(`【更新標準品統一售價確認】\n\n即將把型號【${modelNo}】正式發行至全公司「共通標準牌價表」。\n發行後系統將以公司標準售價為準，並自動將原特殊品封存保留歷史紀錄。\n\n請輸入公司正式發行之「標準經銷牌價(未稅)」：`, String(origPrice));
+            const inputStdPrice = await promptFluentInputDialog({
+              title: "更新標準品售價",
+              message: `即將將「${modelNo}」發行至共通標準牌價表。\n請輸入標準經銷牌價（未稅）：`,
+              defaultValue: String(origPrice),
+              confirmText: "下一步"
+            });
             if (inputStdPrice === null) return;
-            const stdPrice = parseFloat(inputStdPrice);
+            const stdPrice = parseFloat(String(inputStdPrice).replace(/,/g, "").trim());
             if (isNaN(stdPrice) || stdPrice <= 0) {
-              alert("請輸入有效的標準經銷牌價數字！");
+              showAuthToast("請輸入大於 0 的標準經銷牌價");
               return;
             }
-            if (!confirm(`【二次確認】確定要將【${modelNo}】以標準牌價 $${stdPrice.toLocaleString()} 更新為全公司共通標準牌價，並自動封存個人特殊品嗎？`)) {
+            const ok = await promptConfirmDeleteCustomer({
+              title: "發行標準牌價",
+              message: `確定將「${modelNo}」以 $${stdPrice.toLocaleString()} 更新為全公司共通標準牌價？`,
+              confirmText: "確定發行",
+              danger: false
+            });
+            if (!ok) {
               return;
             }
             try {
@@ -13057,10 +13164,10 @@ document.addEventListener("DOMContentLoaded", () => {
               if (!r.ok) throw new Error(resData.detail || "更新發行失敗");
               quoteProductsCache = [];
               if (typeof invalidateDesktopProductsCache === "function") invalidateDesktopProductsCache();
-              alert(`[更新成功] ${resData.message}`);
+              showAuthToast(resData.message || `已將「${modelNo}」轉為共通標準牌價`);
               loadSpecialProductsManager();
             } catch (e) {
-              alert("[執行失敗] " + e.message);
+              showAuthToast(`執行失敗：${e.message}`);
             }
           });
         });
@@ -13069,7 +13176,13 @@ document.addEventListener("DOMContentLoaded", () => {
           btn.addEventListener("click", async () => {
             const spId = btn.dataset.id;
             const modelNo = btn.dataset.model;
-            if (!confirm(`【二次確認】確定要刪除個人特殊品【${modelNo}】嗎？`)) return;
+            const ok = await promptConfirmDeleteCustomer({
+              title: "刪除個人特殊品",
+              message: `確定刪除個人特殊品「${modelNo}」？`,
+              confirmText: "確定刪除",
+              danger: true
+            });
+            if (!ok) return;
             try {
               const r = await fetch(`/api/special-products/${spId}?sales_name=${encodeURIComponent(activeSales)}`, {
                 method: "DELETE"
@@ -13078,9 +13191,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 quoteProductsCache = [];
                 if (typeof invalidateDesktopProductsCache === "function") invalidateDesktopProductsCache();
                 loadSpecialProductsManager();
+                showAuthToast(`已刪除個人特殊品「${modelNo}」`);
               }
             } catch (e) {
-              alert("[刪除失敗] " + e.message);
+              showAuthToast(`刪除失敗：${e.message}`);
             }
           });
         });
@@ -13128,11 +13242,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const activeSales = getActiveSalesName();
 
     if (!modelNo) {
-      alert("請輸入特殊品型號！");
+      showAuthToast("請輸入特殊品型號");
       return;
     }
     if (isNaN(priceVal) || priceVal <= 0) {
-      alert("請輸入大於 0 的個人特殊經銷價(未稅)！");
+      showAuthToast("請輸入大於 0 的特殊經銷價");
       return;
     }
 
@@ -13161,10 +13275,10 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("inputSpecialStockQty").value = "0";
       document.getElementById("inputSpecialNotes").value = "";
 
-      alert(`[${resData.status === 'archived_by_standard' ? '標準品轉正提醒' : '儲存成功'}] ${resData.message}`);
+      showAuthToast(resData.message || `已儲存「${modelNo}」`);
       loadSpecialProductsManager();
     } catch (err) {
-      alert("[儲存失敗] " + err.message);
+      showAuthToast(`儲存失敗：${err.message}`);
     }
   }
 
@@ -13634,7 +13748,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function exportDashboardReportCsv() {
     if (!p4DashDataCache) {
-      alert("請先載入大數據分析資料！");
+      showAuthToast("請先載入大數據分析資料");
       return;
     }
     const topCusts = p4DashDataCache.top_customers || [];
@@ -13857,12 +13971,12 @@ document.addEventListener("DOMContentLoaded", () => {
   async function saveQuotationCustomerFromUI(copyAsNewContact = false) {
     const name = document.getElementById("qCustName")?.value.trim() || "";
     if (!name) {
-      alert("請輸入公司名稱！");
+      showAuthToast("請輸入公司名稱");
       return;
     }
     const contactName = document.getElementById("qCustContact")?.value.trim() || "";
     if (copyAsNewContact && !contactName) {
-      alert("若要複製為新聯絡人，請先在「聯絡人」輸入新窗口姓名！");
+      showAuthToast("請先輸入聯絡人姓名");
       return;
     }
     const activeSales = getActiveSalesName();
@@ -13920,44 +14034,115 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         renderQuotationCustomersTable();
       }
-      alert(`[儲存成功] ${res.message}`);
+      const fallbackToast = copyAsNewContact
+        ? `已新增「${name}」聯絡人「${contactName}」`
+        : `已儲存客戶「${name}」`;
+      showAuthToast(res.message || fallbackToast);
     } catch (err) {
-      alert("[儲存失敗] " + err.message);
+      showAuthToast(`儲存失敗：${err.message}`);
     }
   }
 
-  function promptConfirmDeleteCustomer({ title, message }) {
+  function openUniversalFluentDialog({
+    title = "確認",
+    message = "",
+    confirmText = "確定",
+    danger = true,
+    showInput = false,
+    defaultValue = ""
+  }) {
     return new Promise((resolve) => {
       const modal = document.getElementById("modalConfirmDeleteCustomer");
+      const iconEl = document.getElementById("svgFluentModalIcon");
       const titleEl = document.getElementById("lblDeleteCustomerTitle");
       const msgEl = document.getElementById("lblDeleteCustomerPrompt");
+      const inputEl = document.getElementById("inputFluentModalValue");
       const btnClose = document.getElementById("btnCloseDeleteCustModal");
       const btnCancel = document.getElementById("btnCancelDeleteCustModal");
       const btnConfirm = document.getElementById("btnConfirmDeleteCustModal");
 
       if (!modal || !btnConfirm) {
-        return resolve(false);
+        return resolve(showInput ? null : false);
       }
 
-      if (titleEl) titleEl.textContent = title || "刪除確認";
-      if (msgEl) msgEl.textContent = message || "確定要刪除？";
+      if (titleEl) titleEl.textContent = title;
+      if (msgEl) msgEl.textContent = message;
+      if (iconEl) {
+        iconEl.style.color = danger ? "var(--color-danger, #ef4444)" : "var(--color-primary, #2563eb)";
+      }
+      btnConfirm.textContent = confirmText;
+      btnConfirm.classList.toggle("danger", Boolean(danger));
+      btnConfirm.classList.toggle("primary", !danger);
 
-      const cleanup = (confirmed) => {
+      if (inputEl) {
+        if (showInput) {
+          inputEl.classList.remove("hidden");
+          inputEl.value = String(defaultValue ?? "");
+        } else {
+          inputEl.classList.add("hidden");
+          inputEl.value = "";
+        }
+      }
+
+      const cleanup = (result) => {
         modal.classList.add("hidden");
         if (btnClose) btnClose.removeEventListener("click", onCancel);
         if (btnCancel) btnCancel.removeEventListener("click", onCancel);
-        if (btnConfirm) btnConfirm.removeEventListener("click", onConfirm);
-        resolve(confirmed);
+        btnConfirm.removeEventListener("click", onConfirm);
+        if (inputEl) inputEl.removeEventListener("keydown", onInputKey);
+        document.removeEventListener("keydown", onEscKey);
+        resolve(result);
       };
 
-      const onCancel = () => cleanup(false);
-      const onConfirm = () => cleanup(true);
+      const onCancel = () => cleanup(showInput ? null : false);
+      const onConfirm = () => cleanup(showInput ? (inputEl ? inputEl.value : "") : true);
+      const onInputKey = (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onConfirm();
+        }
+      };
+      const onEscKey = (e) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          onCancel();
+        }
+      };
 
-      if (btnClose) btnClose.addEventListener("click", onCancel, { once: true });
-      if (btnCancel) btnCancel.addEventListener("click", onCancel, { once: true });
-      if (btnConfirm) btnConfirm.addEventListener("click", onConfirm, { once: true });
+      if (btnClose) btnClose.addEventListener("click", onCancel);
+      if (btnCancel) btnCancel.addEventListener("click", onCancel);
+      btnConfirm.addEventListener("click", onConfirm);
+      if (inputEl && showInput) inputEl.addEventListener("keydown", onInputKey);
+      document.addEventListener("keydown", onEscKey);
 
       modal.classList.remove("hidden");
+      if (showInput && inputEl) {
+        setTimeout(() => {
+          inputEl.focus();
+          inputEl.select();
+        }, 40);
+      }
+    });
+  }
+
+  function promptConfirmDeleteCustomer({ title = "確認", message = "確定要執行嗎？", confirmText = "確定刪除", danger = true }) {
+    return openUniversalFluentDialog({
+      title,
+      message,
+      confirmText,
+      danger,
+      showInput: false
+    });
+  }
+
+  function promptFluentInputDialog({ title = "輸入", message = "", defaultValue = "", confirmText = "確定" }) {
+    return openUniversalFluentDialog({
+      title,
+      message,
+      confirmText,
+      danger: false,
+      showInput: true,
+      defaultValue
     });
   }
 
@@ -14018,7 +14203,7 @@ document.addEventListener("DOMContentLoaded", () => {
         : `已刪除客戶「${custName}」`;
       showAuthToast(successNotice);
     } catch (err) {
-      showAuthToast(`[刪除失敗] ${err.message}`);
+      showAuthToast(`刪除失敗：${err.message}`);
     }
   }
 
@@ -14063,9 +14248,9 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       const res = await r.json();
       if (!r.ok) throw new Error(res.detail || "儲存供應商設定失敗");
-      alert(`[儲存成功] ${res.message}`);
+      showAuthToast(res.message || "已儲存供應商資料");
     } catch (err) {
-      alert("[儲存失敗] " + err.message);
+      showAuthToast(`儲存失敗：${err.message}`);
     }
   }
 
@@ -14220,7 +14405,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function saveP7ProductFromForm() {
     if (getActiveSalesName() !== "曾維崧") {
-      alert("[權限限制] 共通標準牌價表攸關全公司合約與毛利，僅主管（曾維崧）具備修改與儲存權限。業務人員請唯讀查閱。");
+      showAuthToast("僅主管（曾維崧）可修改標準牌價");
       return;
     }
     const modelNo = document.getElementById("p7InputModel")?.value.trim() || "";
@@ -14228,11 +14413,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const specRaw = document.getElementById("p7InputSpec")?.value.trim() || "";
     const isMto = !!document.getElementById("p7ChkIsMto")?.checked;
     if (!modelNo) {
-      alert("請輸入產品型號！");
+      showAuthToast("請輸入產品型號");
       return;
     }
     if (dealerPrice <= 0) {
-      alert("請輸入大於 0 的經銷價！");
+      showAuthToast("請輸入大於 0 的經銷價");
       return;
     }
     const finalSpec = isMto && !specRaw.includes("訂購品") ? `${specRaw} (訂購品)`.trim() : specRaw;
@@ -14251,18 +14436,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function deleteSelectedP7Product() {
     if (getActiveSalesName() !== "曾維崧") {
-      alert("[權限限制] 共通標準牌價表攸關全公司合約與毛利，僅主管（曾維崧）具備刪除權限。業務人員請唯讀查閱。");
+      showAuthToast("僅主管（曾維崧）可刪除標準品");
       return;
     }
     if (!p7SelectedProductObj) {
-      alert("請先從左側產品列表點選一筆產品！");
+      showAuthToast("請先點選一筆產品");
       return;
     }
     if (!p7SelectedProductObj.is_special) {
-      alert("此品項為公司共通標準牌價品項，受系統保護無法直接刪除；若為個人特殊品請展開下方「個人特殊品專區」刪除。");
+      showAuthToast("公司共通標準品受系統保護，無法直接刪除");
       return;
     }
-    alert(`請展開下方「個人特殊品專區」刪除【${p7SelectedProductObj.model_no}】。`);
+    showAuthToast(`請至下方個人特殊品專區刪除「${p7SelectedProductObj.model_no}」`);
   }
 
   function setupP7CalculatorEvents() {
@@ -14379,10 +14564,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const btnResetTerms = document.getElementById("btnResetDefaultTerms");
     if (btnResetTerms) {
-      btnResetTerms.addEventListener("click", () => {
-        if (!confirm("確定要將交貨驗收條款恢復為系統預設的 8 大條款嗎？")) return;
+      btnResetTerms.addEventListener("click", async () => {
+        const ok = await promptConfirmDeleteCustomer({
+          title: "恢復預設條款",
+          message: "確定恢復為系統預設的 8 大條款？",
+          confirmText: "確定恢復",
+          danger: false
+        });
+        if (!ok) return;
         const txt = document.getElementById("qSetTermsTextarea");
         if (txt) txt.value = DEFAULT_QUOTE_TERMS_8_CLAUSES;
+        showAuthToast("已還原預設條款");
       });
     }
 
@@ -14391,7 +14583,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const name = btn.textContent.trim();
         const targetPage = btn.getAttribute("data-reset-target") || "page1";
         resetQuoteTableColumnWidthsByTarget(targetPage);
-        alert(`[已還原預設欄寬] 「${name}」表格欄寬已重設為系統推薦寬度！`);
+        showAuthToast(`已重設「${name}」欄寬`);
       });
     });
 
@@ -14552,7 +14744,7 @@ document.addEventListener("DOMContentLoaded", () => {
           });
           downloadRowsAsXlsx(`customers_backup_${activeSales}.xlsx`, "客戶資料", rows);
         } catch (err) {
-          alert("[匯出客戶失敗] " + err.message);
+          showAuthToast(`匯出客戶失敗：${err.message}`);
         }
       });
     }
@@ -14574,10 +14766,16 @@ document.addEventListener("DOMContentLoaded", () => {
           const rows = parsed.sheets["客戶資料庫"] || parsed.sheets["客戶資料"] || parsed.firstSheetRows || [];
           const dataRowsEst = Math.max(0, rows.length - 1);
           if (rows.length === 0) {
-            alert("[匯入提醒] 選擇的檔案內沒有讀取到任何客戶資料列。");
+            showAuthToast("檔案內沒有客戶資料");
             return;
           }
-          if (!confirm(`【二次確認】即將從檔案「${file.name}」（約 ${dataRowsEst} 筆明細）匯入客戶資料。\n\n目標歸屬業務員：【${activeSales}】\n同業務同名公司將更新整合，不會影響其他業務的客戶庫。\n確定要開始匯入嗎？`)) {
+          const ok = await promptConfirmDeleteCustomer({
+            title: "匯入客戶資料",
+            message: `確定從「${file.name}」（約 ${dataRowsEst} 筆）匯入至「${activeSales}」客戶庫？`,
+            confirmText: "開始匯入",
+            danger: false
+          });
+          if (!ok) {
             return;
           }
           const resp = await fetch("/api/batch/import-customers", {
@@ -14588,9 +14786,9 @@ document.addEventListener("DOMContentLoaded", () => {
           const res = await resp.json();
           if (!resp.ok) throw new Error(res.detail || "匯入客戶失敗");
           await refreshAllAfterBatchImport();
-          alert(`[匯入完成] ${res.message}`);
+          showAuthToast(res.message || "客戶匯入完成");
         } catch (err) {
-          alert("[匯入客戶失敗] " + err.message);
+          showAuthToast(`匯入失敗：${err.message}`);
         }
       });
     }
@@ -14616,7 +14814,7 @@ document.addEventListener("DOMContentLoaded", () => {
           });
           downloadRowsAsXlsx("products_backup.xlsx", "產品資料", rows);
         } catch (err) {
-          alert("[匯出產品失敗] " + err.message);
+          showAuthToast(`匯出產品失敗：${err.message}`);
         }
       });
     }
@@ -14637,10 +14835,16 @@ document.addEventListener("DOMContentLoaded", () => {
           const rows = parsed.sheets["經銷牌價表參考"] || parsed.sheets["產品資料"] || parsed.firstSheetRows || [];
           const dataRowsEst = Math.max(0, rows.length - 1);
           if (rows.length === 0) {
-            alert("[匯入提醒] 選擇的檔案內沒有讀取到任何產品資料列。");
+            showAuthToast("檔案內沒有產品資料");
             return;
           }
-          if (!confirm(`【二次確認】即將從檔案「${file.name}」（約 ${dataRowsEst} 筆明細）整批新增或更新共通標準產品牌價表。\n\n確定要開始匯入嗎？`)) {
+          const ok = await promptConfirmDeleteCustomer({
+            title: "匯入產品牌價",
+            message: `確定從「${file.name}」（約 ${dataRowsEst} 筆）匯入並更新產品牌價？`,
+            confirmText: "開始匯入",
+            danger: false
+          });
+          if (!ok) {
             return;
           }
           const resp = await fetch("/api/batch/import-products", {
@@ -14651,13 +14855,13 @@ document.addEventListener("DOMContentLoaded", () => {
           const res = await resp.json();
           if (!resp.ok) throw new Error(res.detail || "匯入產品失敗");
           await refreshAllAfterBatchImport();
-          let msg = `[匯入完成] ${res.message}`;
+          let msg = res.message || "產品匯入完成";
           if (Array.isArray(res.error_logs) && res.error_logs.length > 0) {
-            msg += `\n\n檔案內重複型號前 5 筆提示：\n${res.error_logs.slice(0, 5).join("\n")}`;
+            msg += `\n重複型號前 3 筆：${res.error_logs.slice(0, 3).join(" / ")}`;
           }
-          alert(msg);
+          showAuthToast(msg);
         } catch (err) {
-          alert("[匯入產品失敗] " + err.message);
+          showAuthToast(`匯入失敗：${err.message}`);
         }
       });
     }
@@ -14751,7 +14955,7 @@ document.addEventListener("DOMContentLoaded", () => {
           setLegacyProgress(0);
         } catch (err) {
           if (lblLegacyFile) lblLegacyFile.textContent = "解析失敗，請重新選擇檔案";
-          alert("[讀取 Excel 失敗] " + err.message);
+          showAuthToast(`讀取 Excel 失敗：${err.message}`);
         }
       });
     }
@@ -14770,7 +14974,13 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
 
-        if (!confirm(`【二次確認】即將把「${pendingLegacyFileName}」匯入為【${activeSales}】名下歷史資料。\n\n・客戶資料庫列數：${customersRows.length}\n・產品牌價列數：${productsRows.length}\n・報價單明細列數：${quotationsRows.length}\n\n確定開始三階段匯入嗎？`)) {
+        const ok = await promptConfirmDeleteCustomer({
+          title: "三階段歷史資料匯入",
+          message: `確定將「${pendingLegacyFileName}」匯入為「${activeSales}」歷史資料？\n客戶列數：${customersRows.length} ｜ 產品列數：${productsRows.length} ｜ 報價列數：${quotationsRows.length}`,
+          confirmText: "開始匯入",
+          danger: false
+        });
+        if (!ok) {
           return;
         }
 
@@ -14810,9 +15020,10 @@ document.addEventListener("DOMContentLoaded", () => {
             resBoxLegacy.classList.remove("hidden");
           }
           await refreshAllAfterBatchImport();
+          showAuthToast("歷史資料匯入完成");
         } catch (err) {
           setLegacyProgress(0);
-          alert("[三階段匯入失敗] " + err.message);
+          showAuthToast(`匯入失敗：${err.message}`);
         } finally {
           btnStartLegacy.disabled = false;
           btnStartLegacy.style.opacity = "1";
@@ -14830,7 +15041,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnRollback = document.getElementById("btnRollbackPreviousVersion");
     if (btnRollback) {
       btnRollback.addEventListener("click", () => {
-        alert("[版本還原提示] 網頁版採用 Git 版本控制，如需退回上一版本請於終端機執行 git revert。");
+        showAuthToast("如需退回上一版本，請於終端機執行 git revert");
       });
     }
   }
@@ -14874,9 +15085,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!r.ok) throw new Error(res.detail || "儲存財務設定失敗");
       await loadQuotationFinanceSettings();
       recalculateAllQuoteRowsWithCurrentSettings({ flash: true });
-      alert(`[儲存成功] 系統設定已立即套用！（新建預設行數：${defRows} 行｜捨入規則：${quoteFinanceSettings.round_summary_text}）`);
+      showAuthToast(`已儲存系統設定（預設 ${defRows} 行，${quoteFinanceSettings.round_summary_text}）`);
     } catch (err) {
-      alert("[儲存失敗] " + err.message);
+      showAuthToast(`儲存失敗：${err.message}`);
     }
   }
 
@@ -14891,9 +15102,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await r.json();
       if (!r.ok) throw new Error(res.detail || "儲存條款失敗");
       quoteFinanceSettings.quote_terms = res.quote_terms || terms;
-      alert(`[儲存成功] ${res.message}`);
+      showAuthToast(res.message || "已儲存交貨與驗收條款");
     } catch (err) {
-      alert("[儲存失敗] " + err.message);
+      showAuthToast(`儲存失敗：${err.message}`);
     }
   }
 
@@ -15107,15 +15318,21 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  function showAuthToast(msg) {
+  function showAuthToast(msg, durationMs) {
     const toast = document.getElementById("authToastBanner");
     if (!toast) return;
-    toast.textContent = msg;
+    const cleanMsg = String(msg || "").trim();
+    toast.textContent = cleanMsg;
+    toast.style.zIndex = "100010";
+    toast.style.maxWidth = "90vw";
+    toast.style.whiteSpace = "pre-line";
+    toast.style.textAlign = "center";
     toast.classList.remove("hidden");
     if (authToastTimer) clearTimeout(authToastTimer);
+    const ms = durationMs || (cleanMsg.includes("\n") || cleanMsg.length > 35 ? 4200 : 3000);
     authToastTimer = setTimeout(() => {
       toast.classList.add("hidden");
-    }, 2800);
+    }, ms);
   }
 
   function setLoginStatusMessage(msg, isError = false) {
@@ -15226,7 +15443,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (showNotice) {
-      showAuthToast(`[身分切換] 已切換至「${targetSales}」視角（客戶、報價單與權限已同步隔離）`);
+      showAuthToast(`已切換至「${targetSales}」`);
     }
   }
 
@@ -15330,7 +15547,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       setupAdminImpersonator();
       switchSimulatedSalesperson(resolvedSales, false);
-      showAuthToast(`[驗證成功] 歡迎 ${resolvedSales}（${profile.email}）`);
+      showAuthToast(`歡迎 ${resolvedSales}`);
     } catch (err) {
       console.error("[Auth] Google 驗證程序異常:", err);
       setLoginStatusMessage("驗證過程發生錯誤：" + (err.message || err), true);
@@ -15429,7 +15646,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const targetSales = localStorage.getItem("shihlin_pwa_active_sales") || "曾維崧";
         setupAdminImpersonator();
         switchSimulatedSalesperson(targetSales, false);
-        showAuthToast("[測試權限已啟用] 已進入系統，可由頂部「管理員身分模擬」切換人員");
+        showAuthToast("已啟用測試權限");
       });
     }
 
@@ -17447,14 +17664,19 @@ document.addEventListener("DOMContentLoaded", () => {
     menu.style.top = `${Math.round(y)}px`;
   }
 
-  function excelSetCustomRowHeight() {
+  async function excelSetCustomRowHeight() {
     const rows = getExcelRows();
     const { top, bottom } = getNormalizedExcelRange();
     const firstRow = rows[top];
     const currentH = firstRow ? Math.round(firstRow.getBoundingClientRect().height) : 38;
-    const input = prompt("請輸入選取列之列高（像素，建議 32 ～ 120）：", String(currentH));
+    const input = await promptFluentInputDialog({
+      title: "設定列高",
+      message: "請輸入列高（像素，範圍 24 ～ 300，建議 32 ～ 120）：",
+      defaultValue: String(currentH),
+      confirmText: "確定"
+    });
     if (input === null) return;
-    const h = Math.max(24, Math.min(300, parseInt(input, 10) || currentH));
+    const h = Math.max(24, Math.min(300, parseInt(String(input).trim(), 10) || currentH));
     for (let r = top; r <= bottom; r++) {
       const tr = rows[r];
       if (!tr) continue;
@@ -17699,7 +17921,7 @@ document.addEventListener("DOMContentLoaded", () => {
           } else if (excelTableState.copiedMatrix) {
             await excelPasteMatrix(excelTableState.copiedMatrix);
           } else {
-            alert("[貼上提醒] 瀏覽器限制按鈕直接讀取系統剪貼簿，請直接按下鍵盤 Ctrl + V 即可將 Excel 資料貼入表格！");
+            showAuthToast("請直接按下 Ctrl + V 貼入 Excel 資料");
           }
         } else if (action === "insert-copied") {
           await excelInsertCopiedRows("above");
@@ -17718,7 +17940,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (action === "clear-cells") {
           excelClearSelectedCells();
         } else if (action === "set-row-height") {
-          excelSetCustomRowHeight();
+          await excelSetCustomRowHeight();
         } else if (action === "delete-rows") {
           excelDeleteSelectedRows();
         }

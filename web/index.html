@@ -1905,10 +1905,10 @@
               </div>
 
               <div class="pyside-p6-bottom-btns">
+                <button type="button" id="btnExportCrmReportP6" class="btn-pyside-green"
+                  style="flex:1; height:36px;">帶入新建報價</button>
                 <button type="button" id="btnSyncCloudCustomers" class="btn-pyside-blue"
                   style="flex:1; height:36px;">同步雲端客戶</button>
-                <button type="button" id="btnExportCrmReportP6" class="btn-pyside-green"
-                  style="flex:1; height:36px;">CRM 商機月報</button>
                 <button type="button" id="btnQuoteCustDelete" class="btn-pyside-darkred"
                   style="flex:1; height:36px;">刪除選取公司</button>
                 <button type="button" id="btnQuoteCustClearAll" class="btn-pyside-red"
@@ -3623,13 +3623,12 @@
     </div>
   </div>
 
-  <!-- 8. 清空品項防呆二次確認對話框 (Modal) -->
+  <!-- 8. 清空品項確認對話框 (Modal) -->
   <div id="clearConfirmModal" class="modal hidden">
     <div class="modal-content" style="max-width:400px; text-align:center; padding:1.5rem;">
-      <h3 style="margin-top:0; color:var(--color-danger, #ef4444); font-size:1.15rem; font-weight:700;">[防呆警告]
-        確定要清空所有品項嗎？</h3>
-      <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5; margin:1rem 0;">
-        此操作將清除目前編輯畫面中所有品項與方案小計。若尚未儲存，輸入之數據將遺失！
+      <h3 style="margin-top:0; color:var(--color-danger, #ef4444); font-size:1.15rem; font-weight:700;">清空所有品項</h3>
+      <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.5; margin:1rem 0;">
+        確定清除目前畫面中的所有品項與小計？
       </p>
       <div style="display:flex; gap:10px; justify-content:center;">
         <button type="button" id="btnCancelClearConfirm" class="fluent-btn secondary"
@@ -3640,14 +3639,13 @@
     </div>
   </div>
 
-  <!-- 9. 移至垃圾桶防呆二次確認對話框 (Modal) -->
+  <!-- 9. 移至垃圾桶確認對話框 (Modal) -->
   <div id="deleteConfirmModal" class="modal hidden">
-    <div class="modal-content" style="max-width:440px; text-align:center; padding:1.5rem;">
-      <h3 style="margin-top:0; color:var(--color-danger, #ef4444); font-size:1.15rem; font-weight:700;">[確認移至垃圾桶]</h3>
-      <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5; margin:1rem 0;">
-        確定要將報價單【<span id="deleteConfirmQuoteNo"
-          style="font-weight:700; color:var(--text-main); font-family:monospace;"></span>】移至垃圾桶嗎？<br>
-        <span style="font-size:0.8rem; color:var(--text-muted);">(資料將保留 30 天防呆緩衝期，期間內可隨時一鍵復原)</span>
+    <div class="modal-content" style="max-width:420px; text-align:center; padding:1.5rem;">
+      <h3 style="margin-top:0; color:var(--color-danger, #ef4444); font-size:1.15rem; font-weight:700;">移至垃圾桶</h3>
+      <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.5; margin:1rem 0;">
+        確定將報價單「<span id="deleteConfirmQuoteNo"
+          style="font-weight:700; color:var(--text-main); font-family:monospace;"></span>」移至垃圾桶？
       </p>
       <div style="display:flex; gap:10px; justify-content:center;">
         <button type="button" id="btnCancelDeleteConfirm" class="fluent-btn secondary"
@@ -3658,27 +3656,28 @@
     </div>
   </div>
 
-  <!-- 客戶/聯絡人刪除確認對話框 (微軟 Fluent 風格，取代原生 confirm) -->
-  <div id="modalConfirmDeleteCustomer" class="modal-overlay hidden">
-    <div class="fluent-dialog" style="max-width: 400px;">
+  <!-- 全系統通用微軟 Fluent 確認／輸入對話框 (取代原生 confirm 與 prompt) -->
+  <div id="modalConfirmDeleteCustomer" class="modal-overlay hidden" style="z-index: 100005;">
+    <div class="fluent-dialog" style="max-width: 420px;">
       <div class="dialog-header"
         style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light); padding-bottom:10px;">
         <div style="display:flex; align-items:center; gap:8px;">
-          <svg class="icon-svg" style="width:18px; height:18px; color:var(--color-danger, #ef4444);" viewBox="0 0 24 24">
-            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+          <svg id="svgFluentModalIcon" class="icon-svg" style="width:18px; height:18px; color:var(--color-danger, #ef4444);" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
           </svg>
-          <h3 id="lblDeleteCustomerTitle" style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">刪除確認</h3>
+          <h3 id="lblDeleteCustomerTitle" style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">確認</h3>
         </div>
         <button type="button" id="btnCloseDeleteCustModal"
           style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-secondary);">&times;</button>
       </div>
       <div class="dialog-body" style="padding:16px 0;">
-        <p id="lblDeleteCustomerPrompt" style="margin:0; font-size:0.95rem; line-height:1.5; color:var(--text-primary); font-weight:500;"></p>
+        <p id="lblDeleteCustomerPrompt" style="margin:0; font-size:0.95rem; line-height:1.5; color:var(--text-primary); font-weight:500; white-space:pre-line;"></p>
+        <input type="text" id="inputFluentModalValue" class="pyside-input hidden" style="margin-top:10px; width:100%;" />
       </div>
       <div class="dialog-footer"
         style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border-light); padding-top:12px;">
         <button type="button" id="btnCancelDeleteCustModal" class="fluent-btn secondary">取消</button>
-        <button type="button" id="btnConfirmDeleteCustModal" class="fluent-btn danger">確定刪除</button>
+        <button type="button" id="btnConfirmDeleteCustModal" class="fluent-btn danger">確定</button>
       </div>
     </div>
   </div>
@@ -3883,13 +3882,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261118_v1_0_73"></script>
+  <script src="js/app.js?v=20261118_v1_0_74"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261118_v1_0_73')
+        navigator.serviceWorker.register('./sw.js?v=20261118_v1_0_74')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

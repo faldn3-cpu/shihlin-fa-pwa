@@ -1002,8 +1002,8 @@ def save_quotation_customer(data: Dict[str, Any]) -> Tuple[bool, str, int]:
 
         conn.commit()
         if copy_as_new_contact:
-            return True, f"已為「{name}」新增聯絡窗口「{contact_name}」！", cid
-        return True, f"客戶「{name}」資料已成功儲存！", cid
+            return True, f"已新增「{name}」聯絡人「{contact_name}」", cid
+        return True, f"已儲存客戶「{name}」", cid
     finally:
         conn.close()
 

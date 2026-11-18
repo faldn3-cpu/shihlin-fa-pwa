@@ -216,6 +216,7 @@ class QuotationCustomerSaveRequest(BaseModel):
     is_favorite: Optional[bool] = False
     copy_as_new_contact: Optional[bool] = False
     replace_primary_contact: Optional[bool] = False
+    contact_index: Optional[int] = None
 
 
 class QuotationSupplierSaveRequest(BaseModel):

@@ -920,6 +920,15 @@ def save_quotation_customer(data: Dict[str, Any]) -> Tuple[bool, str, int]:
     status = str(data.get("status") or "active").strip()
     is_favorite = 1 if data.get("is_favorite") else 0
     copy_as_new_contact = bool(data.get("copy_as_new_contact"))
+    raw_contact_idx = data.get("contact_index")
+    contact_idx: Optional[int] = None
+    if raw_contact_idx is not None and not isinstance(raw_contact_idx, bool):
+        try:
+            parsed_idx = int(raw_contact_idx)
+            if parsed_idx >= 0:
+                contact_idx = parsed_idx
+        except (TypeError, ValueError):
+            contact_idx = None
 
     conn = get_connection()
     try:
@@ -950,22 +959,46 @@ def save_quotation_customer(data: Dict[str, Any]) -> Tuple[bool, str, int]:
         cid = int(row["id"]) if row else 0
 
         if cid and contact_name:
-            existing_ct = cursor.execute("""
-            SELECT id FROM contact_master WHERE customer_id = ? AND name = ?
-            """, (cid, contact_name)).fetchone()
-            if existing_ct:
+            # 取得該客戶目前依建立順序排列的聯絡人，支援依序號原地修改特定聯絡人列
+            ct_rows = cursor.execute(
+                "SELECT id FROM contact_master WHERE customer_id = ? ORDER BY id ASC",
+                (cid,)
+            ).fetchall()
+            if not copy_as_new_contact and contact_idx is not None and 0 <= contact_idx < len(ct_rows):
+                target_ct_id = ct_rows[contact_idx]["id"]
                 cursor.execute("""
                 UPDATE contact_master
-                SET email = ?, mobile = ?, owner_sales = ?
+                SET name = ?, email = ?, mobile = ?, owner_sales = ?
                 WHERE id = ?
-                """, (contact_email, contact_mobile, owner_sales, existing_ct["id"]))
+                """, (contact_name, contact_email, contact_mobile, owner_sales, target_ct_id))
             else:
-                if not copy_as_new_contact and data.get("replace_primary_contact"):
-                    cursor.execute("DELETE FROM contact_master WHERE customer_id = ?", (cid,))
-                cursor.execute("""
-                INSERT INTO contact_master (customer_id, owner_sales, name, email, mobile)
-                VALUES (?, ?, ?, ?, ?)
-                """, (cid, owner_sales, contact_name, contact_email, contact_mobile))
+                existing_ct = cursor.execute("""
+                SELECT id FROM contact_master WHERE customer_id = ? AND name = ?
+                """, (cid, contact_name)).fetchone()
+                if existing_ct:
+                    cursor.execute("""
+                    UPDATE contact_master
+                    SET email = ?, mobile = ?, owner_sales = ?
+                    WHERE id = ?
+                    """, (contact_email, contact_mobile, owner_sales, existing_ct["id"]))
+                else:
+                    if not copy_as_new_contact and data.get("replace_primary_contact"):
+                        cursor.execute("DELETE FROM contact_master WHERE customer_id = ?", (cid,))
+                    cursor.execute("""
+                    INSERT INTO contact_master (customer_id, owner_sales, name, email, mobile)
+                    VALUES (?, ?, ?, ?, ?)
+                    """, (cid, owner_sales, contact_name, contact_email, contact_mobile))
+
+            # 確保主檔的預設聯絡人與首位聯絡人保持同步
+            first_ct = cursor.execute(
+                "SELECT name FROM contact_master WHERE customer_id = ? ORDER BY id ASC LIMIT 1",
+                (cid,)
+            ).fetchone()
+            if first_ct and first_ct["name"]:
+                cursor.execute(
+                    "UPDATE customer_master SET default_contact = ? WHERE id = ?",
+                    (first_ct["name"], cid)
+                )
 
         conn.commit()
         if copy_as_new_contact:

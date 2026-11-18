@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.70";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-18 10:55:00";
-  const SYSTEM_APP_RELEASE_NOTES = "手機版報價預設品項改為 1 項（不受新建預設行數設定影響），並強化切換業務身分時自動清空報價畫面與本機行數防竄改資安保護";
+  const SYSTEM_APP_VERSION = "v1.0.71";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-18 11:15:00";
+  const SYSTEM_APP_RELEASE_NOTES = "修正客戶管理點選聯絡人時同公司多列同時反藍問題，並強化編輯指定聯絡人列與跨業務切換時自動清空客戶編輯表單之資安防護";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -710,17 +710,34 @@ document.addEventListener("DOMContentLoaded", () => {
         if (payload.payment_terms !== undefined) existing.payment_terms = String(payload.payment_terms || "月結 30 天電匯").trim();
         if (payload.is_favorite !== undefined) existing.is_favorite = payload.is_favorite ? 1 : 0;
         if (contactName) {
-          existing.default_contact = contactName;
           if (!Array.isArray(existing.contacts)) existing.contacts = [];
-          const ctMatch = !payload.copy_as_new_contact
-            ? existing.contacts.find(ct => String(ct.name || "").trim() === contactName)
-            : null;
-          if (ctMatch) {
-            ctMatch.mobile = contactMobile || ctMatch.mobile || "";
-            ctMatch.email = contactEmail || ctMatch.email || "";
+          const hasValidContactIndex =
+            !payload.copy_as_new_contact &&
+            typeof payload.contact_index === "number" &&
+            Number.isInteger(payload.contact_index) &&
+            payload.contact_index >= 0 &&
+            payload.contact_index < existing.contacts.length;
+
+          if (hasValidContactIndex) {
+            // 編輯模式下直接原地更新指定列的聯絡人資料（支援修改姓名與清空手機/信箱）
+            existing.contacts[payload.contact_index] = {
+              ...existing.contacts[payload.contact_index],
+              name: contactName,
+              mobile: contactMobile,
+              email: contactEmail
+            };
           } else {
-            existing.contacts.push({ name: contactName, mobile: contactMobile, email: contactEmail });
+            const ctMatch = !payload.copy_as_new_contact
+              ? existing.contacts.find(ct => String(ct.name || "").trim() === contactName)
+              : null;
+            if (ctMatch) {
+              ctMatch.mobile = contactMobile || ctMatch.mobile || "";
+              ctMatch.email = contactEmail || ctMatch.email || "";
+            } else {
+              existing.contacts.push({ name: contactName, mobile: contactMobile, email: contactEmail });
+            }
           }
+          existing.default_contact = existing.contacts[0]?.name || contactName;
         }
         persistLocalDelta(store);
         return { ok: true, id: existing.id, message: `客戶「${compName}」已更新於【${ownerSales}】個人客戶庫！` };
@@ -6235,6 +6252,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const spBadge = document.getElementById("specialProductOwnerBadge");
     if (spBadge) spBadge.textContent = `所屬業務：${salesName}`;
+    // 切換業務人員時強制清空客戶管理右側編輯表單與選取狀態，避免前一位業務的客戶機密殘留外洩
+    if (typeof clearQuotationCustomerForm === "function") {
+      clearQuotationCustomerForm();
+    }
     await populateCustomerSelectDropdown(true);
     updateQuoteDraftsBadge();
     if (currentActiveQuoteTab === "history") {
@@ -13569,6 +13590,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 第 6 頁：客戶管理 (100% 對標電腦版 _QuotationApp gui_page4.py & 截圖 8)
   // ============================================================================
   let selectedMgmtCustomerId = null;
+  let selectedMgmtContactIdx = null;
   let p6CustPage = 1;
   const P6_PAGE_SIZE = 30;
 
@@ -13633,7 +13655,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const c = row.cust;
       const ct = row.contact || {};
       const isFav = Number(c.is_favorite || 0) > 0;
-      const isSel = Number(c.id) === Number(selectedMgmtCustomerId);
+      // 必須同時比對「公司編號」與「聯絡人列序號」，確保同一公司多位聯絡人只會亮起被點選的單一列
+      const isSel =
+        selectedMgmtCustomerId !== null &&
+        Number(c.id) === Number(selectedMgmtCustomerId) &&
+        Number(row.contactIdx) === Number(selectedMgmtContactIdx ?? 0);
       const rowNum = startIdx + idx + 1;
 
       return `
@@ -13700,21 +13726,31 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function selectCustomerInMgmtForm(cust, contactIdx = 0) {
+    const contacts = Array.isArray(cust.contacts) && cust.contacts.length > 0
+      ? cust.contacts
+      : [{ name: cust.default_contact || "", email: "", mobile: "" }];
+    // 限制聯絡人序號在有效範圍內，避免越界選取
+    const parsedIdx = Number.isInteger(Number(contactIdx)) ? Number(contactIdx) : 0;
+    const safeIdx = Math.max(0, Math.min(parsedIdx, contacts.length - 1));
+    const chosen = contacts[safeIdx] || contacts[0] || {};
+
     selectedMgmtCustomerId = cust.id;
+    selectedMgmtContactIdx = safeIdx;
     renderQuotationCustomersTable();
+
+    const contactDisplayName = chosen.name || cust.default_contact || "";
     const hint = document.getElementById("qCustSelectedHint");
-    if (hint) hint.textContent = `已選取：${cust.name} (ID: ${cust.id})`;
+    if (hint) {
+      hint.textContent = contactDisplayName
+        ? `已選取：${cust.name} - ${contactDisplayName} (ID: ${cust.id})`
+        : `已選取：${cust.name} (ID: ${cust.id})`;
+    }
 
     const legend = document.getElementById("qCustModeLegend");
     if (legend) {
       legend.innerHTML = `<span class="mode-dot" style="background:#f39c12;"></span>【目前狀態：編輯模式】`;
       legend.style.color = "#e67e22";
     }
-
-    const contacts = Array.isArray(cust.contacts) && cust.contacts.length > 0
-      ? cust.contacts
-      : [{ name: cust.default_contact || "", email: "", mobile: "" }];
-    const chosen = contacts[contactIdx] || contacts[0] || {};
 
     document.getElementById("qCustEditId").value = String(cust.id || "");
     document.getElementById("qCustName").value = cust.name || "";
@@ -13731,17 +13767,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function clearQuotationCustomerForm() {
     selectedMgmtCustomerId = null;
-    document.getElementById("qCustEditId").value = "";
-    document.getElementById("qCustName").value = "";
-    document.getElementById("qCustTax").value = "";
-    document.getElementById("qCustContact").value = "";
-    document.getElementById("qCustMobile").value = "";
-    document.getElementById("qCustEmail").value = "";
-    document.getElementById("qCustPhone").value = "";
-    document.getElementById("qCustFax").value = "";
-    document.getElementById("qCustPayment").value = "";
-    document.getElementById("qCustAddress").value = "";
-    document.getElementById("qCustFavorite").checked = false;
+    selectedMgmtContactIdx = null;
+    [
+      "qCustEditId", "qCustName", "qCustTax", "qCustContact",
+      "qCustMobile", "qCustEmail", "qCustPhone", "qCustFax",
+      "qCustPayment", "qCustAddress"
+    ].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+    const favEl = document.getElementById("qCustFavorite");
+    if (favEl) favEl.checked = false;
 
     const legend = document.getElementById("qCustModeLegend");
     if (legend) {
@@ -13765,6 +13801,16 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     const activeSales = getActiveSalesName();
+    const editingCust = selectedMgmtCustomerId !== null
+      ? (customersCache || []).find(c => Number(c.id) === Number(selectedMgmtCustomerId))
+      : null;
+    const editingSameCust = Boolean(
+      !copyAsNewContact &&
+      editingCust &&
+      String(editingCust.name || "").trim() === name &&
+      Number.isInteger(selectedMgmtContactIdx) &&
+      selectedMgmtContactIdx >= 0
+    );
     const payload = {
       name: name,
       owner_sales: activeSales,
@@ -13777,7 +13823,8 @@ document.addEventListener("DOMContentLoaded", () => {
       payment_terms: document.getElementById("qCustPayment")?.value.trim() || "月結 30 天電匯",
       address: document.getElementById("qCustAddress")?.value.trim() || "",
       is_favorite: !!document.getElementById("qCustFavorite")?.checked,
-      copy_as_new_contact: copyAsNewContact
+      copy_as_new_contact: copyAsNewContact,
+      contact_index: editingSameCust ? selectedMgmtContactIdx : null
     };
 
     try {
@@ -13792,8 +13839,22 @@ document.addEventListener("DOMContentLoaded", () => {
       const savedCust = (customersCache || []).find(
         c => Number(c.id) === Number(res.id) || ((c.owner_sales || activeSales) === activeSales && c.name === name)
       );
-      if (savedCust) selectCustomerInMgmtForm(savedCust);
-      else renderQuotationCustomersTable();
+      if (savedCust) {
+        const savedContacts = Array.isArray(savedCust.contacts) ? savedCust.contacts : [];
+        let targetContactIdx = 0;
+        if (copyAsNewContact) {
+          const matchedNewIdx = savedContacts.findIndex(ct => String(ct.name || "").trim() === contactName);
+          targetContactIdx = matchedNewIdx >= 0 ? matchedNewIdx : Math.max(0, savedContacts.length - 1);
+        } else if (editingSameCust && selectedMgmtContactIdx !== null) {
+          targetContactIdx = Math.min(selectedMgmtContactIdx, Math.max(0, savedContacts.length - 1));
+        } else if (contactName) {
+          const matchedIdx = savedContacts.findIndex(ct => String(ct.name || "").trim() === contactName);
+          if (matchedIdx >= 0) targetContactIdx = matchedIdx;
+        }
+        selectCustomerInMgmtForm(savedCust, targetContactIdx);
+      } else {
+        renderQuotationCustomersTable();
+      }
       alert(`[儲存成功] ${res.message}`);
     } catch (err) {
       alert("[儲存失敗] " + err.message);

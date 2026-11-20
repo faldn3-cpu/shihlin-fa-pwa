@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.78";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-18 18:25:00";
-  const SYSTEM_APP_RELEASE_NOTES = "統一更名為個人牌價表與公司發行牌價表、移除沉睡預警表格重複拉桿並修復拉桿拖曳、新增大數據分析KPI卡片點擊明細彈窗與雙擊開啟報價單";
+  const SYSTEM_APP_VERSION = "v1.0.79";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-20 17:00:00";
+  const SYSTEM_APP_RELEASE_NOTES = "優化三階段歷史資料匯入效能：改為非同步分批切割排程、拔除迴圈內數千次重複存檔並加入IndexedDB大容量防爆保護，徹底解決大檔案匯入當機問題";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -487,11 +487,30 @@ document.addEventListener("DOMContentLoaded", () => {
           deals_by_sales: store.deals_by_sales || {}
         };
 
-        const serialized = JSON.stringify(deltaPayload);
-        localStorage.setItem(CENTRALIZED_LOCAL_STORAGE_KEY, serialized);
-
-        // 同步寫入 IndexedDB 做為大容量雙重保護備份
+        // 優先非同步寫入 IndexedDB 做為大容量完整儲存主力（不受 5MB 限制）
         saveToShihlinIdb(IDB_KEY, deltaPayload).catch(() => {});
+
+        try {
+          const serialized = JSON.stringify(deltaPayload);
+          localStorage.setItem(CENTRALIZED_LOCAL_STORAGE_KEY, serialized);
+        } catch (quotaErr) {
+          // 當匯入數千張歷史報價單超出 localStorage 5MB 上限時，自動啟動防爆精簡層，完整歷史單據由 IndexedDB 承載
+          try {
+            const slimQuotations = {};
+            Object.keys(deltaQuotations).forEach(sales => {
+              const nonLegacy = (deltaQuotations[sales] || []).filter(q => q && q.source_type !== "LEGACY_IMPORT");
+              if (nonLegacy.length > 0) slimQuotations[sales] = nonLegacy;
+            });
+            const slimPayload = {
+              ...deltaPayload,
+              _overflow_to_idb: true,
+              quotations_by_sales: slimQuotations
+            };
+            localStorage.setItem(CENTRALIZED_LOCAL_STORAGE_KEY, JSON.stringify(slimPayload));
+          } catch (innerErr) {
+            console.warn("[內建資料庫] localStorage 配額已滿，已自動轉由 IndexedDB 大容量資料庫保存:", innerErr);
+          }
+        }
       } catch (err) {
         console.warn("[內建資料庫] 寫入瀏覽器本機儲存空間失敗:", err);
       }
@@ -538,27 +557,36 @@ document.addEventListener("DOMContentLoaded", () => {
         baseStore._seedCustNames = seedCustNames;
         baseStore._deletedCustIds = new Set();
 
-        // 疊加瀏覽器本機異動層 (優先嘗試 localStorage，並以 IndexedDB 為互補備份)
+        // 疊加瀏覽器本機異動層 (同時檢查 localStorage 與大容量 IndexedDB，若發生大容量溢位則以 IndexedDB 為準)
         let delta = null;
+        let lsDelta = null;
+        let idbDelta = null;
         try {
           const rawDelta = localStorage.getItem(CENTRALIZED_LOCAL_STORAGE_KEY);
           if (rawDelta) {
-            delta = JSON.parse(rawDelta);
+            lsDelta = JSON.parse(rawDelta);
           }
         } catch (e) {
           console.warn("[內建資料庫] 讀取 localStorage 失敗:", e);
         }
 
-        // 若 localStorage 查無資料，嘗試從 IndexedDB 還原
-        if (!delta) {
-          try {
-            const idbDelta = await loadFromShihlinIdb(IDB_KEY);
-            if (idbDelta && typeof idbDelta === "object") {
-              delta = idbDelta;
-            }
-          } catch (e) {
-            console.warn("[內建資料庫] 讀取 IndexedDB 備份失敗:", e);
+        try {
+          const loadedIdb = await loadFromShihlinIdb(IDB_KEY);
+          if (loadedIdb && typeof loadedIdb === "object") {
+            idbDelta = loadedIdb;
           }
+        } catch (e) {
+          console.warn("[內建資料庫] 讀取 IndexedDB 備份失敗:", e);
+        }
+
+        if (lsDelta && idbDelta) {
+          if (lsDelta._overflow_to_idb || String(idbDelta.saved_at || "") >= String(lsDelta.saved_at || "")) {
+            delta = idbDelta;
+          } else {
+            delta = lsDelta;
+          }
+        } else {
+          delta = idbDelta || lsDelta;
         }
 
         if (delta && typeof delta === "object") {
@@ -827,7 +855,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return deactivated;
     }
 
-    function saveCustomerScoped(store, payload) {
+    function saveCustomerScoped(store, payload, options = {}) {
       const ownerSales = normalizeSales(payload.owner_sales || payload.sales_name);
       const compName = String(payload.name || "").trim();
       if (!compName) return { ok: false, message: "請輸入客戶公司名稱", id: null };
@@ -841,11 +869,15 @@ document.addEventListener("DOMContentLoaded", () => {
       if (existing) {
         existing._modified = true;
         existing.owner_sales = ownerSales;
-        if (payload.tax_id !== undefined) existing.tax_id = String(payload.tax_id || "").trim();
-        if (payload.phone !== undefined) existing.phone = String(payload.phone || "").trim();
-        if (payload.fax !== undefined) existing.fax = String(payload.fax || "").trim();
-        if (payload.address !== undefined) existing.address = String(payload.address || "").trim();
-        if (payload.payment_terms !== undefined) existing.payment_terms = String(payload.payment_terms || "月結 30 天電匯").trim();
+        if (payload.tax_id !== undefined && String(payload.tax_id || "").trim()) existing.tax_id = String(payload.tax_id || "").trim();
+        else if (payload.tax_id !== undefined && !options.preserveExistingEmpty) existing.tax_id = String(payload.tax_id || "").trim();
+        if (payload.phone !== undefined && String(payload.phone || "").trim()) existing.phone = String(payload.phone || "").trim();
+        else if (payload.phone !== undefined && !options.preserveExistingEmpty) existing.phone = String(payload.phone || "").trim();
+        if (payload.fax !== undefined && String(payload.fax || "").trim()) existing.fax = String(payload.fax || "").trim();
+        else if (payload.fax !== undefined && !options.preserveExistingEmpty) existing.fax = String(payload.fax || "").trim();
+        if (payload.address !== undefined && String(payload.address || "").trim()) existing.address = String(payload.address || "").trim();
+        else if (payload.address !== undefined && !options.preserveExistingEmpty) existing.address = String(payload.address || "").trim();
+        if (payload.payment_terms !== undefined && String(payload.payment_terms || "").trim()) existing.payment_terms = String(payload.payment_terms || "月結 30 天電匯").trim();
         if (payload.is_favorite !== undefined) existing.is_favorite = payload.is_favorite ? 1 : 0;
         if (contactName) {
           if (!Array.isArray(existing.contacts)) existing.contacts = [];
@@ -865,7 +897,8 @@ document.addEventListener("DOMContentLoaded", () => {
               email: contactEmail
             };
           } else {
-            const ctMatch = !payload.copy_as_new_contact
+            const shouldDedupeByName = !payload.copy_as_new_contact || options.dedupeContactByName;
+            const ctMatch = shouldDedupeByName
               ? existing.contacts.find(ct => String(ct.name || "").trim() === contactName)
               : null;
             if (ctMatch) {
@@ -877,16 +910,20 @@ document.addEventListener("DOMContentLoaded", () => {
           }
           existing.default_contact = existing.contacts[0]?.name || contactName;
         }
-        persistLocalDelta(store);
+        if (!options.skipPersist) persistLocalDelta(store);
         const saveMsg = (payload.copy_as_new_contact && contactName)
           ? `已新增「${compName}」聯絡人「${contactName}」`
           : `已儲存客戶「${compName}」`;
-        return { ok: true, id: existing.id, message: saveMsg };
+        return { ok: true, id: existing.id, customer: existing, message: saveMsg };
       }
 
-      const allCustIds = Object.values(store.customers_by_sales).flat();
+      let nextIdVal = options.nextCustId;
+      if (!nextIdVal) {
+        const allCustIds = Object.values(store.customers_by_sales).flat();
+        nextIdVal = computeNextId(allCustIds);
+      }
       const newCust = {
-        id: computeNextId(allCustIds),
+        id: nextIdVal,
         name: compName,
         owner_sales: ownerSales,
         tax_id: String(payload.tax_id || "").trim(),
@@ -901,8 +938,8 @@ document.addEventListener("DOMContentLoaded", () => {
         contacts: contactName ? [{ name: contactName, email: contactEmail, mobile: contactMobile }] : []
       };
       bucket.push(newCust);
-      persistLocalDelta(store);
-      return { ok: true, id: newCust.id, message: `已新增客戶「${compName}」` };
+      if (!options.skipPersist) persistLocalDelta(store);
+      return { ok: true, id: newCust.id, customer: newCust, message: `已新增客戶「${compName}」` };
     }
 
     async function handleBuiltinApiRequest(urlObj, method, bodyObj) {
@@ -1751,10 +1788,14 @@ document.addEventListener("DOMContentLoaded", () => {
         return { dateStr: `${yr}-${String(mo).padStart(2, "0")}-${String(da).padStart(2, "0")}`, err: null };
       }
 
-      function importCustomersBatchScoped(salesName, rows) {
+      // 讓出瀏覽器主執行緒，確保進度條與畫面即時重繪、防止上萬筆資料迴圈造成假死當機
+      const yieldToBrowser = () => new Promise(resolve => setTimeout(resolve, 0));
+
+      function importCustomersBatchScoped(salesName, rows, options = {}) {
         const targetSales = normalizeSales(salesName);
         let importedCount = 0;
         let headerIdxMap = null;
+        let nextCustId = computeNextId(Object.values(store.customers_by_sales).flat());
         (Array.isArray(rows) ? rows : []).forEach((row, idx) => {
           let payload = null;
           if (Array.isArray(row)) {
@@ -1805,10 +1846,18 @@ document.addEventListener("DOMContentLoaded", () => {
             };
           }
           if (payload) {
-            const r = saveCustomerScoped(store, payload);
+            const r = saveCustomerScoped(store, payload, {
+              skipPersist: true,
+              dedupeContactByName: true,
+              preserveExistingEmpty: true,
+              nextCustId: nextCustId++
+            });
             if (r.ok) importedCount += 1;
           }
         });
+        if (!options.skipPersist) {
+          persistLocalDelta(store);
+        }
         return {
           status: "success",
           sales_name: targetSales,
@@ -1817,7 +1866,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
       }
 
-      function importProductsBatchScoped(rows, salesName = "曾維崧", mode = "personal_diff") {
+      async function importProductsBatchScoped(rows, salesName = "曾維崧", mode = "personal_diff", options = {}) {
         const seen = new Set();
         const errorLogs = [];
         let newCount = 0;
@@ -1830,9 +1879,22 @@ document.addEventListener("DOMContentLoaded", () => {
         const extraMap = new Map(store._extra_products.map(p => [String(p.model_no || "").toUpperCase(), p]));
         const spBucket = ensureSpecialBucket(store, targetSales);
         const spMap = new Map(spBucket.map(p => [String(p.model_no || "").toUpperCase(), p]));
+        // 預先計算起始 ID，避免在近萬筆迴圈內重複展開陣列導致 O(N^2) 卡死
+        let nextSpId = computeNextId(Object.values(store.special_products_by_sales || {}).flat());
 
         let headerIdxMap = null;
-        (Array.isArray(rows) ? rows : []).forEach((row, idx) => {
+        const rowList = Array.isArray(rows) ? rows : [];
+        const totalRows = rowList.length;
+        const CHUNK_SIZE = 500;
+
+        for (let idx = 0; idx < totalRows; idx++) {
+          if (idx > 0 && idx % CHUNK_SIZE === 0) {
+            if (typeof options.onProgress === "function") {
+              options.onProgress(idx, totalRows);
+            }
+            await yieldToBrowser();
+          }
+          const row = rowList[idx];
           let modelNo = "", lp = 0, dp = 0, desc = "", isOrder = 0;
           if (Array.isArray(row)) {
             const cells = row.map(cleanBatchCell);
@@ -1840,7 +1902,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (idx === 0 && compact.some(c => ["規格(型號)", "規格", "型號", "牌價", "經銷價", "NO."].includes(c))) {
               headerIdxMap = {};
               compact.forEach((c, ci) => { if (c) headerIdxMap[c.toUpperCase()] = ci; });
-              return;
+              continue;
             }
             const pick = (...names) => {
               if (!headerIdxMap) return "";
@@ -1866,23 +1928,23 @@ document.addEventListener("DOMContentLoaded", () => {
             const ord = cleanBatchCell(cleanObj["訂購品(V)"] || cleanObj["訂購品"] || cleanObj.is_order_item);
             isOrder = ord.toUpperCase().includes("V") || ord === "1" ? 1 : 0;
           }
-          if (!modelNo) return;
-          const isDup = seen.has(modelNo.toUpperCase());
+          if (!modelNo) continue;
+          const key = modelNo.toUpperCase();
+          const isDup = seen.has(key);
           if (isDup) {
             duplicateCount += 1;
-            errorLogs.push(`[第 ${idx + 2} 列] 重複型號: ${modelNo}`);
+            if (errorLogs.length < 200) errorLogs.push(`[第 ${idx + 2} 列] 重複型號: ${modelNo}`);
           } else {
-            seen.add(modelNo.toUpperCase());
+            seen.add(key);
           }
           const specStr = desc ? (desc.startsWith(modelNo) ? desc : `${modelNo} (${desc})`) : modelNo;
-          const key = modelNo.toUpperCase();
           const prevStd = prodMap.get(key);
 
           if (mode === "personal_diff") {
             // 與公司發行牌價表型號與經銷價皆相同時略過，僅將差異項目匯入個人牌價表
             if (prevStd && Math.round(dp) === Math.round(Number(prevStd.dealer_price || 0))) {
               skippedStandardCount += 1;
-              return;
+              continue;
             }
             const existingSp = spMap.get(key);
             if (existingSp) {
@@ -1895,9 +1957,8 @@ document.addEventListener("DOMContentLoaded", () => {
               existingSp.deactivated_at = null;
               if (!isDup) updateCount += 1;
             } else {
-              const allSp = Object.values(store.special_products_by_sales || {}).flat();
               const newSp = {
-                id: computeNextId(allSp),
+                id: nextSpId++,
                 owner_sales: targetSales,
                 model_no: modelNo,
                 spec: specStr,
@@ -1914,7 +1975,7 @@ document.addEventListener("DOMContentLoaded", () => {
               spMap.set(key, newSp);
               newCount += 1;
             }
-            return;
+            continue;
           }
 
           const prodObj = {
@@ -1937,12 +1998,14 @@ document.addEventListener("DOMContentLoaded", () => {
             newCount += 1;
           }
           extraMap.set(key, prodObj);
-        });
+        }
 
         if (mode !== "personal_diff") {
           store._extra_products = Array.from(extraMap.values());
         }
-        persistLocalDelta(store);
+        if (!options.skipPersist) {
+          persistLocalDelta(store);
+        }
         return {
           status: "success",
           mode,
@@ -1964,7 +2027,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (pathname === "/api/batch/import-products" && upperMethod === "POST") {
-        const res = importProductsBatchScoped(
+        const res = await importProductsBatchScoped(
           bodyObj?.rows,
           bodyObj?.sales_name || "曾維崧",
           bodyObj?.mode || "personal_diff"
@@ -1976,41 +2039,82 @@ document.addEventListener("DOMContentLoaded", () => {
         const targetSales = normalizeSales(bodyObj?.sales_name);
         const logs = [];
         let custCnt = 0, prodNew = 0, prodUpd = 0;
+        const progBar = document.getElementById("progLegacyThreeStage");
+        const progTxt = document.getElementById("lblLegacyProgressPct");
+        const logBox = document.getElementById("txtLegacyImportLog");
+        const updateLiveProgress = (pct, liveMsg) => {
+          const v = Math.max(0, Math.min(100, Math.round(pct)));
+          if (progBar) progBar.style.width = `${v}%`;
+          if (progTxt) progTxt.textContent = `${v}%`;
+          if (liveMsg && logBox) {
+            logBox.value += liveMsg + "\n";
+            logBox.scrollTop = logBox.scrollHeight;
+          }
+        };
+
+        updateLiveProgress(10, "--- 階段一：開始匯入客戶主檔 ---");
+        await yieldToBrowser();
 
         if (Array.isArray(bodyObj?.customers_rows) && bodyObj.customers_rows.length > 0) {
           logs.push("--- 階段一：開始匯入客戶主檔 ---");
-          const cr = importCustomersBatchScoped(targetSales, bodyObj.customers_rows);
+          const cr = importCustomersBatchScoped(targetSales, bodyObj.customers_rows, { skipPersist: true });
           custCnt = cr.imported_count || 0;
-          logs.push(`[成功] 客戶主檔同步完成，共處理 ${custCnt} 筆（歸屬業務：${targetSales}）。`);
+          const msg1 = `[成功] 客戶主檔同步完成，共處理 ${custCnt} 筆（歸屬業務：${targetSales}）。`;
+          logs.push(msg1);
+          updateLiveProgress(20, msg1);
         } else {
-          logs.push("--- 階段一：未偵測到 [客戶資料庫] 工作表，略過此階段 ---");
+          const msg1 = "--- 階段一：未偵測到 [客戶資料庫] 工作表，略過此階段 ---";
+          logs.push(msg1);
+          updateLiveProgress(20, msg1);
         }
+        await yieldToBrowser();
 
         if (Array.isArray(bodyObj?.products_rows) && bodyObj.products_rows.length > 0) {
-          logs.push("--- 階段二：開始匯入產品主檔 ---");
-          const pr = importProductsBatchScoped(
+          const msg2Start = `--- 階段二：開始比對並匯入產品主檔（共 ${bodyObj.products_rows.length} 列）---`;
+          logs.push(msg2Start);
+          updateLiveProgress(25, msg2Start);
+          await yieldToBrowser();
+
+          const pr = await importProductsBatchScoped(
             bodyObj.products_rows,
             targetSales,
-            bodyObj?.mode || "personal_diff"
+            bodyObj?.mode || "personal_diff",
+            {
+              skipPersist: true,
+              onProgress: (done, total) => {
+                const ratio = total > 0 ? (done / total) : 1;
+                updateLiveProgress(25 + Math.round(ratio * 25));
+              }
+            }
           );
           prodNew = pr.new_count || 0;
           prodUpd = pr.update_count || 0;
-          logs.push(`[成功] 已比對標準品並匯入個人牌價表：新增 ${prodNew} 筆、更新 ${prodUpd} 筆（略過相同標準品 ${pr.skipped_standard_count || 0} 筆）。`);
+          const msg2End = `[成功] 已比對標準品並匯入個人牌價表：新增 ${prodNew} 筆、更新 ${prodUpd} 筆（略過相同標準品 ${pr.skipped_standard_count || 0} 筆）。`;
+          logs.push(msg2End);
+          updateLiveProgress(50, msg2End);
         } else {
-          logs.push("--- 階段二：未偵測到 [經銷牌價表參考] 工作表，略過此階段 ---");
+          const msg2Skip = "--- 階段二：未偵測到 [經銷牌價表參考] 工作表，略過此階段 ---";
+          logs.push(msg2Skip);
+          updateLiveProgress(50, msg2Skip);
         }
+        await yieldToBrowser();
 
-        logs.push("--- 階段三：開始匯入報價單明細 ---");
         const qRawRows = Array.isArray(bodyObj?.quotations_rows) ? bodyObj.quotations_rows : [];
+        const msg3Start = `--- 階段三：開始匯入報價單明細（共 ${qRawRows.length} 列）---`;
+        logs.push(msg3Start);
+        updateLiveProgress(55, msg3Start);
+        await yieldToBrowser();
+
         let qHeaderMap = null;
         const normalizedQuotes = [];
-        qRawRows.forEach((r, idx) => {
+        for (let idx = 0; idx < qRawRows.length; idx++) {
+          const r = qRawRows[idx];
           if (Array.isArray(r)) {
             const cells = r.map(cleanBatchCell);
             if (!qHeaderMap && cells.some(c => ["報價單編號", "報價日期", "客戶名稱", "規格"].includes(c))) {
               qHeaderMap = {};
               cells.forEach((c, ci) => { if (c) qHeaderMap[c] = ci; });
-              return;
+              continue;
             }
             if (qHeaderMap) {
               const obj = { _row_no: idx + 1 };
@@ -2020,19 +2124,22 @@ document.addEventListener("DOMContentLoaded", () => {
           } else if (r && typeof r === "object") {
             normalizedQuotes.push({ _row_no: idx + 2, ...r });
           }
-        });
+        }
 
         const allExistingQuotes = Object.values(store.quotations_by_sales).flat();
         const existingQuoteNos = new Set(allExistingQuotes.map(q => String(q.quote_no || "")));
+        let nextQuoteId = computeNextId(allExistingQuotes);
+        let nextCustId = computeNextId(Object.values(store.customers_by_sales).flat());
         const blacklisted = new Set();
         const skippedQuotes = new Set();
         const errorsList = [];
         const idCustMap = new Map();
 
         logs.push("[掃描] 正在進行日期格式與同單號客戶一致性預先掃描...");
-        normalizedQuotes.forEach(rec => {
+        for (let i = 0; i < normalizedQuotes.length; i++) {
+          const rec = normalizedQuotes[i];
           const oid = cleanBatchCell(rec["報價單編號"] || rec.quote_no);
-          if (!oid) return;
+          if (!oid) continue;
           const { err } = parseBatchDateStrict(rec["報價日期"] || rec.quote_date);
           if (err && !blacklisted.has(oid)) {
             blacklisted.add(oid);
@@ -2051,37 +2158,73 @@ document.addEventListener("DOMContentLoaded", () => {
           } else {
             idCustMap.set(oid, cName);
           }
-        });
+        }
+        await yieldToBrowser();
 
         const qBucket = ensureQuoteBucket(store, targetSales);
+        const custBucket = ensureCustomerBucket(store, targetSales);
+        const custFastMap = new Map(custBucket.map(c => [String(c.name || "").trim(), c]));
+        const seenCustContactPairs = new Set();
         const createdMap = new Map();
         const prodLookup = new Map(store.products.map(p => [String(p.model_no || "").toUpperCase(), p]));
-        let successCount = 0;
+        const spBucketForSales = ensureSpecialBucket(store, targetSales);
+        spBucketForSales.forEach(sp => {
+          const m = String(sp.model_no || "").toUpperCase();
+          if (m && !prodLookup.has(m)) prodLookup.set(m, sp);
+        });
 
-        normalizedQuotes.forEach(rec => {
+        let successCount = 0;
+        const nowTimestamp = new Date().toISOString().slice(0, 19).replace("T", " ");
+        const QUOTE_CHUNK_SIZE = 300;
+        const totalNorm = normalizedQuotes.length;
+
+        for (let i = 0; i < totalNorm; i++) {
+          if (i > 0 && i % QUOTE_CHUNK_SIZE === 0) {
+            const ratio = totalNorm > 0 ? (i / totalNorm) : 1;
+            updateLiveProgress(55 + Math.round(ratio * 40));
+            await yieldToBrowser();
+          }
+
+          const rec = normalizedQuotes[i];
           const oid = cleanBatchCell(rec["報價單編號"] || rec.quote_no);
-          if (!oid) return;
+          if (!oid) continue;
           if (existingQuoteNos.has(oid)) {
             if (!skippedQuotes.has(oid)) {
               skippedQuotes.add(oid);
-              logs.push(`[略過] 單號 ${oid} 已存在於系統，自動略過。`);
+              if (skippedQuotes.size <= 30) {
+                logs.push(`[略過] 單號 ${oid} 已存在於系統，自動略過。`);
+              }
             }
-            return;
+            continue;
           }
-          if (blacklisted.has(oid)) return;
+          if (blacklisted.has(oid)) continue;
           const { dateStr } = parseBatchDateStrict(rec["報價日期"] || rec.quote_date);
-          if (!dateStr) return;
+          if (!dateStr) continue;
 
           const custName = cleanBatchCell(rec["客戶名稱"] || rec.customer_name) || "未命名客戶";
           const contactName = cleanBatchCell(rec["聯絡人"] || rec.contact_name);
           const spec = cleanBatchCell(rec["規格"] || rec["型號"] || rec.model_no) || "(無規格名稱)";
           const projectName = cleanBatchCell(rec["專案名稱"] || rec.project_name);
 
-          saveCustomerScoped(store, { name: custName, owner_sales: targetSales, contact_name: contactName, copy_as_new_contact: true });
-          const custMeta = (ensureCustomerBucket(store, targetSales).find(c => c.name === custName)) || {};
+          // 僅在尚未建立該「客戶+聯絡人」組合時更新記憶體客戶主檔，且絕不在迴圈內寫入磁碟
+          const pairKey = `${custName}||${contactName}`;
+          let custMeta = custFastMap.get(custName);
+          if (!custMeta || !seenCustContactPairs.has(pairKey)) {
+            seenCustContactPairs.add(pairKey);
+            const savedRes = saveCustomerScoped(
+              store,
+              { name: custName, owner_sales: targetSales, contact_name: contactName, copy_as_new_contact: true },
+              { skipPersist: true, dedupeContactByName: true, preserveExistingEmpty: true, nextCustId: nextCustId++ }
+            );
+            if (savedRes && savedRes.customer) {
+              custMeta = savedRes.customer;
+              custFastMap.set(custName, custMeta);
+            }
+          }
+          if (!custMeta) custMeta = {};
 
           if (!createdMap.has(oid)) {
-            const parts = oid.rsplit ? oid.rsplit("-", 2) : oid.split("-");
+            const parts = oid.split("-");
             let prefix = oid, seqNum = 1, revNum = 0;
             if (parts.length >= 3) {
               const last = parts[parts.length - 1], mid = parts[parts.length - 2];
@@ -2092,7 +2235,7 @@ document.addEventListener("DOMContentLoaded", () => {
               }
             }
             const newQ = {
-              id: computeNextId(Object.values(store.quotations_by_sales).flat()),
+              id: nextQuoteId++,
               quote_no: oid,
               prefix,
               sequence: seqNum,
@@ -2126,14 +2269,18 @@ document.addEventListener("DOMContentLoaded", () => {
               source_type: "LEGACY_IMPORT",
               is_deleted: 0,
               deleted_at: null,
-              created_at: new Date().toISOString().slice(0, 19).replace("T", " "),
-              updated_at: new Date().toISOString().slice(0, 19).replace("T", " "),
+              created_at: nowTimestamp,
+              updated_at: nowTimestamp,
               items: []
             };
             qBucket.push(newQ);
             createdMap.set(oid, newQ);
             successCount += 1;
-            logs.push(`[匯入] 報價單：${oid}（${custName}）`);
+            if (successCount <= 60) {
+              logs.push(`[匯入] 報價單：${oid}（${custName}）`);
+            } else if (successCount === 61) {
+              logs.push(`[匯入] ...其餘報價單持續批次寫入中...`);
+            }
           }
 
           const targetQ = createdMap.get(oid);
@@ -2173,7 +2320,7 @@ document.addEventListener("DOMContentLoaded", () => {
             item_status: "pending",
             lost_reason: null
           });
-        });
+        }
 
         createdMap.forEach(q => {
           const sub = q.items.reduce((acc, it) => acc + (Number(it.row_subtotal) || 0), 0);
@@ -2182,7 +2329,15 @@ document.addEventListener("DOMContentLoaded", () => {
           q.grand_total = sub + q.tax_amount;
         });
 
+        updateLiveProgress(96, "[存檔] 正在將匯入成果寫入本機資料庫...");
+        await yieldToBrowser();
+
+        // 三階段全部完成後，唯一執行一次最佳化本機儲存
         persistLocalDelta(store);
+
+        const finalSummary = `處理完畢！本次成功為【${targetSales}】寫入 ${successCount} 張新報價單（略過既有單號 ${skippedQuotes.size} 張）。`;
+        logs.push(`[完成] ${finalSummary}`);
+
         return jsonResponse({
           status: "success",
           sales_name: targetSales,
@@ -2193,7 +2348,7 @@ document.addEventListener("DOMContentLoaded", () => {
           skipped_count: skippedQuotes.size,
           errors: errorsList,
           logs,
-          message: `處理完畢！本次成功為【${targetSales}】寫入 ${successCount} 張新報價單（略過既有單號 ${skippedQuotes.size} 張）。`
+          message: finalSummary
         });
       }
 
@@ -16448,8 +16603,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         btnStartLegacy.disabled = true;
         btnStartLegacy.style.opacity = "0.55";
-        setLegacyProgress(40);
-        if (logLegacy) logLegacy.value += `\n[開始執行] 正在為【${activeSales}】寫入資料，請稍候...\n`;
+        setLegacyProgress(5);
+        if (logLegacy) {
+          logLegacy.value += `\n[開始執行] 正在為【${activeSales}】啟動三階段分批匯入，請稍候...\n`;
+          logLegacy.scrollTop = logLegacy.scrollHeight;
+        }
+        await new Promise(resolve => setTimeout(resolve, 10));
 
         try {
           const resp = await fetch("/api/batch/import-legacy", {
@@ -16468,7 +16627,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
           setLegacyProgress(100);
           if (logLegacy && Array.isArray(res.logs)) {
-            logLegacy.value += res.logs.join("\n") + "\n";
+            logLegacy.value += `\n--- 匯入執行摘要 ---\n` + res.logs.join("\n") + "\n";
             logLegacy.scrollTop = logLegacy.scrollHeight;
           }
           if (resBoxLegacy) {

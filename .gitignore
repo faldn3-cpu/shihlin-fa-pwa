@@ -1,0 +1,40 @@
+# Python 虛擬環境
+.venv/
+venv/
+ENV/
+env/
+
+# Python 編譯快取與暫存檔
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 機密設定與連線金鑰（嚴禁存入 Git，保護密碼）
+.env
+*.env
+*.local
+
+# 管理員本機專用加密檢視工具（僅留本機，不上傳 GitHub）
+json_vault_viewer.py
+
+# IDE 與編輯器暫存
+.vscode/
+.idea/
+*.swp
+
+# 紀錄檔
+*.log
+
+# 本機資料庫與安全備份資料夾 (保護資料安全不進 Git)
+*.db
+*.sqlite
+*.sqlite3
+Backups/
+
+# 本機參考資料夾 (避免舊版大檔進 Git)
+之前做的應用程式跟網頁/
+
+# 嚴禁任何前端打包資料檔進入公開 Git 儲存庫
+web/data/*.json
+web/data/*.db

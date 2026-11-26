@@ -1,0 +1,567 @@
+# -*- coding: utf-8 -*-
+"""
+士林電機 FA 業務戰情與報價系統 - 資料存取層自動化驗證腳本 (test_data_access.py)
+嚴格檢驗：
+1. 資料表建立與種子資料
+2. 業務日報 (OGSM) 寫入與讀取
+3. CRM 商機轉為 Deal 案件
+4. 報價單三段式編號生成 (Prefix-Seq-Rev)
+5. 報價單 Append-Only 鐵律 (修改產生新版次，舊單不被覆蓋)
+6. 垃圾桶軟刪除與一鍵還原
+7. 專案售價申請單串聯與領先指標 4 週防呆審核
+8. 多人業務資料嚴格隔離 (客戶、歷史報價單、手機草稿匣、歷史單價分析)
+9. 共通牌價表 + 業務個人特殊品牌價表，以及【方案 A】特殊品轉標準品自動取代與封存留紀錄
+"""
+
+import sys
+from pathlib import Path
+
+# 將專案目錄加入模組搜尋路徑
+project_dir = Path(__file__).resolve().parent
+sys.path.insert(0, str(project_dir))
+
+# 設定 Windows 終端輸出編碼為 UTF-8
+if sys.platform.startswith("win"):
+    try:
+        reconfig_out = getattr(sys.stdout, "reconfigure", None)
+        if callable(reconfig_out):
+            reconfig_out(encoding="utf-8")
+        reconfig_err = getattr(sys.stderr, "reconfigure", None)
+        if callable(reconfig_err):
+            reconfig_err(encoding="utf-8")
+    except Exception:
+        pass
+
+import data_access
+
+
+def run_all_tests():
+    print("=" * 65)
+    print("[TEST] 開始執行 data_access.py 資料存取層全自動化驗證")
+    print("=" * 65)
+
+    test_db = project_dir / "test_verification.db"
+    if test_db.exists():
+        try:
+            test_db.unlink()
+        except Exception:
+            pass
+
+    # 1. 驗證資料庫建立與種子資料
+    print("\n[測試 1] 初始化資料庫與檢查種子資料...")
+    data_access.init_database(test_db)
+    conn = data_access.get_connection(test_db)
+
+    tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
+    table_names = [t["name"] for t in tables]
+    required_tables = [
+        "daily_report", "crm_opportunity", "deal_case", "quotation_header",
+        "quotation_item", "special_price_application", "customer_master",
+        "product_master", "manager_task", "industry_strategy",
+        "scoreboard_metric", "system_settings",
+        "contact_master", "personal_special_product", "quotation_draft"
+    ]
+    for req in required_tables:
+        assert req in table_names, f"缺少必要資料表: {req}"
+    print(f"  [OK] 核心與擴充業務表全數成功建立 (目前共有 {len(table_names)} 張表格)")
+
+    customers = conn.execute("SELECT COUNT(*) AS c FROM customer_master;").fetchone()["c"]
+    products = conn.execute("SELECT COUNT(*) AS c FROM product_master;").fetchone()["c"]
+    assert customers >= 2, "客戶主檔種子資料不足"
+    assert products >= 5, "產品庫種子資料不足"
+    print(f"  [OK] 主檔種子資料正確植入：客戶 {customers} 家、產品庫 {products} 筆")
+    conn.close()
+
+    # 2. 驗證業務日報 (OGSM)
+    print("\n[測試 2] 驗證業務日報 (OGSM) 寫入與查詢...")
+    original_db = data_access.DEFAULT_DB_FILE
+    data_access.DEFAULT_DB_FILE = test_db
+
+    try:
+        report_id = data_access.save_daily_report({
+            "report_date": "2026-10-20",
+            "sales_name": "曾維崧",
+            "customer_name": "贊翔實業有限公司",
+            "contact_name": "陳姿蓉特助",
+            "visit_type": "實地拜訪",
+            "content_summary": "拜訪洽談本季出貨目標，客戶表達有新產線變頻器升級需求。"
+        })
+        assert report_id > 0, "日報寫入失敗"
+        reports = data_access.get_daily_reports(sales_name="曾維崧")
+        assert len(reports) == 1, "日報查詢筆數不符合"
+        assert reports[0]["customer_name"] == "贊翔實業有限公司"
+        print(f"  [OK] 業務日報寫入成功 (編號 ID={report_id})，資料精準回讀！")
+
+        # 3. 驗證商機 (CRM) 轉 Deal 案件
+        print("\n[測試 3] 驗證商機 (CRM) 轉成 Deal 專案案件...")
+        opp_id = data_access.save_crm_opportunity({
+            "daily_report_id": report_id,
+            "customer_name": "贊翔實業有限公司",
+            "industry_type": "自動化設備產業",
+            "product_series": "士林品",
+            "est_quarter": "Q4",
+            "est_scale": 1500000.0,
+            "status": "評估中"
+        })
+        assert opp_id > 0
+        print(f"  [OK] 第二層 CRM 商機建立成功 (ID={opp_id})")
+
+        deal_id = data_access.save_deal_case({
+            "opportunity_id": opp_id,
+            "customer_name": "贊翔實業有限公司",
+            "project_name": "新竹產線變頻器升級案",
+            "project_type": "專案特價",
+            "comp_brand": "台達",
+            "comp_channel": "能麒",
+            "est_deal_date": "2026-11-30",
+            "est_amount": 1200000.0,
+            "stage": "報價中"
+        })
+        assert deal_id > 0
+        deals = data_access.get_deal_cases(stage="報價中")
+        assert len(deals) == 1
+        assert deals[0]["project_name"] == "新竹產線變頻器升級案"
+        print(f"  [OK] 第三層 Deal 專案案件升格成功 (ID={deal_id})")
+
+        # 4. 驗證三段式報價單編號與 Append-Only (修改另存新版，舊單不覆蓋)
+        print("\n[測試 4] 驗證報價單 Append-Only 鐵律 (修改產生新版次，禁止覆蓋舊資料)...")
+        header_data_v0 = {
+            "prefix": "贊翔2610",
+            "deal_id": deal_id,
+            "sales_name": "曾維崧",
+            "quote_date": "2026-10-20",
+            "valid_date": "2026-11-19",
+            "customer_name": "贊翔實業有限公司",
+            "tax_id": "87654321",
+            "contact_name": "陳姿蓉特助",
+            "project_name": "新竹產線變頻器升級案",
+            "project_type": "專案特價",
+            "subtotal": 141000.0,
+            "tax_rate": 5.0,
+            "tax_amount": 7050.0,
+            "grand_total": 148050.0,
+            "status": "追蹤中"
+        }
+        items_data_v0 = [
+            {
+                "model_no": "SE3-023-11K",
+                "spec": "3Φ220V 15HP 高機能向量變頻器",
+                "dealer_price": 14100.0,
+                "discount_pct": 100.0,
+                "final_unit_price": 14100.0,
+                "quantity": 10.0,
+                "row_subtotal": 141000.0,
+                "note_lead_time": "現貨庫存"
+            }
+        ]
+
+        quote_no_v0 = data_access.save_quotation(header_data_v0, items_data_v0)
+        assert quote_no_v0 == "贊翔2610-001-00", f"單號格式不符合預期: {quote_no_v0}"
+        print(f"  [OK] 初版報價單儲存成功：單號為【{quote_no_v0}】")
+
+        header_data_v1 = header_data_v0.copy()
+        header_data_v1["sequence"] = 1
+        header_data_v1["subtotal"] = 120000.0
+        header_data_v1["grand_total"] = 126000.0
+        items_data_v1 = [
+            {
+                "model_no": "SE3-023-11K",
+                "spec": "3Φ220V 15HP 高機能向量變頻器",
+                "dealer_price": 14100.0,
+                "discount_pct": 85.0,
+                "final_unit_price": 12000.0,
+                "quantity": 10.0,
+                "row_subtotal": 120000.0,
+                "note_lead_time": "現貨庫存"
+            }
+        ]
+        quote_no_v1 = data_access.save_quotation(header_data_v1, items_data_v1)
+        assert quote_no_v1 == "贊翔2610-001-01", f"新版次單號不符合預期: {quote_no_v1}"
+        print(f"  [OK] 次版報價單另存成功：單號自動升級為【{quote_no_v1}】")
+
+        old_quote = data_access.get_quotation("贊翔2610-001-00")
+        new_quote = data_access.get_quotation("贊翔2610-001-01")
+        assert old_quote is not None, "舊版報價單遭到抹除！違反 Append-Only 鐵律！"
+        assert new_quote is not None, "新版報價單未成功讀出"
+        assert old_quote["grand_total"] == 148050.0, "舊版報價金額被改動！"
+        assert new_quote["grand_total"] == 126000.0, "新版報價金額不正確！"
+        print("  [OK] 成功通過 Append-Only 鐵律審查：舊版 00 與新版 01 獨立並存、無痕追蹤！")
+
+        # 5. 驗證垃圾桶軟刪除與一鍵復原
+        print("\n[測試 5] 驗證垃圾桶機制 (軟刪除與復原)...")
+        data_access.soft_delete_quotation("贊翔2610-001-01")
+        active_list = data_access.list_quotations(include_deleted=False, sales_name="曾維崧")
+        trash_list = data_access.list_quotations(include_deleted=True, sales_name="曾維崧")
+        assert any(q["quote_no"] == "贊翔2610-001-00" for q in active_list)
+        assert not any(q["quote_no"] == "贊翔2610-001-01" for q in active_list)
+        assert any(q["quote_no"] == "贊翔2610-001-01" for q in trash_list)
+        print("  [OK] 軟刪除成功：單號移入垃圾桶，正常清單已隱藏。")
+
+        data_access.restore_quotation("贊翔2610-001-01")
+        active_list_after = data_access.list_quotations(include_deleted=False, sales_name="曾維崧")
+        assert any(q["quote_no"] == "贊翔2610-001-01" for q in active_list_after)
+        print("  [OK] 一鍵復原成功：單號順利移回正常報價管理清單。")
+
+        # 6. 驗證專案售價申請單
+        print("\n[測試 6] 驗證專案售價申請單...")
+        app_id = data_access.save_special_price_application({
+            "deal_id": deal_id,
+            "quotation_id": new_quote["id"],
+            "quote_no": "贊翔2610-001-01",
+            "applicant_sales": "曾維崧",
+            "apply_reason": "台達報價8,500搶單，為保住年約客戶，建議以85折專案價承做。",
+            "comp_price_info": "台達經銷商能麒出價單價約8,500元未稅",
+            "target_subtotal": 120000.0,
+            "est_margin_pct": 21.5
+        })
+        assert app_id > 0
+        print(f"  [OK] 專案售價申請單成功建立 (ID={app_id})！")
+
+        # 7. 驗證三大產品線領先指標 (驅動目標) 與 4 週防呆審核
+        print("\n[測試 7] 驗證領先指標 (驅動目標) 讀取、4 週防呆阻擋與主管審核...")
+        drivers_tseng = data_access.get_active_drivers("曾維崧")
+        assert len(drivers_tseng) == 3, f"曾維崧應有 3 條產品線指標，實際有 {len(drivers_tseng)} 條"
+        for drv in drivers_tseng:
+            assert drv["product_line"] in ["士林伺服", "士林變頻器", "士林PLC"]
+            assert drv["rate_pct"] >= 0.0
+            assert drv["traffic_light"] in ["green", "yellow", "red"]
+        print("  [OK] 曾維崧 3 條產品線驅動指標讀取成功，紅黃綠燈計算精準！")
+
+        drivers_yeh = data_access.get_active_drivers("葉仁豪")
+        servo_yeh = next(d for d in drivers_yeh if d["product_line"] == "士林伺服")
+        assert servo_yeh["can_change"] is False, "未滿 28 天卻顯示可變更！"
+        ok, msg, req_id = data_access.apply_driver_change({
+            "driver_id": servo_yeh["id"],
+            "new_driver_name": "想要隨便更換指標",
+            "new_target_val": 10.0,
+            "new_unit": "次",
+            "change_reason": "測試防呆"
+        })
+        assert ok is False, "未滿 28 天之指標竟然申請成功！防呆機制失效！"
+        assert "未滿 4 週" in msg, f"防呆提示訊息不正確: {msg}"
+        print(f"  [OK] 成功通過 4 週防呆審查：未滿 28 天申請遭精準阻擋！(系統提示：{msg})")
+
+        drivers_ren = data_access.get_active_drivers("曾仁君")
+        servo_ren = next(d for d in drivers_ren if d["product_line"] == "士林伺服")
+        assert servo_ren["can_change"] is True, "已滿 28 天卻顯示不可變更！"
+        ok_apply, msg_apply, req_id_apply = data_access.apply_driver_change({
+            "driver_id": servo_ren["id"],
+            "new_driver_name": "先進半導體產線實機調機與規格制定",
+            "new_target_val": 5.0,
+            "new_unit": "場",
+            "change_reason": "配合新竹大廠擴產，原試機轉為深入調機規格制定。"
+        })
+        assert ok_apply is True, f"滿 4 週指標申請失敗: {msg_apply}"
+        assert req_id_apply is not None
+        print(f"  [OK] 滿 4 週指標申請成功送出 (申請單 ID={req_id_apply})！")
+
+        ok_rev, msg_rev = data_access.review_driver_change(req_id_apply, action="approve", reviewer_name="曾維崧", comment="同意策略調整，全力支援技術工程師。")
+        assert ok_rev is True, f"主管審核核准失敗: {msg_rev}"
+
+        drivers_ren_after = data_access.get_active_drivers("曾仁君")
+        servo_ren_after = next(d for d in drivers_ren_after if d["product_line"] == "士林伺服")
+        assert servo_ren_after["driver_name"] == "先進半導體產線實機調機與規格制定"
+        assert servo_ren_after["target_val"] == 5.0
+        assert servo_ren_after["actual_val"] == 0.0
+        print("  [OK] 主管核准生效：舊指標安全歸檔封存，新指標成功上線運作！")
+
+        ok_apply2, _, req_id_apply2 = data_access.apply_driver_change({
+            "driver_id": servo_ren_after["id"],
+            "new_driver_name": "短線電訪 50 通",
+            "new_target_val": 50.0,
+            "new_unit": "通",
+            "change_reason": "短線衝刺"
+        })
+        assert ok_apply2 is False, "新指標未滿 28 天卻能再次申請！"
+        print("  [OK] 新指標剛上線執行 0 天，再次觸發 4 週防呆鎖定保護！")
+
+        # 8. 驗證業務人員資料嚴格隔離 (客戶、歷史報價單、手機草稿匣、歷史單價分析)
+        print("\n[測試 8] 驗證不同業務人員資料完全獨立隔離...")
+        cust_yeh_id = data_access.save_customer({
+            "owner_sales": "葉仁豪",
+            "name": "葉仁豪專屬測試機械廠",
+            "tax_id": "11223344",
+            "default_contact": "林經理",
+            "phone": "04-23456789"
+        })
+        assert cust_yeh_id > 0
+        cust_list_tseng = data_access.get_customers(sales_name="曾維崧")
+        cust_list_yeh = data_access.get_customers(sales_name="葉仁豪")
+        assert not any(c["name"] == "葉仁豪專屬測試機械廠" for c in cust_list_tseng), "曾維崧不應看到葉仁豪的專屬客戶！"
+        assert any(c["name"] == "葉仁豪專屬測試機械廠" for c in cust_list_yeh), "葉仁豪應看到自己的客戶！"
+        print("  [OK] 客戶主檔依業務人員完全獨立隔離驗證通過！")
+
+        quotes_tseng = data_access.list_quotations(include_deleted=False, sales_name="曾維崧")
+        quotes_yeh = data_access.list_quotations(include_deleted=False, sales_name="葉仁豪")
+        assert len(quotes_tseng) >= 2
+        assert len(quotes_yeh) == 0, "葉仁豪不應看到曾維崧的歷史報價單！"
+        print("  [OK] 歷史報價單依業務人員完全獨立隔離驗證通過！")
+
+        draft_id = data_access.save_quotation_draft({
+            "sales_name": "曾維崧",
+            "customer_name": "贊翔實業有限公司",
+            "subtotal": 28200.0,
+            "items": [{"model_no": "SE3-023-11K", "qty": 2, "final_price": 14100}]
+        })
+        assert draft_id > 0
+        drafts_tseng = data_access.get_quotation_drafts(sales_name="曾維崧")
+        drafts_yeh = data_access.get_quotation_drafts(sales_name="葉仁豪")
+        assert len(drafts_tseng) == 1
+        assert len(drafts_yeh) == 0, "葉仁豪不應看到曾維崧的手機草稿！"
+        deleted_bad = data_access.delete_quotation_draft(draft_id, sales_name="葉仁豪")
+        assert deleted_bad is False, "其他業務不應能刪除曾維崧的手機草稿！"
+        deleted_ok = data_access.delete_quotation_draft(draft_id, sales_name="曾維崧")
+        assert deleted_ok is True
+        print("  [OK] 手機報價草稿匣依業務人員直連資料庫與隔離驗證通過！")
+
+        analysis_tseng = data_access.analyze_historical_prices(sales_name="曾維崧", model_keyword="SE3-023-11K")
+        analysis_yeh = data_access.analyze_historical_prices(sales_name="葉仁豪", model_keyword="SE3-023-11K")
+        assert len(analysis_tseng) >= 2
+        assert len(analysis_yeh) == 0, "葉仁豪不應查到曾維崧的歷史單價分析紀錄！"
+        print("  [OK] 歷史單價分析依業務人員完全獨立隔離驗證通過！")
+
+        # 9. 驗證共通牌價表 + 個人特殊品牌價表，以及【方案 A】特殊品轉標準品自動取代與封存
+        print("\n[測試 9] 驗證個人特殊品牌價表與【方案 A】轉標準品自動取代並封存留紀錄...")
+        ok_sp, msg_sp, sp_id = data_access.save_personal_special_product({
+            "owner_sales": "曾維崧",
+            "model_no": "SP-CUSTOM-9000",
+            "spec": "客製化耐高溫伺服馬達",
+            "dealer_price": 32000.0,
+            "stock_qty": 3,
+            "note": "新竹半導體客製型號"
+        })
+        assert ok_sp is True and sp_id > 0, f"儲存特殊品失敗: {msg_sp}"
+
+        # 曾維崧查得到此特殊品，葉仁豪查不到
+        prods_tseng = data_access.search_products(query="SP-CUSTOM-9000", sales_name="曾維崧")
+        prods_yeh = data_access.search_products(query="SP-CUSTOM-9000", sales_name="葉仁豪")
+        assert any(p["model_no"] == "SP-CUSTOM-9000" and p["is_special"] == 1 for p in prods_tseng)
+        assert not any(p["model_no"] == "SP-CUSTOM-9000" for p in prods_yeh), "其他業務不應看到曾維崧的未公開特殊品！"
+        print("  [OK] 個人特殊品僅建立者可見，其他業務完全不可見！")
+
+        # 執行【方案 A】：公司正式將 SP-CUSTOM-9000 轉為共通標準品發行 (標準經銷價 35000)
+        ok_promo, msg_promo = data_access.promote_special_to_standard(
+            item_id=sp_id,
+            standard_dealer_price=35000.0
+        )
+        assert ok_promo is True, f"特殊品轉標準品失敗: {msg_promo}"
+
+        # 驗證共通產品庫現在全員可見，且價格為標準品價格 35000
+        prods_tseng_after = data_access.search_products(query="SP-CUSTOM-9000", sales_name="曾維崧")
+        prods_yeh_after = data_access.search_products(query="SP-CUSTOM-9000", sales_name="葉仁豪")
+        std_item_tseng = next(p for p in prods_tseng_after if p["model_no"] == "SP-CUSTOM-9000")
+        std_item_yeh = next(p for p in prods_yeh_after if p["model_no"] == "SP-CUSTOM-9000")
+        assert std_item_tseng["is_special"] == 0
+        assert std_item_tseng["dealer_price"] == 35000.0
+        assert std_item_yeh["dealer_price"] == 35000.0
+
+        # 驗證曾維崧的個人特殊品已被自動標記為封存，並完整保留原價 32000 與新標準價 35000 對照紀錄
+        sp_all_tseng = data_access.get_personal_special_products(sales_name="曾維崧", include_archived=True)
+        archived_sp = next(s for s in sp_all_tseng if s["model_no"] == "SP-CUSTOM-9000")
+        assert archived_sp["is_archived"] == 1
+        assert archived_sp["dealer_price"] == 32000.0
+        assert archived_sp["archived_standard_price"] == 35000.0
+        assert "32,000" in archived_sp["archived_note"] and "35,000" in archived_sp["archived_note"]
+        print(f"  [OK] 【方案 A】驗證通過：特殊品自動由標準品取代，並封存保留價格軌跡 ({archived_sp['archived_note']})！")
+
+        # 10. 驗證「同一個業務名下公司名稱不可重複，但不同業務可以各自建檔」
+        print("\n[測試 10] 驗證客戶同公司跨業務獨立建檔與同業務更新不重複...")
+        ok_c1, msg_c1, cid_ren = data_access.save_quotation_customer({
+            "owner_sales": "曾仁君",
+            "name": "台灣精密自動化股份有限公司",
+            "tax_id": "55667788",
+            "contact_name": "王經理",
+            "phone": "03-1111111"
+        })
+        ok_c2, msg_c2, cid_chang = data_access.save_quotation_customer({
+            "owner_sales": "張何達",
+            "name": "台灣精密自動化股份有限公司",
+            "tax_id": "55667788",
+            "contact_name": "李採購",
+            "phone": "02-2222222"
+        })
+        assert ok_c1 and ok_c2, f"跨業務建同名客戶失敗: {msg_c1} / {msg_c2}"
+        assert cid_ren != cid_chang, f"不同業務同名客戶竟共用同一筆 ID={cid_ren}"
+
+        list_ren = data_access.get_customers(sales_name="曾仁君")
+        list_chang = data_access.get_customers(sales_name="張何達")
+        ren_rec = next(c for c in list_ren if c["name"] == "台灣精密自動化股份有限公司")
+        chang_rec = next(c for c in list_chang if c["name"] == "台灣精密自動化股份有限公司")
+        assert ren_rec["phone"] == "03-1111111" and ren_rec["default_contact"] == "王經理"
+        assert chang_rec["phone"] == "02-2222222" and chang_rec["default_contact"] == "李採購"
+
+        # 同業務再次儲存同名公司應更新原紀錄，且不影響張何達的資料
+        ok_c1_upd, _, cid_ren_upd = data_access.save_quotation_customer({
+            "owner_sales": "曾仁君",
+            "name": "台灣精密自動化股份有限公司",
+            "tax_id": "55667788",
+            "contact_name": "王經理",
+            "phone": "03-9999999"
+        })
+        assert ok_c1_upd and cid_ren_upd == cid_ren, "同業務建同名公司應更新原 ID 而非重複新增"
+        list_ren_after = data_access.get_customers(sales_name="曾仁君")
+        list_chang_after = data_access.get_customers(sales_name="張何達")
+        assert sum(1 for c in list_ren_after if c["name"] == "台灣精密自動化股份有限公司") == 1
+        assert next(c for c in list_ren_after if c["name"] == "台灣精密自動化股份有限公司")["phone"] == "03-9999999"
+        assert next(c for c in list_chang_after if c["name"] == "台灣精密自動化股份有限公司")["phone"] == "02-2222222"
+        print("  [OK] 跨業務可建立同名公司且互不覆蓋、同業務更新維持唯一驗證通過！")
+
+        # 11. 驗證集中管理模式 (一人一資料夾) 匯出與匯入
+        print("\n[測試 11] 驗證集中管理模式一人一資料夾匯出與匯入...")
+        import shutil
+        test_store_dir = project_dir / "test_centralized_store"
+        if test_store_dir.exists():
+            shutil.rmtree(test_store_dir, ignore_errors=True)
+        try:
+            exp_res = data_access.export_centralized_sales_folders(base_dir=test_store_dir, db_path=test_db)
+            assert exp_res["status"] == "success"
+            assert (test_store_dir / "00_全體共用區" / "standard_products.json").exists()
+            assert (test_store_dir / "00_全體共用區" / "system_settings.json").exists()
+            assert (test_store_dir / "01_業務個人資料區" / "曾仁君" / "customers_曾仁君.json").exists()
+            assert (test_store_dir / "01_業務個人資料區" / "張何達" / "customers_張何達.json").exists()
+
+            imp_res = data_access.import_centralized_sales_folders(base_dir=test_store_dir, db_path=test_db)
+            assert imp_res["status"] == "success"
+            assert imp_res["imported_products"] >= 5
+            assert imp_res["imported_customers"] >= 2
+            print("  [OK] 集中管理模式 (00_全體共用區 + 01_業務個人資料區/<業務姓名>) 匯出與匯入驗證通過！")
+        finally:
+            if test_store_dir.exists():
+                shutil.rmtree(test_store_dir, ignore_errors=True)
+
+        # 12. 驗證批次資料管理 (客戶 / 產品 / 舊版歷史報價單三階段匯入精靈)
+        print("\n[測試 12] 驗證批次匯入客戶、產品與三階段歷史報價單匯入精靈...")
+        cust_batch_res = data_access.batch_import_customers_data(
+            "楊家豪",
+            [
+                ["姓名", "統編", "公司", "電話", "傳真", "手機", "E-MAIL", "地址", "付款方式"],
+                ["陳工程師", "88112233", "宏達電機測試廠", "03-5551111", "03-5551112", "0912345678", "chen@example.com", "新竹縣", "月結 30 天電匯"],
+                ["林採購", "88112233", "宏達電機測試廠", "03-5551111", "03-5551112", "0922334455", "lin@example.com", "新竹縣", "月結 30 天電匯"],
+            ],
+            db_path=test_db
+        )
+        assert cust_batch_res["imported_count"] == 2
+        yang_custs = data_access.get_customers(sales_name="楊家豪")
+        yang_target = next(c for c in yang_custs if c["name"] == "宏達電機測試廠")
+        assert len(yang_target["contacts"]) == 2
+        assert not any(c["name"] == "宏達電機測試廠" for c in data_access.get_customers(sales_name="張書偉"))
+
+        prod_batch_res = data_access.batch_import_products_data(
+            [
+                ["NO.", "規格(型號)", "牌價", "經銷價", "說明", "訂購品(V)"],
+                [1, "BATCH-SA3-001", "20,000", "10,000", "批次測試變頻器", "V"],
+                [2, "BATCH-SA3-001", "22,000", "11,000", "批次測試變頻器(修正)", "V"],
+            ],
+            db_path=test_db
+        )
+        assert prod_batch_res["new_count"] == 1
+        assert prod_batch_res["duplicate_count"] == 1
+        found_batch_prod = data_access.search_products(query="BATCH-SA3-001", sales_name="楊家豪")
+        assert any(p["model_no"] == "BATCH-SA3-001" and p["dealer_price"] == 11000.0 and p["is_order_item"] == 1 for p in found_batch_prod)
+
+        legacy_res = data_access.batch_import_legacy_three_stage(
+            "楊家豪",
+            {
+                "customers_rows": [
+                    ["姓名", "統編", "公司", "電話", "傳真", "手機", "E-MAIL", "地址", "付款方式"],
+                    ["周課長", "77112233", "三階段測試企業", "02-88887777", "", "", "", "台北市", "現金"]
+                ],
+                "products_rows": [
+                    ["NO.", "規格(型號)", "牌價", "經銷價", "說明", "訂購品(V)"],
+                    [1, "LEGACY-PLC-01", "15000", "7500", "歷史精靈測試PLC", ""]
+                ],
+                "quotations_rows": [
+                    ["報價單編號", "報價日期", "客戶名稱", "聯絡人", "專案名稱", "規格", "數量/EA", "單價", "小計", "實際折數", "交期", "說明事項"],
+                    ["LEGACY2611-001-00", "2026-10-01", "三階段測試企業", "周課長", "產線擴建", "LEGACY-PLC-01", "2", "8000", "16000", "106.7%", "現貨", "1. 標準保固一年"],
+                    ["BADDATE2611-002-00", "日期錯誤!!", "三階段測試企業", "周課長", "異常測試", "LEGACY-PLC-01", "1", "8000", "8000", "100%", "", ""]
+                ]
+            },
+            db_path=test_db
+        )
+        assert legacy_res["quote_imported_count"] == 1
+        assert len(legacy_res["errors"]) == 1 and "BADDATE2611-002-00" in legacy_res["errors"][0]
+        yang_quotes = data_access.list_quotations(sales_name="楊家豪")
+        assert any(q["quote_no"] == "LEGACY2611-001-00" and q["subtotal"] == 16000.0 for q in yang_quotes)
+        assert not any(q["quote_no"] == "LEGACY2611-001-00" for q in data_access.list_quotations(sales_name="張書偉"))
+        print("  [OK] 批次匯入客戶、產品與歷史報價單三階段智慧匯入精靈（含業務隔離與異常攔截）驗證通過！")
+
+        # 13. 驗證 JSON 檔案加密亂碼保護、雙層金鑰隔離與防竄改攔截
+        print("\n[測試 13] 驗證 JSON 檔案加密亂碼保護、雙層金鑰隔離與防竄改攔截...")
+        enc_test_dir = project_dir / "test_encrypted_vault_dir"
+        if enc_test_dir.exists():
+            shutil.rmtree(enc_test_dir, ignore_errors=True)
+        try:
+            test_pw = "TestVault#2026"
+            exp_enc = data_access.export_centralized_sales_folders(
+                base_dir=enc_test_dir, db_path=test_db, encrypt=True, password=test_pw
+            )
+            assert exp_enc["status"] == "success" and exp_enc["encrypted"] is True
+            cust_enc_path = enc_test_dir / "01_業務個人資料區" / "曾仁君" / "customers_曾仁君.json"
+            raw_text = cust_enc_path.read_text(encoding="utf-8")
+            assert "__encrypted_vault__" in raw_text, "匯出之 JSON 未加上加密外封包"
+            assert "台灣精密自動化股份有限公司" not in raw_text, "加密後之 JSON 檔案不得包含明文客戶名稱"
+            assert "03-9999999" not in raw_text, "加密後之 JSON 檔案不得包含明文電話號碼"
+
+            # 驗證正確管理員密碼可 100% 還原後台檔案
+            decrypted_custs = data_access._read_json_utf8(cust_enc_path, password=test_pw)
+            assert any(c.get("name") == "台灣精密自動化股份有限公司" for c in decrypted_custs)
+
+            # 驗證錯誤密碼與網頁自動解鎖金鑰皆絕對無法解開後台個人資料檔
+            for bad_pw in ("WrongPassword!", data_access.WEB_SEED_AUTO_KEY):
+                wrong_blocked = False
+                try:
+                    data_access._read_json_utf8(cust_enc_path, password=bad_pw)
+                except ValueError:
+                    wrong_blocked = True
+                assert wrong_blocked, "非授權密碼或網頁自動金鑰竟未在後台檔案遭攔截"
+
+            # 驗證網頁自動解鎖資料包：磁碟為亂碼且採用 web_auto 範疇，網頁可自動解鎖，錯誤密碼仍被拒絕
+            seed_enc_file = enc_test_dir / "test_encrypted_seed.json"
+            seed_res = data_access.export_builtin_web_seed_json(
+                output_path=seed_enc_file, db_path=test_db, encrypt=True
+            )
+            assert seed_res["status"] == "success" and seed_res.get("key_scope") == "web_auto"
+            assert seed_enc_file.exists()
+            seed_raw = seed_enc_file.read_text(encoding="utf-8")
+            assert "__encrypted_vault__" in seed_raw and '"key_scope":"web_auto"' in seed_raw
+            assert "BATCH-SA3-001" not in seed_raw
+
+            # 模擬網頁瀏覽器以自動金鑰解鎖
+            seed_dec_web = data_access._read_json_utf8(seed_enc_file, password=data_access.WEB_SEED_AUTO_KEY)
+            assert any(p.get("model_no") == "BATCH-SA3-001" for p in seed_dec_web.get("products", []))
+
+            # 若本機已設定管理員 .env 密碼，驗證管理員輸入私人密碼亦可在檢視器開啟，輸入錯誤密碼仍遭拒絕
+            try:
+                real_admin_pw = data_access.get_vault_password(None)
+            except ValueError:
+                real_admin_pw = ""
+            if real_admin_pw:
+                seed_dec_admin = data_access._read_json_utf8(seed_enc_file, password=real_admin_pw)
+                assert any(p.get("model_no") == "BATCH-SA3-001" for p in seed_dec_admin.get("products", []))
+
+            seed_wrong_blocked = False
+            try:
+                data_access._read_json_utf8(seed_enc_file, password="WrongPassword!")
+            except ValueError:
+                seed_wrong_blocked = True
+            assert seed_wrong_blocked, "錯誤密碼竟未被網頁資料包檢視驗證攔截"
+            print("  [OK] 後台私人密碼與網頁自動金鑰雙層隔離、正確密碼解密及防竄改攔截驗證通過！")
+        finally:
+            if enc_test_dir.exists():
+                shutil.rmtree(enc_test_dir, ignore_errors=True)
+
+        print("\n" + "=" * 65)
+        print("[SUCCESS] 恭喜！data_access.py 全數 13 大單元測試 100% 通過！")
+        print("=" * 65)
+
+    finally:
+        data_access.DEFAULT_DB_FILE = original_db
+        if test_db.exists():
+            try:
+                test_db.unlink()
+            except Exception:
+                pass
+
+
+if __name__ == "__main__":
+    run_all_tests()

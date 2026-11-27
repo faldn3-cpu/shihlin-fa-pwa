@@ -13,7 +13,7 @@
  * 2. 點擊左側齒輪「專案設定」->「指令碼屬性」，新增屬性：
  *    - ADMIN_EMAILS：管理員 Google 信箱（多位請用半形逗號分隔）
  *    - WHITELIST_SHEET_ID：（選填）既有業務白名單試算表 ID；若留空，系統會自動在雲端硬碟尋找或建立「報價系統業務白名單」
- *    - CLOUD_ROOT_FOLDER_NAME：（選填）預設為「士林FA業務系統_雲端資料庫_測試副本」，驗證無誤後可改為正式資料夾名稱
+ *    - CLOUD_ROOT_FOLDER_NAME：（選填）預設為「士林FA業務系統_雲端資料庫」
  * 3. 先在上方函式選單選擇「authorizeCloudPermissions」執行一次，完成 Google 雲端硬碟與外部驗證連線授權。
  * 4. 點擊右上角「部署」->「新增部署作業」-> 類型選「網頁應用程式」：
  *    - 執行身分：「我」
@@ -21,7 +21,7 @@
  * 5. 複製部署產生的網頁應用程式網址，貼入系統網頁「設定 -> 資料連線模式與雲端同步設定」即可啟用。
  */
 
-var DEFAULT_TEST_ROOT_FOLDER = "士林FA業務系統_雲端資料庫_測試副本";
+var DEFAULT_CLOUD_ROOT_FOLDER = "士林FA業務系統_雲端資料庫";
 var SUBFOLDER_SHARED_NAME = "00_系統共用主檔";
 var SUBFOLDER_SALES_NAME = "01_業務個人隔離庫";
 var WHITELIST_DEFAULT_FILENAME = "報價系統業務白名單";
@@ -309,12 +309,12 @@ function getOrCreateWhitelistSpreadsheet(props) {
 }
 
 /**
- * 確保 Google 雲端硬碟內的資料庫資料夾結構存在（預設建立測試用副本資料夾，絕不動到既有正式檔案）
+ * 確保 Google 雲端硬碟內的正式資料庫資料夾結構存在
  */
 function ensureCloudFolderStructure() {
   var props = PropertiesService.getScriptProperties();
-  var rootName = String(props.getProperty("CLOUD_ROOT_FOLDER_NAME") || DEFAULT_TEST_ROOT_FOLDER).trim();
-  if (!rootName) rootName = DEFAULT_TEST_ROOT_FOLDER;
+  var rootName = String(props.getProperty("CLOUD_ROOT_FOLDER_NAME") || DEFAULT_CLOUD_ROOT_FOLDER).trim();
+  if (!rootName) rootName = DEFAULT_CLOUD_ROOT_FOLDER;
 
   var rootFolder = getOrCreateFolder(DriveApp.getRootFolder(), rootName);
   var sharedFolder = getOrCreateFolder(rootFolder, SUBFOLDER_SHARED_NAME);
@@ -636,7 +636,9 @@ function handleSyncSalesData(auth, req) {
       currentCloud.quotations = mergedQuotes;
     }
 
-    // 2. 更新該業務名下其餘標準資料表陣列
+    // 2. 更新該業務名下其餘標準資料表陣列（內建防空白陣列洗白既有雲端資料保護鎖）
+    var allowEmptyKeys = Array.isArray(req.allow_empty_keys) ? req.allow_empty_keys : [];
+    var protectedEmptyKeys = [];
     var listKeys = [
       "customers",
       "deactivated_customers",
@@ -652,6 +654,11 @@ function handleSyncSalesData(auth, req) {
     for (var k = 0; k < listKeys.length; k++) {
       var keyName = listKeys[k];
       if (Array.isArray(incoming[keyName])) {
+        var existingArr = Array.isArray(currentCloud[keyName]) ? currentCloud[keyName] : [];
+        if (incoming[keyName].length === 0 && existingArr.length > 0 && allowEmptyKeys.indexOf(keyName) === -1) {
+          protectedEmptyKeys.push(keyName);
+          continue;
+        }
         currentCloud[keyName] = incoming[keyName];
       }
     }
@@ -678,6 +685,7 @@ function handleSyncSalesData(auth, req) {
       status: "ok",
       target_sales: targetSales,
       reassigned_quotes: reassignedQuotes,
+      protected_empty_keys: protectedEmptyKeys,
       saved_at: currentCloud.updated_at,
       msg: "已安全同步儲存至 Google 雲端硬碟（" + folders.rootName + "）"
     });
@@ -687,7 +695,7 @@ function handleSyncSalesData(auth, req) {
 }
 
 /**
- * 管理員專用：初始化上傳標準產品牌價庫與業務基準資料至雲端測試副本資料夾
+ * 管理員專用：初始化上傳標準產品牌價庫與業務基準資料至正式雲端資料庫資料夾
  */
 function handleAdminSeedSharedData(auth, req) {
   if (auth.role !== "admin") {
@@ -752,7 +760,7 @@ function handleAdminSeedSharedData(auth, req) {
       root_folder: folders.rootName,
       product_count: prodCount,
       seeded_sales_count: seededSalesCount,
-      msg: "已完成雲端測試副本初始化（產品 " + prodCount + " 筆，業務個人庫 " + seededSalesCount + " 位）。"
+      msg: "已完成正式雲端資料庫初始化（產品 " + prodCount + " 筆，業務個人庫 " + seededSalesCount + " 位）。"
     });
   } finally {
     lock.releaseLock();

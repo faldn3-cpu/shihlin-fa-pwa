@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261127_v1_0_89" />
+  <link rel="stylesheet" href="css/style.css?v=20261127_v1_0_90" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -2912,7 +2912,7 @@
             <button type="button" id="btnSaveDataGatewayConfig" class="fluent-btn primary">保存連線設定</button>
             <button type="button" id="btnTestDataGateway" class="fluent-btn">測試連線狀態</button>
             <button type="button" id="btnPullCloudWorkspace" class="fluent-btn">從雲端同步最新資料</button>
-            <button type="button" id="btnSeedCloudTestStore" class="fluent-btn">初始化上傳至雲端測試副本</button>
+            <button type="button" id="btnSeedCloudTestStore" class="fluent-btn">初始化上傳至正式雲端資料庫</button>
           </div>
 
           <div id="cloudGatewayStatusBanner" class="cloud-gateway-status-box" style="margin-top: 12px;">
@@ -3165,7 +3165,7 @@
         </div>
       </div>
 
-      <!-- 初始化上傳至雲端測試副本二次確認對話框 (Zero Emoji 規範) -->
+      <!-- 初始化上傳至正式雲端資料庫二次確認對話框 (Zero Emoji 規範) -->
       <div id="modalConfirmCloudSeed" class="modal-overlay hidden">
         <div class="fluent-dialog" style="max-width: 460px;">
           <div class="dialog-header"
@@ -3174,7 +3174,7 @@
               <svg class="icon-svg" style="width:20px; height:20px; color:#f59e0b;" viewBox="0 0 24 24">
                 <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
               </svg>
-              <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">初始化雲端測試副本確認</h3>
+              <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">初始化正式雲端資料庫確認</h3>
             </div>
             <button type="button" id="btnCloseCloudSeedModal"
               style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-secondary);">&times;</button>
@@ -3182,10 +3182,10 @@
           <div class="dialog-body" style="padding:16px 0; display:flex; flex-direction:column; gap:12px;">
             <div
               style="background:rgba(245, 158, 11, 0.12); border:1px solid rgba(245, 158, 11, 0.35); border-radius:6px; padding:10px 12px; font-size:0.9rem; line-height:1.5; color:var(--text-primary);">
-              <strong style="color:#d97706;">[操作確認]</strong> 即將上傳產品牌價與業務結構至雲端測試資料夾。
+              <strong style="color:#d97706;">[操作確認]</strong> 即將上傳產品牌價與業務結構至正式雲端資料庫。
             </div>
             <p style="margin:0; font-size:0.9rem; line-height:1.6; color:var(--text-secondary);">
-              1. 僅於獨立測試資料夾建立檔案，不會更動既有正式試算表。<br>
+              1. 將寫入正式雲端資料庫資料夾，不影響既有報價歷史版次。<br>
               2. 若該資料夾已有業務個人資料檔，將保留原檔不覆蓋。
             </p>
           </div>
@@ -4427,13 +4427,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261127_v1_0_89"></script>
+  <script src="js/app.js?v=20261127_v1_0_90"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261127_v1_0_89')
+        navigator.serviceWorker.register('./sw.js?v=20261127_v1_0_90')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);

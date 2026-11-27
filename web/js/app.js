@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.89";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-27 10:30:00";
-  const SYSTEM_APP_RELEASE_NOTES = "修復雲端網址異常或首次喚醒逾時導致白名單無法登入之問題：放寬驗證逾時至 20 秒、加入連線異常自動退回標準白名單核對機制（明確拒絕絕不繞過），並強化雲端守門員回應錯誤保護";
+  const SYSTEM_APP_VERSION = "v1.0.90";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-27 12:00:00";
+  const SYSTEM_APP_RELEASE_NOTES = "全面切換正式雲端資料庫（停用測試副本）、新增雲端防空白清單覆蓋鎖、強化批次匯入即時雲端同步回報，並升級本機檢視工具支援唯讀檢視正式雲端資料庫";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -2818,7 +2818,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return cloudData;
     }
 
-    // 管理員專用：將目前標準產品庫與業務結構上傳至 Google 雲端硬碟測試用副本資料夾
+    // 管理員專用：將目前標準產品庫與業務結構上傳至 Google 雲端硬碟正式資料庫資料夾
     async function seedCloudTestStoreFromCurrent() {
       const store = await ensureSeedLoaded();
       const salesSeedMap = {};
@@ -17032,6 +17032,28 @@ document.addEventListener("DOMContentLoaded", () => {
       try { await runPriceAnalysis(); } catch (e) {}
     }
 
+    // 批次匯入完成後立即同步寫回正式雲端資料庫，並回傳明確成功或失敗狀態供畫面提示
+    async function syncImportedSalesBucketImmediately(salesName) {
+      const gw = window.__shihlinDataGateway;
+      if (!gw || typeof gw.getConfig !== "function") {
+        return { synced: false, skipped: true, msg: "" };
+      }
+      const cfg = gw.getConfig();
+      if (cfg.mode !== "cloud_drive" || !cfg.url) {
+        return { synced: false, skipped: true, msg: "" };
+      }
+      try {
+        await gw.pushSalesBucket(salesName);
+        return { synced: true, skipped: false, msg: "已同步寫入正式雲端資料庫" };
+      } catch (cloudErr) {
+        return {
+          synced: false,
+          skipped: false,
+          msg: cloudErr?.message || String(cloudErr || "雲端連線異常")
+        };
+      }
+    }
+
     // 1. 匯出客戶 Excel (桌面版 9 欄格式)
     const btnExpCust = document.getElementById("btnBatchExportCustomers");
     if (btnExpCust) {
@@ -17099,7 +17121,15 @@ document.addEventListener("DOMContentLoaded", () => {
           const res = await resp.json();
           if (!resp.ok) throw new Error(res.detail || "匯入客戶失敗");
           await refreshAllAfterBatchImport();
-          showAuthToast(res.message || "客戶匯入完成");
+          const cloudSync = await syncImportedSalesBucketImmediately(activeSales);
+          const baseMsg = res.message || "客戶匯入完成";
+          if (cloudSync.synced) {
+            showAuthToast(`${baseMsg}（${cloudSync.msg}）`, 4500);
+          } else if (!cloudSync.skipped) {
+            showAuthToast(`[警告] 本機已匯入，但寫入正式雲端失敗：${cloudSync.msg}，請檢查設定頁雲端連線`, 6500);
+          } else {
+            showAuthToast(baseMsg);
+          }
         } catch (err) {
           showAuthToast(`匯入失敗：${err.message}`);
         }
@@ -17170,11 +17200,18 @@ document.addEventListener("DOMContentLoaded", () => {
           if (!resp.ok) throw new Error(res.detail || "匯入產品失敗");
           if (typeof invalidateDesktopProductsCache === "function") invalidateDesktopProductsCache();
           await refreshAllAfterBatchImport();
+          const cloudSync = await syncImportedSalesBucketImmediately(activeSales);
           let msg = res.message || "產品匯入完成";
           if (Array.isArray(res.error_logs) && res.error_logs.length > 0) {
             msg += `\n重複型號前 3 筆：${res.error_logs.slice(0, 3).join(" / ")}`;
           }
-          showAuthToast(msg);
+          if (cloudSync.synced) {
+            showAuthToast(`${msg}（${cloudSync.msg}）`, 4500);
+          } else if (!cloudSync.skipped) {
+            showAuthToast(`[警告] 本機已匯入，但寫入正式雲端失敗：${cloudSync.msg}，請檢查設定頁雲端連線`, 6500);
+          } else {
+            showAuthToast(msg);
+          }
         } catch (err) {
           showAuthToast(`匯入失敗：${err.message}`);
         }
@@ -17340,7 +17377,23 @@ document.addEventListener("DOMContentLoaded", () => {
             resBoxLegacy.classList.remove("hidden");
           }
           await refreshAllAfterBatchImport();
-          showAuthToast("歷史資料匯入完成");
+          const cloudSync = await syncImportedSalesBucketImmediately(activeSales);
+          if (resBoxLegacy) {
+            let syncStatusHtml = "";
+            if (cloudSync.synced) {
+              syncStatusHtml = `<div style="margin-top:6px; color:#059669; font-weight:700;">[雲端同步完成] ${escapeHtml(cloudSync.msg)}</div>`;
+            } else if (!cloudSync.skipped) {
+              syncStatusHtml = `<div style="margin-top:6px; color:#b91c1c; font-weight:700;">[警告] 本機已匯入，但寫入正式雲端失敗：${escapeHtml(cloudSync.msg)}，請檢查設定頁雲端連線</div>`;
+            }
+            resBoxLegacy.insertAdjacentHTML("beforeend", syncStatusHtml);
+          }
+          if (cloudSync.synced) {
+            showAuthToast("歷史資料匯入完成，已同步寫入正式雲端資料庫", 4500);
+          } else if (!cloudSync.skipped) {
+            showAuthToast(`[警告] 本機已匯入，但寫入正式雲端失敗：${cloudSync.msg}，請檢查設定頁雲端連線`, 6500);
+          } else {
+            showAuthToast("歷史資料匯入完成");
+          }
         } catch (err) {
           setLegacyProgress(0);
           showAuthToast(`匯入失敗：${err.message}`);
@@ -17696,7 +17749,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
     <div class="help-changelog-card">
       <div class="help-changelog-header">
-        <span class="help-changelog-ver">PWA ${SYSTEM_APP_VERSION}（2026-11-27）｜修復登入白名單連線逾時與自訂雲端異常鎖死問題</span>
+        <span class="help-changelog-ver">PWA ${SYSTEM_APP_VERSION}（2026-11-27）｜全面切換正式雲端資料庫、防空白覆蓋鎖與唯讀雲端檢視升級</span>
+        <span class="help-changelog-tag">正式環境與資料安全防護</span>
+      </div>
+      <div class="help-changelog-grid">
+        <div class="help-changelog-row">
+          <div class="help-changelog-label">【修改背景與解決問題】</div>
+          前期架構驗證期間雲端守門員預設寫入「測試副本」資料夾，且若瀏覽器剛清空快取尚未完成雲端拉取就觸發儲存，原本直接覆蓋客戶與牌價欄位的寫入邏輯可能誤將雲端既有資料覆蓋成空白；同時批次匯入完成後僅在背景延遲同步且缺少明確失敗回報，管理員也無法直接透過本機檢視工具確認正式雲端資料庫內容。
+        </div>
+        <div class="help-changelog-row">
+          <div class="help-changelog-label">【異動檔案與核心函式／模組】</div>
+          1. <code>cloud_backend/cloud_gateway.gs</code>：將預設根資料夾常數 <code>DEFAULT_CLOUD_ROOT_FOLDER</code> 切換為「士林FA業務系統_雲端資料庫」；於 <code>handleSyncSalesData</code> 新增防空白陣列覆蓋鎖（回傳 <code>protected_empty_keys</code>）；更新 <code>handleAdminSeedSharedData</code> 正式初始化訊息。<br>
+          2. <code>web/js/app.js</code>：升級版本開關 <code>SYSTEM_APP_VERSION</code> 至 <code>v1.0.90</code>；於 <code>initBatchDataManagementEvents</code> 新增 <code>syncImportedSalesBucketImmediately</code>，串接客戶、個人牌價與三階段歷史報價單匯入後即時雲端寫回與成敗提示；正名雲端初始化提示文字。<br>
+          3. <code>data_access.py</code> &amp; <code>json_vault_viewer.py</code>：擴充唯一資料存取窗口新增 Google 雲端資料庫唯讀清單 <code>list_gdrive_cloud_db_files</code>、記憶體讀取 <code>read_gdrive_json_file_in_memory</code> 與精準測試資料夾清除 <code>delete_gdrive_folder_by_exact_name</code>；桌面檢視工具新增唯讀檢視雲端正式資料庫分頁與結構解析。<br>
+          4. <code>web/index.html</code> &amp; <code>web/sw.js</code>：正名設定頁與二次確認視窗文字，並同步更新資源載入參數與離線快取版號。
+        </div>
+        <div class="help-changelog-row">
+          <div class="help-changelog-label">【商業邏輯與防呆規則】</div>
+          1. <strong>防空白覆蓋雲端既有資料鎖</strong>：<code>handleSyncSalesData</code> 偵測到雲端原本大於 0 筆而前端送來空白陣列且未帶入允許清空旗標時，自動拒絕覆寫並保留雲端原檔。<br>
+          2. <strong>匯入即時寫回與明顯告警</strong>：批次匯入完成並取得雲端回應後立即提示成功；若連線異常或遭拒絕，於畫面明確警告「本機已匯入但寫入正式雲端失敗」，絕不靜默吞掉錯誤。<br>
+          3. <strong>唯讀檢視不落地明文</strong>：本機檢視工具連線雲端正式資料庫僅於記憶體解密／解析並顯示中文表格，不產生明文暫存檔亦不提供直接修改或刪除正式雲端資料按鈕。
+        </div>
+        <div class="help-changelog-row">
+          <div class="help-changelog-label">【交接維護注意事項】</div>
+          更新 <code>cloud_backend/cloud_gateway.gs</code> 後，接手人員務必至 Google Apps Script 貼上最新程式、檢查「指令碼屬性」中的 <code>CLOUD_ROOT_FOLDER_NAME</code> 未殘留測試副本名稱，並點擊「部署 ➔ 管理部署作業 ➔ 建立新版本」才會對所有連線生效。
+        </div>
+      </div>
+    </div>
+
+    <div class="help-changelog-card">
+      <div class="help-changelog-header">
+        <span class="help-changelog-ver">PWA v1.0.89（2026-11-27）｜修復登入白名單連線逾時與自訂雲端異常鎖死問題</span>
         <span class="help-changelog-tag">登入備援與錯誤保護</span>
       </div>
       <div class="help-changelog-grid">
@@ -21499,11 +21582,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnConfirmSeed) {
       btnConfirmSeed.addEventListener("click", async () => {
         closeSeedDialog();
-        setGatewayBanner("正在初始化上傳標準產品庫與業務結構至雲端測試副本，請稍候...", "normal");
+        setGatewayBanner("正在初始化上傳標準產品庫與業務結構至正式雲端資料庫，請稍候...", "normal");
         try {
           const res = await window.__shihlinDataGateway.seedCloudTestStore();
-          setGatewayBanner(`[上傳成功] ${res?.msg || "已完成雲端測試副本初始化"}`, "ok");
-          showAuthToast("已完成雲端測試副本初始化");
+          setGatewayBanner(`[上傳成功] ${res?.msg || "已完成正式雲端資料庫初始化"}`, "ok");
+          showAuthToast("已完成正式雲端資料庫初始化");
         } catch (err) {
           setGatewayBanner(`[上傳失敗] ${err?.message || err}`, "err");
         }

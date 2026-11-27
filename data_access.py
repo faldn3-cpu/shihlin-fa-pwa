@@ -3697,6 +3697,168 @@ def sync_to_gdrive_pwa_folder(
     }
 
 
+def _load_gdrive_readonly_or_user_credentials(readonly: bool = True):
+    """
+    載入本機 Google 雲端硬碟授權憑證（供唯讀檢視或指定測試資料夾清除使用）：
+    1. 優先複用既有使用者 OAuth 憑證 (_load_gdrive_credentials)。
+    2. 若無使用者 token，再嘗試本機服務帳號 JSON（絕不寫死或印出任何憑證內容）。
+    """
+    creds = _load_gdrive_credentials()
+    if creds:
+        return creds
+
+    sa_env = os.environ.get("GDRIVE_SERVICE_ACCOUNT_PATH")
+    candidates = []
+    if sa_env:
+        candidates.append(Path(sa_env))
+    candidates.append(PROJECT_DIR / "service_account.json")
+    candidates.append(LEGACY_APP_DIR / "service_account.json")
+
+    scope_list = (
+        ["https://www.googleapis.com/auth/drive.readonly"]
+        if readonly
+        else ["https://www.googleapis.com/auth/drive"]
+    )
+    try:
+        from google.oauth2.service_account import Credentials as ServiceAccountCredentials
+    except ImportError:
+        return None
+
+    for p in candidates:
+        if p.exists():
+            return ServiceAccountCredentials.from_service_account_file(str(p), scopes=scope_list)
+    return None
+
+
+def list_gdrive_cloud_db_files(folder_name: str = "士林FA業務系統_雲端資料庫") -> Dict[str, Any]:
+    """
+    唯讀列出 Google 雲端硬碟正式資料庫資料夾中的 JSON 檔案清單（絕不寫入或修改雲端內容）。
+    """
+    creds = _load_gdrive_readonly_or_user_credentials(readonly=True)
+    if not creds:
+        raise RuntimeError("找不到本機有效的 Google 雲端授權憑證（token.json 或 service_account.json）。")
+
+    from googleapiclient.discovery import build
+
+    service = build("drive", "v3", credentials=creds)
+    safe_root = str(folder_name or "士林FA業務系統_雲端資料庫").strip().replace("'", "\\'")
+    root_q = f"name = '{safe_root}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+    roots = service.files().list(q=root_q, spaces="drive", fields="files(id, name)").execute().get("files", [])
+    if not roots:
+        raise FileNotFoundError(f"在目前授權的 Google 雲端硬碟中找不到資料夾「{folder_name}」。")
+
+    root_id = roots[0]["id"]
+    sections = []
+    for sub_name in ("00_系統共用主檔", "01_業務個人隔離庫"):
+        safe_sub = sub_name.replace("'", "\\'")
+        sub_q = (
+            f"name = '{safe_sub}' and '{root_id}' in parents "
+            "and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+        )
+        sub_folders = service.files().list(q=sub_q, spaces="drive", fields="files(id, name)").execute().get("files", [])
+        file_items = []
+        if sub_folders:
+            sub_id = sub_folders[0]["id"]
+            page_token = None
+            while True:
+                res = service.files().list(
+                    q=f"'{sub_id}' in parents and trashed = false",
+                    spaces="drive",
+                    fields="nextPageToken, files(id, name, size, modifiedTime)",
+                    pageSize=200,
+                    pageToken=page_token,
+                ).execute()
+                for fobj in res.get("files", []):
+                    fname = str(fobj.get("name") or "")
+                    if fname.lower().endswith(".json"):
+                        file_items.append({
+                            "id": str(fobj.get("id") or ""),
+                            "name": fname,
+                            "size": int(fobj.get("size") or 0),
+                            "modified_time": str(fobj.get("modifiedTime") or ""),
+                            "section": sub_name,
+                        })
+                page_token = res.get("nextPageToken")
+                if not page_token:
+                    break
+            file_items.sort(key=lambda x: x["name"])
+        sections.append({"section": sub_name, "files": file_items})
+
+    return {
+        "status": "ok",
+        "folder_name": roots[0].get("name") or folder_name,
+        "root_folder_id": root_id,
+        "sections": sections,
+    }
+
+
+def read_gdrive_json_file_in_memory(file_id: str) -> str:
+    """
+    於記憶體內唯讀下載 Google 雲端硬碟指定檔案文字內容（嚴禁寫入本機明文暫存檔）。
+    """
+    clean_id = str(file_id or "").strip()
+    if not clean_id:
+        raise ValueError("缺少雲端檔案識別碼。")
+
+    creds = _load_gdrive_readonly_or_user_credentials(readonly=True)
+    if not creds:
+        raise RuntimeError("找不到本機有效的 Google 雲端授權憑證。")
+
+    from googleapiclient.discovery import build
+
+    service = build("drive", "v3", credentials=creds)
+    raw_bytes = service.files().get_media(fileId=clean_id).execute()
+    if isinstance(raw_bytes, bytes):
+        return raw_bytes.decode("utf-8")
+    return str(raw_bytes or "")
+
+
+def delete_gdrive_folder_by_exact_name(folder_name: str) -> Dict[str, Any]:
+    """
+    以完整名稱精準比對並永久刪除舊版測試副本資料夾（安全白名單：僅允許刪除名稱包含「_測試副本」之資料夾）。
+    """
+    target_name = str(folder_name or "").strip()
+    if not target_name or "_測試副本" not in target_name:
+        raise ValueError("基於安全保護，本函式僅允許精準刪除名稱包含「_測試副本」之資料夾。")
+
+    creds = _load_gdrive_readonly_or_user_credentials(readonly=False)
+    if not creds:
+        return {
+            "status": "no_credentials",
+            "folder_name": target_name,
+            "deleted_count": 0,
+            "message": "本機無可用的 Google 雲端刪除授權憑證，無法從本機刪除遠端資料夾。",
+        }
+
+    from googleapiclient.discovery import build
+
+    service = build("drive", "v3", credentials=creds)
+    safe_name = target_name.replace("'", "\\'")
+    q = f"name = '{safe_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+    matched = service.files().list(q=q, spaces="drive", fields="files(id, name)").execute().get("files", [])
+    if not matched:
+        return {
+            "status": "not_found",
+            "folder_name": target_name,
+            "deleted_count": 0,
+            "message": f"目前授權的雲端硬碟內已找不到資料夾「{target_name}」（可能已刪除或不在本機憑證權限範圍內）。",
+        }
+
+    deleted_ids = []
+    for folder_obj in matched:
+        fid = str(folder_obj.get("id") or "")
+        if fid:
+            service.files().delete(fileId=fid).execute()
+            deleted_ids.append(fid)
+
+    return {
+        "status": "deleted",
+        "folder_name": target_name,
+        "deleted_count": len(deleted_ids),
+        "message": f"已精準永久刪除資料夾「{target_name}」（共 {len(deleted_ids)} 個）。",
+    }
+
+
 def get_centralized_storage_summary(db_path: Optional[Path] = None) -> Dict[str, Any]:
     """回傳目前集中管理模式資料夾統計資訊"""
     conn = get_connection(db_path)

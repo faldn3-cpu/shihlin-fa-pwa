@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ============================================================================
   // 全系統唯一版本總開關 (修改此處即可自動同步畫面所有可見版本文字)
   // ============================================================================
-  const SYSTEM_APP_VERSION = "v1.0.88";
-  const SYSTEM_APP_RELEASE_DATE = "2026-11-26 17:15:00";
-  const SYSTEM_APP_RELEASE_NOTES = "徹底移除公開靜態打包資料與程式碼內寫死之個人信箱、電話與解鎖金鑰，全面改為 Google 登入驗證後自私人雲端硬碟讀取授權資料";
+  const SYSTEM_APP_VERSION = "v1.0.89";
+  const SYSTEM_APP_RELEASE_DATE = "2026-11-27 10:30:00";
+  const SYSTEM_APP_RELEASE_NOTES = "修復雲端網址異常或首次喚醒逾時導致白名單無法登入之問題：放寬驗證逾時至 20 秒、加入連線異常自動退回標準白名單核對機制（明確拒絕絕不繞過），並強化雲端守門員回應錯誤保護";
 
   function syncSystemVersionUI() {
     document.querySelectorAll("[data-version-template]").forEach(el => {
@@ -17696,7 +17696,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
     <div class="help-changelog-card">
       <div class="help-changelog-header">
-        <span class="help-changelog-ver">PWA ${SYSTEM_APP_VERSION}（2026-11-26）｜重大資安止血：清除公開打包檔與寫死機密，全面改由登入後雲端讀取</span>
+        <span class="help-changelog-ver">PWA ${SYSTEM_APP_VERSION}（2026-11-27）｜修復登入白名單連線逾時與自訂雲端異常鎖死問題</span>
+        <span class="help-changelog-tag">登入備援與錯誤保護</span>
+      </div>
+      <div class="help-changelog-grid">
+        <div class="help-changelog-row">
+          <div class="help-changelog-label">【修改背景與解決問題】</div>
+          當管理員已於本機設定自訂雲端資料庫網址，若該雲端服務首次喚醒超過 12 秒、尚未更新部署或回應異常格式時，登入驗證會直接失敗並將授權使用者阻擋在登入頁外，無法進入設定頁修正連線設定。
+        </div>
+        <div class="help-changelog-row">
+          <div class="help-changelog-label">【異動檔案與核心函式／模組】</div>
+          1. <code>web/js/app.js</code>：升級 <code>checkGoogleWhitelist</code> 拆出輔助函式 <code>querySingleWhitelistEndpoint</code>，將逾時延長至 20 秒並明確辨識 <code>explicitReject</code> 與技術連線異常；僅於自訂雲端網址連線異常時自動退回標準 Google 白名單核對，並於 <code>handleGoogleTokenResponse</code> 提示檢查雲端設定。<br>
+          2. <code>cloud_backend/cloud_gateway.gs</code>：為 <code>doGet</code> 補上完整 <code>try / catch</code> 保護，確保任何內部例外皆回傳標準 JSON 格式。<br>
+          3. <code>web/index.html</code> &amp; <code>web/sw.js</code>：同步更新資源版號與快取名稱至 <code>v1.0.89</code>。
+        </div>
+        <div class="help-changelog-row">
+          <div class="help-changelog-label">【商業邏輯與防呆規則】</div>
+          1. <strong>明確拒絕絕不退回</strong>：只要任一白名單服務明確回覆帳號未授權（<code>rejected</code>），立即阻擋登入並顯示原因，絕不退回其他服務繞過。<br>
+          2. <strong>斷網依然鎖死</strong>：標準 Google 白名單服務若同樣無法連線，仍強制禁止進入系統，非白名單帳號永遠無法登入。
+        </div>
+        <div class="help-changelog-row">
+          <div class="help-changelog-label">【交接維護注意事項】</div>
+          部署或更新 Google Apps Script 後，請確認「誰可以存取」維持「所有人」，若登入後看到檢查雲端網址提醒，請至「設定 ➔ 資料連線模式與雲端同步設定」執行一次連線測試確認狀態正常。
+        </div>
+      </div>
+    </div>
+
+    <div class="help-changelog-card">
+      <div class="help-changelog-header">
+        <span class="help-changelog-ver">PWA v1.0.88（2026-11-26）｜重大資安止血：清除公開打包檔與寫死機密，全面改由登入後雲端讀取</span>
         <span class="help-changelog-tag">資料清空與雲端隔離</span>
       </div>
       <div class="help-changelog-grid">
@@ -18448,60 +18476,109 @@ document.addEventListener("DOMContentLoaded", () => {
     return await res.json();
   }
 
-  // 檢查 Email 是否在白名單內（優先透過私人雲端守門員搭配 Google 通行證驗證）
+  // 向單一白名單服務端點查驗授權，明確區分「伺服器拒絕」與「技術連線異常」
+  async function querySingleWhitelistEndpoint(endpointUrl, lowerEmail, accessToken = "") {
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 20000) : null;
+    try {
+      const fetchOpts = controller ? { signal: controller.signal } : {};
+      const queryUrl = accessToken
+        ? `${endpointUrl}?action=check_whitelist&access_token=${encodeURIComponent(accessToken)}&email=${encodeURIComponent(lowerEmail)}`
+        : `${endpointUrl}?action=check_whitelist&email=${encodeURIComponent(lowerEmail)}`;
+      const res = await fetch(queryUrl, fetchOpts);
+      if (!res.ok) {
+        return {
+          ok: false,
+          networkError: true,
+          reason: `伺服器回應 HTTP ${res.status}`
+        };
+      }
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        return {
+          ok: false,
+          networkError: true,
+          reason: "服務回應格式異常"
+        };
+      }
+      if (data && data.status === "ok") {
+        return {
+          ok: true,
+          allowed: true,
+          name: data.name,
+          is_admin: !!(data.is_admin || data.role === "admin")
+        };
+      }
+      if (data && data.status === "rejected") {
+        return {
+          ok: true,
+          allowed: false,
+          explicitReject: true,
+          msg: data.msg || "[存取受限] 您的帳號尚未通過管理員審核。"
+        };
+      }
+      return {
+        ok: false,
+        networkError: true,
+        reason: (data && data.msg) ? String(data.msg) : "白名單驗證未回傳有效結果"
+      };
+    } catch (err) {
+      const isTimeout = err && err.name === "AbortError";
+      return {
+        ok: false,
+        networkError: true,
+        reason: isTimeout ? "連線逾時（超過 20 秒未回應）" : "網路連線中斷或服務未開放存取"
+      };
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
+
+  // 檢查 Email 是否在白名單內（優先透過私人雲端守門員驗證，僅在連線技術異常時退回標準白名單核對）
   async function checkGoogleWhitelist(email, accessToken = "") {
     if (!email) return { allowed: false, msg: "未提供 Google 帳號 Email" };
     const lowerEmail = email.trim().toLowerCase();
 
-    let whitelistEndpoint = GAS_WHITELIST_URL;
-    let useCloudGateway = false;
+    let customEndpoint = "";
     if (window.__shihlinDataGateway) {
       const gwCfg = window.__shihlinDataGateway.getConfig();
       if (
         gwCfg &&
         gwCfg.mode === "cloud_drive" &&
         gwCfg.url &&
-        gwCfg.url.startsWith("https://script.google.com/macros/s/")
+        gwCfg.url.startsWith("https://script.google.com/macros/s/") &&
+        gwCfg.url !== GAS_WHITELIST_URL
       ) {
-        whitelistEndpoint = gwCfg.url;
-        useCloudGateway = true;
+        customEndpoint = gwCfg.url;
       }
     }
 
-    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-    const timeoutId = controller ? setTimeout(() => controller.abort(), 12000) : null;
-    try {
-      const fetchOpts = controller ? { signal: controller.signal } : {};
-      const queryUrl = useCloudGateway && accessToken
-        ? `${whitelistEndpoint}?action=check_whitelist&access_token=${encodeURIComponent(accessToken)}&email=${encodeURIComponent(lowerEmail)}`
-        : `${whitelistEndpoint}?action=check_whitelist&email=${encodeURIComponent(lowerEmail)}`;
-      const res = await fetch(queryUrl, fetchOpts);
-      if (!res.ok) {
-        return {
-          allowed: false,
-          msg: "[存取受限] 白名單驗證服務目前回應異常，為確保資料安全已暫停登入，請稍後再試。"
-        };
+    let lastReason = "連線異常";
+    if (customEndpoint) {
+      const customRes = await querySingleWhitelistEndpoint(customEndpoint, lowerEmail, accessToken);
+      if (customRes.ok) {
+        return customRes;
       }
-      const data = await res.json();
-      if (data.status === "ok") {
-        return {
-          allowed: true,
-          name: data.name,
-          is_admin: !!(data.is_admin || data.role === "admin")
-        };
-      } else if (data.status === "rejected") {
-        return { allowed: false, msg: data.msg || "[存取受限] 您的帳號尚未通過管理員審核。" };
-      }
-      return { allowed: false, msg: data.msg || "白名單驗證失敗" };
-    } catch (err) {
-      console.warn("[Auth] 白名單連線檢查異常，已阻擋未授權進入:", err);
-      return {
-        allowed: false,
-        msg: "[驗證失敗] 無法連線至系統白名單驗證服務，為確保資料安全已暫停登入，請確認網路連線正常後重試。"
-      };
-    } finally {
-      if (timeoutId) clearTimeout(timeoutId);
+      lastReason = customRes.reason || lastReason;
+      console.warn("[Auth] 自訂雲端白名單端點連線異常，改向標準白名單服務核對:", lastReason);
     }
+
+    const stdRes = await querySingleWhitelistEndpoint(GAS_WHITELIST_URL, lowerEmail, "");
+    if (stdRes.ok) {
+      if (stdRes.allowed && customEndpoint) {
+        return { ...stdRes, fallbackWarning: true };
+      }
+      return stdRes;
+    }
+
+    lastReason = stdRes.reason || lastReason;
+    console.warn("[Auth] 白名單連線檢查異常，已阻擋未授權進入:", lastReason);
+    return {
+      allowed: false,
+      msg: `[驗證失敗] 無法連線至系統白名單驗證服務（${lastReason}），為確保資料安全已暫停登入，請確認網路連線正常後重試。`
+    };
   }
 
   // 將登入者名稱對應至系統內的業務人員名單
@@ -18579,7 +18656,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       setupAdminImpersonator();
       switchSimulatedSalesperson(resolvedSales, false);
-      showAuthToast(`歡迎 ${resolvedSales}`);
+      if (checkResult.fallbackWarning) {
+        showAuthToast(`歡迎 ${resolvedSales}（提醒：您設定的雲端資料庫網址暫時無法連線，請至「設定」測試或更新網址）`, 5500);
+      } else {
+        showAuthToast(`歡迎 ${resolvedSales}`);
+      }
     } catch (err) {
       console.error("[Auth] Google 驗證程序異常:", err);
       setLoginStatusMessage("驗證過程發生錯誤：" + (err.message || err), true);

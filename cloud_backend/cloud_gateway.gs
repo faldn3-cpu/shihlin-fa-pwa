@@ -40,50 +40,58 @@ function authorizeCloudPermissions() {
  * 處理 GET 請求（相容原有 check_whitelist 檢查與狀態探測）
  */
 function doGet(e) {
-  e = e || { parameter: {} };
-  var params = e.parameter || {};
-  var action = String(params.action || "").trim();
+  try {
+    e = e || { parameter: {} };
+    var params = e.parameter || {};
+    var action = String(params.action || "").trim();
 
-  if (action === "check_whitelist") {
-    var accessToken = String(params.access_token || "").trim();
-    if (accessToken) {
-      var auth = verifyUserIdentity(accessToken);
-      if (!auth.allowed) {
-        return createJsonOutput({ status: "rejected", allowed: false, msg: auth.msg });
+    if (action === "check_whitelist") {
+      var accessToken = String(params.access_token || "").trim();
+      if (accessToken) {
+        var auth = verifyUserIdentity(accessToken);
+        if (!auth.allowed) {
+          return createJsonOutput({ status: "rejected", allowed: false, msg: auth.msg });
+        }
+        return createJsonOutput({
+          status: "ok",
+          allowed: true,
+          name: auth.salesName,
+          role: auth.role,
+          is_admin: auth.role === "admin",
+          is_manager: auth.role === "admin" || auth.role === "manager",
+          msg: "身分與白名單驗證通過"
+        });
+      }
+      // 相容舊版登入前預檢（僅回傳是否在白名單，不回傳任何商業資料）
+      var rawEmail = String(params.email || "").trim().toLowerCase();
+      var preCheck = lookupWhitelistByEmail(rawEmail);
+      if (!preCheck.allowed) {
+        return createJsonOutput({ status: "rejected", allowed: false, msg: preCheck.msg });
       }
       return createJsonOutput({
         status: "ok",
         allowed: true,
-        name: auth.salesName,
-        role: auth.role,
-        is_admin: auth.role === "admin",
-        is_manager: auth.role === "admin" || auth.role === "manager",
-        msg: "身分與白名單驗證通過"
+        name: preCheck.salesName,
+        role: preCheck.role,
+        is_admin: preCheck.role === "admin",
+        is_manager: preCheck.role === "admin" || preCheck.role === "manager",
+        msg: "白名單驗證通過"
       });
     }
-    // 相容舊版登入前預檢（僅回傳是否在白名單，不回傳任何商業資料）
-    var rawEmail = String(params.email || "").trim().toLowerCase();
-    var preCheck = lookupWhitelistByEmail(rawEmail);
-    if (!preCheck.allowed) {
-      return createJsonOutput({ status: "rejected", allowed: false, msg: preCheck.msg });
-    }
+
     return createJsonOutput({
       status: "ok",
-      allowed: true,
-      name: preCheck.salesName,
-      role: preCheck.role,
-      is_admin: preCheck.role === "admin",
-      is_manager: preCheck.role === "admin" || preCheck.role === "manager",
-      msg: "白名單驗證通過"
+      service: "Shihlin FA Cloud Gateway",
+      mode: "active",
+      msg: "雲端資料庫守門員運作正常，資料讀寫請透過加密 POST 通行證呼叫。"
+    });
+  } catch (err) {
+    return createJsonOutput({
+      status: "error",
+      code: 500,
+      msg: "雲端守門員查詢異常：" + String(err && err.message ? err.message : err)
     });
   }
-
-  return createJsonOutput({
-    status: "ok",
-    service: "Shihlin FA Cloud Gateway",
-    mode: "active",
-    msg: "雲端資料庫守門員運作正常，資料讀寫請透過加密 POST 通行證呼叫。"
-  });
 }
 
 /**

@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon-v2.png" />
 
   <!-- 核心微軟現代辦公風格樣式表 (相對路徑支援 GitHub Pages) -->
-  <link rel="stylesheet" href="css/style.css?v=20261126_v1_0_88" />
+  <link rel="stylesheet" href="css/style.css?v=20261127_v1_0_89" />
 
   <!-- Google Identity Services 官方驗證腳本 -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -139,7 +139,7 @@
           <div class="drawer-divider"></div>
           <div class="drawer-version-tag">
             <span id="sidebarAppVersionText" class="version-text" data-version-template="士林電機 FA 業務系統 {v}">士林電機 FA 業務系統
-              v1.0.88</span>
+              v1.0.89</span>
             <button id="btnClearCacheDrawer" class="btn-clear-cache" type="button" title="清除快取並載入最新版">
               <svg class="icon-svg-xs" viewBox="0 0 24 24">
                 <path
@@ -2166,7 +2166,7 @@
                 <legend class="pyside-groupbox-legend">當前版本資訊</legend>
                 <div style="line-height:1.9; font-size:14px;">
                   <div id="lblQuoteCurrentVersion" data-version-template="目前版本 : {v}"
-                    style="color:var(--color-accent); font-weight:700; font-size:15px;">目前版本 : v1.0.88</div>
+                    style="color:var(--color-accent); font-weight:700; font-size:15px;">目前版本 : v1.0.89</div>
                   <div id="lblQuoteVersionNotes">更新內容 : 載入中</div>
                   <div id="lblQuoteVersionDate">發布時間 : --</div>
                 </div>
@@ -4427,13 +4427,13 @@
   <div id="authToastBanner" class="auth-toast-banner hidden"></div>
 
   <!-- 引用前端主腳本 (相對路徑) -->
-  <script src="js/app.js?v=20261126_v1_0_88"></script>
+  <script src="js/app.js?v=20261127_v1_0_89"></script>
 
   <!-- 註冊 Service Worker 實現 PWA 手機安裝為 App 與離線快取 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=20261126_v1_0_88')
+        navigator.serviceWorker.register('./sw.js?v=20261127_v1_0_89')
           .then(function (reg) {
             reg.update();
             console.log('[PWA] Service Worker 註冊成功，範疇：', reg.scope);
